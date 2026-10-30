@@ -175,14 +175,16 @@ class _Crumbs extends StatelessWidget {
             const Icon(LucideIcons.chevronRight, size: 10, color: AppTokens.textSecondary),
             const SizedBox(width: 9),
           ],
-          Text(
-            c,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: i == crumbs.length - 1 ? FontWeight.w600 : FontWeight.w400,
-              color: i == crumbs.length - 1 ? AppTokens.textPrimary : AppTokens.textSecondary,
-            ),
-          ),
+          if (i == crumbs.length - 1)
+            Expanded(
+              child: Text(
+                c,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+              ),
+            )
+          else
+            Text(c, style: const TextStyle(fontSize: 13, color: AppTokens.textSecondary)),
         ],
       ],
     );
