@@ -1,0 +1,9 @@
+name: animesvc
+description: "番剧服务：独立 Dart 进程（库扫描、元数据、播放记忆）"
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.4
+
+resolution: workspace

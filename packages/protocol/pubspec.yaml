@@ -1,0 +1,9 @@
+name: protocol
+description: "App 与服务共享的 DTO 与 API 契约（唯一事实源，见 AGENTS.md §3）"
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.4
+
+resolution: workspace

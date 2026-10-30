@@ -1,0 +1,24 @@
+#!/bin/sh
+# pre-commit —— 格式化与静态检查（AGENTS.md §4 工程纪律）
+# 工程骨架建立前（无 pubspec.yaml）直接放行，允许纯文档提交
+[ -f pubspec.yaml ] || exit 0
+
+# 优先走 fvm 锁定的工具链
+if [ -f .fvmrc ] && command -v fvm >/dev/null 2>&1; then
+  DART="fvm dart"
+elif command -v dart >/dev/null 2>&1; then
+  DART="dart"
+else
+  echo "⚠ 未找到 Dart 工具链，跳过 pre-commit 检查"
+  exit 0
+fi
+
+$DART format --output=none --set-exit-if-changed . || {
+  echo "✖ dart format 未通过：先运行 '$DART format .' 再提交"
+  exit 1
+}
+
+$DART analyze >/dev/null || {
+  echo "✖ dart analyze 未通过"
+  exit 1
+}

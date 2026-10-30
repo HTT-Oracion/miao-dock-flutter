@@ -1,0 +1,40 @@
+# ---- 通用 ----
+.DS_Store
+*.log
+*.swp
+.history/
+
+# ---- IDE ----
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.iml
+
+# ---- Flutter / Dart ----
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+app.*.symbols
+app.*.map.json
+coverage/
+# pubspec.lock 不忽略：应用工程 + workspace，锁文件入库（见 AGENTS.md §5）
+
+# 平台子目录各有 flutter create 生成的 .gitignore，这里只兜底
+**/ios/Flutter/.last_build_id
+**/macos/Flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/android/.gradle/
+
+# ---- 生成的代码（build_runner；不入库，见 AGENTS.md §5）----
+*.g.dart
+*.freezed.dart
+
+# ---- fvm ----
+.fvm/
+
+# ---- 临时文件（见 AGENTS.md §3 / README 目录约定）----
+.tmp/

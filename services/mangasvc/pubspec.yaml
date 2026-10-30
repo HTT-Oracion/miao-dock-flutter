@@ -1,0 +1,9 @@
+name: mangasvc
+description: "漫画服务：独立 Dart 进程，本地 HTTP（端口段 5180–5190）"
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.4
+
+resolution: workspace
