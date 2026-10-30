@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:protocol/protocol.dart';
 
@@ -109,7 +110,7 @@ class _ErrorBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, size: 15, color: Color(0xFFD98C84)),
+          const Icon(LucideIcons.circleAlert, size: 15, color: Color(0xFFD98C84)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
