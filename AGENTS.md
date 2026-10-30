@@ -53,6 +53,7 @@
 - 设计令牌位于 `lib/core/theme/`（落成 `ThemeExtension` + `ThemeData`）；修改令牌前检查相关断言。
 - 通用 UI 优先复用 `lib/shared/widgets/`；仅服务单屏的组件留在该屏内。
 - **组件库约束**：首选 Material 3（内置基座，经 `ThemeExtension` / 主题定制融入设计令牌）；内置无法满足的组件，次选以 `shadcn_ui` 为底自行封装进 `lib/shared/widgets/`，库类型不得泄漏到业务层。不引入其他整体组件库。
+- **图标约束**：所有图标统一使用 **lucide**（`lucide_icons_flutter`）或与其一致的线性风格；不混用其他图标体系（Material Icons、CupertinoIcons 等仅作兜底占位，不允许进入正式 UI）。
 - 新增窗口入口（如未来托盘设置窗）时，在本文 §2 与 README 同步登记入口文件。
 
 ### 服务（services/，Dart）
