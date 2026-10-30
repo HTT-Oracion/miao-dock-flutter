@@ -5,6 +5,7 @@ import 'package:protocol/protocol.dart';
 import '../../../shared/widgets/app_pager.dart';
 import '../controller/queue_controller.dart';
 import 'queue_empty.dart';
+import 'queue_mobile.dart';
 import 'queue_skeleton.dart';
 import 'queue_sum_bar.dart';
 import 'queue_table.dart';
@@ -17,33 +18,48 @@ class QueueScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final queue = ref.watch(queueProvider);
-    final Widget body;
-    if (queue.isLoading && queue.value == null) {
-      body = const QueueSkeleton();
-    } else if (queue.hasError) {
-      body = _ErrorBody(message: '${queue.error}', lastGood: ref.read(queueProvider.notifier).lastGood);
-    } else {
-      final tasks = queue.value ?? const <MangaTask>[];
-      body = tasks.isEmpty ? const QueueEmpty() : _QueueContent(tasks: tasks);
-    }
-    return Padding(padding: const EdgeInsets.fromLTRB(22, 18, 22, 0), child: body);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mobile = constraints.maxWidth < 720;
+        final Widget body;
+        if (queue.isLoading && queue.value == null) {
+          body = const QueueSkeleton();
+        } else if (queue.hasError) {
+          body = _ErrorBody(
+            message: '${queue.error}',
+            lastGood: ref.read(queueProvider.notifier).lastGood,
+            mobile: mobile,
+          );
+        } else {
+          final tasks = queue.value ?? const <MangaTask>[];
+          body = tasks.isEmpty
+              ? const QueueEmpty()
+              : (mobile ? QueueCardList(tasks: tasks) : _QueueContent(tasks: tasks));
+        }
+        return Padding(padding: const EdgeInsets.fromLTRB(22, 18, 22, 0), child: body);
+      },
+    );
   }
 }
 
 /// 错误态（H Note 07）：错误横幅 + 上次成功的数据仍在。
 class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.lastGood});
+  const _ErrorBody({required this.message, required this.lastGood, required this.mobile});
 
   final String message;
   final List<MangaTask> lastGood;
+  final bool mobile;
 
   @override
   Widget build(BuildContext context) {
+    final content = lastGood.isEmpty
+        ? const QueueEmpty()
+        : (mobile ? QueueCardList(tasks: lastGood) : _QueueContent(tasks: lastGood));
     return Column(
       children: [
         _ErrorBanner(message: message),
         const SizedBox(height: 10),
-        lastGood.isEmpty ? const Expanded(child: QueueEmpty()) : Expanded(child: _QueueContent(tasks: lastGood)),
+        Expanded(child: content),
       ],
     );
   }
