@@ -11,7 +11,7 @@
 
 ### 1. 漫画翻译
 
-- **服务**：桌面端实现 `mangasvc` + engine（manga-image-translator）+ LLM（本地 Sakura-GalTransl-7B-v3.7 或 LLM API），支持**单独部署、启动漫画图片翻译流水线**；移动端采用量化版引擎、模型，或通过局域网访问桌面端服务。
+- **服务**：桌面端实现 `mangasvc` + engine（manga-image-translator）+ LLM（本地 Sakura-GalTransl-7B-v3.7 或 LLM API），支持**单独部署、启动漫画图片翻译流水线**；移动端**不装配引擎**，通过局域网访问桌面端服务。
 - **功能**：队列、投放、书架。
 
 ### 2. 音乐
