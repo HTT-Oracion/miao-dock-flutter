@@ -14,11 +14,15 @@ workspace:
   - services/animesvc
 
 dependencies:
+  desktop_drop: ^0.8.4
+  file_selector: ^1.1.0
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.0.0
   go_router: ^16.0.0
   lucide_icons_flutter: ^4.0.1
+  protocol:
+    path: packages/protocol
   window_manager: ^0.5.2
 
 dev_dependencies:
