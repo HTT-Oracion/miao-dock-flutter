@@ -77,6 +77,14 @@ class _SelectionBar extends ConsumerWidget {
       for (final t in tasks)
         if (t.deletable) t.id,
     };
+    final pager = ref.watch(pagerProvider);
+    final pageDeletableIds = {
+      for (final t in tasks.skip((pager.page - 1) * pager.pageSize).take(pager.pageSize))
+        if (t.deletable) t.id,
+    };
+    final allPageSelected = pageDeletableIds.isNotEmpty && pageDeletableIds.every(enabled.ids.contains);
+    // H Note 10：勾满本页可删任务后出现「选择全部 N 条」，一键跨页选中全部可删任务。
+    final showSelectAll = allPageSelected && deletableIds.length > pageDeletableIds.length;
     return Container(
       height: 36,
       decoration: BoxDecoration(color: AppTokens.navActive, borderRadius: BorderRadius.circular(8)),
@@ -89,6 +97,16 @@ class _SelectionBar extends ConsumerWidget {
           ),
           const SizedBox(width: 16),
           AppGhostButton(label: '全选本页', onTap: () => ref.read(selectionProvider.notifier).selectAllPage(deletableIds)),
+          if (showSelectAll) ...[
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: () => ref.read(selectionProvider.notifier).selectAllPage(deletableIds),
+              child: Text(
+                '选择全部 ${deletableIds.length} 条',
+                style: const TextStyle(fontSize: 12, color: AppTokens.accent),
+              ),
+            ),
+          ],
           const SizedBox(width: 10),
           AppGhostButton(
             label: '删除选中（${enabled.ids.length}）',

@@ -90,6 +90,7 @@ class _DesktopShell extends ConsumerWidget {
               AppTitleBar(
                 breadcrumb: _Crumbs(crumbs: module.crumbs),
                 actions: [
+                  if (module.index == 0) const _EnginePills(),
                   IconButton(
                     icon: const Icon(LucideIcons.settings, size: 15),
                     color: AppTokens.textSecondary,
@@ -106,6 +107,55 @@ class _DesktopShell extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 漫画模块顶栏徽标（设计稿 H Top 的三枚 Pill，逐字文案）。
+class _EnginePills extends StatelessWidget {
+  const _EnginePills();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _Pill(label: '本地引擎'),
+        SizedBox(width: 10),
+        _Pill(label: '每批 20 张 · 自动排队'),
+        SizedBox(width: 10),
+        _Pill(label: '服务运行中', dot: true),
+      ],
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, this.dot = false});
+
+  final String label;
+  final bool dot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 21,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(11)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dot) ...[
+            Container(
+              width: 5,
+              height: 5,
+              decoration: const BoxDecoration(color: AppTokens.success, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+          ],
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+        ],
+      ),
     );
   }
 }
