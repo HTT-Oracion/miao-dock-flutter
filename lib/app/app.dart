@@ -10,6 +10,11 @@ class MiaoDockApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp.router(title: '喵坞 MiaoDock', theme: buildLightTheme(), routerConfig: ref.watch(routerProvider));
+    return MaterialApp.router(
+      title: '喵坞 MiaoDock',
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(),
+      routerConfig: ref.watch(routerProvider),
+    );
   }
 }

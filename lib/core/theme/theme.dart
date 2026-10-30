@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
 
-/// 设计令牌装配点（AGENTS.md §3）：令牌经 ThemeExtension 扩展后在此并入 ThemeData。
-/// 当前为占位主题，令牌体系随首个屏落地定稿。
-ThemeData buildLightTheme() {
-  return ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4A6CF7)));
+import 'tokens.dart';
+
+/// 应用主题（深色为默认，令牌取自设计稿 G 帧；浅色主题随 L 帧落地补充）。
+ThemeData buildAppTheme() {
+  final scheme = ColorScheme.fromSeed(
+    seedColor: AppTokens.accent,
+    brightness: Brightness.dark,
+    surface: AppTokens.pageBg,
+  );
+  return ThemeData(
+    useMaterial3: true,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: AppTokens.pageBg,
+    dividerColor: AppTokens.divider,
+    textTheme: ThemeData.dark(useMaterial3: true).textTheme
+        .apply(bodyColor: AppTokens.textPrimary, displayColor: AppTokens.textPrimary),
+  );
 }
