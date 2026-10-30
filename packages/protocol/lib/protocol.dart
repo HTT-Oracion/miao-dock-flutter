@@ -3,6 +3,7 @@
 /// `lib/` 与 `services/*` 都只从这里 import，不得各自另写一套。
 library;
 
+export 'src/dto/lib_book.dart';
 export 'src/dto/manga_task.dart';
 export 'src/mangasvc_client.dart';
 export 'src/fake_mangasvc.dart';

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'dto/lib_book.dart';
 import 'dto/manga_task.dart';
 import 'mangasvc_client.dart';
 
@@ -87,6 +88,31 @@ class FakeMangasvcClient implements MangasvcClient {
   Future<List<MangaTask>> listTasks() async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     return List.of(_tasks);
+  }
+
+  @override
+  Future<List<LibBook>> listLibrary() async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    final books = <LibBook>[];
+    final rand = Random(7);
+    for (final t in _tasks.where((t) => t.status == MangaTaskStatus.done)) {
+      final chapters = <LibChapter>[];
+      final count = 2 + rand.nextInt(4);
+      for (var c = 1; c <= count; c++) {
+        final pages = 12 + rand.nextInt(24);
+        chapters.add(LibChapter(no: c, pageCount: pages, donePages: rand.nextBool() ? pages : pages - rand.nextInt(6)));
+      }
+      books.add(
+        LibBook(
+          key: t.id,
+          name: t.name,
+          author: '佚名',
+          chapters: chapters,
+          totalBytes: chapters.fold(0, (s, c) => s + c.pageCount) * 1024 * 380,
+        ),
+      );
+    }
+    return books;
   }
 
   @override

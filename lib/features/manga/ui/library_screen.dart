@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/empty_state.dart';
+import '../../../core/theme/tokens.dart';
+import 'library_detail.dart';
+import 'library_shelf.dart';
 
-/// 漫画库屏（书架）：作品按「本 → 话 → 页」整理。
-class LibraryScreen extends StatelessWidget {
+/// 漫画库屏（设计稿 G 漫画库）：书架左栏 260 + 详情主区。
+class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: EmptyState(
-        icon: LucideIcons.bookOpen,
-        title: '书架还是空的',
-        description: '投放几张漫画图片，翻译完成后作品会自动按「本 → 话 → 页」整理在这里。',
-        actionLabel: '去投放',
-        onAction: () => context.go('/manga/drop'),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const LibraryShelf(),
+        const VerticalDivider(width: 1, color: AppTokens.divider),
+        const Expanded(child: LibraryDetail()),
+      ],
     );
   }
 }

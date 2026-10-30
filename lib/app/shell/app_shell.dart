@@ -99,7 +99,9 @@ class _DesktopShell extends ConsumerWidget {
                 ],
               ),
               const Divider(height: 1, color: AppTokens.divider),
-              Expanded(child: navigationShell),
+              Expanded(
+                child: Material(color: AppTokens.pageBg, child: navigationShell),
+              ),
             ],
           ),
         ),
