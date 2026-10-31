@@ -1569,5 +1569,13 @@
   "platformYoudao": "有道智云",
   "@platformYoudao": {
     "description": "在线翻译平台名"
+  },
+  "svcStartNeedInstall": "先下载或导入引擎，才能启动",
+  "@svcStartNeedInstall": {
+    "description": "启动按钮禁用原因"
+  },
+  "svcStartNeedVerify": "请先在下方点「校验」，通过后才能启动",
+  "@svcStartNeedVerify": {
+    "description": "启动按钮禁用原因"
   }
 }

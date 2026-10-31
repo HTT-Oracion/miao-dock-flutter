@@ -277,15 +277,11 @@ class _TranslateSection extends ConsumerWidget {
             const _SourceRow(),
             const _RemoteSection(),
           ] else ...[
-            // 三层状态条（项目口径 D-012，设计稿没有）：服务常驻 / 引擎共用开关 / 来源。
-            const _LayerStrip(),
-            const SizedBox(height: 12),
-
-            // 设计稿没有、项目已有的能力：引擎目录 + 部件表 + 校验 + 导入。
-            const EnginePartsSection(),
-            const SizedBox(height: 12),
-
+            // 「模型」放在首部：引擎目录 / 启动服务 / 校验 / 导入 —— 能不能翻译的前提。
+            SettingSubTitle(l10n.settingsSectionModels),
             const _ServiceCard(),
+            const SizedBox(height: 6),
+            const EnginePartsSection(),
 
             SettingSubTitle(l10n.settingsSectionSource),
             const _SourceRow(),
@@ -298,9 +294,6 @@ class _TranslateSection extends ConsumerWidget {
             SettingSubTitle(l10n.settingsSectionInference),
             const _InferenceRows(),
 
-            SettingSubTitle(l10n.settingsSectionModels),
-            const _ModelRows(),
-
             const _DiagOutput(),
           ],
         ],
@@ -309,78 +302,6 @@ class _TranslateSection extends ConsumerWidget {
   }
 }
 
-/// 三层状态条（D-012）。设计稿的设置页没有它，但「服务常驻」是项目里最容易被误解的事实。
-class _LayerStrip extends ConsumerWidget {
-  const _LayerStrip();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    final source = ref.watch(translateSourceProvider);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: palette.card,
-        border: Border.all(color: palette.line),
-        borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
-      ),
-      child: Column(
-        children: [
-          _LayerRow(dot: palette.good, title: l10n.nrLayerService, sub: l10n.nrLayerServiceSub),
-          const SizedBox(height: 6),
-          _LayerRow(dot: palette.acc, title: l10n.nrLayerEngine, sub: l10n.nrLayerEngineSub),
-          const SizedBox(height: 6),
-          _LayerRow(
-            dot: palette.warn,
-            title: l10n.nrLayerSource,
-            sub: switch (source) {
-              TranslateSource.local => l10n.sourceLocal,
-              TranslateSource.llm => l10n.sourceLlm,
-              TranslateSource.remote => l10n.sourceRemote,
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LayerRow extends StatelessWidget {
-  const _LayerRow({required this.dot, required this.title, required this.sub});
-
-  final Color dot;
-  final String title;
-  final String sub;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: palette.ink),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(sub, style: TextStyle(fontSize: 9, color: palette.mut)),
-        ),
-      ],
-    );
-  }
-}
-
-/// 服务卡片（design.html `.svccard`：1.5px 主色边框）。
-///
-/// 内容按项目口径：**不写「服务运行中」**（D-012），显示引擎就绪度与启停。
 class _ServiceCard extends ConsumerWidget {
   const _ServiceCard();
 
@@ -391,6 +312,18 @@ class _ServiceCard extends ConsumerWidget {
     final view = ref.watch(notReadyViewProvider);
     final install = ref.watch(engineInstallProvider);
     final running = view.engine.isReady;
+
+    // 启动前置条件（D-062）：**装配齐全 且 校验通过**才允许点启动。
+    // 没装好就点启动，只会得到一个语焉不详的失败；不如直接禁用并说明原因。
+    final installed = ref.watch(enginePresenceProvider).value == EnginePresence.complete;
+    final verified = ref.watch(engineInspectionProvider).value?.ok ?? false;
+    final starting = view.engine == EngineRuntimeState.starting;
+    final canStart = installed && verified && !starting;
+    final blockedReason = !installed
+        ? l10n.svcStartNeedInstall
+        : !verified
+        ? l10n.svcStartNeedVerify
+        : null;
 
     final subtitle = switch ((install.running, view.state)) {
       (true, _) => l10n.nrTitleDownloading,
@@ -431,19 +364,33 @@ class _ServiceCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${l10n.nrLayerEngine} · ${_sourceLabel(l10n, view.source)}',
-                  style: TextStyle(fontSize: 10, color: palette.ink2),
+                  blockedReason ?? '${l10n.nrLayerEngine} · ${_sourceLabel(l10n, view.source)}',
+                  style: TextStyle(fontSize: 10, color: blockedReason == null ? palette.ink2 : palette.warn),
                 ),
               ],
             ),
           ),
           FilledButton(
-            onPressed: () {
-              final n = ref.read(engineStateProvider.notifier);
-              running ? n.stop() : n.start();
-            },
+            // 运行中可停止；未启动时必须满足前置条件且不在启动中。
+            onPressed: running
+                ? () => ref.read(engineStateProvider.notifier).stop()
+                : (canStart ? () => ref.read(engineStateProvider.notifier).start() : null),
             style: _primaryStyle(palette),
-            child: Text(running ? l10n.svcStop : l10n.svcStart, style: const TextStyle(fontSize: 9.5)),
+            child: starting
+                // 启动中：按钮内显示 loading，且不可再次点击。
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 11,
+                        height: 11,
+                        child: CircularProgressIndicator(strokeWidth: 1.6, color: palette.onAcc),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(l10n.svcStart, style: const TextStyle(fontSize: 9.5)),
+                    ],
+                  )
+                : Text(running ? l10n.svcStop : l10n.svcStart, style: const TextStyle(fontSize: 9.5)),
           ),
         ],
       ),
@@ -923,68 +870,6 @@ class _InferenceRows extends ConsumerWidget {
   }
 }
 
-class _ModelRows extends ConsumerWidget {
-  const _ModelRows();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    final dir = ref.watch(engineRootProvider);
-
-    return Column(
-      children: [
-        SettingRow(
-          label: l10n.settingModelsDirLabel,
-          why: l10n.settingModelDirWhy,
-          control: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: palette.card,
-              border: Border.all(color: palette.line2),
-              borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
-            ),
-            child: Text(
-              engineModelsDir(dir),
-              style: TextStyle(fontSize: 9, color: palette.ink2, fontFamily: 'monospace'),
-            ),
-          ),
-        ),
-        SettingRow(
-          label: l10n.settingVerifyLabel,
-          why: l10n.settingSectionModelHead,
-          control: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              OutlinedButton(
-                onPressed: () => ref.read(engineInspectionProvider.notifier).run(),
-                style: _ghostStyle(palette),
-                child: Text(l10n.settingModelVerify, style: const TextStyle(fontSize: 9.5)),
-              ),
-              const SizedBox(width: 6),
-              OutlinedButton(
-                onPressed: () => ref.read(enginePresenceProvider.notifier).refresh(),
-                style: _ghostStyle(palette),
-                child: Text(l10n.engineRecheck, style: const TextStyle(fontSize: 9.5)),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-ButtonStyle _ghostStyle(AppPalette palette) => OutlinedButton.styleFrom(
-  foregroundColor: palette.ink2,
-  minimumSize: const Size(0, 28),
-  padding: const EdgeInsets.symmetric(horizontal: 10),
-  side: BorderSide(color: palette.line2),
-  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-  textStyle: const TextStyle(fontSize: 9.5),
-);
-
-/// 诊断输出（design.html `.diag`）—— 复用日志组件，hover 可复制/导出。
 class _DiagOutput extends ConsumerWidget {
   const _DiagOutput();
 

@@ -42,10 +42,10 @@ void main() {
     await tester.tap(find.text('翻译服务'));
     await tester.pumpAndSettle();
 
-    // 破坏点：三层缺一层 → 用户看不到「服务常驻」的关键事实，本条失败。
-    expect(find.text('漫画服务'), findsOneWidget);
-    // L1+L2 在卡片里是拼接文案「引擎 + 大模型 · 本地翻译」
-    expect(find.textContaining('引擎 + 大模型'), findsWidgets);
+    // 三层状态条已按要求移除（用户要求删掉 _LayerRow 那段）；
+    // 现在「模型」区在首部，含启动按钮与引擎目录。
+    expect(find.text('模型'), findsWidgets);
+    expect(find.text('启动'), findsWidgets);
 
     // 来源改用 `.select` 下拉（设计稿 §设置）：收起只显示当前值，展开是三选一。
     // 按类型点：来源会被持久化，上次跑的用例可能已把它改成别的值，
