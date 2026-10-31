@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/app_pager.dart';
 import '../controller/queue_controller.dart';
 import 'queue_empty.dart';
@@ -24,14 +23,18 @@ class QueueScreen extends ConsumerWidget {
       builder: (context, constraints) {
         final mobile = constraints.maxWidth < 720;
         final Widget body;
-        if (queue.isLoading && queue.value == null) {
-          body = const QueueSkeleton();
-        } else if (queue.hasError) {
+        // 🔴 先判错误：Riverpod 的 `hasError` 与 `isLoading` 可能**同时为真**
+        // （重试期间的状态是 AsyncLoading.copyWithPrevious(error)）。先判 loading
+        // 会让失败态被骨架屏永久盖住，用户看不到错误与重试按钮。
+        if (queue.hasError) {
           body = _ErrorBody(
-            message: '${queue.error}',
+            error: queue.error,
             lastGood: ref.read(queueProvider.notifier).lastGood,
             mobile: mobile,
+            onRetry: () => ref.read(queueProvider.notifier).refresh(),
           );
+        } else if (queue.isLoading && queue.value == null) {
+          body = const QueueSkeleton();
         } else {
           final tasks = queue.value ?? const <MangaTask>[];
           body = tasks.isEmpty
@@ -44,23 +47,25 @@ class QueueScreen extends ConsumerWidget {
   }
 }
 
-/// 错误态（H Note 07）：错误横幅 + 上次成功的数据仍在。
+/// 错误态（design.html §07 失败行）：
+/// **有旧数据 → 横幅 + 旧数据并存；无旧数据 → 整块错误态**（与空态分开绘制）。
 class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.message, required this.lastGood, required this.mobile});
+  const _ErrorBody({required this.error, required this.lastGood, required this.mobile, required this.onRetry});
 
-  final String message;
+  final Object? error;
   final List<MangaTask> lastGood;
   final bool mobile;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final content = lastGood.isEmpty
-        ? const QueueEmpty()
-        : (mobile ? QueueCardList(tasks: lastGood) : _QueueContent(tasks: lastGood));
+    // 从没成功过：没有旧数据可展示，给整块错误态（不能拿空态冒充失败态）。
+    if (lastGood.isEmpty) return ErrorState(error: error, onRetry: onRetry);
+
+    final content = mobile ? QueueCardList(tasks: lastGood) : _QueueContent(tasks: lastGood);
     return Column(
       children: [
-        _ErrorBanner(message: message),
-        const SizedBox(height: 10),
+        ErrorBanner(error: error, onRetry: onRetry, showStaleHint: true),
         Expanded(child: content),
       ],
     );
@@ -91,37 +96,6 @@ class _QueueContent extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
       ],
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFD98C84).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(LucideIcons.circleAlert, size: 15, color: Color(0xFFD98C84)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              AppLocalizations.of(context).queueLoadFailed(message),
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFFD98C84)),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

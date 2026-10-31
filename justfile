@@ -15,6 +15,13 @@ test:
 test-svc:
     fvm dart test services/mangasvc
 
+# 端到端：起 mock 服务后跑 e2e（否则 e2e 会显式跳过）
+test-e2e:
+    fvm dart run services/mangasvc/bin/mangasvc.dart --engine mock --root /tmp/miaodock-e2e &
+    sleep 8
+    fvm flutter test
+    kill %1
+
 analyze:
     fvm flutter analyze
 

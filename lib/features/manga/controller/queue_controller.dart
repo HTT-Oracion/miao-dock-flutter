@@ -16,24 +16,28 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
   /// 最近一次成功拉取的任务（错误态时 UI 仍展示它，见设计稿 H Note 07）。
   List<MangaTask> get lastGood => _lastGood;
 
+  /// 首次加载：**返回 Future 让 Riverpod 自己判状态**。
+  ///
+  /// 🔴 这里不能「catch 后吞掉再 return 空列表」：那样 `build()` 正常完成，
+  /// provider 状态是 `AsyncData([])`，UI 会把它当**空态**画 —— 失败被伪装成
+  /// 「没有任务」，正是 design.html §07 禁止的。必须让异常抛出去成为 `AsyncError`。
   @override
-  Future<List<MangaTask>> build() => _fetch();
-
-  Future<void> refresh() async {
-    state = const AsyncLoading<List<MangaTask>>();
-    await _fetch();
+  Future<List<MangaTask>> build() async {
+    final response = await ref.read(mangaSvcClientProvider).listTasks();
+    final tasks = response.tasks.map(toMangaTask).toList();
+    _lastGood = tasks;
+    return tasks;
   }
 
-  Future<List<MangaTask>> _fetch() async {
-    try {
+  /// 重试 / 刷新。
+  Future<void> refresh() async {
+    state = const AsyncLoading<List<MangaTask>>();
+    state = await AsyncValue.guard(() async {
       final response = await ref.read(mangaSvcClientProvider).listTasks();
       final tasks = response.tasks.map(toMangaTask).toList();
       _lastGood = tasks;
-      state = AsyncData(tasks);
-    } catch (e, st) {
-      state = AsyncError(e, st);
-    }
-    return _lastGood;
+      return tasks;
+    });
   }
 
   /// 删除任务记录；ids 为空集表示全量删除可删任务（设计稿 H Note 10）。

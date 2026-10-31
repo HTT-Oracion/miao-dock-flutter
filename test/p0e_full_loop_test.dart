@@ -15,7 +15,24 @@ import 'package:miao_dock_flutter/features/manga/data/http_manga_svc_client.dart
 /// ```
 /// dart run services/mangasvc/bin/mangasvc.dart --engine mock --root /tmp/e1-lib
 /// ```
+/// 服务在线与否 —— e2e 前置条件。
+///
+/// 不在线时**显式 skip**（测试框架会报告 skipped），不静默通过（AGENTS §4.3）。
+/// 起服务：`dart run services/mangasvc/bin/mangasvc.dart --engine mock --root /tmp/e2e-lib`
+bool _serviceUp = false;
+
+/// 未起服务时跳过（返回值给 `test(skip:)`）。
+String? get _skipIfNoService => _serviceUp ? null : '未探测到 mangasvc 服务';
+
 void main() {
+  setUpAll(() async {
+    _serviceUp = (await const PortProbe().discover()) != null;
+    if (!_serviceUp) {
+      // ignore: avoid_print
+      print('⚠ 跳过 e2e：未探测到 mangasvc。起服务后重跑（见文件头说明）。');
+    }
+  });
+
   late HttpMangaSvcClient client;
   late Directory src;
 
@@ -29,7 +46,7 @@ void main() {
 
   tearDownAll(() => src.deleteSync(recursive: true));
 
-  test('E1 全链路：投放 → 落盘 → 读回', () async {
+  test('E1 全链路：投放 → 落盘 → 读回', skip: _skipIfNoService, () async {
     final book = 'E1-${DateTime.now().millisecondsSinceEpoch}';
     final paths = List.generate(3, (i) => '${src.path}/0${i + 1}.png');
 
@@ -58,7 +75,7 @@ void main() {
     expect(chapter.missingSeqs, isEmpty);
   });
 
-  test('E1 续做计划：全译完后无待补页', () async {
+  test('E1 续做计划：全译完后无待补页', skip: _skipIfNoService, () async {
     final lib = await client.listLibrary();
     final book = lib.books!.firstWhere((b) => b.bookName.startsWith('E1-'));
     final plan = await client.getChapterResumePlan(book.bookName, 1);

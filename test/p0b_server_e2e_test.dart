@@ -16,8 +16,25 @@ import 'package:miao_dock_flutter/features/manga/domain/manga_task.dart';
 /// dart run services/mangasvc/bin/mangasvc.dart --engine mock --root /tmp/e2e-lib
 /// ```
 /// 未起服务时本文件会失败（**不静默跳过**，符合 AGENTS §4.3）。
+/// 服务在线与否 —— e2e 前置条件。
+///
+/// 不在线时**显式 skip**（测试框架会报告 skipped），不静默通过（AGENTS §4.3）。
+/// 起服务：`dart run services/mangasvc/bin/mangasvc.dart --engine mock --root /tmp/e2e-lib`
+bool _serviceUp = false;
+
+/// 未起服务时跳过（返回值给 `test(skip:)`）。
+String? get _skipIfNoService => _serviceUp ? null : '未探测到 mangasvc 服务';
+
 void main() {
-  test('health 可达且服务名正确', () async {
+  setUpAll(() async {
+    _serviceUp = (await const PortProbe().discover()) != null;
+    if (!_serviceUp) {
+      // ignore: avoid_print
+      print('⚠ 跳过 e2e：未探测到 mangasvc。起服务后重跑（见文件头说明）。');
+    }
+  });
+
+  test('health 可达且服务名正确', skip: _skipIfNoService, () async {
     final baseUrl = await const PortProbe().discover();
     expect(baseUrl, isNotNull, reason: '未探测到 mangasvc，请先启动服务');
 
@@ -29,7 +46,7 @@ void main() {
     expect(h.rootDir, isNotEmpty);
   });
 
-  test('建单 → 串行执行 → 完成（真实落盘链路的入口）', () async {
+  test('建单 → 串行执行 → 完成（真实落盘链路的入口）', skip: _skipIfNoService, () async {
     final c = HttpMangaSvcClient(LocalServiceLocator(probe: const PortProbe()));
     final created = await c.createTask(comicName: '端到端测试', imagePaths: const ['/tmp/1.png', '/tmp/2.png']);
     expect(created.taskId, isNotEmpty);
@@ -52,7 +69,7 @@ void main() {
     expect(vm.deletable, isTrue);
   });
 
-  test('串行约束：同一时刻只有 1 个 running', () async {
+  test('串行约束：同一时刻只有 1 个 running', skip: _skipIfNoService, () async {
     final c = HttpMangaSvcClient(LocalServiceLocator(probe: const PortProbe()));
     // 连投 3 个
     for (var i = 0; i < 3; i++) {
@@ -64,7 +81,7 @@ void main() {
     expect(snap.queued.length, greaterThanOrEqualTo(1));
   });
 
-  test('漫画库扫描识别「本 → 话 → 页」与已译页码', () async {
+  test('漫画库扫描识别「本 → 话 → 页」与已译页码', skip: _skipIfNoService, () async {
     final c = HttpMangaSvcClient(LocalServiceLocator(probe: const PortProbe()));
     // 造一个真实目录
     final lib = await c.listLibrary();

@@ -24,3 +24,10 @@ jobs:
       - run: dart test services/mangasvc
       - run: dart analyze services/animesvc
       - run: flutter test
+      # e2e：先起真实 mangasvc，再跑（默认会 skip e2e，这里显式给服务）
+      - name: mangasvc e2e
+        run: |
+          dart run services/mangasvc/bin/mangasvc.dart --engine mock --root /tmp/ci-lib --port 5180 &
+          sleep 8
+          curl -sf http://127.0.0.1:5180/health > /dev/null
+          flutter test

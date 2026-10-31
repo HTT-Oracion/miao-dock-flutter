@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
 import '../domain/manga_status.dart';
@@ -22,7 +23,13 @@ class LibraryDetail extends ConsumerWidget {
       // 搜索态（设计稿 G Row 4）：右栏切换为分组命中结果。
       return LibrarySearchResults(query: query);
     }
-    final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
+    final state = ref.watch(libraryProvider);
+    final books = state.value ?? ref.read(libraryProvider.notifier).lastGood;
+
+    // 失败且从没成功过：给整块错误态，**不能用空态冒充**（design.html §07）。
+    if (books.isEmpty && state.hasError) {
+      return ErrorState(error: state.error, onRetry: () => ref.read(libraryProvider.notifier).refresh());
+    }
     if (books.isEmpty) {
       return Center(
         child: Text(

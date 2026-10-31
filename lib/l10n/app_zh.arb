@@ -630,5 +630,53 @@
   "queueDeleteHint": "删除只清记录，不动漫画库里的文件",
   "@queueDeleteHint": {
     "description": "队列：删除说明"
+  },
+  "errorServiceUnreachable": "连不上本地服务",
+  "@errorServiceUnreachable": {
+    "description": "错误：可执行文件找不到 / 端口探测全失败"
+  },
+  "errorServiceUnreachableHint": "翻译服务可能未启动。请检查「设置 → 翻译服务」，或重启应用。",
+  "@errorServiceUnreachableHint": {
+    "description": "错误：连不上的说明"
+  },
+  "errorUnauthorized": "配对令牌无效",
+  "@errorUnauthorized": {
+    "description": "错误：鉴权失败"
+  },
+  "errorUnauthorizedHint": "请在「设置 → 翻译服务」重新配对令牌。",
+  "@errorUnauthorizedHint": {
+    "description": "错误：鉴权失败的说明"
+  },
+  "errorTimeout": "服务响应超时",
+  "@errorTimeout": {
+    "description": "错误：超时"
+  },
+  "errorTimeoutHint": "服务可能繁忙或卡住，稍后重试；仍失败请重启服务。",
+  "@errorTimeoutHint": {
+    "description": "错误：超时的说明"
+  },
+  "errorGeneric": "加载失败",
+  "@errorGeneric": {
+    "description": "错误：兜底标题"
+  },
+  "errorGenericHint": "请重试；若持续失败请查看服务日志。",
+  "@errorGenericHint": {
+    "description": "错误：兜底说明"
+  },
+  "errorRetry": "重试",
+  "@errorRetry": {
+    "description": "错误态：重试按钮"
+  },
+  "errorShowDetail": "查看详情",
+  "@errorShowDetail": {
+    "description": "错误态：展开技术细节"
+  },
+  "errorHideDetail": "收起详情",
+  "@errorHideDetail": {
+    "description": "错误态：收起技术细节"
+  },
+  "errorStaleData": "以下为上次成功加载的数据",
+  "@errorStaleData": {
+    "description": "错误态：旧数据提示横幅"
   }
 }

@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
 import '../domain/lib_book.dart';
@@ -16,9 +17,10 @@ class LibraryShelf extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final books = shelfBooks(ref);
-    final allBooks = ref.watch(libraryProvider).value ?? const <LibBook>[];
+    final allBooks = books;
     final selected = ref.watch(selectedBookProvider);
     final query = ref.watch(shelfQueryProvider);
+    final hasError = shelfHasError(ref);
 
     return SizedBox(
       width: 260,
@@ -26,6 +28,16 @@ class LibraryShelf extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _ShelfHead(count: books.length),
+          // 失败但有旧数据：横幅 + 旧书架并存（设计稿 §07）。
+          if (hasError)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: ErrorBanner(
+                error: shelfError(ref),
+                onRetry: () => ref.read(libraryProvider.notifier).refresh(),
+                showStaleHint: true,
+              ),
+            ),
           _ShelfSearch(query: query),
           Expanded(
             child: _ShelfList(books: books, selected: selected),
