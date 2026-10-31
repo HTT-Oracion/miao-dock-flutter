@@ -153,8 +153,14 @@ abstract class MangaSvcClient {
   /// `POST /api/v1/engine/settings` —— 写引擎设置。
   Future<void> setEngineSettings(Map<String, dynamic> settings);
 
-  /// `POST /api/v1/engine/unload` —— 空闲卸载权重。
+  /// `POST /api/v1/engine/unload` —— 空闲卸载权重（不停进程）。
   Future<void> unloadEngine();
+
+  /// `POST /api/v1/engine/start` —— 启动引擎 + 大模型（共用一个开关，D-012）。
+  Future<EngineStatus> startEngine();
+
+  /// `POST /api/v1/engine/stop` —— 停止引擎 + 大模型。
+  Future<EngineStatus> stopEngine();
 
   /// `POST /api/v1/engine/models/verify` —— 校验模型完整性。
   Future<ModelStatus> verifyModels();

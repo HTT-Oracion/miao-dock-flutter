@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:protocol/protocol.dart';
 
 import '../../../core/storage/shell_prefs.dart';
+import 'queue_controller.dart';
 import '../../../core/window/window_controller.dart';
 import '../domain/not_ready_state.dart';
 
@@ -14,22 +15,41 @@ class EngineNotifier extends Notifier<EngineRuntimeState> {
   @override
   EngineRuntimeState build() => EngineRuntimeState.off;
 
-  /// 启动引擎 + 大模型。
+  /// 启动引擎 + 大模型（共用一个开关，D-012）。
   ///
-  /// 真实实现走 `POST /engine/status` 轮询；P0-C 接入前这里只把状态推到 starting，
-  /// **不假装成功**（调用方接的后端若无引擎，会在下一次轮询回到 failed）。
+  /// 走 `POST /api/v1/engine/start`，用返回的 `EngineStatus` 推导状态 ——
+  /// **不乐观置 running**：服务端未就绪时如实落 failed。
   Future<void> start() async {
     if (state == EngineRuntimeState.starting) return;
     state = EngineRuntimeState.starting;
     try {
-      // P0-C：这里应调用 MangaSvcClient 的引擎启动端点。
-      // 当前服务端未实现该端点 → 保持 starting 由轮询回落，不伪造 running。
+      final status = await ref.read(mangaSvcClientProvider).startEngine();
+      applyStatus(status);
     } catch (_) {
       state = EngineRuntimeState.failed;
     }
   }
 
-  void stop() => state = EngineRuntimeState.stopping;
+  /// 停止引擎 + 大模型。
+  Future<void> stop() async {
+    if (state == EngineRuntimeState.stopping) return;
+    state = EngineRuntimeState.stopping;
+    try {
+      final status = await ref.read(mangaSvcClientProvider).stopEngine();
+      applyStatus(status);
+    } catch (_) {
+      state = EngineRuntimeState.failed;
+    }
+  }
+
+  /// 从服务端拉一次引擎状态（供轮询调用）。
+  Future<void> refreshFromServer() async {
+    try {
+      applyStatus(await ref.read(mangaSvcClientProvider).getEngineStatus());
+    } catch (_) {
+      // 拉取失败**不改状态**：网络抖动不该把「运行中」误判成「已停止」。
+    }
+  }
 
   /// 由轮询结果更新（服务端 `EngineStatus` 的 engine.state + llm.state 合成）。
   void applyStatus(EngineStatus? status) {

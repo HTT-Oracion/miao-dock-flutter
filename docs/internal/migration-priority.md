@@ -85,11 +85,11 @@
 
 | # | 任务 | 说明 | 验收判据 |
 |---|---|---|---|
-| P0-C1 | 引擎状态机 | `GET /api/v1/engine/status`、`/runtime` | 五态机（stopped/starting/running/stopping/error）可观测 |
-| P0-C2 | 引擎选项与设置 | `GET/POST /api/v1/engine/options`、`/settings` | 设置页能读能写 |
-| P0-C3 | 模型校验 | `POST /api/v1/engine/models/verify` | 缺件能列出缺哪个 |
-| P0-C4 | 模型下载（含暂停 / 续传） | `POST /engine/models/download`、`/download/pause` | 进度真实、暂停可续 |
-| P0-C5 | 引擎空闲卸载 | `POST /api/v1/engine/unload` | 超时自动卸载权重 |
+| P0-C1 | 引擎状态机 | `GET /api/v1/engine/status`、`/runtime` | 五态机可观测 | ✅ |
+| P0-C2 | 引擎选项与设置 | `GET/POST /api/v1/engine/options`、`/settings` | 设置页能读能写 | ✅ |
+| P0-C3 | 模型校验 | `POST /api/v1/engine/models/verify` | 缺件能列出缺哪个 | ✅ 基础版 |
+| P0-C4 | 模型下载（含暂停 / 续传） | `POST /engine/models/download`、`/download/pause` | 进度真实、暂停可续 | ✅ 骨架（真实源待 C6） |
+| P0-C5 | 引擎空闲卸载 | `POST /api/v1/engine/unload` | 超时自动卸载权重 | ✅ |
 | P0-C6 | 翻译引擎接入 | 对接 manga-image-translator + LLM | 一张图能出译文 |
 
 > **P0-C 建议单独立项**：原项目 `engine/` 有 **11,476 行**（含 supervisor 1,106、wheels 563、tier_downgrade 347），

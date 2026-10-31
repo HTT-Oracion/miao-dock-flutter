@@ -26,7 +26,7 @@ class RouteDef {
   List<String> get segments => pattern.split('/').where((s) => s.isNotEmpty).toList();
 }
 
-/// 全量路由表（46 条 —— 与客户端契约 `MangaSvcClient` 的方法数一致）。
+/// 全量路由表（48 条 —— 客户端契约 45 个方法 + `/health` 双路径 + start/stop）。
 const List<RouteDef> routes = [
   // ── health ──────────────────────────────────────────────────────────────
   RouteDef(method: 'GET', pattern: '/health', group: 'health'),
@@ -85,6 +85,9 @@ const List<RouteDef> routes = [
   RouteDef(method: 'POST', pattern: '/api/v1/engine/models/verify', group: 'engine'),
   RouteDef(method: 'POST', pattern: '/api/v1/engine/models/download', group: 'engine'),
   RouteDef(method: 'POST', pattern: '/api/v1/engine/models/download/pause', group: 'engine'),
+  // D-012：引擎与 LLM 共用开关，故有 start / stop 两个动作端点
+  RouteDef(method: 'POST', pattern: '/api/v1/engine/start', group: 'engine'),
+  RouteDef(method: 'POST', pattern: '/api/v1/engine/stop', group: 'engine'),
 ];
 
 /// 路由匹配结果。

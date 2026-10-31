@@ -317,6 +317,12 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<void> unloadEngine() => _post('/engine/unload');
 
   @override
+  Future<EngineStatus> startEngine() async => _engineStatusOf(await _post('/engine/start'));
+
+  @override
+  Future<EngineStatus> stopEngine() async => _engineStatusOf(await _post('/engine/stop'));
+
+  @override
   Future<ModelStatus> verifyModels() async => _modelsOf(await _post('/engine/models/verify'));
 
   @override

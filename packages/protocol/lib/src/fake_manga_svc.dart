@@ -389,6 +389,12 @@ class FakeMangaSvcClient implements MangaSvcClient {
   Future<void> unloadEngine() => _unimplemented('POST /engine/unload');
 
   @override
+  Future<EngineStatus> startEngine() => _unimplemented('POST /engine/start');
+
+  @override
+  Future<EngineStatus> stopEngine() => _unimplemented('POST /engine/stop');
+
+  @override
   Future<ModelStatus> verifyModels() => _unimplemented('POST /engine/models/verify');
 
   @override

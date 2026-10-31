@@ -146,14 +146,18 @@ Future<SecurityVerdict> guardRequest(HttpRequest req, SecurityPolicy policy) asy
 
 /// 读取或生成服务令牌。
 ///
-/// 优先级：`MIAO_TOKEN` 环境变量 > `<root>/state/token` 文件 > 新生成。
-/// 生成时写 64 位 hex（与原项目同长度）。
-String? resolveToken({required String rootDir, bool enabled = true}) {
+/// 优先级：`MIAO_TOKEN` 环境变量 > `<stateDir>/token` 文件 > 新生成（64 hex）。
+///
+/// 🔴 **令牌必须落在 state 目录，不能落在库根**：
+/// 库根是用户成果目录（`~/Pictures/MiaoDock Mangas`），把服务状态写进去会
+/// 污染用户可见的相册、被备份工具带走、且卸载时不知道哪些该删。
+/// 调用方应传 `core/storage/paths.dart` 的 `mangaStateDir()`。
+String? resolveToken({required String stateDir, bool enabled = true}) {
   if (!enabled) return null;
   final fromEnv = Platform.environment['MIAO_TOKEN'];
   if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
 
-  final file = File('$rootDir/state/token');
+  final file = File('$stateDir${Platform.pathSeparator}token');
   try {
     if (file.existsSync()) {
       final t = file.readAsStringSync().trim();

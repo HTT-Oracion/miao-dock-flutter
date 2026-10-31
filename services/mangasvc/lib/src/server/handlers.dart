@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../engine/engine_facade.dart';
 import '../queue/task_queue.dart';
 import '../store/plans.dart';
 import '../store/library_store.dart';
@@ -13,16 +14,60 @@ import 'routes.dart';
 class Handlers {
   /// 用 factory 保证 `store` 与 `queue` 共用**同一个** rootDir，
   /// 而不是各建一个 LibraryStore 实例（那会在惰性默认值上产生两份真相）。
-  factory Handlers({String? rootDir, String engineMode = 'mock'}) {
+  factory Handlers({String? rootDir, String? runtimeRoot, String? modelsDir, String engineMode = 'mock'}) {
     final store = LibraryStore(rootDir: rootDir);
-    return Handlers._(store, TaskQueue(engineMode: engineMode, rootDir: store.rootDir), engineMode);
+    final rt = runtimeRoot ?? _defaultRuntimeRoot();
+    final md = modelsDir ?? _defaultModelsDir();
+    return Handlers._(
+      store,
+      TaskQueue(engineMode: engineMode, rootDir: store.rootDir),
+      EngineFacade(runtimeRoot: rt, modelsDir: md),
+      engineMode,
+    );
   }
 
-  Handlers._(this.store, this.queue, this.engineMode);
+  Handlers._(this.store, this.queue, this.engine, this.engineMode);
 
   final LibraryStore store;
   final TaskQueue queue;
+  final EngineFacade engine;
   final String engineMode;
+
+  /// 引擎运行时默认根（与 `lib/core/storage/paths.dart` 同口径）。
+  static String _defaultRuntimeRoot() {
+    final env = Platform.environment;
+    final override = env['MIAO_MANGA_RUNTIME_ROOT'];
+    if (override != null && override.isNotEmpty) return override;
+    return '${_dataRoot()}${Platform.pathSeparator}manga${Platform.pathSeparator}runtimes';
+  }
+
+  /// 模型目录默认值（D-016：挂在 state 下，与运行时解耦）。
+  static String _defaultModelsDir() {
+    final env = Platform.environment;
+    final override = env['MIAO_MODELS_STORE_DIR'];
+    if (override != null && override.isNotEmpty) return override;
+    final stateOverride = env['MIAO_MANGA_STATE_DIR'];
+    final state = (stateOverride != null && stateOverride.isNotEmpty)
+        ? stateOverride
+        : '${_dataRoot()}${Platform.pathSeparator}manga${Platform.pathSeparator}state';
+    return '$state${Platform.pathSeparator}models-state';
+  }
+
+  static String _dataRoot() {
+    final env = Platform.environment;
+    final override = env['MIAO_ROOT'];
+    if (override != null && override.isNotEmpty) return override;
+    final home = env['HOME'] ?? env['USERPROFILE'] ?? '.';
+    final String appData;
+    if (Platform.isMacOS) {
+      appData = '$home/Library/Application Support';
+    } else if (Platform.isWindows) {
+      appData = env['LOCALAPPDATA'] ?? '$home\\AppData\\Local';
+    } else {
+      appData = '$home/.local/share';
+    }
+    return '$appData${Platform.pathSeparator}MiaoDock';
+  }
 
   /// 服务启动时刻（`/health` 用）。
   final DateTime startedAt = DateTime.now().toUtc();
@@ -31,6 +76,7 @@ class Handlers {
 
   Future<void> dispose() async {
     await queue.dispose();
+    await engine.dispose();
   }
 
   Future<void> handle(HttpRequest req, RouteMatch match) async {
@@ -95,6 +141,27 @@ class Handlers {
         await _chapterRetranslatePlan(req, p['book']!, p['no']!);
       case 'POST /api/v1/library/{book}/chapters/{no}/renumber':
         await _renumberChapter(req, p['book']!, p['no']!);
+      // ── engine（P0-C1~C5）───────────────────────────────────────────────
+      case 'GET /api/v1/engine/status':
+        await writeJson(req.response, 200, engine.status());
+      case 'GET /api/v1/engine/runtime':
+        await writeJson(req.response, 200, engine.runtimeProbe());
+      case 'GET /api/v1/engine/options':
+        await writeJson(req.response, 200, engine.options());
+      case 'POST /api/v1/engine/settings':
+        await writeJson(req.response, 200, await engine.applySettings(await readJsonBody(req)));
+      case 'POST /api/v1/engine/unload':
+        await writeJson(req.response, 200, await engine.unload());
+      case 'POST /api/v1/engine/models/verify':
+        await writeJson(req.response, 200, await engine.verifyModels());
+      case 'POST /api/v1/engine/models/download':
+        await writeJson(req.response, 200, await engine.startDownload());
+      case 'POST /api/v1/engine/models/download/pause':
+        await writeJson(req.response, 200, await engine.pauseDownload());
+      case 'POST /api/v1/engine/start':
+        await writeJson(req.response, 200, await engine.startEngine());
+      case 'POST /api/v1/engine/stop':
+        await writeJson(req.response, 200, await engine.stopEngine());
       // ── 尚未实现（P0-B 其余项）──────────────────────────────────────────
       default:
         await writeErrorCode(req.response, 501, 'NOT_IMPLEMENTED', '端点尚未实现：${r.id}');

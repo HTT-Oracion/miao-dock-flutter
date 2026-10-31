@@ -235,3 +235,41 @@
   - `modelsStoreDir()` 因此**不接受 runtimeRoot 参数** —— 模型位置不随运行时走，签名本身就是这条约束的表达。
 - **怎么验证**：`test/paths_test.dart` 中断言「模型目录在 state 下，且**不**在运行时下」，并做了反证（改回 runtimes 下 → 该条失败）。
 - **关联**：D-015 · P0-F6a · `paths.dart`。
+
+## D-017 服务状态目录与库根分离（修 D-015 引入的泄漏）
+
+- **状态**：已完成（2026-10-31）
+- **做了什么**：`resolveToken` 的落点从 `<库根>/state/token` 改为独立 `stateDir`；新增 `--state` 参数。
+- **为什么（真实缺陷）**：D-015 把库根改为 `~/Pictures/MiaoDock Mangas` 后，令牌仍写在 `<库根>/state/token` —— 即**把服务状态写进了用户相册目录**。虽然 `library_store` 用 `if (name == 'state') continue` 跳过了扫描，但那只是掩盖症状：文件仍在用户成果目录里，会被备份工具带走、卸载时不知道要不要删。
+- **路径职责（最终）**：
+  | 用途 | 路径 | 谁用 |
+  |---|---|---|
+  | 漫画库（用户成果） | `~/Pictures/MiaoDock Mangas` | `LibraryStore` / `TaskQueue` |
+  | 服务状态 | `<数据根>/manga/state` | 令牌 / 隐藏清单 |
+  | 引擎运行时 | `<数据根>/manga/runtimes` | 下载 / 导入（**与库无关**） |
+  | 模型 | `<数据根>/manga/state/models-state` | 下载 / 校验（**与库无关**） |
+- **验证**：`--root /tmp/lib-ok --state /tmp/state-ok` 启动后，库根为空、令牌在 `state-ok/token`；`store/` 与 `queue/` 源码中**零处**引用引擎路径函数。
+- **关联**：D-015 · D-016 · `paths.dart`。
+
+## D-018 P0-C1~C5 引擎端点落地
+
+- **状态**：已完成（2026-10-31；进程拉起属 C6）
+- **做了什么**：
+  - `services/mangasvc/lib/src/engine/engine_runtime.dart`：五态机 `stopped/starting/running/stopping/error` + runtime 探针（三项逐项报真伪）+ 阶段日志。
+  - `services/mangasvc/lib/src/engine/engine_facade.dart`：状态 / 运行时 / 选项 / 设置（白名单）/ 校验 / 下载 / 暂停 / 卸载 / 启停。
+  - 路由新增 `POST /engine/start`、`/engine/stop`（D-012 引擎共用开关）。路由数 46 → **48**。
+  - 客户端契约补 `startEngine` / `stopEngine`；Flutter 侧 `EngineNotifier.start/stop` 改为**调真实端点**并按返回推导状态。
+- **为什么**：C1~C5 是引导页六态的数据来源。不落地它们，引导页永远停在「假数据」。
+- **三条红线（都有断言 + 反证）**：
+  1. **不编造下载进度**：无真实进度来源时 `percent: null`（设计稿 §07）。
+  2. **未装配不假装 running**：启动时装配不齐 → 明确 `error` + 缺失原因。
+  3. **版本不猜**：读 `src/version.txt`，没有就是 null。
+- **已知边界（C6 补）**：
+  - `start()` 目前**不 spawn 进程**（缺 Python / llama-server 二进制），装配齐了也如实落 `error: 进程拉起未实现`。
+  - `download()` 不真下载（缺模型源 URL 与校验清单），保持 `running` 并明确标记。
+  - 这两个「如实失败」是刻意的：假装成功会掩盖真实缺口，等 C6 接入后自然转绿。
+- **怎么验证**：
+  - `services/mangasvc/test/engine_test.dart` 13 条（五态、探针三项、白名单拒绝、needsRestart、校验路径、下载暂停、percent 为 null、目录创建、卸载语义）。
+  - 端到端：真实服务 → 状态/探针/选项/校验/下载/暂停/启动 全链路通过。
+  - 反证 2 轮：伪造 `percent` → 断言失败；未装配报 running → 断言失败。
+- **关联**：D-012 · D-015 · D-016 · P0-C1~C5。

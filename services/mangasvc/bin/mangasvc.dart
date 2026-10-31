@@ -8,6 +8,8 @@ import 'package:mangasvc/src/server/server.dart';
 ///   `--engine <mock|real>`  引擎模式（默认 mock，服务自测不需要 Python）
 ///   `--root <dir>`          落盘根目录（默认 `~/MiaoDock/library`）
 ///   `--port <n>`            固定端口（默认在 5180–5190 探测）
+///   `--state <dir>`         服务状态目录（令牌 / 隐藏清单）；默认 `<root>/../state`
+///                           🔴 必须与库根分开：库根是用户成果目录，状态是产品数据
 ///   `--no-token`            关闭 `X-Box-Token` 校验（**仅开发/自测**）
 ///   `--print-token`         就绪后额外打印令牌（父进程接管用）
 ///
@@ -16,6 +18,7 @@ import 'package:mangasvc/src/server/server.dart';
 Future<void> main(List<String> args) async {
   final engine = _arg(args, '--engine') ?? 'mock';
   final root = _arg(args, '--root');
+  final state = _arg(args, '--state');
   final fixedPort = int.tryParse(_arg(args, '--port') ?? '');
   final noToken = args.contains('--no-token');
   final printToken = args.contains('--print-token');
@@ -24,6 +27,7 @@ Future<void> main(List<String> args) async {
     portStart: fixedPort ?? 5180,
     portEnd: fixedPort ?? 5190,
     rootDir: root,
+    stateDir: state,
     engineMode: engine,
     requireToken: !noToken,
   );

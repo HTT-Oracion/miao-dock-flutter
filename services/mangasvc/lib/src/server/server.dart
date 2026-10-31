@@ -22,6 +22,7 @@ class MangaSvcServer {
     this.rootDir,
     this.engineMode = 'mock',
     this.requireToken = true,
+    this.stateDir,
   });
 
   final int portStart;
@@ -35,6 +36,13 @@ class MangaSvcServer {
 
   /// 是否要求 `X-Box-Token`（E4：跨设备访问的鉴权面）。测试可关。
   final bool requireToken;
+
+  /// 服务状态目录（令牌 / 隐藏清单）。
+  ///
+  /// 🔴 与**库根**分开：库根是用户成果（`~/Pictures/...`），状态是产品数据
+  /// （`<appData>/MiaoDock/manga/state`）。混在一起会污染用户相册目录。
+  /// null = 用 `<库根>/.miao-state`（仅测试便捷路径；生产由 main 显式传）。
+  final String? stateDir;
 
   /// 安全策略（启动时由 [start] 填充 token）。
   late SecurityPolicy _policy = const SecurityPolicy();
@@ -56,7 +64,10 @@ class MangaSvcServer {
       try {
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, p, shared: false);
         _server = server;
-        final token = resolveToken(rootDir: _handlers.store.rootDir, enabled: requireToken);
+        final token = resolveToken(
+          stateDir: stateDir ?? '${_handlers.store.rootDir}${Platform.pathSeparator}.miao-state',
+          enabled: requireToken,
+        );
         _policy = SecurityPolicy(token: token);
         _token = token;
         server.listen(_dispatch);
