@@ -1581,5 +1581,30 @@
   "svcStartFailed": "启动失败",
   "@svcStartFailed": {
     "description": "启动引擎失败前缀"
+  },
+  "dropComicNamePlaceholder": "例如：第12话 · 学园祭",
+  "@dropComicNamePlaceholder": {
+    "description": "投放页文案"
+  },
+  "dropLandingPreview": "落盘路径预览",
+  "@dropLandingPreview": {
+    "description": "投放页文案"
+  },
+  "dropLandingPreviewUnknown": "<提交后由服务端给出实际路径>",
+  "@dropLandingPreviewUnknown": {
+    "description": "投放页文案"
+  },
+  "dropLandingPreviewHint": "名称规范化只在服务端执行，所以提交前这里不猜名字。",
+  "@dropLandingPreviewHint": {
+    "description": "投放页文案"
+  },
+  "dropBatchSummary": " · 分 {count} 批",
+  "@dropBatchSummary": {
+    "description": "投放页：分批提示",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
