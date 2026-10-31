@@ -27,10 +27,18 @@ class LibraryStore {
   /// 落盘根目录（惰性创建）。
   String get rootDir => _rootDir ??= _defaultRoot();
 
+  /// 默认库根 —— **用户成果目录**（D-015）。
+  ///
+  /// 🔴 不挂进 appData：漫画译文要能在 Finder 里找到、能独立备份、卸载不删。
+  /// 原项目 `paths.rs` 的断言「库是用户成果，不得藏进 appData」即此意。
+  ///
+  /// 可用 `MIAO_MANGA_LIBRARY_DIR` 覆盖（与原项目同名）。
   static String _defaultRoot() {
     final env = Platform.environment;
-    final home = env['HOME'] ?? '.';
-    return '$home/MiaoDock/library';
+    final override = env['MIAO_MANGA_LIBRARY_DIR'];
+    if (override != null && override.isNotEmpty) return override;
+    final home = env['HOME'] ?? env['USERPROFILE'] ?? '.';
+    return '$home${Platform.pathSeparator}Pictures${Platform.pathSeparator}MiaoDock Mangas';
   }
 
   /// 初始化：确保根目录存在。

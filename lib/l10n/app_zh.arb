@@ -944,5 +944,70 @@
   "engineNotStarted": "引擎未启动",
   "@engineNotStarted": {
     "description": "工具条：引擎未启动"
+  },
+  "runtimePickTitle": "选择引擎安装位置",
+  "@runtimePickTitle": {
+    "description": "运行时目录选择：标题"
+  },
+  "runtimePickDesc": "引擎与模型体积较大（数 GB）。每次下载都会询问安装位置，避免静默占用系统盘。",
+  "@runtimePickDesc": {
+    "description": "运行时目录选择：说明"
+  },
+  "runtimePickDefault": "默认位置",
+  "@runtimePickDefault": {
+    "description": "运行时目录选择：默认标签"
+  },
+  "runtimePickChange": "更改…",
+  "@runtimePickChange": {
+    "description": "运行时目录选择：改目录按钮"
+  },
+  "runtimePickConfirm": "安装到这里",
+  "@runtimePickConfirm": {
+    "description": "运行时目录选择：确认"
+  },
+  "runtimeImport": "导入本地运行时",
+  "@runtimeImport": {
+    "description": "引导：导入本地按钮"
+  },
+  "runtimeImportTitle": "导入本地引擎运行时",
+  "@runtimeImportTitle": {
+    "description": "导入：标题"
+  },
+  "runtimeImportDesc": "选择一个已有的 runtimes 目录（应包含 src/ 与 venv/）。导入后将跳过下载直接使用。",
+  "@runtimeImportDesc": {
+    "description": "导入：说明"
+  },
+  "runtimeImportPick": "选择目录…",
+  "@runtimeImportPick": {
+    "description": "导入：选择按钮"
+  },
+  "runtimeImportOk": "导入并使用",
+  "@runtimeImportOk": {
+    "description": "导入：确认"
+  },
+  "runtimeImportInvalid": "该目录不像是一个完整的引擎运行时",
+  "@runtimeImportInvalid": {
+    "description": "导入：校验失败"
+  },
+  "runtimeImportMissing": "缺少：{items}",
+  "@runtimeImportMissing": {
+    "description": "导入：缺失项",
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "runtimeImported": "已导入本地运行时",
+  "@runtimeImported": {
+    "description": "导入：成功吐司"
+  },
+  "runtimeNotVerified": "未做完整性校验",
+  "@runtimeNotVerified": {
+    "description": "导入：提示校验待做"
+  },
+  "runtimeNotVerifiedHint": "当前只检查了目录结构（src / venv 是否存在）；版本匹配与模型齐全的校验尚未实现。",
+  "@runtimeNotVerifiedHint": {
+    "description": "导入：校验待做说明"
   }
 }

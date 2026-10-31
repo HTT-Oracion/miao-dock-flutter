@@ -23,6 +23,7 @@ class NotReadyScreen extends StatelessWidget {
     required this.onPrimary,
     required this.onSecondary,
     required this.onRetryService,
+    this.onImportLocal,
     this.onTogglePause,
     this.paused = false,
     this.onExportLogs,
@@ -38,6 +39,9 @@ class NotReadyScreen extends StatelessWidget {
 
   /// 服务异常时的重启。
   final VoidCallback onRetryService;
+
+  /// 导入本地运行时（仅未装配态可用）。
+  final VoidCallback? onImportLocal;
 
   /// 下载中：暂停 / 继续。
   final VoidCallback? onTogglePause;
@@ -64,6 +68,7 @@ class NotReadyScreen extends StatelessWidget {
               onTogglePause: onTogglePause,
               paused: paused,
               onExportLogs: onExportLogs,
+              onImportLocal: onImportLocal,
             ),
           ),
         ),
@@ -81,6 +86,7 @@ class _NotReadyCard extends StatelessWidget {
     required this.onTogglePause,
     required this.paused,
     required this.onExportLogs,
+    required this.onImportLocal,
   });
 
   final NotReadyView view;
@@ -90,6 +96,7 @@ class _NotReadyCard extends StatelessWidget {
   final VoidCallback? onTogglePause;
   final bool paused;
   final void Function(String text, String suggestedName)? onExportLogs;
+  final VoidCallback? onImportLocal;
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +135,7 @@ class _NotReadyCard extends StatelessWidget {
             onRetryService: onRetryService,
             onTogglePause: onTogglePause,
             paused: paused,
+            onImportLocal: onImportLocal,
           ),
         ],
       ),
@@ -438,6 +446,7 @@ class _Actions extends StatelessWidget {
     required this.onRetryService,
     required this.onTogglePause,
     required this.paused,
+    required this.onImportLocal,
   });
 
   final NotReadyView view;
@@ -446,6 +455,7 @@ class _Actions extends StatelessWidget {
   final VoidCallback onRetryService;
   final VoidCallback? onTogglePause;
   final bool paused;
+  final VoidCallback? onImportLocal;
 
   @override
   Widget build(BuildContext context) {
@@ -498,6 +508,18 @@ class _Actions extends StatelessWidget {
               textStyle: const TextStyle(fontSize: 11),
             ),
             child: Text(l10n.nrActionGoSettings),
+          ),
+        // 导入本地运行时（D-015）：指向已有 runtimes，跳过下载。
+        if (view.state == NotReadyState.uninstalled && onImportLocal != null)
+          OutlinedButton.icon(
+            onPressed: onImportLocal,
+            icon: const Icon(LucideIcons.folderInput, size: 12),
+            label: Text(l10n.runtimeImport),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 34),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              textStyle: const TextStyle(fontSize: 11),
+            ),
           ),
         if (view.state == NotReadyState.installed && onSecondary != null)
           OutlinedButton(

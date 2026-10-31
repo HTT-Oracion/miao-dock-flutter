@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../controller/engine_controller.dart';
 import '../../domain/not_ready_state.dart';
 import 'not_ready_screen.dart';
+import 'runtime_picker.dart';
 
 /// 路由壳：把 [NotReadyScreen] 接到 provider 与导航上。
 ///
@@ -48,6 +49,13 @@ class NotReadyRouteScreen extends ConsumerWidget {
       },
       onRetryService: () {},
       onExportLogs: null,
+      // 导入本地运行时（D-015）：选目录 → 浅检查 → 通过则跳过下载。
+      onImportLocal: () async {
+        final result = await RuntimePickerDialog.show(context);
+        if (result == null || !result.imported) return;
+        // TODO(P0-C): 把选定目录写入运行时配置，并触发引擎装载。
+        // 完整性校验见 P0-F6d（已记账，后做）；当前只做了结构浅检查。
+      },
     );
   }
 }

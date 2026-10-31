@@ -209,3 +209,29 @@
   - 反证 2 轮：LogBox 按钮常驻 → hover 断言失败；只判 engine 不看 llm → 2 条失败。
   - macOS 实机：`_EngineOffBanner` / `_TranslateStatusChips` 均渲染，运行时零异常。
 - **关联**：D-012 · D-013 · P0-F2/F3/F4 · `ver1.0` 设计稿同步更新。
+
+## D-015 目录约定：用户成果与产品数据分树 + 引擎安装位置可选
+
+- **状态**：开发中（2026-10-31 定案）
+- **做了什么**：
+  - **漫画库**（用户成果）默认改为 `~/Pictures/MiaoDock Mangas`，**不挂进数据根**。原项目 `paths.rs:719` 有断言「库是用户成果，不得藏进 appData」。
+  - **引擎运行时**（产品数据）默认 `<appData>/MiaoDock/manga/runtimes`，结构 `src/` + `venv/` + `models-store/`。
+  - **下载引擎时每次弹目录选择**，默认定位到 `<appData>/MiaoDock/manga/runtimes`。**不记忆上次选择**（每次问）。
+  - **新增「导入本地」**：用户可指向已有的 runtimes 目录，跳过下载直接使用。
+  - **本地导入的完整性校验**：先记账，后做（见 P0-F6）。
+- **为什么**：
+  - 用户成果要能在 Finder 里找到、能独立备份、不该被卸载器连带删除。
+  - 引擎体积大（数 GB），装在系统盘可能是用户的真实痛点；每次询问比"记忆上次"更安全 —— 用户换机器 / 换盘时不会被静默塞回旧位置。
+  - 导入本地运行时支持离线安装与内网分发。
+- **关联**：`platform/paths.rs`（原项目基准）· P0-C1 前置 · P0-F6（校验，待做）。
+
+## D-016 模型目录改挂 state 下（刻意偏离原项目）
+
+- **状态**：已完成（2026-10-31）
+- **做了什么**：模型落盘位置改为 `<数据根>/manga/state/models-state`（`MIAO_MODELS_STORE_DIR` 可覆盖）。
+- **为什么**：**原项目把 `models-store` 放在运行时根下**（`<runtimes>/models-store`，见 `model_status.rs` 的 `tmp.join("models-store")`）。但本项目的运行时目录是**用户可选的**（D-015：下载时每次询问 / 支持导入本地），若模型挂在运行时下，用户换个 runtimes 目录就要重下数 GB 模型。挂到 `state/` 后模型成为「状态资产」，与运行时解耦。
+- **代价 / 已知偏离**：
+  - 与原项目目录布局不一致，若将来要做「旧版数据自动迁移」，需要单独处理 `models-store` → `models-state` 的搬迁。
+  - `modelsStoreDir()` 因此**不接受 runtimeRoot 参数** —— 模型位置不随运行时走，签名本身就是这条约束的表达。
+- **怎么验证**：`test/paths_test.dart` 中断言「模型目录在 state 下，且**不**在运行时下」，并做了反证（改回 runtimes 下 → 该条失败）。
+- **关联**：D-015 · P0-F6a · `paths.dart`。
