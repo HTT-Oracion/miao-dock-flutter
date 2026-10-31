@@ -1475,3 +1475,34 @@
   重跑 `flutter run`（触发 `tool/package_macos.sh` 增量编译）后再验。
 - **验证**：`dart analyze` 干净；服务端 133 通过；应用 116 通过。
 - **关联**：D-075（翻译日志 / 重试）· D-073（队列轮询）。
+
+## D-077 翻译日志带上流水线各步骤
+
+- **状态**：完成（2026-11-01），真实跑通验证
+- **改动**：`EngineFacade.translateImage` 增加 `onStage` 回调（来自 `TranslateOutcome.stageLines`，
+  引擎 stream 的 code=1 帧）；`TaskQueue` 的翻译注入签名变为
+  `(bytes, onStage) -> 出图`，逐页把阶段行写进翻译日志。
+- **实测**（真实引擎，1 页任务）日志如下：
+  ```
+  任务创建 stages-test（1 张）
+  开始翻译 stages-test 第 001 页
+  [stages-test 第001页] 排队位次 0
+  [stages-test 第001页] 等待翻译实例
+  [stages-test 第001页] running_pre_translation_hooks
+  [stages-test 第001页] detection
+  [stages-test 第001页] ocr
+  [stages-test 第001页] textline_merge
+  [stages-test 第001页] translating
+  [stages-test 第001页] after-translating
+  [stages-test 第001页] mask-generation
+  [stages-test 第001页] inpainting
+  [stages-test 第001页] rendering
+  [stages-test 第001页] rendering_folder:...
+  [stages-test 第001页] finished
+  完成 stages-test 第 001 页
+  ```
+  任务状态 `done`，产物齐全。
+- **限制**：阶段行按「页」批量写入（引擎响应整体解析完成后），不是逐阶段实时——
+  设置页 1s 轮询下观感等同实时；真逐帧流式需改 `EngineClient` 的流式解析，留作后续。
+- **验证**：服务端 133 通过；`dart analyze` 干净。
+- **关联**：D-075（翻译日志入口）· D-043（帧协议）。

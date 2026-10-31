@@ -94,7 +94,7 @@ class TaskQueue {
   /// 真实翻译（D-057）：引擎就绪时由 `EngineFacade` 注入。
   ///
   /// null = 没有引擎能力，只跑 mock（把原图字节当译文，仅供界面演示）。
-  Future<Uint8List> Function(Uint8List bytes)? translateImage;
+  Future<Uint8List> Function(Uint8List bytes, void Function(String line) onStage)? translateImage;
 
   final String engineMode;
 
@@ -350,9 +350,13 @@ class TaskQueue {
         }
         if (real) {
           // 真实翻译：引擎出图；失败只让**这一页**失败，不拖垮整本。
+          _logLine('开始翻译 ${t.comicName} 第 ${_pad(seq)} 页');
           try {
-            final out = await translator!(original.readAsBytesSync());
+            final out = await translator!(original.readAsBytesSync(), (line) {
+              _logLine('[${t.comicName} 第${_pad(seq)}页] $line');
+            });
             translated.writeAsBytesSync(out);
+            _logLine('完成 ${t.comicName} 第 ${_pad(seq)} 页');
           } catch (e) {
             t.failed++;
             t.lastError = '$e';

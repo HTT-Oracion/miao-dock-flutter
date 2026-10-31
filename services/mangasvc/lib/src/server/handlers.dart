@@ -33,7 +33,9 @@ class Handlers {
     final queue = TaskQueue(engineMode: engineMode, rootDir: store.rootDir, stateDir: stateDir);
     // 真实模式：把引擎能力注入队列（D-057）。
     // mock 模式不注入 —— 那种模式下的「译文」是原图字节，仅供界面演示。
-    if (engineMode != 'mock') queue.translateImage = facade.translateImage;
+    if (engineMode != 'mock') {
+      queue.translateImage = (bytes, onStage) => facade.translateImage(bytes, onStage: onStage);
+    }
     return Handlers._(store, queue, facade, engineMode);
   }
 
