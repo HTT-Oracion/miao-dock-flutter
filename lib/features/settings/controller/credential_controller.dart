@@ -7,7 +7,9 @@ import '../../../core/storage/secure_store.dart';
 /// 当前只有有道智云 —— 原项目 `miao-dock` 的在线 API 也只接了这一个。
 /// 加平台时在这里扩，`id` 就是引擎侧的 translator 名。
 enum TranslatePlatform {
-  youdao('youdao');
+  /// id 用 `youdaoZhiYun` 而**不是** `youdao`：
+  /// 引擎自带一个同名翻译器（读环境变量、只有文本接口），两者必须能区分。
+  youdaoZhiYun('youdaoZhiYun');
 
   const TranslatePlatform(this.id);
 

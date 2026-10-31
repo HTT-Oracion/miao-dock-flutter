@@ -928,3 +928,27 @@
   所以 `flutter build web` 通过**不代表能跑**。这类问题只能靠真实浏览器暴露。
 - **验证**：`flutter analyze` 干净；`flutter test` 115 通过；`flutter build web` 成功。
 - **关联**：D-044。
+
+## D-049 有道智云签名 v3（平台 id：`youdaoZhiYun`）
+
+- **状态**：签名层完成（2026-11-01）；HTTP 调用 / 流式 / 自检 未做
+- **定案（用户）**：
+  - 「大模型翻译」＝**不用本地 LLM 做文本翻译**，改用在线翻译服务；
+  - 路径照 miao-dock：**mangasvc 直连有道**，不经引擎；
+  - **引擎自带的 `youdao` 保持不动**（它读环境变量、只有文本接口）；
+  - 我们的平台 id 用 **`youdaoZhiYun`**，与引擎那个同名翻译器区分。
+- **已实现** `services/mangasvc/lib/src/translate/youdao_signing.dart`（纯计算，不碰网络）：
+  - `truncateInput`：`len <= 20` 原样；否则 `前10 + len + 后10`，**len 按 UTF-16 码元**
+    （照官方 JS demo；Dart `String.length` 等价，**不能**换成 `runes.length`）；
+  - `signYoudao`：`sha256(appKey + truncate(q) + salt + curtime + appSecret)`，`signType: v3`；
+  - **salt 由调用方传入**：miao-dock 用 uuid4、引擎用 uuid1，签名本身不关心来源；
+    但**每次请求（含重试）必须重新生成 salt/curtime/sign**，重放会被上游判 207。
+- **验证**：`youdao_signing_test.dart` 6 条，含
+  「emoji 占 2 码元所以 15 个 emoji 必须截断」——这条是「按码元不按字符」的决定性证据；
+  服务端 123 通过，应用 115 通过。
+- **仍未做**：
+  1. 文本接口 `POST https://openapi.youdao.com/api`（表单编码，`errorCode` 单判）；
+  2. 大模型流式 `POST /proxy/http/llm-trans`（`code` + `successful` **双判** + SSE 解析）；
+  3. 「测试凭证」（对应 miao-dock `selftest.rs`）；
+  4. 设置页把「大模型翻译」接到这条路（当前只存了凭证）。
+- **关联**：D-047 · `miao-dock/src-tauri/src/mangasvc/translate/youdao.rs`。

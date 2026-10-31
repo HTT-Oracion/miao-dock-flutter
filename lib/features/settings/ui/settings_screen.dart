@@ -457,7 +457,7 @@ class _ServiceCard extends ConsumerWidget {
 }
 
 String _platformLabel(AppLocalizations l10n, TranslatePlatform p) => switch (p) {
-  TranslatePlatform.youdao => l10n.platformYoudao,
+  TranslatePlatform.youdaoZhiYun => l10n.platformYoudao,
 };
 
 /// 在线翻译平台凭证（D-047）：平台下拉 + appKey/appSecret，存系统钥匙串。
@@ -469,7 +469,7 @@ class _LlmCredentialSection extends ConsumerStatefulWidget {
 }
 
 class _LlmCredentialSectionState extends ConsumerState<_LlmCredentialSection> {
-  TranslatePlatform _platform = TranslatePlatform.youdao;
+  TranslatePlatform _platform = TranslatePlatform.youdaoZhiYun;
   late final TextEditingController _key;
   late final TextEditingController _secret;
   bool _loaded = false;
