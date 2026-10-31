@@ -8,7 +8,6 @@ import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
 import '../../features/manga/controller/engine_controller.dart';
-import '../../features/manga/ui/manga_gate.dart';
 import 'readiness.dart';
 import '../../features/manga/domain/manga_task.dart';
 import '../../features/manga/domain/not_ready_state.dart';
@@ -151,11 +150,7 @@ class _DesktopShell extends ConsumerWidget {
                 ),
                 Container(height: 1, color: palette.line),
                 Expanded(
-                  child: MangaGate(
-                    enabled: location.moduleIndex == 0,
-                    path: GoRouterState.of(context).uri.path,
-                    child: _PageTransition(location: GoRouterState.of(context).uri.path, child: shell),
-                  ),
+                  child: _PageTransition(location: GoRouterState.of(context).uri.path, child: shell),
                 ),
               ],
             ),
@@ -313,11 +308,7 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
             _MobileTopBar(title: title, onMenu: () => _scaffoldKey.currentState?.openDrawer()),
             Container(height: 1, color: palette.line),
             Expanded(
-              child: MangaGate(
-                enabled: widget.location.moduleIndex == 0,
-                path: GoRouterState.of(context).uri.path,
-                child: _PageTransition(location: GoRouterState.of(context).uri.path, child: widget.shell),
-              ),
+              child: _PageTransition(location: GoRouterState.of(context).uri.path, child: widget.shell),
             ),
           ],
         ),
