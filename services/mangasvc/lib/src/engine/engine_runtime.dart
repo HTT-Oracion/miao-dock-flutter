@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'engine_launch.dart';
+import 'supervisor.dart';
+
 /// 引擎状态机（P0-C1）—— L1 翻译引擎 + L2 大模型，**共用一个开关**（D-012）。
 ///
 /// ## 五态（与原项目 `ServiceState` 同构）
@@ -14,13 +17,18 @@ import 'dart:io';
 /// - `warmed`：HTTP 真应答过才算「预热完成」——**不拿进程存活当预热**。
 /// - 状态只在**真实事件**后推进，不预置「假装 running」。
 class EngineRuntime {
-  EngineRuntime({required this.runtimeRoot, required this.modelsDir});
+  EngineRuntime({required this.runtimeRoot, required this.modelsDir, this.healthTimeout = const Duration(seconds: 60)});
 
   /// 引擎运行时根（用户可选，D-015）。
   final String runtimeRoot;
 
   /// 模型目录（与运行时解耦，D-016）。
   final String modelsDir;
+
+  /// 等待引擎健康应答的时长（首次装载模型可能很慢）。
+  final Duration healthTimeout;
+
+  EngineSupervisor? _supervisor;
 
   EngineState _state = EngineState.stopped;
   String? _phase;
@@ -81,19 +89,59 @@ class EngineRuntime {
       _log('[engine] not assembled: $runtimeRoot');
       return;
     }
-    // P0-C6 前不真起进程 —— 明确落 error，而不是停在一个永远不动的 starting。
-    _state = EngineState.error;
-    _phase = 'L1';
-    _lastError = '引擎进程拉起未实现（P0-C6）';
-    _log('[engine] process spawn not implemented (P0-C6)');
+
+    // 启动规格是「怎么起」的唯一事实源；缺了就明确报缺，不猜参数。
+    final specResult = EngineLaunchSpec.load(runtimeRoot);
+    final spec = specResult.spec;
+    if (spec == null) {
+      _state = EngineState.error;
+      _phase = 'L1';
+      _lastError = specResult.error;
+      _log('[engine] ${specResult.error}');
+      return;
+    }
+
+    final sup = EngineSupervisor(
+      processPath: spec.command,
+      processArgs: spec.args,
+      healthUrl: spec.healthUrl(),
+      workingDirectory: runtimeRoot,
+      healthTimeout: healthTimeout,
+    );
+    _supervisor = sup;
+    _enginePort = spec.port;
+
+    final healthy = await sup.start();
+    _enginePid = sup.pid;
+    // 监督器的输出就是「引擎这段时间在做什么」，直接进阶段日志。
+    for (final line in sup.log) {
+      _log(line);
+    }
+    if (!healthy) {
+      _state = EngineState.error;
+      _phase = 'L1';
+      _lastError = '引擎未能在 ${healthTimeout.inSeconds}s 内就绪（健康检查 ${spec.healthUrl()}）';
+      return;
+    }
+    _state = EngineState.running;
+    _phase = null;
+    _warmed = false;
+    _log('[engine] ready on ${spec.port}');
   }
 
-  /// 停止。
+  /// 停止（主动停止：监督器不会把它当崩溃重启）。
   Future<void> stop() async {
     if (_state == EngineState.stopped) return;
     _state = EngineState.stopping;
     _log('[engine] stopping…');
-    // P0-C6：这里应终止子进程并等待退出。
+    final sup = _supervisor;
+    if (sup != null) {
+      await sup.stop();
+      for (final line in sup.log) {
+        _log(line);
+      }
+      _supervisor = null;
+    }
     _state = EngineState.stopped;
     _phase = null;
     _enginePid = null;
@@ -167,8 +215,11 @@ class EngineRuntime {
     return {'ready': srcOk && venvOk && modelsOk, 'checks': checks};
   }
 
-  /// 释放资源（P0-C6 起会终止子进程）。
-  Future<void> dispose() async {}
+  /// 释放资源：终止子进程，不留僵尸。
+  Future<void> dispose() async {
+    await _supervisor?.dispose();
+    _supervisor = null;
+  }
 }
 
 /// 引擎五态（契约词表）。

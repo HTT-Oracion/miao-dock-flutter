@@ -162,6 +162,19 @@ class _DigestSink implements Sink<Digest> {
   void close() {}
 }
 
+/// 模型清单里的一个文件（`<modelsDir>/manifest.json` 的 `files[]` 元素）。
+class ManifestFile {
+  const ManifestFile({required this.url, required this.dest, this.sha256});
+
+  final String url;
+
+  /// 落盘文件名（相对 modelsDir）。
+  final String dest;
+
+  /// 期望 sha256（hex）；null = 不校验。
+  final String? sha256;
+}
+
 /// 下载结果。
 class DownloadResult {
   const DownloadResult._({

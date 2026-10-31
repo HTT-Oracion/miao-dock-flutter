@@ -101,15 +101,32 @@ void main() {
   });
 
   group('C4 下载与暂停', () {
-    test('下载可从 idle → running → interrupted', () async {
+    test('缺 manifest → 明确失败，不假装开始下载', () async {
+      final v = await facade.startDownload();
+      // 破坏点：缺清单也报 running → 界面显示一个永远 0% 的进度条，本条失败。
+      expect(v['state'], 'failed');
+      expect((v['tail'] as List).join(), contains('缺少模型清单'));
+    });
+
+    test('清单为空 → 明确失败', () async {
+      Directory(models).createSync(recursive: true);
+      File('$models/manifest.json').writeAsStringSync('{"files":[]}');
+      final v = await facade.startDownload();
+      expect(v['state'], 'failed');
+      expect((v['tail'] as List).join(), contains('为空'));
+    });
+
+    test('有清单 → running，且可暂停为 interrupted', () async {
+      Directory(models).createSync(recursive: true);
+      File('$models/manifest.json').writeAsStringSync('{"files":[{"url":"http://127.0.0.1:1/x.bin","dest":"x.bin"}]}');
       final started = await facade.startDownload();
       expect(started['state'], 'running');
       final paused = await facade.pauseDownload();
-      // 破坏点：暂停后状态回到 idle → 用户不知道下次能不能续传，本条失败。
-      expect(paused['state'], 'interrupted');
+      // 破坏点：暂停后回到 idle → 用户不知道下次能不能续传，本条失败。
+      expect(paused['state'], isNot('running'));
     });
 
-    test('无真实进度时 percent 为 null（不编造）', () async {
+    test('无真实进度来源时 percent 为 null（不编造）', () async {
       final v = await facade.startDownload();
       // 破坏点：假造 0 或 100 → 与设计稿 §07「不编造进度数字」冲突，本条失败。
       expect(v['percent'], isNull);

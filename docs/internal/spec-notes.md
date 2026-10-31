@@ -313,3 +313,20 @@
 - **反证记录**：解引用符号链接 → 3 条红；不剥顶层 → 3 条红；200 也追加 → 续传用例红；校验失败不删坏文件 → 用例红；不区分主动停止 → 需**同时**移除两道守卫才红（守卫为纵深防御，已记录）；固定退避 → 递减用例红；帧头小端 → 3 条红；不拦非图片 → 用例红；无空闲超时 → 用例红（30s 后失败）。
 - **验证**：`services/mangasvc` 测试 39 → **78 条**全绿（setup 9 / download 9 / supervisor 7 / client 14）。
 - **关联**：P0-C6a~d · D-015 · D-016。
+
+## D-021 P0-C6 接线：启动规格与状态机打通
+
+- **状态**：已完成（2026-10-31；C6e 真引擎仍需模型与硬件）
+- **做了什么**：
+  - `engine_launch.dart`：`<runtimeRoot>/launch.json` 描述「怎么起」（command / args / healthPath / port）。
+  - `EngineRuntime.start()` 改为：装配检查 → 读启动规格 → 建 `EngineSupervisor` → 等健康 → running / error。
+  - `EngineRuntime.stop()` 走监督器 `stop()`（主动停止，不触发重启）。
+  - 下载骨架换为 **manifest 驱动**（`<modelsDir>/manifest.json` 的 `files[]`），逐个真实下载 + sha256。
+- **为什么**：C6a–d 四个模块各自的单测都过，不代表接进状态机还能起来。接线必须单独验。
+- **关键设计**：
+  - **启动规格是数据不是代码**：引擎可执行文件/参数/健康路径随版本与平台变化，写死会在换版本时静默失效；读文件则「起不来」时能直接指出缺哪一项。
+  - **command 提前解析并检查存在**：拖到 spawn 才失败会变成笼统的「启动失败」。
+  - **缺 manifest 明确失败**，不进 running —— 否则界面显示一个永远 0% 的进度条。
+- **反证记录**：不真起进程却报 running → 2 条红（pid 为 null）；忽略健康探测结果 → 「健康地址指错」红。
+- **验证**：`services/mangasvc` **89 条**全绿（新增 launch/接线 9 条）。端到端真起子进程：规格正确 → running + pid + port；停止后端口可重绑（无僵尸）；manifest 下载 → 文件内容与 sha256 一致。
+- **关联**：P0-C6 · D-020 · `engine_launch.dart` · `supervisor.dart` · `model_download.dart`。
