@@ -64,15 +64,21 @@ class _DropScreenState extends ConsumerState<DropScreen> {
   Future<void> _submit() async {
     final state = ref.read(dropController);
     if (state.name.isEmpty || state.files.isEmpty) return;
-    final result = await ref.read(queueProvider.notifier).submit(comicName: state.name, imagePaths: state.files);
-    ref.read(dropController.notifier).clear();
-    if (!mounted) return;
-    showAppToast(
-      context,
-      AppLocalizations.of(context).dropSubmittedToast(result.submitted, result.position),
-      tone: ToastTone.good,
-    );
-    context.go('/manga/queue');
+    try {
+      final result = await ref.read(queueProvider.notifier).submit(comicName: state.name, imagePaths: state.files);
+      ref.read(dropController.notifier).clear();
+      if (!mounted) return;
+      showAppToast(
+        context,
+        AppLocalizations.of(context).dropSubmittedToast(result.submitted, result.position),
+        tone: ToastTone.good,
+      );
+      context.go('/manga/queue');
+    } catch (e) {
+      // 提交失败必须给反馈：以前是静默抛异常，用户完全不知道发生了什么。
+      if (!mounted) return;
+      showAppToast(context, '${AppLocalizations.of(context).dropSubmitFailed}：$e', tone: ToastTone.bad);
+    }
   }
 
   @override

@@ -79,6 +79,12 @@ List<LibBook> shelfBooks(WidgetRef ref) {
 /// 书架当前是否处于「失败但有旧数据」状态（UI 据此显示横幅）。
 bool shelfHasError(WidgetRef ref) => ref.watch(libraryProvider).hasError;
 
+/// 是否处于「首次加载中」（有旧数据时不算，避免书架闪成骨架）。
+bool shelfLoading(WidgetRef ref) {
+  final st = ref.watch(libraryProvider);
+  return st.isLoading && st.value == null;
+}
+
 /// 书架错误对象（透传给 [ErrorBanner]）。
 Object? shelfError(WidgetRef ref) => ref.watch(libraryProvider).error;
 

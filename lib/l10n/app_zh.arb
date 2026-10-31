@@ -1606,5 +1606,9 @@
         "type": "int"
       }
     }
+  },
+  "dropSubmitFailed": "提交失败",
+  "@dropSubmitFailed": {
+    "description": "投放提交失败提示"
   }
 }

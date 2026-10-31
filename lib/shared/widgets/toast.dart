@@ -40,7 +40,7 @@ void showAppToast(BuildContext context, String message, {ToastTone tone = ToastT
   overlay.insert(entry);
 
   // 自动消失；`_ToastHost` 负责淡出后再通知移除。
-  Timer(const Duration(milliseconds: 2400), () {
+  Timer(const Duration(milliseconds: 3200), () {
     if (!closing) entry.remove();
   });
 }
@@ -76,9 +76,10 @@ class _ToastHostState extends State<_ToastHost> with SingleTickerProviderStateMi
       ToastTone.bad => palette.bad,
     };
 
+    // 设计稿 `#toasts{top:14px;right:14px}`：**右上角**，不是右下角。
     return Positioned(
-      right: 16,
-      bottom: 16,
+      right: 14,
+      top: 14,
       child: IgnorePointer(
         child: AnimatedBuilder(
           animation: _c,
