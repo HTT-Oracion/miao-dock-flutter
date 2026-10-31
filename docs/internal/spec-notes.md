@@ -968,3 +968,23 @@
 - **仍未做**：`POST /api` 文本调用、`/proxy/http/llm-trans` 流式（双判 + SSE）、
   测试凭证、设置页接线路由。
 - **关联**：D-049 · `miao-dock/.../translate/errors.rs`。
+
+## D-051 有道文本翻译客户端（可注入出网）
+
+- **状态**：完成（2026-11-01）；大模型流式 / 测试凭证 / 设置页接线 未做
+- **实现**：`services/mangasvc/lib/src/translate/youdao_client.dart`
+  - `POST {base}/api`，表单字段 = `q/from/to` + 签名五件套（+ 可选 `domain`/`vocabId`）；
+  - 判成功**只看 `errorCode === "0"`**（单判；大模型接口才双判）；
+  - 响应不是 JSON → `TRANSLATE_UPSTREAM_ERROR` 且**带上 HTTP 状态**；
+  - `errorCode` 缺失按 **`"undefined"`**（复刻 JS `String(v)`，不是空串）；
+  - 未配置密钥 → `TRANSLATE_NOT_CONFIGURED`，**不发请求**（对应 `assert_credentials`）。
+- **为什么把出网抽成 `YoudaoTransport`**：签名与判定逻辑必须能在**不发真网络**的前提下测到；
+  真网络只能验证「通不通」，验证不了「码对不对」。
+- **每次调用重算 salt/curtime/sign**（`YoudaoClient` 内部生成，不接受外部复用）。
+- **验证**：`youdao_client_test.dart` 5 条（成功路径含表单字段断言、202 映射、非 JSON、缺码、未配置）；服务端 133 通过。
+- **仍未做**：
+  1. `POST /proxy/http/llm-trans` 流式（`code` + `successful` **双判** + SSE 解析）；
+  2. 测试凭证（`selftest.rs` 语义）；
+  3. 设置页把「大模型翻译」接到这条路；
+  4. 真实出网实现（`dart:io HttpClient` + 四层超时）。
+- **关联**：D-049 · D-050。
