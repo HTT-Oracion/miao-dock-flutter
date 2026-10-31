@@ -291,3 +291,25 @@
   4. `_SettingRow` 的尾件用 `?tail`（null-aware collection element）替代 if-else 链，消除 lint。
 - **怎么验证**：`test/settings_ui_test.dart` 2 条（三层卡片要素 + 来源三选一 + 分组切换内容变化）。
 - **关联**：D-012 · C1~C5 · `engine_settings_controller.dart`。
+
+## D-020 P0-C6a~C6d 引擎接入基础件
+
+- **状态**：已完成（2026-10-31）
+- **做了什么**：
+  - `runtime_setup.dart`（C6a）：解包 tar.gz / tgz / tar / zip，`strip-components` 默认 1。
+  - `model_download.dart`（C6b）：真实 HTTP 下载 + `Range` 续传 + sha256 校验 + `.part` 原子改名。
+  - `supervisor.dart`（C6c）：spawn + 健康探针 + 崩溃指数退避重启 + 主动停止不重启。
+  - `engine_client.dart`（C6d）：`POST /translate/image/stream` 帧协议、图片嗅探、空闲超时、错误归一。
+- **依赖**：新增 **1 个**包 `crypto ^3.0.8`（官方 Dart 团队、纯 Dart、运行时依赖，用于 sha256；体积可忽略）。**未**引入 `archive` —— 见下条。
+- **为什么不用 Dart 的 archive 包解压**：Python venv 的 `bin/python` 是**符号链接**，且必须保留 `0755`。纯 Dart 解包器普遍把 symlink 写成普通文件 —— 解出来的 venv「文件都在、就是跑不起来」，症状极隐蔽。系统 `tar`（macOS/Linux 的 tar、Win10+ 的 bsdtar）同时认 tar.gz 与 zip，且与原项目 `runtime_setup.rs` 口径一致。
+- **四条必须做对的地方（都有断言 + 反证）**：
+  1. **续传要看响应码**：服务器可能无视 `Range` 仍返回 200。此时若追加写 = 旧前段 + 新全量 = **静默损坏**（文件大小正常）。必须清空重下。
+  2. **健康 ≠ 进程活着**：进程起来要能应答 `/health` 才算就绪；只看 pid 会把加载中的引擎当可用。
+  3. **主动停止不得触发重启**：否则「停止」按钮变成「重启」按钮。
+  4. **超时是空闲超时**：每收一块重置。用总时长会把正常的慢请求判死；无限等则卡死。
+- **踩坑（真实缺陷）**：
+  - `Directory.listSync()` 默认 `followLinks: true`，把符号链接解引用成 `File`；目标已被先移走时 `File.renameSync` 的 `existsSync` 检查返回 false → `PathNotFoundException`。必须 `followLinks: false` + 按类型分发 rename，删除同名目标时同理。
+  - `_mergeInto` 用 rename 而非 copy：同卷常数时间，避免数百 MB 复制。
+- **反证记录**：解引用符号链接 → 3 条红；不剥顶层 → 3 条红；200 也追加 → 续传用例红；校验失败不删坏文件 → 用例红；不区分主动停止 → 需**同时**移除两道守卫才红（守卫为纵深防御，已记录）；固定退避 → 递减用例红；帧头小端 → 3 条红；不拦非图片 → 用例红；无空闲超时 → 用例红（30s 后失败）。
+- **验证**：`services/mangasvc` 测试 39 → **78 条**全绿（setup 9 / download 9 / supervisor 7 / client 14）。
+- **关联**：P0-C6a~d · D-015 · D-016。

@@ -12,6 +12,8 @@ resolution: workspace
 dependencies:
   protocol:
     path: ../../packages/protocol
+  # sha256 校验模型文件（候选清单「基础工具」组；官方 Dart 团队包，纯 Dart）
+  crypto: ^3.0.8
 
 dev_dependencies:
   test: ^1.25.0
