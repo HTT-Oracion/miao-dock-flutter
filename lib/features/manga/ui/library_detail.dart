@@ -7,6 +7,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
 import '../domain/manga_status.dart';
+import 'library_search_results.dart';
 
 /// 详情主区（设计稿 G Main）：Hero（封面 + 标题 + 元信息 + 动作）+ 章节卡（一行两话）。
 class LibraryDetail extends ConsumerWidget {
@@ -14,6 +15,11 @@ class LibraryDetail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final query = ref.watch(shelfQueryProvider).trim();
+    if (query.isNotEmpty) {
+      // 搜索态（设计稿 G Row 4）：右栏切换为分组命中结果。
+      return LibrarySearchResults(query: query);
+    }
     final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
     if (books.isEmpty) {
       return const Center(

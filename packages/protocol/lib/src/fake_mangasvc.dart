@@ -86,13 +86,13 @@ class FakeMangasvcClient implements MangasvcClient {
 
   @override
   Future<List<MangaTask>> listTasks() async {
-    await Future<void>.delayed(const Duration(milliseconds: 120));
+    await Future<void>.value(); // A 级替身不引入定时器，测试无需 fake_async
     return List.of(_tasks);
   }
 
   @override
   Future<List<LibBook>> listLibrary() async {
-    await Future<void>.delayed(const Duration(milliseconds: 120));
+    await Future<void>.value(); // A 级替身不引入定时器，测试无需 fake_async
     final books = <LibBook>[];
     final rand = Random(7);
     for (final t in _tasks.where((t) => t.status == MangaTaskStatus.done)) {
@@ -117,7 +117,7 @@ class FakeMangasvcClient implements MangasvcClient {
 
   @override
   Future<SubmitResult> submit({required String comicName, required List<String> imagePaths}) async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+    await Future<void>.value();
     final position = _tasks.where((t) => !t.deletable).length + 1;
     _tasks.insert(
       0,
@@ -138,13 +138,13 @@ class FakeMangasvcClient implements MangasvcClient {
 
   @override
   Future<void> deleteTasks(Set<String>? taskIds) async {
-    await Future<void>.delayed(const Duration(milliseconds: 150));
+    await Future<void>.value();
     _tasks.removeWhere((t) => t.deletable && (taskIds == null || taskIds.contains(t.id)));
   }
 
   @override
   Future<void> cancelTask(String taskId) async {
-    await Future<void>.delayed(const Duration(milliseconds: 150));
+    await Future<void>.value();
     final i = _tasks.indexWhere((t) => t.id == taskId);
     if (i >= 0) {
       _tasks[i] = _tasks[i].copyWith(status: MangaTaskStatus.cancelled);
