@@ -557,3 +557,28 @@
   真正能否起来要等依赖装完 + 模型到位后实测；`--start-instance` 与 `upload-cache` 的工作目录行为也待确认。
 - **验证**：`test/paths_test.dart` 21 条、`engine_install_test.dart` 11 条（含 launch.json 内容断言）。
 - **关联**：D-027（部分推翻）· D-030 · `engine-downloads.md`。
+
+## D-032 真实 pip 失败根因：上游依赖直连 GitHub
+
+- **状态**：已查明并加固（2026-11-01）；macOS 仍需 GitHub + Xcode CLT
+- **实测**：在真实装配出的 289 MB 目录上跑 deps 重建，pip 失败：
+  `github.com didn't respond within 15 seconds (while establishing a connection)`，退出码 1。
+- **根因**（读下载下来的 `src/requirements.txt` 得出，共 63 行）：
+  ```
+  pydensecrf@https://github.com/lucasb-eyer/pydensecrf/archive/refs/heads/master.zip
+  --extra-index-url https://frederik-uni.github.io/manga-image-translator-rust/python/wheels/simple/
+  rusty-manga-image-translator
+  ```
+  也就是说：**deps 重建必然依赖 GitHub 可达**，不是纯 PyPI 行为。
+- **加固**：pip 参数加 `--timeout 60 --retries 5`（默认 15s 太短，实测直接失败）。
+- **两个重要发现**：
+  1. **`miao-dock/runtimes/manga-translator/src/requirements.txt` 与我们下载的源码版本不一致**
+     （本地那份 25 行、无 GitHub 依赖；下载的 63 行、有 `pydensecrf@github`）。
+     ⇒ 依赖必须从**实际下载的源码**读，不能照抄仓库里那份旧的。
+  2. **macOS 没有 pydensecrf 预编译 wheel**（`wheels.manifest.json` 只有 `win32-x64`），
+     所以 macOS 上它要**从源码编译** ⇒ 需要 **Xcode 命令行工具**。
+     这正是原项目注释里说的「macOS 零配置唯一缺口」。
+- **对产品的含义**：
+  - Windows：可走预编译 wheel，避开编译；仍需 GitHub（除非我们把 wheel 随包分发）。
+  - macOS：需要 GitHub **且** 已装 Xcode CLT，否则 deps 必然失败 —— 界面必须把这两条写进失败提示。
+- **关联**：D-029 · `engine-downloads.md` §三。

@@ -65,6 +65,12 @@ class EngineDepsInstaller {
       '--no-input',
       // 进度条对日志没有价值，还会把日志刷满。
       '--progress-bar', 'off',
+      // 🔴 上游 requirements 里有**直连 GitHub** 的依赖
+      //   （`pydensecrf@https://github.com/.../master.zip`），
+      //   以及一个 github.io 上的额外 wheel 索引。pip 默认 15s 超时太短，
+      //   实测会直接失败在「github.com didn't respond within 15 seconds」。
+      '--timeout', '60',
+      '--retries', '5',
       if (url.isNotEmpty) ...['--index-url', url],
       if (extraIndexUrl != null && extraIndexUrl.isNotEmpty) ...['--extra-index-url', extraIndexUrl],
     ];
