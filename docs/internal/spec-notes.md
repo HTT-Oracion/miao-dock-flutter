@@ -426,3 +426,16 @@
   3. **须授权（重）**：真装 manga-image-translator（torch 约 2 GB）+ 经镜像下 Sakura（约 3.3 GB）+ 跑 7B。
      约 7 GB 下载与数十分钟计算，属对本机的实际占用，**需用户明确同意**。
 - **关联**：P0-C6e · D-020 · D-021。
+
+## D-026 模型分发走 HF 镜像优先；测试漫画不入库
+
+- **状态**：已定案（2026-10-31）；下载清单见 `docs/internal/engine-downloads.md`
+- **做了什么**：
+  - **HuggingFace 策略改为镜像优先**：`hf-mirror.com` 首选，官方站仅兜底。
+  - `test-manga/` 加入 `.gitignore`（本地 2 张 800×1142 JPEG，用于翻译冒烟验证）。
+- **为什么**：实测本机 `huggingface.co` **不可达（000）**、`hf-mirror.com` 200 ——
+  不优先镜像就装不上，这不是偏好问题。`sources` 字段已在 manifest 里，但目前只写了镜像一条，
+  兜底顺序需补。
+- **测试漫画为什么不入库**：体积与版权都属本地素材，仓库不该承载；
+  但引擎验证必须有真实漫画页，故固定目录名 `test-manga/` 作为约定。
+- **关联**：P0-C6e · D-025 · `engine-downloads.md`。

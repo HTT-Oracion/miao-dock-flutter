@@ -39,3 +39,7 @@ lib/l10n/app_localizations*.dart
 
 # ---- 临时文件（见 AGENTS.md §3 / README 目录约定）----
 .tmp/
+
+# ---- 测试用漫画原图（本地素材，不入库）----
+# 用于引擎翻译冒烟验证（如 C6e）；体积与版权都属本地，不随仓库分发。
+test-manga/
