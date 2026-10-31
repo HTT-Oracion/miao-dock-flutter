@@ -30,7 +30,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/manga',
-                redirect: (context, state) => state.matchedLocation == '/manga' ? '/manga/drop' : null,
+                // 🔴 必须用 `uri.path`（完整请求路径）判断，不能用 `matchedLocation`：
+                // 后者的语义是「命中的路由路径」，访问 `/manga/queue` 时它仍是 `/manga`，
+                // 于是**任何子页面都会被重定向回 /manga/drop** —— 表现就是侧栏点了没反应。
+                redirect: (context, state) => state.uri.path == '/manga' ? '/manga/drop' : null,
                 routes: [
                   GoRoute(path: 'drop', builder: (_, _) => const DropScreen()),
                   GoRoute(path: 'queue', builder: (_, _) => const QueueScreen()),
@@ -46,7 +49,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/music',
-                redirect: (context, state) => state.matchedLocation == '/music' ? '/music/discover' : null,
+                // 同上：用完整路径判断，避免子页面被重定向回首屏。
+                redirect: (context, state) => state.uri.path == '/music' ? '/music/discover' : null,
                 routes: [
                   GoRoute(
                     path: 'discover',

@@ -1381,3 +1381,31 @@
   静态看链路是通的，所以需要运行时日志确认断点位置。
 - **验证**：`flutter analyze` 干净；`flutter test` 116 通过。
 - **关联**：D-068（移除整页门禁）。
+
+## D-072 侧栏点不动：redirect 把子页面全部重定向回首屏
+
+- **状态**：已修（2026-11-01）
+- **证据链**（用户提供的运行日志）：
+  ```
+  [nav] go /manga/queue      ← go() 确实执行了
+  [nav] at = /manga/drop     ← 但路由仍停在 drop，而且连 go('/manga/drop') 也是如此
+  ```
+  三个不同目标都落回 `/manga/drop` ⇒ 一定是**重定向**而不是渲染问题。
+- **根因**：
+  ```dart
+  redirect: (context, state) => state.matchedLocation == '/manga' ? '/manga/drop' : null
+  ```
+  `matchedLocation` 的语义是**命中的路由路径**。访问 `/manga/queue` 时，
+  命中的 GoRoute 仍是父路由 `/manga`，于是条件为真 ⇒ 任何 `/manga/*` 都被打回 `/manga/drop`。
+  `/music/*` 有同样的问题。
+- **修法**：改用 `state.uri.path`（完整请求路径）判断：
+  ```dart
+  redirect: (context, state) => state.uri.path == '/manga' ? '/manga/drop' : null
+  ```
+- **为什么之前没暴露**：`initialLocation` 直接就是 `/manga/drop`，不经过这条 redirect；
+  点击侧栏才第一次真正走「navigate 到子路由」的路径。
+- **诊断方法（值得复用）**：在 `go()` 之后用
+  `addPostFrameCallback` 打印 `routerDelegate.currentConfiguration.uri`，
+  一眼区分「没导航」与「导航被重定向」。只看 `go()` 之前的日志会误判成渲染问题。
+- **验证**：`flutter analyze` 干净；`flutter test` 116 通过；l10n 棘轮通过（调试串已改 ASCII）。
+- **关联**：D-068（先移除了整页门禁，排除了一个干扰项）。
