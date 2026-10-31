@@ -149,9 +149,7 @@ class _DesktopShell extends ConsumerWidget {
                   actions: [if (location.moduleIndex == 0) const _TranslateStatusChips()],
                 ),
                 Container(height: 1, color: palette.line),
-                Expanded(
-                  child: _PageTransition(location: GoRouterState.of(context).uri.path, child: shell),
-                ),
+                Expanded(child: shell),
               ],
             ),
           ),
@@ -174,8 +172,6 @@ void _goModule(BuildContext context, int index) {
 
 void _goView(BuildContext context, int moduleIndex, String viewId) {
   final base = moduleIndex == 1 ? 'music' : 'manga';
-  // 诊断：页面切不动时，先看这行有没有打出来（看出是「没触发」还是「触发了但没切」）。
-  debugPrint('[nav] go /$base/$viewId (module=$moduleIndex)');
   context.go('/$base/$viewId');
   // 再打一次「跳完之后路由器认为自己在哪」——
   // 若这里仍是旧路径 ⇒ 路由没生效；若已是新路径 ⇒ 路由对、是渲染层没换。
@@ -315,9 +311,7 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
           children: [
             _MobileTopBar(title: title, onMenu: () => _scaffoldKey.currentState?.openDrawer()),
             Container(height: 1, color: palette.line),
-            Expanded(
-              child: _PageTransition(location: GoRouterState.of(context).uri.path, child: widget.shell),
-            ),
+            Expanded(child: widget.shell),
           ],
         ),
       ),

@@ -173,8 +173,13 @@ class TaskQueue {
     if (_draining) return;
     _draining = true;
     _ticker = Timer(const Duration(milliseconds: 10), () async {
-      await _drain();
-      _draining = false;
+      try {
+        await _drain();
+      } finally {
+        // 🔴 必须放 finally：中途抛异常若不复位，后续任务**永远不会被取出**，
+        // 表现就是「一直排队中」。
+        _draining = false;
+      }
     });
   }
 

@@ -23,7 +23,7 @@ class QueueEmpty extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: AppTokens.progressTrack, width: 2),
             ),
-            child: const Icon(LucideIcons.layers, size: 28, color: AppTokens.textSecondary),
+            child: const Icon(LucideIcons.inbox, size: 28, color: AppTokens.textSecondary),
           ),
           const SizedBox(height: 14),
           Text(

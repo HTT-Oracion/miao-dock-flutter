@@ -6,7 +6,6 @@ import '../../../shared/widgets/app_pager.dart';
 import '../controller/queue_controller.dart';
 import 'queue_empty.dart';
 import 'queue_mobile.dart';
-import 'queue_skeleton.dart';
 import 'queue_sum_bar.dart';
 import 'queue_table.dart';
 import '../domain/manga_task.dart';
@@ -33,9 +32,9 @@ class QueueScreen extends ConsumerWidget {
             mobile: mobile,
             onRetry: () => ref.read(queueProvider.notifier).refresh(),
           );
-        } else if (queue.isLoading && queue.value == null) {
-          body = const QueueSkeleton();
         } else {
+          // 按用户要求**不再使用骨架屏**：加载中直接按「暂无任务」渲染，
+          // 数据到了再刷新。骨架屏在这类秒回的本地服务上反而像闪屏。
           final tasks = queue.value ?? const <MangaTask>[];
           body = tasks.isEmpty
               ? const QueueEmpty()
