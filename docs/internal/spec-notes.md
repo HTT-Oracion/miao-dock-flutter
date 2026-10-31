@@ -377,3 +377,28 @@
   - macOS 真机：自动拉起 → health 200 → Cmd+Q 后 `[lifecycle]` 两条日志出现、服务退出、端口释放。
   - `dart compile exe` 产出 6.7 MB 自包含可执行文件，能打印就绪行并返回 health 200。
 - **关联**：P0-D1~D4 · D-022。
+
+## D-024 P0-D4 打包形态：mangasvc 随 App 分发
+
+- **状态**：已完成（macOS）；Windows / Linux 未自动化
+- **做了什么**：
+  - `tool/package_macos.sh`：用 `dart compile exe` 编出自包含二进制，再复制进 App（带**增量**：源码没变就跳过编译）。
+  - Xcode 新增构建阶段 **Bundle mangasvc**（`macos/Runner.xcodeproj`），`flutter build macos` / `flutter run` 自动带上。
+- **为什么放进构建阶段而不是事后复制**：构建阶段在**代码签名之前**执行，Xcode 之后统一签名整个 bundle ——
+  额外二进制会被一并签进去。事后复制会破坏签名封条（`codesign --verify --deep --strict` 会失败）。
+- **实测数据**：
+  - 开发期 `dart run` 启动约 **10 s**；打包后 **395 ms** 到服务就绪。
+  - Debug / Release 两种构建都产出 `Contents/MacOS/mangasvc`（6.7 MB），签名校验均通过。
+  - `[bootstrap] mangasvc bundled → 端口 5180`，`/api/v1/health` 200，
+    `rootDir` = `~/Pictures/MiaoDock Mangas`（D-015 生效）。
+- **失败不静默**：脚本在目标目录不存在、找不到 dart 时**非零退出**，Xcode 构建随之失败 ——
+  不产出「看起来构建成功、其实缺服务」的包。
+- **已知限制**：
+  - 应用被 **SIGKILL** 时 `didRequestAppExit` 不会执行，子进程会变孤儿占住端口。
+    彻底解法是让服务在 stdin 关闭（父进程死亡）时自行退出，属后续增强。
+  - 通过 `osascript quit` 退出时 AppleScript 报 `-128`：因为 `didRequestAppExit` 里
+    **先**等清理完成**再**回复，Apple 事件超时。App 与服务都正常退出，仅自动化脚本会看到该码。
+  - Windows / Linux 的分发目录未脚本化（解析逻辑已支持「与 App 同目录」）。
+- **验证**：`flutter build macos --debug/--release` → 包内有 mangasvc → `open` 启动 → 健康 200 →
+  退出后 App 与服务都消失、端口释放。
+- **关联**：P0-D4 · D-022 · D-023。

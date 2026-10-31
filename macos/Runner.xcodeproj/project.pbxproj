@@ -238,6 +238,7 @@
 				33CC10E92044A3C60003C045 /* Sources */,
 				33CC10EA2044A3C60003C045 /* Frameworks */,
 				33CC10EB2044A3C60003C045 /* Resources */,
+				D4A11CE0202610A1B2C3D4E5 /* Bundle mangasvc */,
 				33CC110E2044A8840003C045 /* Bundle Framework */,
 				3399D490228B24CF009A79C7 /* ShellScript */,
 				C0E3F42CE9D6E4F82449A51B /* [CP] Embed Pods Frameworks */,
@@ -323,6 +324,25 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		D4A11CE0202610A1B2C3D4E5 /* Bundle mangasvc */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle mangasvc";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# P0-D4：把 mangasvc 编成自包含可执行文件并放进 App 的 Contents/MacOS/。\n# 必须放在代码签名之前 —— Xcode 在全部阶段之后统一签名，这样额外二进制才会被包含在签名里。\nif [ \"${ACTION:-build}\" = \"indexbuild\" ]; then exit 0; fi\n\"${PROJECT_DIR}/../tool/package_macos.sh\" \"${TARGET_BUILD_DIR}/${EXECUTABLE_FOLDER_PATH}\"\n";
+		};
 		3399D490228B24CF009A79C7 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
