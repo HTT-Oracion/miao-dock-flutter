@@ -46,7 +46,6 @@ class EnginePartsSection extends ConsumerWidget {
           // ── 目录行 ───────────────────────────────────────────────
           Row(
             children: [
-              Icon(LucideIcons.folderCog, size: 13, color: palette.mut),
               const SizedBox(width: 8),
               Text(l10n.engineDirLabel, style: TextStyle(fontSize: 10.5, color: palette.ink2)),
               const SizedBox(width: 10),

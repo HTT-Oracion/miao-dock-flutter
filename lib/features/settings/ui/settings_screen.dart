@@ -403,7 +403,18 @@ class _ServiceCard extends ConsumerWidget {
             // 运行中可停止；未启动时必须满足前置条件且不在启动中。
             onPressed: running
                 ? () => ref.read(engineStateProvider.notifier).stop()
-                : (canStart ? () => ref.read(engineStateProvider.notifier).start() : null),
+                : (canStart
+                      ? () async {
+                          await ref.read(engineStateProvider.notifier).start();
+                          if (!context.mounted) return;
+                          final err = ref.read(engineStartErrorProvider);
+                          showAppToast(
+                            context,
+                            err == null ? l10n.svcStartOk : '${l10n.svcStartFailed}：$err',
+                            tone: err == null ? ToastTone.good : ToastTone.bad,
+                          );
+                        }
+                      : null),
             style: _primaryStyle(palette),
             child: starting
                 // 启动中：按钮内显示 loading，且不可再次点击。

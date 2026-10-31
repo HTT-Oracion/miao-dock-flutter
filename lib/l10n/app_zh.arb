@@ -1610,5 +1610,9 @@
   "dropSubmitFailed": "提交失败",
   "@dropSubmitFailed": {
     "description": "投放提交失败提示"
+  },
+  "svcStartOk": "服务已启动",
+  "@svcStartOk": {
+    "description": "启动成功提示"
   }
 }

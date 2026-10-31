@@ -174,6 +174,8 @@ void _goModule(BuildContext context, int index) {
 
 void _goView(BuildContext context, int moduleIndex, String viewId) {
   final base = moduleIndex == 1 ? 'music' : 'manga';
+  // 诊断：页面切不动时，先看这行有没有打出来（看出是「没触发」还是「触发了但没切」）。
+  debugPrint('[nav] go /$base/$viewId（module=$moduleIndex）');
   context.go('/$base/$viewId');
 }
 
