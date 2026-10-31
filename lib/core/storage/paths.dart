@@ -8,10 +8,22 @@
 /// 产品数据（卸载可清、不进用户视野）
 ///   <appData>/MiaoDock/
 ///     manga/
-///       state/                             队列 / 令牌 / 隐藏清单
-///       runtimes/                          引擎运行时（src + venv + models-store）
-///     anime/runtimes/
+///       state/                             应用自产：令牌 / 队列 / 幂等表
+///       engine/                            ★ 引擎目录：应用下载的一切都在这里
+///         python/                            自带解释器 + site-packages（pip 依赖）
+///         src/                               引擎源码
+///         bin/llama/                         llama-server（按后端换内容）
+///         models/                            MIT 的 model_dir（结构遵从上游）
+///           detection/ inpainting/ ocr/ fonts/
+///           translators/nllb/                按需
+///         llm/                               llama-server 加载的权重（Sakura）
+///         .engine.json                       安装清单
+///     anime/engine/
 /// ```
+///
+/// 🔴 **engine/ 与 state/ 的边界**：engine/ 里全是「下载来的、可搬走、可分享」的资产；
+/// state/ 里是「运行期自产」的状态。两者混放会让「导入别人的引擎目录」变成
+/// 「顺便把别人的令牌也导进来」。
 ///
 /// 🔴 原项目 `paths.rs` 有一条断言：「库是用户成果，不得藏进 appData」。
 /// 把两者混成一个 `rootDir` 会导致：卸载器不知道哪些该删、备份时无法区分、
@@ -66,31 +78,53 @@ String dataRoot() => _env('MIAO_ROOT') ?? '${appDataDir()}${_sep()}MiaoDock';
 /// 浏览器插件存的旧令牌全部 401。
 String mangaStateDir() => _env('MIAO_MANGA_STATE_DIR') ?? '${dataRoot()}${_sep()}manga${_sep()}state';
 
-/// 漫画域：引擎运行时根（`<数据根>/manga/runtimes`）。
+/// 漫画域：**引擎目录**（`<数据根>/manga/engine`）。
 ///
-/// **下载时默认定位到这里**，但用户可以改选别处（见 D-015）。
-String mangaRuntimeRoot() => _env('MIAO_MANGA_RUNTIME_ROOT') ?? '${dataRoot()}${_sep()}manga${_sep()}runtimes';
+/// 这是「应用下载的一切」的唯一根，**整体可搬移 / 可导入 / 可导出**。
+/// 下载时默认定位到这里，但用户可改选别处（D-015 / D-027）。
+String mangaEngineDir() => _env('MIAO_MANGA_ENGINE_DIR') ?? '${dataRoot()}${_sep()}manga${_sep()}engine';
 
-/// 引擎源码目录（`<runtimes>/src`）。
-String engineSrcDir([String? runtimeRoot]) => '${runtimeRoot ?? mangaRuntimeRoot()}${_sep()}src';
-
-/// 引擎解释器目录（`<runtimes>/venv`）。
-String engineVenvDir([String? runtimeRoot]) => '${runtimeRoot ?? mangaRuntimeRoot()}${_sep()}venv';
-
-/// 模型落盘目录：`<数据根>/manga/state/models-state`（D-016）。
+/// 自带解释器目录（`<engine>/python`）。
 ///
-/// ⚠️ **这是对原项目的刻意偏离**：原项目把 `models-store` 放在运行时根下
-/// （`<runtimes>/models-store`，见 `model_status.rs` 的 `tmp.join("models-store")`）。
-/// 现改挂到 `state/` 下 —— 模型被视为**状态资产**，与运行时解耦：
-/// 换一个 runtimes 目录（导入本地 / 换盘）时，模型不必重下。
+/// 🔴 **不用 venv**：venv 的 `pyvenv.cfg` 记录绝对路径，目录一移动 `bin/python` 就断
+/// （实测：`bad interpreter: No such file or directory`）；而自带 Python 移动后
+/// `sys.prefix` 自动跟随、pip 与已装依赖照常可用（实测 numpy 2.4.6 导入正常）。
+/// 「一个目录可搬」与 venv 互斥。
+String enginePythonDir([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_sep()}python';
+
+/// 引擎源码目录（`<engine>/src`）。
+String engineSrcDir([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_sep()}src';
+
+/// llama-server 目录（`<engine>/bin/llama`）。
 ///
-/// 因此本函数**不接受 runtimeRoot**：模型位置不随运行时走。
-String modelsStoreDir() => _env('MIAO_MODELS_STORE_DIR') ?? '${mangaStateDir()}${_sep()}models-state';
+/// 路径固定，换后端 = 替换该目录内容（后端记在 `.engine.json`）。
+String engineLlamaDir([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_sep()}bin${_sep()}llama';
+
+/// MIT 的 model_dir（`<engine>/models`）。
+///
+/// 🔴 这个目录的**内部结构遵从上游**（`detection/` `inpainting/` `ocr/` `fonts/`
+/// `translators/nllb/`）。启动引擎时必须显式传 `--model-dir` 指到这里 ——
+/// MIT 的默认值是 `<src>/models`（`utils/inference.py`），不传就会去源码目录里找，
+/// 在离线机器上表现为「卡住」或静默走下载。
+String engineModelsDir([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_sep()}models';
+
+/// llama-server 加载的权重目录（`<engine>/llm`）。
+///
+/// 🔴 刻意**不放在 `models/` 下**：`models/` 是 MIT 的领地，结构要能原样对照上游文档；
+/// Sakura 是 llama-server 的资产，MIT 一行代码都不读它（`SakuraTranslator` 只是 HTTP 客户端）。
+/// 混放会让「升级引擎」与「我们的资产」互相牵制。
+String engineLlmDir([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_sep()}llm';
+
+/// 安装清单（`<engine>/.engine.json`）：版本 / 后端 / 各部件校验 / 时间。
+String engineManifestPath([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_sep()}.engine.json';
 
 /// 引擎解释器可执行文件路径。
-String enginePythonPath([String? runtimeRoot]) {
-  final venv = engineVenvDir(runtimeRoot);
-  return Platform.isWindows ? '$venv${_sep()}Scripts${_sep()}python.exe' : '$venv${_sep()}bin${_sep()}python';
+///
+/// 🔴 两个平台布局不同：python-build-standalone 在 Windows 上是**完整安装**
+/// （`python/python.exe`），不是 venv 的 `Scripts/python.exe`。
+String enginePythonPath([String? engineDir]) {
+  final root = enginePythonDir(engineDir);
+  return Platform.isWindows ? '$root${_sep()}python.exe' : '$root${_sep()}bin${_sep()}python3';
 }
 
 /// 漫画作品库根（**用户成果**）：`~/Pictures/MiaoDock Mangas`。
@@ -102,21 +136,19 @@ String mangaLibraryDir() {
   return '${_home()}${_sep()}Pictures${_sep()}MiaoDock Mangas';
 }
 
-/// 运行时目录结构是否像是一个引擎安装。
+/// 超长路径前缀（Windows）。
 ///
-/// ⚠️ **这是浅检查，不是完整性校验**。完整的校验（版本匹配、模型齐全、
-/// venv 可用）见 P0-F6d（已记账，后做）。
-///
-/// 返回缺失项的键（空 = 浅检查通过）。
-List<String> inspectRuntimeDir(String runtimeRoot) {
-  final dir = Directory(runtimeRoot);
-  if (!dir.existsSync()) return const ['runtime-root'];
-
-  final missing = <String>[];
-  if (!Directory(engineSrcDir(runtimeRoot)).existsSync()) missing.add('src');
-  if (!Directory(engineVenvDir(runtimeRoot)).existsSync()) missing.add('venv');
-  // models-store 允许不存在（首次下载后再建），但 src / venv 必须有。
-  return missing;
+/// 🔴 Windows 的 `MAX_PATH` 是 260；nllb 的 HF cache 路径
+/// （`models/translators/nllb/models--facebook--nllb-200-distilled-600M/blobs/<64位sha>`）
+/// 叠加 `%LOCALAPPDATA%` 后逼近上限。加 `\\?\` 前缀可绕过。
+/// 其他平台原样返回 —— 不要到处判断平台，统一走这里。
+String longPath(String path) {
+  if (!Platform.isWindows) return path;
+  if (path.startsWith(r'\\?\')) return path;
+  final abs = File(path).absolute.path;
+  // 短路径不加前缀：加了反而会绕过一些正常化的便利。
+  if (abs.length < 240) return abs;
+  return abs.startsWith(r'\\') ? '${r'\\?\UNC\'}${abs.substring(2)}' : '${r'\\?\'}$abs';
 }
 
 String _sep() => Platform.pathSeparator;

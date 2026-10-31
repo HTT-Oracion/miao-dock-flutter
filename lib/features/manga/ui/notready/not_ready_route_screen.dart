@@ -51,7 +51,7 @@ class NotReadyRouteScreen extends ConsumerWidget {
       onExportLogs: null,
       // 导入本地运行时（D-015）：选目录 → 浅检查 → 通过则跳过下载。
       onImportLocal: () async {
-        final result = await RuntimePickerDialog.show(context);
+        final result = await RuntimePickerDialog.show(context, importMode: true);
         if (result == null || !result.imported) return;
         // TODO(P0-C): 把选定目录写入运行时配置，并触发引擎装载。
         // 完整性校验见 P0-F6d（已记账，后做）；当前只做了结构浅检查。

@@ -439,3 +439,37 @@
 - **测试漫画为什么不入库**：体积与版权都属本地素材，仓库不该承载；
   但引擎验证必须有真实漫画页，故固定目录名 `test-manga/` 作为约定。
 - **关联**：P0-C6e · D-025 · `engine-downloads.md`。
+
+## D-027 引擎目录收束为一个可搬的根（废止 D-016）
+
+- **状态**：开发中（2026-11-01；路径层与部件模型已落地，设置页部件表待做）
+- **做了什么**：
+  - 引擎目录 `<数据根>/manga/runtimes` → **`<数据根>/manga/engine`**。
+  - 模型从 `<state>/models-state` 挪进 **`<engine>/models`**（MIT 的 `model_dir`）。
+  - Sakura 权重放 **`<engine>/llm`**（与 `models/` 平级）。
+  - **删除 venv**：依赖直接装进 `<engine>/python` 的 site-packages。
+  - 新增「部件模型」（`packages/protocol/lib/src/engine_parts.dart`）：7 个部件 + manifest 前缀改写表 + 后端枚举。
+  - 新增「校验」（`lib/core/storage/engine_inspect.dart`）：结构 → 可运行（真的 `import torch`）→ 元数据。
+  - 导入对话框加「校验」按钮；**失败才出日志**（复用 `LogBox`），并给「重新下载缺失部件」。
+- **为什么（推翻 D-016 的实测依据）**：
+  - **venv 不可搬迁**：`pyvenv.cfg` 记录绝对路径，移动后 `bin/python` 直接坏
+    （实测 `bad interpreter: No such file or directory`）。
+  - **自带 Python 可搬迁**：移动后 `sys.prefix` 自动跟随、pip 与已装依赖照常可用
+    （实测 `numpy 2.4.6` 与 `einops` 导入正常）。「一个目录可搬」与 venv 互斥。
+  - D-016 当初的理由是「换 runtimes 不重下模型」；该场景现由**部件级导入**覆盖，
+    理由不再成立。
+- **目录职责**：`engine/` 全是「下载来的、可搬、可分享」的资产；
+  `state/` 全是「运行期自产」的状态（令牌 / 队列）。混放会让「导入别人的引擎目录」
+  顺带把别人的令牌导进来。
+- **为什么 Sakura 不放进 `models/`**：`models/` 就是 MIT 的 `model_dir`，
+  结构要能原样对照上游；Sakura 归 llama-server（`SakuraTranslator` 只是 HTTP 客户端，
+  MIT 一行代码都不读它的权重）。混放会让升级引擎与我们的资产互相牵制。
+- **踩坑**：
+  - python-build-standalone 在 **Windows 是完整安装**（`python/python.exe`），不是 venv 的
+    `Scripts/python.exe`；解释器路径必须按平台分叉。
+  - MIT 的 `model_dir` 默认是 `<src>/models`，启动引擎**必须显式 `--model-dir`**，
+    否则会去源码目录找，离线机器上表现为卡住。
+  - 校验的 deps 必须**真的 import 一次**：只查 site-packages 非空会把「装了一半」判成就绪。
+- **反证**：nllb 改成必需 → 3 条红；Sakura 留在 `models/` 下 → 2 条红。
+- **验证**：`test/paths_test.dart` 21 条（两棵树、逐部件落点、前缀映射、平台分叉、长路径、结构级校验、后端枚举）。
+- **关联**：D-015 · D-016（废止）· D-025 · `engine-downloads.md`。

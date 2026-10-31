@@ -16,7 +16,7 @@ class Handlers {
   /// 而不是各建一个 LibraryStore 实例（那会在惰性默认值上产生两份真相）。
   factory Handlers({String? rootDir, String? runtimeRoot, String? modelsDir, String engineMode = 'mock'}) {
     final store = LibraryStore(rootDir: rootDir);
-    final rt = runtimeRoot ?? _defaultRuntimeRoot();
+    final rt = runtimeRoot ?? _defaultEngineDir();
     final md = modelsDir ?? _defaultModelsDir();
     return Handlers._(
       store,
@@ -33,24 +33,22 @@ class Handlers {
   final EngineFacade engine;
   final String engineMode;
 
-  /// 引擎运行时默认根（与 `lib/core/storage/paths.dart` 同口径）。
-  static String _defaultRuntimeRoot() {
+  /// 引擎目录默认根（`<数据根>/manga/engine`，与 `lib/core/storage/paths.dart` 同口径）。
+  ///
+  /// 这是「应用下载的一切」的根：python / src / bin/llama / models / llm（D-027）。
+  static String _defaultEngineDir() {
     final env = Platform.environment;
-    final override = env['MIAO_MANGA_RUNTIME_ROOT'];
+    final override = env['MIAO_MANGA_ENGINE_DIR'];
     if (override != null && override.isNotEmpty) return override;
-    return '${_dataRoot()}${Platform.pathSeparator}manga${Platform.pathSeparator}runtimes';
+    return '${_dataRoot()}${Platform.pathSeparator}manga${Platform.pathSeparator}engine';
   }
 
-  /// 模型目录默认值（D-016：挂在 state 下，与运行时解耦）。
+  /// 模型目录默认值：`<engine>/models`（MIT 的 model_dir，D-027 废止 D-016）。
   static String _defaultModelsDir() {
     final env = Platform.environment;
-    final override = env['MIAO_MODELS_STORE_DIR'];
+    final override = env['MIAO_MODELS_DIR'];
     if (override != null && override.isNotEmpty) return override;
-    final stateOverride = env['MIAO_MANGA_STATE_DIR'];
-    final state = (stateOverride != null && stateOverride.isNotEmpty)
-        ? stateOverride
-        : '${_dataRoot()}${Platform.pathSeparator}manga${Platform.pathSeparator}state';
-    return '$state${Platform.pathSeparator}models-state';
+    return '${_defaultEngineDir()}${Platform.pathSeparator}models';
   }
 
   static String _dataRoot() {

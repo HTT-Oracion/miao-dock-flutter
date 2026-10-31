@@ -5,9 +5,11 @@
   "lib/core/net/service_locator.dart": 2,
   "lib/core/window/window_controller.dart": 1,
   "lib/features/manga/domain/not_ready_state.dart": 1,
-  "_note": "诊断信息（异常 message / 进程日志 / debugPrint），不进 UI；UI 按错误 code 映射 ARB 词条。\nP0-D 新增的 4 个文件均为**纯诊断层**（无 Widget），服务失败若要在界面上展示，须走 state → ARB 映射，不得直接渲染 lastError。",
+  "_note": "诊断信息（异常 message / 进程日志 / debugPrint / 校验日志行），不进 UI 直接展示；UI 按错误 code 或部件 id 映射 ARB 词条。\nP0-D 与 D-027 新增的文件均为**纯诊断层**（无 Widget）。引擎校验日志（engine_inspect）会进 LogBox，属「技术输出」而非界面文案，其外层标题与按钮文案仍走 ARB。",
   "lib/core/process/service_controller.dart": 2,
   "lib/core/process/service_launch.dart": 3,
   "lib/core/process/service_supervisor.dart": 5,
-  "lib/app/bootstrap.dart": 1
+  "lib/app/bootstrap.dart": 1,
+  "lib/core/storage/paths.dart": 1,
+  "lib/core/storage/engine_inspect.dart": 16
 }

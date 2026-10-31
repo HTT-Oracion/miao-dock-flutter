@@ -1222,5 +1222,88 @@
   "settingTierByHw": "按硬件探测",
   "@settingTierByHw": {
     "description": "设置：档位"
+  },
+  "engineCheck": "校验",
+  "@engineCheck": {
+    "description": "引擎：校验按钮"
+  },
+  "engineChecking": "校验中…",
+  "@engineChecking": {
+    "description": "引擎：校验进行中"
+  },
+  "engineCheckPassed": "校验通过",
+  "@engineCheckPassed": {
+    "description": "引擎：校验通过"
+  },
+  "engineCheckFailed": "校验失败 · {count} 个部件有问题",
+  "@engineCheckFailed": {
+    "description": "引擎：校验失败",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "engineCheckLog": "校验日志",
+  "@engineCheckLog": {
+    "description": "引擎：日志块标题"
+  },
+  "engineRedownloadHint": "缺少部件：{parts}。重新下载会先让你选择安装目录，与直接下载一致。",
+  "@engineRedownloadHint": {
+    "description": "引擎：重下引导",
+    "placeholders": {
+      "parts": {
+        "type": "String"
+      }
+    }
+  },
+  "engineRedownloadMissing": "重新下载缺失部件",
+  "@engineRedownloadMissing": {
+    "description": "引擎：重下按钮"
+  },
+  "enginePartReady": "就绪",
+  "@enginePartReady": {
+    "description": "引擎部件状态"
+  },
+  "enginePartMissing": "缺失",
+  "@enginePartMissing": {
+    "description": "引擎部件状态"
+  },
+  "enginePartOptional": "按需",
+  "@enginePartOptional": {
+    "description": "引擎部件状态"
+  },
+  "enginePickBackendTitle": "选择推理后端",
+  "@enginePickBackendTitle": {
+    "description": "后端选择：标题"
+  },
+  "enginePickBackendDesc": "不同后端的体积与兼容性不同。可稍后在设置里更换，只会重下这一部分。",
+  "@enginePickBackendDesc": {
+    "description": "后端选择：说明"
+  },
+  "engineBackendAuto": "自动（推荐）",
+  "@engineBackendAuto": {
+    "description": "后端选项"
+  },
+  "engineBackendCpu": "CPU",
+  "@engineBackendCpu": {
+    "description": "后端选项"
+  },
+  "engineBackendVulkan": "Vulkan",
+  "@engineBackendVulkan": {
+    "description": "后端选项"
+  },
+  "engineBackendCuda": "CUDA 12.4",
+  "@engineBackendCuda": {
+    "description": "后端选项"
+  },
+  "engineBackendSize": "约 {mb} MB",
+  "@engineBackendSize": {
+    "description": "后端选项：体积",
+    "placeholders": {
+      "mb": {
+        "type": "int"
+      }
+    }
   }
 }

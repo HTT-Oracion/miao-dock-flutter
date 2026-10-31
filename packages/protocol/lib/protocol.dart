@@ -4,6 +4,7 @@
 library;
 
 export 'src/dto/api_error.dart';
+export 'src/engine_parts.dart';
 export 'src/dto/engine.dart';
 export 'src/dto/library.dart';
 export 'src/dto/task_row.dart';
