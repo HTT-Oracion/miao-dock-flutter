@@ -771,3 +771,28 @@
      —— 需要给 `launch.json` 与 `EngineSupervisor` 增加 `env` 支持。
 - **验证**：`services/mangasvc/test/engine_config_test.dart` 3 条（逐项钉死 mocr/CHS/sakura）；服务端 117 通过。
 - **关联**：D-028 · D-031 · D-030。
+
+## D-042 mocr 权重落盘 + 真实翻译首次跑通（含 nonce 根因）
+
+- **状态**：✅ **整条链路真实跑通**（2026-11-01）
+- **实测结果**（`/tmp/full-eng`，800×1142 日文页 → 中文）：
+  ```
+  STAGE: translating → after-translating → mask-generation → inpainting → rendering → finished
+  RESULT 1 301 295 字节 PNG（800×1142），耗时 24.7 秒
+  帧计数：queue 1 · waiting 1 · stage 11 · result 1
+  ```
+  译文正确落在气泡内（竖排、字号自适应），未出现 `use_mocr_merge` 的排版回归。
+- **mocr 权重**：`models-mocr` 部件，8 个文件 423.7 MB，落点走 HF 缓存布局 + `refs/main`；
+  启动注入 `HF_HOME=<engine>/.hf` / `HF_HUB_OFFLINE=1` / `TRANSFORMERS_OFFLINE=1`。
+- **🔴 关键根因（nonce）**：`--start-instance` 模式下必然 401「Nonce does not match」，链路是
+  1. 父进程生成 nonce 并传给子进程（`server/main.py:288`）；
+  2. 父进程转发翻译请求时**不带 `X-Nonce`**（`server/instance.py` 调 `fetch_data_stream` 没传 headers）；
+  3. 子进程 `check_nonce` 发现 header 缺失 → 401（`mode/share.py:115`）。
+  **唯一正解是启动时传字面量 `--nonce None`**：`share.py:52-57` 里
+  `if not nonce: nonce = secrets.token_hex(16)`——**空串或省略都会让子进程自己再生成一个**，
+  只有字符串 `"None"` 才 `nonce = None` 真正禁用校验。
+- **安全说明**：`nonce` 本意是防同机他进程调用子进程端口。禁用后仅监听 `127.0.0.1`（随机端口），
+  风险面限于本机；相比之下「翻译 100% 失败」不可接受。若要恢复校验，需给上游打补丁转发 header。
+- **教训**：这类问题**单测永远抓不到**——必须真起进程、真发请求。之前 `launch.json` 标 `provisional`
+  是对的预判。
+- **关联**：D-030 · D-031 · D-041。
