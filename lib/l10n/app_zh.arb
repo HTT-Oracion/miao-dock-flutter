@@ -1541,5 +1541,33 @@
   "remoteFail": "连接失败",
   "@remoteFail": {
     "description": "远程连接文案"
+  },
+  "llmCredTitle": "在线翻译平台",
+  "@llmCredTitle": {
+    "description": "在线平台凭证"
+  },
+  "llmCredWhy": "选平台并填写该平台的凭证；凭证存系统钥匙串，不写明文。",
+  "@llmCredWhy": {
+    "description": "在线平台凭证"
+  },
+  "llmAppKey": "App Key",
+  "@llmAppKey": {
+    "description": "在线平台凭证"
+  },
+  "llmAppSecret": "App Secret",
+  "@llmAppSecret": {
+    "description": "在线平台凭证"
+  },
+  "llmCredSave": "保存凭证",
+  "@llmCredSave": {
+    "description": "在线平台凭证"
+  },
+  "llmCredSaved": "已保存到钥匙串",
+  "@llmCredSaved": {
+    "description": "在线平台凭证"
+  },
+  "platformYoudao": "有道智云",
+  "@platformYoudao": {
+    "description": "在线翻译平台名"
   }
 }

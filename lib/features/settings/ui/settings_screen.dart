@@ -17,6 +17,7 @@ import '../../manga/controller/engine_install_controller.dart';
 import '../../manga/controller/engine_ready_controller.dart';
 import '../../manga/domain/not_ready_state.dart';
 import '../../manga/controller/remote_controller.dart';
+import '../controller/credential_controller.dart';
 import '../../manga/domain/platform_caps.dart';
 import '../controller/engine_dir_controller.dart';
 import '../controller/engine_settings_controller.dart';
@@ -288,6 +289,7 @@ class _TranslateSection extends ConsumerWidget {
             SettingSubTitle(l10n.settingsSectionSource),
             const _SourceRow(),
             if (source == TranslateSource.remote) const _RemoteSection(),
+            if (source == TranslateSource.llm) const _LlmCredentialSection(),
 
             SettingSubTitle(l10n.settingsSectionPairing),
             const _PairingRows(),
@@ -452,6 +454,101 @@ class _ServiceCard extends ConsumerWidget {
     TranslateSource.llm => l10n.sourceLlm,
     TranslateSource.remote => l10n.sourceRemote,
   };
+}
+
+String _platformLabel(AppLocalizations l10n, TranslatePlatform p) => switch (p) {
+  TranslatePlatform.youdao => l10n.platformYoudao,
+};
+
+/// 在线翻译平台凭证（D-047）：平台下拉 + appKey/appSecret，存系统钥匙串。
+class _LlmCredentialSection extends ConsumerStatefulWidget {
+  const _LlmCredentialSection();
+
+  @override
+  ConsumerState<_LlmCredentialSection> createState() => _LlmCredentialSectionState();
+}
+
+class _LlmCredentialSectionState extends ConsumerState<_LlmCredentialSection> {
+  TranslatePlatform _platform = TranslatePlatform.youdao;
+  late final TextEditingController _key;
+  late final TextEditingController _secret;
+  bool _loaded = false;
+  bool _saved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _key = TextEditingController();
+    _secret = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _key.dispose();
+    _secret.dispose();
+    super.dispose();
+  }
+
+  void _loadOnce(Map<TranslatePlatform, PlatformCredential>? creds) {
+    if (_loaded || creds == null) return;
+    _loaded = true;
+    final c = creds[_platform] ?? const PlatformCredential();
+    _key.text = c.appKey;
+    _secret.text = c.appSecret;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final creds = ref.watch(credentialProvider).value;
+    _loadOnce(creds);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SettingSubTitle(l10n.llmCredTitle),
+        SettingRow(
+          label: l10n.llmCredTitle,
+          why: l10n.llmCredWhy,
+          control: AppSelect<TranslatePlatform>(
+            value: _platform,
+            items: [for (final p in TranslatePlatform.values) (p, _platformLabel(l10n, p))],
+            onChanged: (v) {
+              setState(() {
+                _platform = v;
+                _loaded = false;
+                _saved = false;
+              });
+            },
+          ),
+        ),
+        SettingRow(
+          label: l10n.llmAppKey,
+          control: SizedBox(width: 220, child: _Field(controller: _key)),
+        ),
+        SettingRow(
+          label: l10n.llmAppSecret,
+          control: SizedBox(width: 220, child: _Field(controller: _secret, obscure: true)),
+        ),
+        SettingRow(
+          label: l10n.llmCredSave,
+          why: _saved ? l10n.llmCredSaved : null,
+          control: FilledButton(
+            onPressed: () async {
+              await ref
+                  .read(credentialProvider.notifier)
+                  .save(_platform, PlatformCredential(appKey: _key.text, appSecret: _secret.text));
+              if (!mounted) return;
+              setState(() => _saved = true);
+            },
+            style: _primaryStyle(palette),
+            child: Text(l10n.llmCredSave, style: const TextStyle(fontSize: 9.5)),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// 远程连接配置（D-045）：地址 + 令牌 + 测试连接。

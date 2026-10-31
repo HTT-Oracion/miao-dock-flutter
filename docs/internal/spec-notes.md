@@ -880,3 +880,30 @@
   将来若要真正隔离，需要多令牌签发。
 - **验证**：`flutter analyze` 干净；`flutter test` 115 通过；服务端 117 通过。
 - **关联**：D-045。
+
+## D-047 凭据走系统钥匙串（flutter_secure_storage）
+
+- **状态**：存储层与设置 UI 已完成（2026-11-01）；**翻译链路尚未把凭证传进引擎 config**
+- **依赖引入**（按 `third-party-packages.md` §纪律）：
+  - 包：`flutter_secure_storage ^11.2.0`（运行时依赖，**1 个直接 + 5 个联邦子包**：
+    darwin / linux / web / windows / platform_interface，均随主包锁定）
+  - 维护状态核查：最新版 2026-09-16 发布（距今约 1.5 个月），六个平台齐全；
+    SDK 约束 `>=3.8.0` 与本项目 Dart 3.13 兼容。该包原本已在候选清单「App：存储」组，
+    引入时机正是「鉴权方案落地时」。
+- **为什么不用偏好文件**：`appSecret` 是凭据不是配置，明文 JSON 任何进程都能读。
+  现在落：macOS/iOS → Keychain，Windows → Credential Manager，Linux → libsecret，
+  Android → KeyStore，Web → WebCrypto。
+- **封装**：`core/storage/secure_store.dart`（AGENTS §3 禁止第三方类型泄漏）。
+  读写失败**不抛异常**：平台后端缺失（如 Linux 无 libsecret）时按「没有凭证」处理，
+  让用户被引导去填写，而不是整页崩掉。
+- **设置页**：来源 = 大模型翻译时出现「在线翻译平台」区块：
+  平台下拉（当前仅**有道智云**，与原项目在线 API 一致）+ App Key + App Secret + 保存。
+  结果提示「已保存到钥匙串」。
+- **未做**：
+  1. 凭证尚未传给引擎（`config.translator` 需要 `app_key` / `app_secret`，
+     且用户选定平台后 `translator` 要改成对应引擎名）；
+  2. **没有「测试凭证」**：有道是签名接口，凭证错会在翻译时才发现；
+  3. 平台只登记了有道一家，更多平台需先确认原项目的接入范围。
+- **验证**：`flutter analyze` 干净；`flutter test` 115 通过；l10n 棘轮通过
+  （平台名已挪进 ARB，控制器不再含中文）。
+- **关联**：D-040 · D-041 · D-045。

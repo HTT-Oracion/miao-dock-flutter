@@ -22,6 +22,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^3.0.0
+  # 敏感凭证（有道智云 appSecret / 配对令牌）走系统钥匙串，不落明文偏好（D-047）。
+  flutter_secure_storage: ^11.2.0
   go_router: ^16.0.0
   lucide_icons_flutter: ^4.0.1
   protocol:
