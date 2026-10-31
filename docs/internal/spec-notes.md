@@ -582,3 +582,23 @@
   - Windows：可走预编译 wheel，避开编译；仍需 GitHub（除非我们把 wheel 随包分发）。
   - macOS：需要 GitHub **且** 已装 Xcode CLT，否则 deps 必然失败 —— 界面必须把这两条写进失败提示。
 - **关联**：D-029 · `engine-downloads.md` §三。
+
+## D-033 引导页接上真实装配（UI 接线完成）
+
+- **状态**：已完成（2026-11-01）
+- **做了什么**：
+  - `engine_install_controller.dart`：装配状态 provider（`running/done/error/logs/percent`），
+    调 `installEngine` 后每 800ms 轮询 `getEngineInstall`，终态自动停止。
+  - `notReadyViewProvider` 改为由**真实状态**驱动：
+    装配中 → `downloading`（进度透传，无来源则为 null）；失败 → `failed`（日志交给 `LogBox`）；
+    完成 → `installed`。
+  - 引导页主按钮：未装配/失败 → 选目录 → 开始装配；已装 → 起引擎。
+  - 导入本地：校验通过后记住目录（会话内），让「导入」立刻生效。
+- **为什么状态放 Notifier 而不是 FutureBuilder**：装配是分钟级长任务，
+  用户切走再回来进度不能归零。
+- **临时取舍（需后续补）**：
+  - 导入的目录**只在会话内有效**，未落盘 —— 落盘要等设置页有「引擎目录」设置项。
+  - Windows/Linux 的**后端选择弹窗尚未接**，目前传 `null`（服务端按 auto 处理）。
+- **反证**：`if (install.running)` 改成 `if (false)` → 「装配中 → downloading」立即红。
+- **验证**：`test/engine_install_view_test.dart` 4 条；全量 `flutter test` 106 通过 + 11 跳过。
+- **关联**：D-027 · D-028 · D-029 · D-031。

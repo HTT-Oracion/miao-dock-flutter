@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../controller/engine_controller.dart';
+import '../../controller/engine_install_controller.dart';
 import '../../domain/not_ready_state.dart';
 import 'not_ready_screen.dart';
 import 'runtime_picker.dart';
@@ -21,20 +22,23 @@ class NotReadyRouteScreen extends ConsumerWidget {
 
     return NotReadyScreen(
       view: view,
-      onPrimary: () {
+      onPrimary: () async {
+        final install = ref.read(engineInstallProvider.notifier);
         switch (view.state) {
           case NotReadyState.uninstalled:
-            // P0-C：触发模型下载。当前未接入 → 不假装开始。
-            break;
-          case NotReadyState.installed:
-            engine.start();
           case NotReadyState.failed:
+            // 重新下载与直接下载一致：**先选目录**（D-027 定案）。
+            final r = await RuntimePickerDialog.show(context, initialDir: ref.read(activeEngineDirProvider));
+            if (r == null) return;
+            install.reset();
+            await install.start(engineDir: r.dir);
+          case NotReadyState.installed:
+            // 已装好但引擎未起 → 起引擎（共用开关，D-012）。
             engine.start();
           case NotReadyState.starting:
-            break;
           case NotReadyState.downloading:
-            break;
           case NotReadyState.degraded:
+            // 进行中或服务异常：主按钮此时不承担动作。
             break;
         }
       },
@@ -51,8 +55,14 @@ class NotReadyRouteScreen extends ConsumerWidget {
       onExportLogs: null,
       // 导入本地运行时（D-015）：选目录 → 浅检查 → 通过则跳过下载。
       onImportLocal: () async {
-        final result = await RuntimePickerDialog.show(context, importMode: true);
+        final result = await RuntimePickerDialog.show(
+          context,
+          initialDir: ref.read(activeEngineDirProvider),
+          importMode: true,
+        );
         if (result == null || !result.imported) return;
+        // 校验已通过（对话框里强制要求），记住目录即可让它生效。
+        ref.read(importedEngineDirProvider.notifier).set(result.dir);
         // TODO(P0-C): 把选定目录写入运行时配置，并触发引擎装载。
         // 完整性校验见 P0-F6d（已记账，后做）；当前只做了结构浅检查。
       },

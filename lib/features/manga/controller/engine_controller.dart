@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:protocol/protocol.dart';
 
 import '../../../core/storage/shell_prefs.dart';
 import 'queue_controller.dart';
 import '../../../core/window/window_controller.dart';
+import '../../../core/storage/paths.dart';
 import '../domain/not_ready_state.dart';
+import 'engine_install_controller.dart';
 
 /// 引擎运行状态（L1 + L2 合并，共用一个开关 —— D-012）。
 ///
@@ -98,17 +102,46 @@ class TranslateSourceNotifier extends Notifier<TranslateSource> {
 
 final translateSourceProvider = NotifierProvider<TranslateSourceNotifier, TranslateSource>(TranslateSourceNotifier.new);
 
-/// 模型是否已装配。
+/// 引擎目录是否「看起来装过」。
 ///
-/// P0-C 接入前恒为 false —— 这样引导页会稳定停在「未装配」态，
-/// 不会因为返回 true 而让用户以为能翻译。
-final modelsInstalledProvider = Provider<bool>((ref) => false);
+/// 用 `.engine.json` 的存在与否做粗判：它由装配器在成功后被写入。
+/// 🔴 这只是**粗判**，不是校验 —— 真正的部件级校验在设置页（`inspectEngine`）。
+/// 引导页要的是「该显示未装配还是已装配」，不该为此起子进程。
+final modelsInstalledProvider = Provider<bool>((ref) {
+  // 装配刚完成也要立刻反映，不能等下次冷启动。
+  final install = ref.watch(engineInstallProvider);
+  if (install.done) return true;
+  final dir = ref.watch(importedEngineDirProvider);
+  return File(engineManifestPath(dir)).existsSync();
+});
 
-/// 完整视图模型 —— UI 直接 watch 它。
+/// 完整视图模型 —— UI 直接 watch 它（D-033：接上真实装配状态）。
 final notReadyViewProvider = Provider<NotReadyView>((ref) {
+  final source = ref.watch(translateSourceProvider);
+  final install = ref.watch(engineInstallProvider);
+
+  // 装配中：进度来自服务端；`percent` 为 null 时界面不画百分比（不编造）。
+  if (install.running) {
+    return NotReadyView(
+      state: NotReadyState.downloading,
+      engine: EngineRuntimeState.off,
+      source: source,
+      downloadProgress: install.percent,
+      logs: install.logs,
+    );
+  }
+  // 装配失败：把服务端日志直接交给日志组件。
+  if (install.error != null) {
+    return NotReadyView(
+      state: NotReadyState.failed,
+      engine: EngineRuntimeState.off,
+      source: source,
+      logs: install.logs,
+    );
+  }
   return deriveNotReadyView(
-    source: ref.watch(translateSourceProvider),
-    status: null, // P0-C 接入真实 EngineStatus 后替换
+    source: source,
+    status: null, // 引擎进程状态由 EngineNotifier 维护（C6e 后接真实 EngineStatus）
     modelsInstalled: ref.watch(modelsInstalledProvider),
     downloadProgress: null,
     logs: const [],

@@ -161,10 +161,10 @@ abstract class MangaSvcClient {
   ///
   /// 立刻返回，装配在后台跑；进度用 [getEngineInstall] 轮询。
   /// [backend] 只对 Windows / Linux 有意义（macOS 只有一种构建）。
-  Future<Map<String, dynamic>> installEngine({required String engineDir, String backend, bool includeNllb});
+  Future<Map<String, dynamic>> installEngine({required String engineDir, String? backend, bool includeNllb = false});
 
   /// `POST /api/v1/engine/deps/rebuild` —— 用 pip 重建依赖（D-029，国内镜像优先）。
-  Future<Map<String, dynamic>> rebuildDeps({required String engineDir, String indexUrl});
+  Future<Map<String, dynamic>> rebuildDeps({required String engineDir, String? indexUrl});
 
   /// `GET /api/v1/engine/deps` —— 依赖重建进度。
   Future<Map<String, dynamic>> getDepsStatus();
