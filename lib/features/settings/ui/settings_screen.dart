@@ -124,7 +124,7 @@ class _SectionNotifier extends Notifier<String> {
 
 final _sectionProvider = NotifierProvider<_SectionNotifier, String>(_SectionNotifier.new);
 
-class _NavItem extends StatelessWidget {
+class _NavItem extends StatefulWidget {
   const _NavItem({required this.label, required this.active, required this.onTap, this.count, this.icon});
 
   final String label;
@@ -134,34 +134,52 @@ class _NavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_NavItem> createState() => _NavItemState();
+}
+
+class _NavItemState extends State<_NavItem> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? palette.accSoft : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 12, color: active ? palette.acc : palette.mut),
-              const SizedBox(width: 7),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                color: active ? palette.ink : palette.ink2,
+    final active = widget.active;
+    final icon = widget.icon;
+    final label = widget.label;
+    final count = widget.count;
+    final onTap = widget.onTap;
+    // hover 与高亮**共用同一个 Container**：InkWell 放进内层，
+    // 否则水波纹会覆盖到外边距，hover 区域比高亮大一圈（用户实测指出）。
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+      decoration: BoxDecoration(
+        color: active ? palette.accSoft : (_hover ? palette.card : Colors.transparent),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        onHover: (v) => setState(() => _hover = v),
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 12, color: active ? palette.acc : palette.mut),
+                const SizedBox(width: 7),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                  color: active ? palette.ink : palette.ink2,
+                ),
               ),
-            ),
-            const Spacer(),
-            if (count != null) Text('$count', style: TextStyle(fontSize: 8.5, color: palette.mut)),
-          ],
+              const Spacer(),
+              if (count != null) Text('$count', style: TextStyle(fontSize: 8.5, color: palette.mut)),
+            ],
+          ),
         ),
       ),
     );
@@ -311,13 +329,16 @@ class _ServiceCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final view = ref.watch(notReadyViewProvider);
     final install = ref.watch(engineInstallProvider);
-    final running = view.engine.isReady;
+    // 🔴 必须直接看 engineStateProvider：`notReadyViewProvider` 传的是 `status: null`，
+    // 其 `engine` 恒为 off —— 用它判断会导致按钮永远没有 loading 态。
+    final engineState = ref.watch(engineStateProvider);
+    final running = engineState.isReady;
 
     // 启动前置条件（D-062）：**装配齐全 且 校验通过**才允许点启动。
     // 没装好就点启动，只会得到一个语焉不详的失败；不如直接禁用并说明原因。
     final installed = ref.watch(enginePresenceProvider).value == EnginePresence.complete;
     final verified = ref.watch(engineInspectionProvider).value?.ok ?? false;
-    final starting = view.engine == EngineRuntimeState.starting;
+    final starting = engineState == EngineRuntimeState.starting;
     final canStart = installed && verified && !starting;
     final blockedReason = !installed
         ? l10n.svcStartNeedInstall

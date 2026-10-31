@@ -141,11 +141,7 @@ class _NotReadyCard extends StatelessWidget {
             const SizedBox(height: 16),
           ],
           if (view.state == NotReadyState.failed || view.state == NotReadyState.degraded) ...[
-            LogBox(
-              lines: view.logs.isEmpty ? _demoLogs(view.state) : view.logs,
-              title: l10n.logBoxTitle,
-              onExport: onExportLogs,
-            ),
+            LogBox(lines: view.logs, title: l10n.logBoxTitle, onExport: onExportLogs),
             const SizedBox(height: 16),
           ],
           _Actions(
@@ -167,13 +163,6 @@ class _NotReadyCard extends StatelessWidget {
   ///
   /// 🔴 不写死假数据上屏：这里只在**没有任何日志来源时**给结构性占位，
   /// 并在 P0-C 接入真实日志后移除。
-  static List<String> _demoLogs(NotReadyState state) => state == NotReadyState.degraded
-      ? const [
-          '[mangasvc] bind 127.0.0.1:5180 failed: address already in use',
-          '[mangasvc] tried ports 5180–5190, all occupied',
-        ]
-      : const ['[engine] loading model', '[engine] llama-server exited with code 1'];
-
   static ({IconData icon, String title, String desc, String chip, _Tone tone}) _metaOf(
     AppLocalizations l10n,
     NotReadyState state,

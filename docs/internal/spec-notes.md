@@ -1247,3 +1247,21 @@
   不存在「hover 区域比高亮大一圈」的问题。
 - **验证**：`flutter analyze` 干净；应用 116 通过。
 - **关联**：D-062（设置页布局）。
+
+## D-064 移除伪造日志 + 启动按钮 loading + hover 区域对齐
+
+- **状态**：完成（2026-11-01）
+- **`[engine] llama-server exited with code 1` 是假日志**：`not_ready_screen.dart` 里的
+  `_demoLogs()` 会在 `view.logs` 为空时**编造**两条诊断输出。用户把演示数据当成了真实报错。
+  **已整段删除** —— 日志区只显示真实日志；没有就显示空态。
+  教训：占位数据一旦进入「诊断输出」这种可信区域，等于误导排障方向。
+- **启动按钮没有 loading 态**：`_ServiceCard` 之前用 `view.engine` 判断，
+  而 `notReadyViewProvider` 传的是 `status: null` ⇒ `engine` **恒为 off**。
+  改为直接 `ref.watch(engineStateProvider)`。这条也是「看着像没反应」的一半原因。
+- **hover 区域与高亮不一致**：设置页左栏 `_NavItem` 原来 `InkWell` 包在带 `margin` 的容器**外面**，
+  水波纹会盖住外边距，比高亮大一圈。已把 `InkWell` 收进内层，hover/激活共用**同一个容器**。
+  侧栏视图项（投放/队列/漫画库）本来就是同一个 `AnimatedContainer`，无需改。
+- **仍未做**：引擎运行日志（supervisor 的 `recentStageLog`）还没有呈现在设置页，
+  真实启动失败时用户仍看不到原因 —— 需要把 `/engine/status` 的最近日志接到诊断输出。
+- **验证**：`flutter analyze` 干净；应用 116 通过；服务端 133 通过。
+- **关联**：D-062（启动按钮前置）· D-063（侧栏）。
