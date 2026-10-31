@@ -321,8 +321,11 @@ class FakeMangaSvcClient implements MangaSvcClient {
   Future<void> deleteBookCover(String bookName) => _unimplemented('DELETE /library/{name}/cover');
 
   @override
-  Future<void> mergeChapters(String bookName, {required List<String> chapterDirs}) =>
-      _unimplemented('POST /library/{name}/merge');
+  @override
+  Future<Map<String, dynamic>> mergeChapter(String srcName, {required String targetBook, required double no}) async => {
+    'title': targetBook,
+    'merged': {'from': srcName, 'no': no},
+  };
 
   @override
   Future<void> revealBook(String bookName) => _unimplemented('POST /library/{name}/reveal');

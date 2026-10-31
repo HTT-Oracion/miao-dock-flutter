@@ -212,6 +212,13 @@ class TaskQueue {
     'concurrency': concurrency,
   };
 
+  /// 某目录（规范化漫画名）上正在跑/排队的任务状态（归并 BUSY 守卫用，D-083）。
+  List<String> activeStatusesForDir(String normalizedName) => [
+    for (final t in _tasks)
+      if (t.normalizedComicName == normalizedName && (t.status == TaskStatus.running || t.status == TaskStatus.queued))
+        t.status.wire,
+  ];
+
   /// 批量删除：逐条回报，不整批失败。
   Future<Map<String, dynamic>> deleteTasks(Set<String>? ids) async {
     final deleted = <String>[];

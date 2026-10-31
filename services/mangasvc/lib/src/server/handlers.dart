@@ -147,6 +147,8 @@ class Handlers {
         await _deleteBook(req, p['name']!);
       case 'POST /api/v1/library/{name}/unhide':
         await _unhideBook(req, p['name']!);
+      case 'POST /api/v1/library/{name}/merge':
+        await _mergeBook(req, p['name']!);
       case 'GET /api/v1/library/{name}/files/{seq}':
         await _getBookFile(req, p['name']!, int.tryParse(p['seq'] ?? '') ?? 0);
       case 'GET /api/v1/library/{book}/chapters/{no}/files/{seq}':
@@ -459,6 +461,29 @@ class Handlers {
   Future<void> _unhideBook(HttpRequest req, String name) async {
     await store.unhide(name);
     await writeJson(req.response, 200, {'ok': true});
+  }
+
+  /// 归并（D-083）：`POST /library/{src}/merge`，body `{targetBook|book|target, no}`。
+  Future<void> _mergeBook(HttpRequest req, String name) async {
+    final body = await readJsonBody(req);
+    final targetRaw = body['targetBook'] ?? body['book'] ?? body['target'];
+    final no = body['no'];
+    if (targetRaw is! String || targetRaw.isEmpty || no is! num) {
+      throw const ServiceError('INVALID_BOOK_META', '请求体缺少 targetBook/no');
+    }
+    final srcNorm = normalizeComicName(name);
+    final targetNorm = normalizeComicName(targetRaw);
+    if (!srcNorm.isOk || !targetNorm.isOk) {
+      throw ServiceError(srcNorm.code ?? targetNorm.code!, srcNorm.message ?? targetNorm.message!);
+    }
+    final busy = queue.activeStatusesForDir(srcNorm.name!);
+    final merged = await store.mergeBook(
+      srcName: srcNorm.name!,
+      targetBook: targetNorm.name!,
+      no: no.toDouble(),
+      busyStatuses: busy,
+    );
+    await writeJson(req.response, 200, merged);
   }
 
   Future<void> _getBookFile(HttpRequest req, String name, int seq) async {

@@ -208,8 +208,8 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<void> deleteBookCover(String bookName) => _delete('/library/${Uri.encodeComponent(bookName)}/cover');
 
   @override
-  Future<void> mergeChapters(String bookName, {required List<String> chapterDirs}) =>
-      _post('/library/${Uri.encodeComponent(bookName)}/merge', body: {'chapterDirs': chapterDirs});
+  Future<Map<String, dynamic>> mergeChapter(String srcName, {required String targetBook, required double no}) =>
+      _post('/library/${Uri.encodeComponent(srcName)}/merge', body: {'targetBook': targetBook, 'no': no});
 
   @override
   Future<void> revealBook(String bookName) => _post('/library/${Uri.encodeComponent(bookName)}/reveal');

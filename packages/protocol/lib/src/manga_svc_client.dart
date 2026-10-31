@@ -93,7 +93,8 @@ abstract class MangaSvcClient {
   Future<void> deleteBookCover(String bookName);
 
   /// `POST /api/v1/library/{name}/merge` —— 把若干单话归并进本。
-  Future<void> mergeChapters(String bookName, {required List<String> chapterDirs});
+  /// `POST /library/{name}/merge`（miao-dock 语义：把「未归并单话」并进目标书第 no 话）。
+  Future<Map<String, dynamic>> mergeChapter(String srcName, {required String targetBook, required double no});
 
   /// `POST /api/v1/library/{name}/reveal` —— 在文件管理器中打开目录（桌面专属）。
   Future<void> revealBook(String bookName);

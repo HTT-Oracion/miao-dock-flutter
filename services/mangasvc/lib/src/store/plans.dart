@@ -122,15 +122,6 @@ double parseChapterNo(String raw) {
   return no;
 }
 
-/// 话号 → 目录名（`1` → `01_第1话`，`1.5` → `01.5_第1.5话`）。
-///
-/// 补齐两位是为了目录排序：`09_` 排在 `10_` 前。
-String chapterDirName(double no) {
-  final text = no == no.roundToDouble() ? no.toInt().toString() : no.toString();
-  final padded = text.contains('.') ? text : text.padLeft(2, '0');
-  return '${padded}_第$text话';
-}
-
 const Set<String> _imageExts = {'png', 'jpg', 'jpeg', 'webp'};
 
 int? _seqOf(String name) {

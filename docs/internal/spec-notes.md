@@ -1561,3 +1561,27 @@
 - **验证**：`library_hidden_test` 4 条（隐藏保留目录/物理删除/恢复/去重）；服务端 152 通过；应用 116 通过。
 - **下一阶段**：B 漫画库功能（新建漫画 UI、单话归并 UI、查看逻辑、简易模式、编辑、阅读器、封面、状态联动、刷新）。
 - **关联**：D-079（名称规范化）· D-080（单话平铺）。
+
+## D-083 单话归并（服务端，对照 library_merge 逐条）
+
+- **状态**：完成（2026-11-01）
+- **对照**：`miao-dock handlers.rs library_merge` + `library.rs resolve_book_dir/resolve_chapter_dir/remove_cover/episodes_from_dirs/write_manifest_atomic`。
+- **语义**：`POST /library/{src}/merge`，body `{targetBook|book|target, no}`（`no` 必填，话号由调用方显式给出——旧项目同样如此）。
+- **守卫顺序与错误码**（全部一致）：
+  1. 源不存在 → `TASK_NOT_FOUND`（未归并单话目录不存在，404）
+  2. 源已有 manifest → `ALREADY_MERGED`
+  3. 目标不存在/无 manifest → `TASK_NOT_FOUND`（漫画大类不存在，404）
+  4. 源上有活跃任务 → `MERGE_SOURCE_BUSY`（队列查询 `activeStatusesForDir`）
+  5. 话号不合法 → `TASK_NOT_FOUND`（1–999.9，最多一位小数）
+  6. 目标话号被占 → `CHAPTER_NO_TAKEN`（目录位置 + episodes[] **双向查**）
+  7. rename 跨设备 → `MERGE_CROSS_DEVICE`；占用 → `MERGE_SOURCE_LOCKED`
+- **归并动作**：搬移前清源目录封面（`remove_cover`，不升格为整本封面）→ rename →
+  清搬运后目录里的 stray manifest → `episodes` 以目录为准重派生 → 原子写 manifest →
+  响应 `{title, author, cover, episodes, merged:{from,to,no,removedCoverCount}}`。
+- **顺带修正一个历史偏差**：`plans.dart` 里本地 `chapterDirName(1.5)` 会补零成 `01.5_第1.5话`，
+  与旧项目（`1.5_第1.5话`）**不一致** —— 已删除本地实现，统一走协议版（D-078）。
+- **发现并修掉的坑**：`FileSystemEntity.uri.pathSegments.last` 对**目录是空串**（URI 以 / 结尾），
+  扫章节目录时曾导致 episodes 永远为空；改用 `path` 基名。
+- **验证**：`library_merge_test` 7 条（成功含小数话号/6 类守卫）；服务端 159 通过；应用 116 通过。
+- **客户端**：`mergeChapter(src, targetBook:, no:)` 对齐旧项目 body（原 `mergeChapters(chapterDirs)` 语义错误）。
+- **关联**：D-078（命名）· D-082（隐藏）。

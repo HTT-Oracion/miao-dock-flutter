@@ -1,7 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:protocol/protocol.dart' show LibraryManifest;
+import 'package:protocol/protocol.dart'
+    show
+        LibraryEpisode,
+        LibraryManifest,
+        chapterDirName,
+        chapterNoFromDirName,
+        isValidChapterNo,
+        jsNumStr,
+        maxChapterNo;
 
 import '../server/http.dart';
 import 'plans.dart';
@@ -23,7 +31,7 @@ import 'plans.dart';
 /// 代价是扫描要读每个目录，故 `scan()` 做了浅层缓存（按 mtime 失效）。
 class LibraryStore {
   LibraryStore({String? rootDir, String? stateDir})
-    : _rootDir = rootDir,
+    : _rootDir = rootDir, // ignore: prefer_initializing_formals
       _stateDir = stateDir; // ignore: prefer_initializing_formals
 
   String? _rootDir;
@@ -234,6 +242,12 @@ class LibraryStore {
 
   // ── 元信息 ──────────────────────────────────────────────────────────────
 
+  /// 类型化 manifest（归并/编辑用）。
+  LibraryManifest? _typedManifestOf(Directory dir) {
+    final raw = _manifestOf(dir);
+    return raw == null ? null : LibraryManifest.fromJson(raw);
+  }
+
   /// 读 `manifest.json`；不存在或损坏返回 null。
   Map<String, dynamic>? _manifestOf(Directory dir) {
     final f = File('${dir.path}/manifest.json');
@@ -319,6 +333,126 @@ class LibraryStore {
     // 全字段 manifest（键序同旧项目 default_manifest：schema,title,author,cover,episodes）。
     File('${dir.path}/manifest.json')
         .writeAsStringSync(jsonEncode(LibraryManifest(title: name, author: '', cover: null, episodes: []).toJson()));
+  }
+
+  /// 归并单话到书（D-083，对照旧项目 `library_merge` 守卫顺序与错误码）。
+  Future<Map<String, dynamic>> mergeBook({
+    required String srcName,
+    required String targetBook,
+    required double no,
+    List<String> busyStatuses = const [],
+  }) async {
+    final srcDir = Directory('$rootDir/$srcName');
+    final targetDir = Directory('$rootDir/$targetBook');
+
+    // ③ 源不存在
+    if (!srcDir.existsSync()) {
+      throw const ServiceError('TASK_NOT_FOUND', '未归并单话目录不存在', status: 404);
+    }
+    // ④ 源已经是书
+    if (_manifestOf(srcDir) != null) {
+      throw ServiceError('ALREADY_MERGED', '「$srcName」已经是一本大类（目录内有 manifest.json），不能再次归并');
+    }
+    // 目标必须是存在的大类
+    if (!targetDir.existsSync() || _manifestOf(targetDir) == null) {
+      throw ServiceError('TASK_NOT_FOUND', '漫画大类不存在（目录内没有 manifest.json）', status: 404);
+    }
+    // ⑤ 源上有活跃任务
+    if (busyStatuses.isNotEmpty) {
+      throw ServiceError(
+        'MERGE_SOURCE_BUSY',
+        '「$srcName」还有 ${busyStatuses.length} 个任务在跑（${busyStatuses.join('、')}），请等它跑完或先取消',
+      );
+    }
+    // 话号合法性（与 resolve_chapter_dir 同一套）
+    if (!isValidChapterNo(no)) {
+      throw ServiceError('TASK_NOT_FOUND', '话号必须是 1–$maxChapterNo.9 的数（最多一位小数）');
+    }
+    final dirName = chapterDirName(no);
+    final dst = Directory('${targetDir.path}${Platform.pathSeparator}$dirName');
+    // ⑤ 双向查：目录名（位置）与 episodes[].no（说明文字）都要干净
+    final takenNos = [for (final c in _chapterDirsOf(targetDir)) c.no];
+    final declaredNos = [for (final e in (_typedManifestOf(targetDir)?.episodes ?? const <LibraryEpisode>[])) e.no];
+    if (dst.existsSync() || takenNos.contains(no) || declaredNos.contains(no)) {
+      throw ServiceError('CHAPTER_NO_TAKEN', '《$targetBook》已经有第 ${jsNumStr(no)} 话了');
+    }
+    // 移动前清掉源目录里的封面（单话封面不升格为整本封面）
+    final removedCoverCount = _removeCover(srcDir);
+    try {
+      srcDir.renameSync(dst.path);
+    } on FileSystemException catch (e) {
+      final msg = e.message.toLowerCase();
+      if (e.osError?.errorCode == 18 || msg.contains('cross-device') || msg.contains('different device')) {
+        throw ServiceError('MERGE_CROSS_DEVICE', '漫画库与目标目录不在同一个磁盘卷上，无法自动归并（请手动移动该目录）');
+      }
+      throw ServiceError('MERGE_SOURCE_LOCKED', '「$srcName」正被其它程序占用，请稍候再试');
+    }
+    // 搬进去的目录里若混进 manifest，清掉（单话不该带书签）
+    final stray = File('${dst.path}${Platform.pathSeparator}manifest.json');
+    if (stray.existsSync()) stray.deleteSync();
+    // episodes 以目录为准重派生 + 原子写
+    final manifest = _typedManifestOf(targetDir) ?? LibraryManifest(title: targetBook);
+    final rewritten = LibraryManifest(
+      schema: manifest.schema,
+      title: manifest.title,
+      author: manifest.author,
+      cover: manifest.cover,
+      episodes: _episodesFromDirs(targetDir),
+    );
+    _writeManifestAtomic(targetDir, rewritten);
+    return {
+      'title': rewritten.title,
+      'author': rewritten.author,
+      'cover': rewritten.cover,
+      'episodes': [for (final e in rewritten.episodes) e.toJson()],
+      'merged': {'from': srcName, 'to': '$targetBook/$dirName', 'no': no, 'removedCoverCount': removedCoverCount},
+    };
+  }
+
+  /// `list_chapter_dirs`：目录为准，解析 `NN_第N话`，按话号升序。
+  List<({double no, String dirName})> _chapterDirsOf(Directory bookDir) {
+    if (!bookDir.existsSync()) return const [];
+    final out = <({double no, String dirName})>[];
+    for (final e in bookDir.listSync()) {
+      if (e is! Directory) continue;
+      final base = _baseNameOf(e.path);
+      final no = chapterNoFromDirName(base);
+      if (no == null) continue;
+      out.add((no: no, dirName: base));
+    }
+    out.sort((a, b) => a.no.compareTo(b.no));
+    return out;
+  }
+
+  List<LibraryEpisode> _episodesFromDirs(Directory bookDir) => [
+    for (final c in _chapterDirsOf(bookDir)) LibraryEpisode(no: c.no, dir: c.dirName),
+  ];
+
+  String _baseNameOf(String path) => path.split(Platform.pathSeparator).last;
+
+  /// `remove_cover`：删掉目录里所有 `cover.(png|jpg|jpeg|webp)`，返回删除数。
+  int _removeCover(Directory dir) {
+    var removed = 0;
+    if (!dir.existsSync()) return 0;
+    final re = RegExp(r'^cover\.(png|jpg|jpeg|webp)$');
+    for (final e in dir.listSync()) {
+      if (e is! File) continue;
+      final name = _baseNameOf(e.path);
+      if (!re.hasMatch(name)) continue;
+      try {
+        e.deleteSync();
+        removed++;
+      } catch (_) {}
+    }
+    return removed;
+  }
+
+  /// `write_manifest_atomic`：tmp + rename，键序稳定。
+  void _writeManifestAtomic(Directory dir, LibraryManifest m) {
+    final tmp = File('${dir.path}${Platform.pathSeparator}manifest.json.tmp');
+    final dst = File('${dir.path}${Platform.pathSeparator}manifest.json');
+    tmp.writeAsStringSync(jsonEncode(m.toJson()), flush: true);
+    tmp.renameSync(dst.path);
   }
 
   /// 删本：`deleteFiles=false` 只隐藏（目录仍在），true 连目录一起删。

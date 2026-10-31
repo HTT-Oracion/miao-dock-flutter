@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:protocol/protocol.dart' show chapterDirName;
 import 'package:test/test.dart';
 
 import 'package:mangasvc/src/server/http.dart';
