@@ -1,3 +1,5 @@
+import 'package:protocol/protocol.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -47,7 +49,8 @@ class EngineClient {
 
     final payload = jsonEncode({
       'image': 'data:${mimeOfExt(ext)};base64,${base64Encode(bytes)}',
-      'config': config ?? const <String, dynamic>{},
+      // 不传就用项目定案配置（D-041）：引擎默认是 sugoi + ENG，直接放过会静默出错。
+      'config': config ?? defaultTranslateConfig,
     });
 
     final client = HttpClient();

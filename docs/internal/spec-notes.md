@@ -742,3 +742,32 @@
   教训：涉及落盘偏好的断言必须按**组件类型**定位，不能按当前文案定位。
 - **验证**：`flutter test --exclude-tags e2e` 115 通过；`flutter analyze` 干净；l10n 棘轮通过。
 - **关联**：D-012 · D-015 · D-031 · D-039。
+
+## D-041 引擎配置定案：mocr + sakura/CHS（对齐 miao-dock）
+
+- **状态**：配置部分已完成（2026-11-01）；**mocr 权重下载与 HF 离线环境尚未接**（见末尾）
+- **用户定案**：mocr 为首选 OCR（不再要 `48px`）；`use_mocr_merge` 关；mocr 权重加进下载清单。
+- **做了什么**：
+  - `packages/protocol/lib/src/engine_config.dart`：`defaultTranslateConfig` 唯一来源：
+    `translator: sakura / target_lang: CHS / detector: default / inpainter: lama_large / ocr: mocr / use_mocr_merge: false`
+  - `EngineClient.translateImage` 在不传 config 时使用它。
+- **为什么必须写全每一项**：引擎默认是 `sugoi` + `ENG` + `48px`。漏传**不会报错**，
+  只会静默给出英文译文、且 3.96 GB 的 Sakura 完全不被使用。
+- **为什么不走 `--config-file`**：该参数只存在于 `batch` 子命令（`args.py:130` 的 `parser_batch`），
+  server 是按请求收 config 的（`server/main.py` 各处 `data.config`）。
+- **mocr 权重的真实情况（实测）**：`manga_ocr` 包已随 requirements 装好，
+  但 `MangaOcr()` 无参 → `from_pretrained("kha-white/manga-ocr-base")` → **走 HuggingFace 缓存/联网**。
+  仓库 `kha-white/manga-ocr-base` @ `aa6573bd10b0d446cbf622e29c3e084914df9741`，8 个文件，共约 424 MB：
+  ```
+  .gitattributes 1175 · README.md 705 · config.json 77546 · preprocessor_config.json 228
+  pytorch_model.bin 444135475  sha256 c63e0bb5b3ff798c5991de18a8e0956c7ee6d1563aca6729029815eda6f5c2eb
+  special_tokens_map.json 112 · tokenizer_config.json 486 · vocab.txt 24072
+  ```
+  （除 `pytorch_model.bin` 外均无 LFS 摘要，需下载后自算或按内容比对。）
+- **仍缺的两步**（否则 mocr 会在翻译时静默联网下载）：
+  1. 把这 8 个文件加进引擎清单，落点按 HF 缓存布局
+     `<engine>/.hf/hub/models--kha-white--manga-ocr-base/snapshots/<rev>/…`，并由装配器写 `refs/main`；
+  2. 启动引擎时注入 `HF_HOME=<engine>/.hf`、`HF_HUB_OFFLINE=1`、`TRANSFORMERS_OFFLINE=1`
+     —— 需要给 `launch.json` 与 `EngineSupervisor` 增加 `env` 支持。
+- **验证**：`services/mangasvc/test/engine_config_test.dart` 3 条（逐项钉死 mocr/CHS/sakura）；服务端 117 通过。
+- **关联**：D-028 · D-031 · D-030。
