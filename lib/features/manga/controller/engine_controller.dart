@@ -156,11 +156,21 @@ final notReadyViewProvider = Provider<NotReadyView>((ref) {
       logs: install.logs,
     );
   }
-  return deriveNotReadyView(
+  final base = deriveNotReadyView(
     source: source,
-    status: null, // 引擎进程状态由 EngineNotifier 维护（C6e 后接真实 EngineStatus）
+    status: null,
     modelsInstalled: ref.watch(modelsInstalledProvider),
     downloadProgress: null,
     logs: const [],
+  );
+  // 🔴 必须用真实引擎状态覆盖：derive 传的是 `status: null`，其 engine 恒为 off，
+  // 会导致顶栏、侧栏圆点、队列横幅全部误报「未启动」。
+  return NotReadyView(
+    state: base.state,
+    engine: ref.watch(engineStateProvider),
+    source: base.source,
+    downloadProgress: base.downloadProgress,
+    failedPhase: base.failedPhase,
+    logs: base.logs,
   );
 });

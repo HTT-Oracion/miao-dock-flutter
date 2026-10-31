@@ -295,48 +295,8 @@ class _EngineOffBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
-      decoration: BoxDecoration(
-        color: palette.warn.withValues(alpha: 0.10),
-        border: Border.all(color: palette.warn.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
-      ),
-      child: Row(
-        children: [
-          Icon(LucideIcons.triangleAlert, size: 13, color: palette.warn),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: l10n.engineOffBanner,
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: palette.warn),
-                  ),
-                  TextSpan(
-                    text: ' · ${l10n.engineOffBannerDesc}',
-                    style: TextStyle(fontSize: 10.5, color: palette.ink2),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          FilledButton(
-            onPressed: onStart,
-            style: FilledButton.styleFrom(
-              backgroundColor: palette.acc,
-              foregroundColor: palette.onAcc,
-              minimumSize: const Size(0, 26),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-            ),
-            child: Text(l10n.engineOffBannerAction),
-          ),
-        ],
-      ),
-    );
+    // 引擎未启动横幅**固定不显示**：这件事已由引导页承担（用户要求）。
+    // 保留组件本身是为了不牵动调用方布局；直接渲染空盒子。
+    return const SizedBox.shrink();
   }
 }
