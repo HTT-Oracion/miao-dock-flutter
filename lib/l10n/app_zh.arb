@@ -1577,5 +1577,9 @@
   "svcStartNeedVerify": "请先在下方点「校验」，通过后才能启动",
   "@svcStartNeedVerify": {
     "description": "启动按钮禁用原因"
+  },
+  "svcStartFailed": "启动失败",
+  "@svcStartFailed": {
+    "description": "启动引擎失败前缀"
   }
 }

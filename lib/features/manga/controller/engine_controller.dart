@@ -26,10 +26,13 @@ class EngineNotifier extends Notifier<EngineRuntimeState> {
   Future<void> start() async {
     if (state == EngineRuntimeState.starting) return;
     state = EngineRuntimeState.starting;
+    ref.read(engineStartErrorProvider.notifier).set(null);
     try {
       final status = await ref.read(mangaSvcClientProvider).startEngine();
       applyStatus(status);
-    } catch (_) {
+    } catch (e) {
+      // 🔴 不能吞：用户看到的「点了没反应」正是这条信息被丢掉造成的。
+      ref.read(engineStartErrorProvider.notifier).set('$e');
       state = EngineRuntimeState.failed;
     }
   }
@@ -98,6 +101,18 @@ class TranslateSourceNotifier extends Notifier<TranslateSource> {
     state = value;
     persistTranslateSource(value.wire);
   }
+}
+
+/// 最近一次「启动引擎」失败的原因（null = 没有失败）。
+///
+/// 存在的唯一理由：让界面能显示**为什么**起不来，而不是只把按钮变灰。
+final engineStartErrorProvider = NotifierProvider<EngineStartErrorNotifier, String?>(EngineStartErrorNotifier.new);
+
+class EngineStartErrorNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? message) => state = message;
 }
 
 final translateSourceProvider = NotifierProvider<TranslateSourceNotifier, TranslateSource>(TranslateSourceNotifier.new);

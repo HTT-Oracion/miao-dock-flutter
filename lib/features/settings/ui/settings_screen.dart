@@ -339,6 +339,7 @@ class _ServiceCard extends ConsumerWidget {
     final installed = ref.watch(enginePresenceProvider).value == EnginePresence.complete;
     final verified = ref.watch(engineInspectionProvider).value?.ok ?? false;
     final starting = engineState == EngineRuntimeState.starting;
+    final startError = ref.watch(engineStartErrorProvider);
     final canStart = installed && verified && !starting;
     final blockedReason = !installed
         ? l10n.svcStartNeedInstall
@@ -385,8 +386,13 @@ class _ServiceCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  blockedReason ?? '${l10n.nrLayerEngine} · ${_sourceLabel(l10n, view.source)}',
-                  style: TextStyle(fontSize: 10, color: blockedReason == null ? palette.ink2 : palette.warn),
+                  startError != null
+                      ? '${l10n.svcStartFailed}：$startError'
+                      : blockedReason ?? '${l10n.nrLayerEngine} · ${_sourceLabel(l10n, view.source)}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: startError != null ? palette.bad : (blockedReason == null ? palette.ink2 : palette.warn),
+                  ),
                 ),
               ],
             ),
