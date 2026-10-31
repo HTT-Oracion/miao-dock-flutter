@@ -90,7 +90,7 @@ abstract class MangaSvcClient {
   Future<void> unhideBook(String bookName);
 
   /// `GET /api/v1/library/{name}/resume` —— 整本补页计划。
-  Future<RetranslatePlan> getResumePlan(String bookName);
+  Future<ResumePlan> getResumePlan(String bookName);
 
   /// `POST /api/v1/library/{name}/resume` —— 执行整本补页（建单）。
   Future<CreateTaskResponse> resumeBook(String bookName);
@@ -102,7 +102,7 @@ abstract class MangaSvcClient {
   Future<CreateTaskResponse> retranslateBook(String bookName);
 
   /// `GET /api/v1/library/{book}/chapters/{no}/resume` —— 单话补页计划。
-  Future<RetranslatePlan> getChapterResumePlan(String bookName, int chapterNo);
+  Future<ResumePlan> getChapterResumePlan(String bookName, int chapterNo);
 
   /// `POST /api/v1/library/{book}/chapters/{no}/resume` —— 单话补页。
   Future<CreateTaskResponse> resumeChapter(String bookName, int chapterNo);

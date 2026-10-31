@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../server/http.dart';
+import 'plans.dart';
 
 /// 漫画库落盘 —— 「本 → 话 → 页」三层，目录即索引。
 ///
@@ -383,5 +384,52 @@ class LibraryStore {
       // 统计失败不影响扫描
     }
     return total;
+  }
+}
+
+/// 章节定位与重命名 —— 供 B7 使用。
+extension ChapterOps on LibraryStore {
+  /// 本目录（校验存在）。
+  Directory bookDir(String book) {
+    final dir = Directory('$rootDir/$book');
+    if (!dir.existsSync()) {
+      throw ServiceError('TASK_NOT_FOUND', '漫画目录不存在', details: {'book': book}, status: 404);
+    }
+    return dir;
+  }
+
+  /// 解析 `<book>/chapters/<no>` 对应的目录。
+  Directory chapterDir(String book, String noRaw) {
+    final no = parseChapterNo(noRaw);
+    final bookDir = Directory('$rootDir/$book');
+    if (!bookDir.existsSync()) {
+      throw ServiceError('TASK_NOT_FOUND', '漫画目录不存在', details: {'book': book}, status: 404);
+    }
+    final target = chapterDirName(no);
+    for (final e in bookDir.listSync(followLinks: false)) {
+      if (e is Directory && e.path.split(Platform.pathSeparator).last == target) return e;
+    }
+    throw ServiceError(
+      'TASK_NOT_FOUND',
+      '话目录不存在',
+      details: {'book': book, 'no': noRaw, 'expected': target},
+      status: 404,
+    );
+  }
+
+  /// 改话号：把 `01_第1话` 改成 `02_第2话`。
+  ///
+  /// 目标目录已存在时报冲突（**不覆盖**）。
+  Future<Map<String, dynamic>> renumberChapter(String book, String noRaw, int newNo) async {
+    final dir = chapterDir(book, noRaw);
+    final from = dir.path.split(Platform.pathSeparator).last;
+    final to = chapterDirName(newNo.toDouble());
+    if (from == to) return {'from': from, 'to': to, 'renamed': false};
+    final target = Directory(dir.parent.path + Platform.pathSeparator + to);
+    if (target.existsSync()) {
+      throw ServiceError('CHAPTER_TARGET_EXISTS', '目标话号已存在', details: {'from': from, 'to': to});
+    }
+    dir.renameSync(target.path);
+    return {'from': from, 'to': to, 'renamed': true};
   }
 }

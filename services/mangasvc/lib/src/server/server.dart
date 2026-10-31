@@ -58,7 +58,7 @@ class MangaSvcServer {
 
   Future<void> _dispatch(HttpRequest req) async {
     try {
-      final match = matchRoute(req.method, req.uri.path);
+      final match = matchRouteSegments(req.method, req.uri.pathSegments);
       if (match == null) {
         await writeErrorCode(req.response, 404, 'NOT_FOUND', '端点不存在：${req.method} ${req.uri.path}');
         return;

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../queue/task_queue.dart';
+import '../store/plans.dart';
 import '../store/library_store.dart';
 import 'http.dart';
 import 'routes.dart';
@@ -10,9 +11,14 @@ import 'routes.dart';
 /// 职责：把 `RouteMatch` 映射到具体处理函数，读体、调门面、出信封。
 /// 业务逻辑住在 `queue/` 与 `store/`，本层只做搬运（与客户端的分层对称）。
 class Handlers {
-  Handlers({String? rootDir, this.engineMode = 'mock'})
-    : store = LibraryStore(rootDir: rootDir),
-      queue = TaskQueue(engineMode: engineMode);
+  /// 用 factory 保证 `store` 与 `queue` 共用**同一个** rootDir，
+  /// 而不是各建一个 LibraryStore 实例（那会在惰性默认值上产生两份真相）。
+  factory Handlers({String? rootDir, String engineMode = 'mock'}) {
+    final store = LibraryStore(rootDir: rootDir);
+    return Handlers._(store, TaskQueue(engineMode: engineMode, rootDir: store.rootDir), engineMode);
+  }
+
+  Handlers._(this.store, this.queue, this.engineMode);
 
   final LibraryStore store;
   final TaskQueue queue;
@@ -79,6 +85,16 @@ class Handlers {
         await _getBookFile(req, p['name']!, int.tryParse(p['seq'] ?? '') ?? 0);
       case 'GET /api/v1/library/{book}/chapters/{no}/files/{seq}':
         await _getChapterFile(req, p['book']!, int.tryParse(p['no'] ?? '') ?? 0, int.tryParse(p['seq'] ?? '') ?? 0);
+      case 'GET /api/v1/library/{name}/resume':
+        await _resumePlan(req, p['name']!);
+      case 'GET /api/v1/library/{name}/retranslate':
+        await _retranslatePlan(req, p['name']!);
+      case 'GET /api/v1/library/{book}/chapters/{no}/resume':
+        await _chapterResumePlan(req, p['book']!, p['no']!);
+      case 'GET /api/v1/library/{book}/chapters/{no}/retranslate':
+        await _chapterRetranslatePlan(req, p['book']!, p['no']!);
+      case 'POST /api/v1/library/{book}/chapters/{no}/renumber':
+        await _renumberChapter(req, p['book']!, p['no']!);
       // ── 尚未实现（P0-B 其余项）──────────────────────────────────────────
       default:
         await writeErrorCode(req.response, 501, 'NOT_IMPLEMENTED', '端点尚未实现：${r.id}');
@@ -249,6 +265,119 @@ class Handlers {
     if (file == null) throw const ServiceError('NOT_FOUND', '文件不存在', status: 404);
     await _sendFile(req.response, file);
   }
+
+  // ── 续做 / 返工计划（B7/B8）────────────────────────────────────────────
+
+  /// 整本续做计划：本目录下所有话的待补页汇总。
+  Future<void> _resumePlan(HttpRequest req, String name) async {
+    final dir = store.bookDir(name);
+    final merged = await _aggregatePlan(dir, name, resume: true);
+    await writeJson(req.response, 200, merged);
+  }
+
+  /// 整本返工计划。
+  Future<void> _retranslatePlan(HttpRequest req, String name) async {
+    final dir = store.bookDir(name);
+    final merged = await _aggregatePlan(dir, name, resume: false);
+    await writeJson(req.response, 200, merged);
+  }
+
+  /// 单话续做计划。
+  Future<void> _chapterResumePlan(HttpRequest req, String book, String no) async {
+    final dir = store.chapterDir(book, no);
+    await writeJson(req.response, 200, buildResumePlan(_dirName(dir.path), dir));
+  }
+
+  /// 单话返工计划。
+  Future<void> _chapterRetranslatePlan(HttpRequest req, String book, String no) async {
+    final dir = store.chapterDir(book, no);
+    await writeJson(req.response, 200, buildRetranslatePlan(_dirName(dir.path), dir));
+  }
+
+  /// 改话号。
+  Future<void> _renumberChapter(HttpRequest req, String book, String no) async {
+    final body = await readJsonBody(req);
+    final newNo = body['no'];
+    if (newNo is! num) {
+      throw const ServiceError('INVALID_CHAPTER_NO', '缺少目标话号（no）');
+    }
+    await writeJson(req.response, 200, await store.renumberChapter(book, no, newNo.toInt()));
+  }
+
+  /// 整本计划：把每个话目录的计划合并成一个。
+  ///
+  /// 整本的 `seq` 用「话序号 × 1000 + 页序号」编码，保证跨话唯一且有序；
+  /// UI 需要分话展示时按 [chapterNo] 分组。
+  Future<Map<String, dynamic>> _aggregatePlan(Directory bookDir, String name, {required bool resume}) async {
+    final chapters = <Map<String, dynamic>>[];
+    var imageCount = 0;
+    var translatedCount = 0;
+    var total = 0;
+    var overwrite = 0;
+
+    for (final e in bookDir.listSync(followLinks: false)) {
+      if (e is! Directory) continue;
+      final dirName = _dirName(e.path);
+      final no = int.tryParse(RegExp(r'^(\d+)').firstMatch(dirName)?.group(1) ?? '');
+      if (no == null) continue;
+
+      if (resume) {
+        final plan = buildResumePlan(dirName, e);
+        final pendings = plan['pendings'] as List;
+        if (pendings.isEmpty) continue;
+        imageCount += plan['imageCount'] as int;
+        translatedCount += plan['translatedCount'] as int;
+        total += pendings.length;
+        chapters.add({
+          'chapterNo': no,
+          'chapterDir': dirName,
+          'pendings': [
+            for (final p in pendings.cast<Map<String, dynamic>>()) {...p, 'seq': no * 1000 + (p['seq'] as int)},
+          ],
+        });
+      } else {
+        final plan = buildRetranslatePlan(dirName, e);
+        final candidates = plan['candidates'] as List;
+        if (candidates.isEmpty) continue;
+        imageCount += plan['imageCount'] as int;
+        translatedCount += plan['translatedCount'] as int;
+        total += candidates.length;
+        overwrite += plan['overwriteCount'] as int;
+        chapters.add({
+          'chapterNo': no,
+          'chapterDir': dirName,
+          'candidates': [
+            for (final c in candidates.cast<Map<String, dynamic>>()) {...c, 'seq': no * 1000 + (c['seq'] as int)},
+          ],
+        });
+      }
+    }
+
+    final base = {
+      'comicName': name,
+      'dirName': name,
+      'outputDir': bookDir.path,
+      'imageCount': imageCount,
+      'translatedCount': translatedCount,
+      'chapterPlans': chapters,
+    };
+    if (resume) {
+      return {
+        ...base,
+        'pendingCount': total,
+        'translatedSeqs': const <int>[],
+        'pendings': const <Map<String, dynamic>>[],
+      };
+    }
+    return {
+      ...base,
+      'retranslateCount': total,
+      'overwriteCount': overwrite,
+      'candidates': const <Map<String, dynamic>>[],
+    };
+  }
+
+  String _dirName(String path) => path.split(Platform.pathSeparator).last;
 
   Future<void> _sendFile(HttpResponse res, File file) async {
     final bytes = await file.readAsBytes();

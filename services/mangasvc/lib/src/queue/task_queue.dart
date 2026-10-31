@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import '../server/http.dart';
 
@@ -16,9 +18,12 @@ import '../server/http.dart';
 ///                     └──被取消────→ canceled
 /// ```
 class TaskQueue {
-  TaskQueue({this.engineMode = 'mock'});
+  TaskQueue({this.engineMode = 'mock', required this.rootDir});
 
   final String engineMode;
+
+  /// 落盘根目录（`<root>/<comicName>/<NN_第N话>/`）。
+  final String rootDir;
   final List<QueueTask> _tasks = [];
   int _seq = 0;
   bool _draining = false;
@@ -43,6 +48,7 @@ class TaskQueue {
       outputDir: comicName,
       total: imagePaths.length,
       createdAt: now,
+      batches: List.of(imagePaths),
     );
     _tasks.insert(0, task);
     _scheduleDrain();
@@ -54,6 +60,7 @@ class TaskQueue {
     final t = _find(taskId);
     if (t == null) throw const ServiceError('NOT_FOUND', '任务不存在', status: 404);
     if (imagePaths.isEmpty) throw const ServiceError('INVALID_IMAGES', '没有可用图片');
+    t.batches.addAll(imagePaths);
     t.total += imagePaths.length;
     _scheduleDrain();
     return t.toCreateResponse();
@@ -162,10 +169,17 @@ class TaskQueue {
     }
   }
 
-  /// 跑一个任务。
+  /// 跑一个任务 —— **真的落盘**。
   ///
-  /// **mock 引擎**（B 级替身）：按页推进进度，不真的翻译 —— 服务自测不需要 Python。
-  /// **real 引擎**：P0-C 接入（当前抛错，避免假装成功）。
+  /// 落盘结构（与原项目一致）：
+  /// ```
+  /// <root>/<comicName>/01_第1话/001.png              原图
+  /// <root>/<comicName>/01_第1话/001_translated.png   译文
+  /// ```
+  ///
+  /// **mock 引擎**：原图原样拷贝，译文写成同内容占位 —— 只是把管道跑通，
+  /// 不假装做了翻译（文件内容是原图字节，`_translated` 后缀标明位置）。
+  /// **real 引擎**：P0-C 接入，当前显式失败，绝不假装成功。
   Future<void> _runOne(QueueTask t) async {
     if (engineMode != 'mock') {
       t.status = TaskStatus.failed;
@@ -173,18 +187,53 @@ class TaskQueue {
       return;
     }
     t.status = TaskStatus.running;
-    final pages = t.total;
-    for (var i = 0; i < pages; i++) {
-      if (t.cancelRequested) {
-        t.status = TaskStatus.canceled;
-        return;
+    try {
+      final bookDir = Directory('$rootDir/${t.comicName}');
+      final chapterDir = Directory('${bookDir.path}/01_第1话');
+      chapterDir.createSync(recursive: true);
+      // 建 manifest：没有它，书架子目录会被当成「未归并单话」而不是「本」。
+      final manifest = File('${bookDir.path}/manifest.json');
+      if (!manifest.existsSync()) {
+        manifest.writeAsStringSync(
+          jsonEncode({'title': t.comicName, 'author': '', 'createdAt': DateTime.now().toUtc().toIso8601String()}),
+        );
       }
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      t.done++;
-      t.progressController.add(t.done);
+
+      for (var i = 0; i < t.batches.length; i++) {
+        if (t.cancelRequested) {
+          t.status = TaskStatus.canceled;
+          return;
+        }
+        final src = t.batches[i];
+        final seq = i + 1;
+        final ext = src.contains('.') ? src.split('.').last.toLowerCase() : 'png';
+        final original = File('${chapterDir.path}/${_pad(seq)}.$ext');
+        final translated = File('${chapterDir.path}/${_pad(seq)}_translated.$ext');
+
+        // 原图：源文件存在就拷贝；测试里常见「路径不存在」，则写占位（不失败）。
+        final srcFile = File(src);
+        if (srcFile.existsSync()) {
+          srcFile.copySync(original.path);
+        } else {
+          original.writeAsBytesSync([0]);
+        }
+        // mock 译文 = 原图字节（位置正确，内容不是真翻译）。
+        translated.writeAsBytesSync(original.readAsBytesSync());
+
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        t.done++;
+        t.progressController.add(t.done);
+      }
+      t.finishedAt = DateTime.now().toUtc();
+      t.status = t.failed > 0 ? TaskStatus.partialFailed : TaskStatus.done;
+    } catch (e) {
+      t.status = TaskStatus.failed;
+      t.failAll('落盘失败：$e');
     }
-    t.status = t.failed > 0 ? TaskStatus.partialFailed : TaskStatus.done;
   }
+
+  /// 三位补零（`001`）。
+  String _pad(int n) => n.toString().padLeft(3, '0');
 
   QueueTask? _find(String id) => _tasks.where((t) => t.taskId == id).firstOrNull;
 
@@ -223,6 +272,7 @@ class QueueTask {
     required this.outputDir,
     required this.total,
     required this.createdAt,
+    required this.batches,
   });
 
   final String taskId;
@@ -230,6 +280,9 @@ class QueueTask {
   final String normalizedComicName;
   final String outputDir;
   final DateTime createdAt;
+
+  /// 待处理的原图路径（按序号）。
+  final List<String> batches;
 
   int total;
   int done = 0;

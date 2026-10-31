@@ -209,8 +209,8 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<void> unhideBook(String bookName) => _post('/library/${Uri.encodeComponent(bookName)}/unhide');
 
   @override
-  Future<RetranslatePlan> getResumePlan(String bookName) async =>
-      _planOf(await _get('/library/${Uri.encodeComponent(bookName)}/resume'), fallbackName: bookName);
+  Future<ResumePlan> getResumePlan(String bookName) async =>
+      _resumePlanOf(await _get('/library/${Uri.encodeComponent(bookName)}/resume'), fallbackName: bookName);
 
   @override
   Future<CreateTaskResponse> resumeBook(String bookName) async =>
@@ -225,7 +225,7 @@ class HttpMangaSvcClient implements MangaSvcClient {
       _createTaskOf(await _post('/library/${Uri.encodeComponent(bookName)}/retranslate'));
 
   @override
-  Future<RetranslatePlan> getChapterResumePlan(String bookName, int chapterNo) async => _planOf(
+  Future<ResumePlan> getChapterResumePlan(String bookName, int chapterNo) async => _resumePlanOf(
     await _get('/library/${Uri.encodeComponent(bookName)}/chapters/$chapterNo/resume'),
     fallbackName: bookName,
   );
@@ -485,6 +485,26 @@ ChapterEntry _chapterOf(Map<String, dynamic> j) {
 }
 
 List<int> _intList(Object? v) => v is List ? v.whereType<num>().map((n) => n.toInt()).toList() : const [];
+
+ResumePlan _resumePlanOf(Map<String, dynamic> j, {required String fallbackName}) => ResumePlan(
+  comicName: _stringOf(j['comicName'], fallback: fallbackName),
+  dirName: _stringOf(j['dirName'], fallback: fallbackName),
+  outputDir: _stringOf(j['outputDir']),
+  imageCount: _intOf(j['imageCount']),
+  translatedCount: _intOf(j['translatedCount']),
+  pendingCount: _intOf(j['pendingCount']),
+  reworking: j['reworking'] == true,
+  translatedSeqs: _intList(j['translatedSeqs']),
+  pendings: _listOf(
+    j['pendings'],
+    (m) => ResumePending(
+      seq: _intOf(m['seq']),
+      ext: _stringOf(m['ext']),
+      byteSize: _intOf(m['byteSize']),
+      originalFile: _stringOf(m['originalFile']),
+    ),
+  ),
+);
 
 RetranslatePlan _planOf(Map<String, dynamic> j, {required String fallbackName}) => RetranslatePlan(
   comicName: _stringOf(j['comicName'], fallback: fallbackName),

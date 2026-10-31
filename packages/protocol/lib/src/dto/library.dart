@@ -205,6 +205,60 @@ class LibraryDeleteResponse {
   final int? hiddenCount;
 }
 
+/// 续做（补页）计划 —— 对应 `GET /library/{name|book}/resume`。
+///
+/// 与 [RetranslatePlan] 是**两种不同的计划**，不可合并：
+///   · resume 只含「有原图、缺译文」的页（[pendings]）；
+///   · retranslate 含「所有有原图」的页（[RetranslatePlan.candidates]），并报覆盖数。
+class ResumePlan {
+  const ResumePlan({
+    required this.comicName,
+    required this.dirName,
+    required this.outputDir,
+    required this.imageCount,
+    required this.translatedCount,
+    required this.pendingCount,
+    required this.pendings,
+    required this.translatedSeqs,
+    this.reworking = false,
+  });
+
+  final String comicName;
+  final String dirName;
+  final String outputDir;
+
+  /// 有原图的页数。
+  final int imageCount;
+
+  /// 已有译文的页数。
+  final int translatedCount;
+
+  /// 待补页数（= [pendings].length）。
+  final int pendingCount;
+
+  /// 待补页明细（有原图、缺译文）。
+  final List<ResumePending> pendings;
+
+  /// 已译页码（升序）。
+  final List<int> translatedSeqs;
+
+  /// 该漫画是否已有任务在队列中（前端补的字段，非服务端返回）。
+  final bool reworking;
+
+  /// 无事可做 —— 全部页都已译。
+  bool get isComplete => pendingCount == 0;
+}
+
+/// 待补页。
+class ResumePending {
+  const ResumePending({required this.seq, required this.ext, required this.byteSize, required this.originalFile});
+
+  final int seq;
+  final String ext;
+  final int byteSize;
+  final String originalFile;
+}
+
 /// `GET /api/v1/library/{comicName}/retranslate` 的返工计划。
 class RetranslatePlan {
   const RetranslatePlan({

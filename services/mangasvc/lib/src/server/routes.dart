@@ -101,9 +101,14 @@ class RouteMatch {
 ///
 /// 匹配规则：段数必须相等；字面段精确相等；`{...}` 段吞任意非空值。
 /// **不做前缀匹配** —— `/tasks/x/y` 不会命中 `/tasks/{id}`。
-RouteMatch? matchRoute(String method, String path) {
-  // `HttpRequest.uri.path` 已解码过一次；再 decode 会把 %25 变成 %，造成双重解码。
-  final segs = path.split('/').where((s) => s.isNotEmpty).toList();
+RouteMatch? matchRoute(String method, String path) =>
+    matchRouteSegments(method, path.split('/').where((s) => s.isNotEmpty).toList());
+
+/// 按**已解码的段**匹配。
+///
+/// 调用方应传 `HttpRequest.uri.pathSegments`（框架保证已解码），
+/// 不要传 `uri.path` 再自己 decode —— 客户端没编码时会对 `%` 二次解码。
+RouteMatch? matchRouteSegments(String method, List<String> segs) {
   for (final r in routes) {
     if (r.method != method.toUpperCase()) continue;
     final pat = r.segments;
