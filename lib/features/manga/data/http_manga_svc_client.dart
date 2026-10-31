@@ -96,6 +96,10 @@ class HttpMangaSvcClient implements MangaSvcClient {
   }
 
   @override
+  @override
+  Future<Map<String, dynamic>> getTranslateLog() => _get('/translate/log');
+
+  @override
   Future<CancelResponse> cancelTask(String taskId) async {
     final json = await _post('/tasks/$taskId/cancel');
     return CancelResponse(

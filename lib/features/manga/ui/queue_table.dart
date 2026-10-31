@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/tokens.dart';
@@ -6,6 +7,7 @@ import '../../../../shared/widgets/app_checkbox.dart';
 import '../../../../shared/widgets/app_table.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
+import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
 import '../domain/manga_status.dart';
 import '../../../l10n/app_localizations.dart';
@@ -163,32 +165,66 @@ class _ActionCell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final st = task.status;
+
+    Future<void> retry() async {
+      await ref.read(queueProvider.notifier).retry(task.id);
+      if (context.mounted) {
+        showAppToast(context, l10n.queueRetryToast, tone: ToastTone.info);
+      }
+    }
+
+    // 行首主操作（miao-dock 规则：进行/排队 → 取消；失败 → 重试；
+    // 取消 → 继续；终态 → 查看，跳漫画库定位到对应漫画）。
+    String label;
+    VoidCallback? action;
+    switch (st) {
+      case MangaTaskStatus.translating:
+      case MangaTaskStatus.queued:
+        label = l10n.actionCancel;
+        action = () async {
+          final kept = await ref.read(queueProvider.notifier).cancelTask(task.id);
+          if (context.mounted) {
+            showAppToast(context, l10n.queueCancelledToast(task.name, kept));
+          }
+        };
+      case MangaTaskStatus.failed:
+      case MangaTaskStatus.partialFailed:
+        label = l10n.actionRetry;
+        action = retry;
+      case MangaTaskStatus.cancelled:
+        label = l10n.actionContinue;
+        action = retry;
+      case MangaTaskStatus.done:
+        label = l10n.actionView;
+        action = () {
+          // 「查看」= 跳漫画库并定位到对应漫画（无任务详情页）。
+          ref.read(selectedBookProvider.notifier).select(task.name);
+          context.go('/manga/library');
+        };
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!task.deletable)
-          AppTextAction(
-            label: AppLocalizations.of(context).actionCancel,
-            onTap: () async {
-              final kept = await ref.read(queueProvider.notifier).cancelTask(task.id);
-              if (context.mounted) {
-                showAppToast(context, AppLocalizations.of(context).queueCancelledToast(task.name, kept));
-              }
-            },
-          ),
-        if (task.deletable)
-          AppTextAction(
-            label: AppLocalizations.of(context).actionOpen,
-            onTap: () {
-              /* TODO: 打开落盘目录，随服务端点落地 */
-            },
-          ),
+        AppTextAction(label: label, onTap: action),
         const SizedBox(width: 6),
-        AppTextAction(
-          label: AppLocalizations.of(context).actionMore,
-          onTap: () {
-            /* TODO: 右键菜单同源操作，随详情落地 */
+        PopupMenuButton<String>(
+          tooltip: '',
+          onSelected: (v) {
+            if (v == 'delete') {
+              ref.read(queueProvider.notifier).deleteTasks({task.id});
+            }
           },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'delete',
+              height: 30,
+              child: Text(l10n.actionDelete, style: const TextStyle(fontSize: 10.5)),
+            ),
+          ],
+          child: AppTextAction(label: l10n.actionMore, onTap: () {}),
         ),
       ],
     );

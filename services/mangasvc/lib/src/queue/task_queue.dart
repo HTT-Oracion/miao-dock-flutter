@@ -31,6 +31,24 @@ class TaskQueue {
   /// 落盘根目录（`<root>/<comicName>/<NN_第N话>/`）。
   final String rootDir;
   final List<QueueTask> _tasks = [];
+
+  /// 翻译日志（环形缓冲）：任务级事件与页面级失败都记在这里。
+  /// 设置页「模型 → 翻译日志」轮询展示；上限 200 行。
+  final List<String> _translateLog = [];
+
+  void _logLine(String line) {
+    final ts = DateTime.now().toIso8601String();
+    _translateLog.add('$ts $line');
+    if (_translateLog.length > 200) _translateLog.removeAt(0);
+  }
+
+  /// 翻译日志尾部（新在前）。
+  List<String> translateLogTail([int n = 60]) {
+    final end = _translateLog.length;
+    final start = end - n < 0 ? 0 : end - n;
+    return _translateLog.sublist(start, end).reversed.toList();
+  }
+
   int _seq = 0;
   bool _draining = false;
   Timer? _ticker;
@@ -51,6 +69,7 @@ class TaskQueue {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
     }
     final now = DateTime.now().toUtc();
+    _logLine('任务创建 ${comicName.trim()}（${imagePaths.length} 张）');
     final task = QueueTask(
       taskId: 't-${DateTime.now().microsecondsSinceEpoch}-${++_seq}',
       comicName: comicName,
@@ -136,11 +155,19 @@ class TaskQueue {
   Future<Map<String, dynamic>> retryTask(String taskId) async {
     final t = _find(taskId);
     if (t == null) throw const ServiceError('NOT_FOUND', '任务不存在', status: 404);
+    if (t.status == TaskStatus.running || t.status == TaskStatus.queued) {
+      throw const ServiceError('ALREADY_ACTIVE', '任务已在队列中', status: 409);
+    }
+    _logLine('重试任务 ${t.comicName}（此前 ${t.status.wire}，${t.done}/${t.total}）');
     t
       ..status = TaskStatus.queued
       ..done = 0
       ..failed = 0
+      ..current = 0
+      ..lastError = null
+      ..finishedAt = null
       ..cancelRequested = false;
+    t.failedReasons.clear();
     _scheduleDrain();
     return t.toCreateResponse();
   }
@@ -253,6 +280,9 @@ class TaskQueue {
           } catch (e) {
             t.failed++;
             t.lastError = '$e';
+            // 进 failedReasons：任务行的 failedItems 才会带出原因，
+            // 否则「部分失败」之后用户看不到任何解释（D-075）。
+            t.failedReasons.add('第 ${_pad(seq)} 页：$e');
             continue;
           }
         } else {

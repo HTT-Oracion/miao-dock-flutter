@@ -95,6 +95,8 @@ class Handlers {
         await _ping(req);
       case 'POST /api/v1/translate/text':
         await _translateText(req);
+      case 'GET /api/v1/translate/log':
+        await _translateLog(req);
       // ── tasks ───────────────────────────────────────────────────────────
       case 'GET /api/v1/tasks':
         await _listTasks(req);
@@ -213,6 +215,11 @@ class Handlers {
       'rootDir': store.rootDir,
       'startedAt': isoOf(startedAt),
     });
+  }
+
+  /// 翻译日志（D-075）：只回尾部，不回全量 —— 环形缓冲本来就是为「最近发生了什么」设计的。
+  Future<void> _translateLog(HttpRequest req) async {
+    await writeJson(req.response, 200, {'tail': queue.translateLogTail(), 'updatedAt': isoOf(DateTime.now())});
   }
 
   /// 文本翻译（D-053/D-054）：走在线平台，**不进引擎**。

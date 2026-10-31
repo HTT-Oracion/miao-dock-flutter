@@ -55,6 +55,9 @@ abstract class MangaSvcClient {
   /// 「取消中…」再 await，不能靠返回值才反馈。
   Future<CancelResponse> cancelTask(String taskId);
 
+  /// `GET /api/v1/translate/log` —— 翻译日志尾部（设置页「模型」区）。
+  Future<Map<String, dynamic>> getTranslateLog();
+
   /// `POST /api/v1/tasks/{taskId}/retry` —— 重试失败任务。
   Future<CreateTaskResponse> retryTask(String taskId);
 

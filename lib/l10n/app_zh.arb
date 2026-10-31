@@ -1614,5 +1614,33 @@
   "svcStartOk": "服务已启动",
   "@svcStartOk": {
     "description": "启动成功提示"
+  },
+  "actionRetry": "重试",
+  "@actionRetry": {
+    "description": "队列与翻译日志文案"
+  },
+  "actionContinue": "继续",
+  "@actionContinue": {
+    "description": "队列与翻译日志文案"
+  },
+  "actionView": "查看",
+  "@actionView": {
+    "description": "队列与翻译日志文案"
+  },
+  "actionDelete": "删除",
+  "@actionDelete": {
+    "description": "队列与翻译日志文案"
+  },
+  "queueRetryToast": "已重新入队",
+  "@queueRetryToast": {
+    "description": "队列与翻译日志文案"
+  },
+  "translateLogTitle": "翻译日志",
+  "@translateLogTitle": {
+    "description": "队列与翻译日志文案"
+  },
+  "translateLogEmpty": "暂无翻译日志（翻译任务的事件会出现在这里）",
+  "@translateLogEmpty": {
+    "description": "队列与翻译日志文案"
   }
 }

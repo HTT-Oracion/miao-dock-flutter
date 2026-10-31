@@ -78,6 +78,8 @@ const List<RouteDef> routes = [
 
   // ── translate ───────────────────────────────────────────────────────────
   RouteDef(method: 'POST', pattern: '/api/v1/translate/text', group: 'translate'),
+  // 翻译日志（D-075）：设置页「模型 → 翻译日志」轮询展示。
+  RouteDef(method: 'GET', pattern: '/api/v1/translate/log', group: 'translate'),
   RouteDef(method: 'POST', pattern: '/api/v1/translate/stream', group: 'translate'),
   RouteDef(method: 'GET', pattern: '/api/v1/translate/options', group: 'translate'),
   RouteDef(method: 'POST', pattern: '/api/v1/translate/settings', group: 'translate'),

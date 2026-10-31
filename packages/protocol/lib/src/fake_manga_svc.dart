@@ -165,6 +165,10 @@ class FakeMangaSvcClient implements MangaSvcClient {
   }
 
   @override
+  @override
+  Future<Map<String, dynamic>> getTranslateLog() async => {'tail': <String>[], 'updatedAt': ''};
+
+  @override
   Future<CancelResponse> cancelTask(String taskId) async {
     final i = _tasks.indexWhere((t) => t.taskId == taskId);
     if (i < 0) throw _notFound('任务', taskId);

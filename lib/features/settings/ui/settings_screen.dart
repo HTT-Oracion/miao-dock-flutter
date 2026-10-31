@@ -16,6 +16,7 @@ import '../../../shared/widgets/toast.dart';
 import '../../manga/controller/engine_controller.dart';
 import '../../manga/controller/engine_install_controller.dart';
 import '../../manga/controller/engine_ready_controller.dart';
+import '../../manga/controller/queue_controller.dart';
 import '../../manga/domain/not_ready_state.dart';
 import '../../manga/controller/remote_controller.dart';
 import '../controller/credential_controller.dart';
@@ -300,6 +301,8 @@ class _TranslateSection extends ConsumerWidget {
             const _ServiceCard(),
             const SizedBox(height: 6),
             const EnginePartsSection(),
+            const SizedBox(height: 8),
+            const _TranslateLogBox(),
 
             SettingSubTitle(l10n.settingsSectionSource),
             const _SourceRow(),
@@ -316,6 +319,24 @@ class _TranslateSection extends ConsumerWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// 翻译日志（D-075）：放在「模型」区，任务事件与逐页失败原因都在这里。
+///
+/// 与诊断输出（装配日志）分开：那条是「引擎装没装好」，这条是「翻译跑得怎么样」。
+class _TranslateLogBox extends ConsumerWidget {
+  const _TranslateLogBox();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final lines = ref.watch(translateLogProvider).value ?? const <String>[];
+    return LogBox(
+      title: l10n.translateLogTitle,
+      lines: lines.isEmpty ? [l10n.translateLogEmpty] : lines,
+      maxHeight: 140,
     );
   }
 }

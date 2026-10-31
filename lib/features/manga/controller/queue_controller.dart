@@ -16,8 +16,32 @@ final mangaSvcClientProvider = Provider<MangaSvcClient>((ref) => FakeMangaSvcCli
 /// 取消后进度也还在动（实际是界面不会再更新）。
 ///
 /// 用「被 watch 才启动」的 Provider 承载定时器：页面在场才轮询，离开自动停。
+/// 翻译日志轮询（D-075）：设置页「模型 → 翻译日志」用；1s 拉一次。
+final translateLogProvider = AsyncNotifierProvider<TranslateLogNotifier, List<String>>(TranslateLogNotifier.new);
+
+class TranslateLogNotifier extends AsyncNotifier<List<String>> {
+  Timer? _timer;
+
+  @override
+  Future<List<String>> build() async {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => refresh());
+    ref.onDispose(() => _timer?.cancel());
+    final r = await ref.read(mangaSvcClientProvider).getTranslateLog();
+    return (r['tail'] as List?)?.cast<String>() ?? const [];
+  }
+
+  Future<void> refresh() async {
+    try {
+      final r = await ref.read(mangaSvcClientProvider).getTranslateLog();
+      state = AsyncValue.data((r['tail'] as List?)?.cast<String>() ?? const []);
+    } catch (_) {
+      // 服务不可达时保留旧日志，不清空。
+    }
+  }
+}
+
 final queuePollerProvider = Provider<void>((ref) {
-  final timer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+  final timer = Timer.periodic(const Duration(seconds: 1), (_) {
     ref.read(queueProvider.notifier).refresh();
   });
   ref.onDispose(timer.cancel);
@@ -75,6 +99,12 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
     await ref.read(mangaSvcClientProvider).cancelTask(taskId);
     await refresh();
     return task.donePages;
+  }
+
+  /// 重试/继续任务（D-075）：失败 → 重跑；取消 → 续跑。
+  Future<void> retry(String taskId) async {
+    await ref.read(mangaSvcClientProvider).retryTask(taskId);
+    await refresh();
   }
 
   /// 投放，返回提交结果（吐司用）。
