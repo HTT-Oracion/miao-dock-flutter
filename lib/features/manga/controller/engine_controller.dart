@@ -111,8 +111,7 @@ final modelsInstalledProvider = Provider<bool>((ref) {
   // 装配刚完成也要立刻反映，不能等下次冷启动。
   final install = ref.watch(engineInstallProvider);
   if (install.done) return true;
-  final dir = ref.watch(importedEngineDirProvider);
-  return File(engineManifestPath(dir)).existsSync();
+  return File(engineManifestPath(ref.watch(engineRootProvider))).existsSync();
 });
 
 /// 完整视图模型 —— UI 直接 watch 它（D-033：接上真实装配状态）。

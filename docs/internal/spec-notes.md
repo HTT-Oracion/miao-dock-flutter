@@ -602,3 +602,22 @@
 - **反证**：`if (install.running)` 改成 `if (false)` → 「装配中 → downloading」立即红。
 - **验证**：`test/engine_install_view_test.dart` 4 条；全量 `flutter test` 106 通过 + 11 跳过。
 - **关联**：D-027 · D-028 · D-029 · D-031。
+
+## D-034 引擎目录落盘 + 后端选择弹窗
+
+- **状态**：已完成（2026-11-01）
+- **做了什么**：
+  - **引擎目录持久化**：`engineRootProvider` 读 `shell_prefs`（键 `miao.engine-dir`），
+    导入/选择后立即落盘。此前只在会话内有效，重启即回默认 —— 等于「导入白做」。
+  - **后端选择弹窗**（`backend_picker.dart`）：只在 **Windows / Linux** 出现；
+    候选取 `自动 / CPU / Vulkan / CUDA 12.4`，**不含 DirectML**（llama.cpp 无该构建）。
+    体积直接写在选项上（CUDA ≈ 626 MB vs Vulkan ≈ 32 MB，差 20 倍）。
+  - 探测只返回**结构化结论**（推荐后端 + 厂商），文案在 UI 层由 ARB 拼 ——
+    否则 UI 层会出现硬编码中文（l10n 零容忍会拦）。
+- **为什么探测与文案分离**：`probeBackend()` 在测试里要能脱离 `BuildContext` 跑；
+  而文案必须走 ARB（D-006）。两者混在一起，要么测试起不来，要么文案绕过 ARB。
+- **未验证**：Windows / Linux 上的真实探测（本机是 macOS）。
+  macOS 不适用后端概念（只有一种构建），走不到这个弹窗。
+- **反证**：把「无卡」分支改成推荐 CUDA → 「没有 NVIDIA → 不推荐 CUDA」立即红。
+- **验证**：`test/backend_picker_test.dart` 3 条；全量 109 通过 + 11 跳过。
+- **关联**：D-027 · D-033 · D-035（镜像结论）。

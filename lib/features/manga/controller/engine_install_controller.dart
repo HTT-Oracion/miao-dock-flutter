@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/paths.dart';
+import '../../../core/storage/shell_prefs.dart';
 import '../controller/queue_controller.dart';
 
 /// 引擎装配进度（D-033）—— 引导页「下载」按钮背后的状态机。
@@ -137,21 +138,21 @@ class EngineInstallNotifier extends Notifier<EngineInstallState> {
   }
 }
 
-/// 会话内导入的引擎目录。
+/// 生效的引擎目录（D-034）：读盘上的选择，没有则用默认。
 ///
-/// 不持久化是临时取舍：落盘需要一个「引擎目录」设置项（设置页尚未有），
-/// 先把导入效果接上，避免按钮点了没反应。
-final importedEngineDirProvider = NotifierProvider<ImportedEngineDirNotifier, String?>(ImportedEngineDirNotifier.new);
+/// 🔴 **必须持久化**：目录是可搬、可导入的（D-027），记不住路径等于每次启动
+/// 都回到默认位置 —— 用户导入的目录「第二天就失效」，这比没有导入更糟。
+final engineRootProvider = NotifierProvider<EngineDirNotifier, String>(EngineDirNotifier.new);
 
-class ImportedEngineDirNotifier extends Notifier<String?> {
+class EngineDirNotifier extends Notifier<String> {
   @override
-  String? build() => null;
+  String build() => readEngineDir() ?? mangaEngineDir();
 
-  void set(String? dir) => state = dir;
+  void set(String dir) {
+    state = dir;
+    persistEngineDir(dir);
+  }
 }
-
-/// 生效的引擎目录：导入过就用导入的，否则用默认。
-final activeEngineDirProvider = Provider<String>((ref) => ref.watch(importedEngineDirProvider) ?? mangaEngineDir());
 
 /// 默认装配目录（当前引擎目录）。
 String defaultEngineInstallDir() => mangaEngineDir();

@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 const String _kSidebarLabelsKey = 'miao.sidebar-labels';
 const String _kThemeModeKey = 'miao.theme-mode';
 const String _kTranslateSourceKey = 'miao.translate-source';
+const String _kEngineDirKey = 'miao.engine-dir';
 
 /// 偏好文件路径（均基于 `$HOME`）：macOS 与 Windows 用 Application Support、
 /// Linux 用 `.config`；Windows 走 `LOCALAPPDATA`。
@@ -97,3 +98,15 @@ String? readTranslateSource() {
 }
 
 void persistTranslateSource(String source) => _writePref(_kTranslateSourceKey, source);
+
+/// 引擎目录（用户选过的安装/导入位置）；null = 用默认值。
+///
+/// 🔴 存的是**字符串路径**而不是布尔值：目录必须可搬可导入（D-027），
+/// 记不住路径就等于每次启动都回到默认位置，「导入」白做。
+String? readEngineDir() {
+  final v = _readPrefs()[_kEngineDirKey];
+  if (v == null || v.isEmpty) return null;
+  return v;
+}
+
+void persistEngineDir(String dir) => _writePref(_kEngineDirKey, dir);
