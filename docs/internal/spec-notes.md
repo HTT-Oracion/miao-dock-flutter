@@ -988,3 +988,33 @@
   3. 设置页把「大模型翻译」接到这条路；
   4. 真实出网实现（`dart:io HttpClient` + 四层超时）。
 - **关联**：D-049 · D-050。
+
+## D-052 凭证落盘服务端（credentials.json）
+
+- **状态**：完成（2026-11-01）；`/translate/text` 仍未接真实出网
+- **定案变更（用户）**：从「服务端不落库」改为**多一份 `credentials.json`**。
+  好处：翻译时服务端直接取用，不必每次把 secret 塞进请求体。
+- **落点**：`<state>/credentials.json`（与令牌/队列同目录）。
+- **实现**：`services/mangasvc/lib/src/translate/credential_store.dart`
+  - **原子写**（临时文件 + rename），避免半截文件被当成有效凭证；
+  - 文件权限 **0600**（POSIX；Windows 依赖目录 ACL）；
+  - 对外接口**永不回传 secret**，只回 `hasKey` / `hasSecret`；
+  - 损坏或不存在 → `null`，调用方按「未配置」处理，不抛。
+- **接口**（三条件随 `translate` 分组）：
+  ```
+  GET    /api/v1/translate/credentials   → {configured, platform, hasKey, hasSecret, updatedAt}
+  POST   /api/v1/translate/credentials   ← {platform, appKey, appSecret}
+  DELETE /api/v1/translate/credentials
+  ```
+  用 POST 而非 PUT：HTTP 层没有 `putJson`，为一个端点新增动词不划算。
+- **App 侧**：保存凭证时**同时写两处**（钥匙串 + 服务端）。服务端写入失败会弹提示 ——
+  否则会出现「界面显示已配置、翻译却说没配置」。
+- **已接受的代价（明确记录）**：
+  1. **两份密钥副本**（钥匙串 + state 文件），换 key 要清两处，否则残留陈旧密钥；
+  2. 落盘是**明文 JSON**（已用 0600 收敛），`credential_store_test` 里有一条
+     专门断言「明文落盘」这一事实，将来若改加密会提醒同步文档。
+- **验证**：`credential_store_test.dart` 7 条（原子写无残留、脱敏、0600、损坏容错）；
+  服务端 140 通过，应用 115 通过，l10n 棘轮通过。
+- **仍未做**：`/translate/text` 的真实出网（`dart:io HttpClient` + 四层超时）、
+  流式 `llm-trans`、测试凭证。
+- **关联**：D-047 · D-049 · D-050 · D-051。

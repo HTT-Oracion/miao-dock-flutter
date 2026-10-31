@@ -325,6 +325,19 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<Map<String, dynamic>> ping() => _get('/ping');
 
   @override
+  Future<Map<String, dynamic>> putTranslateCredentials({
+    required String platform,
+    required String appKey,
+    required String appSecret,
+  }) => _post('/translate/credentials', body: {'platform': platform, 'appKey': appKey, 'appSecret': appSecret});
+
+  @override
+  Future<Map<String, dynamic>> getTranslateCredentials() => _get('/translate/credentials');
+
+  @override
+  Future<Map<String, dynamic>> deleteTranslateCredentials() => _delete('/translate/credentials');
+
+  @override
   Future<RuntimeProbe> getEngineRuntime() async => _runtimeOf(await _get('/engine/runtime'));
 
   @override

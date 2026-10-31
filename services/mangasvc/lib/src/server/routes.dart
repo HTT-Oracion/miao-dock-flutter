@@ -81,7 +81,10 @@ const List<RouteDef> routes = [
   RouteDef(method: 'POST', pattern: '/api/v1/translate/stream', group: 'translate'),
   RouteDef(method: 'GET', pattern: '/api/v1/translate/options', group: 'translate'),
   RouteDef(method: 'POST', pattern: '/api/v1/translate/settings', group: 'translate'),
+  // 在线翻译凭证（D-052）：落盘 `<state>/credentials.json`，接口永不回传 secret。
+  RouteDef(method: 'GET', pattern: '/api/v1/translate/credentials', group: 'translate'),
   RouteDef(method: 'POST', pattern: '/api/v1/translate/credentials', group: 'translate'),
+  RouteDef(method: 'DELETE', pattern: '/api/v1/translate/credentials', group: 'translate'),
 
   // ── engine ──────────────────────────────────────────────────────────────
   RouteDef(method: 'GET', pattern: '/api/v1/engine/status', group: 'engine'),

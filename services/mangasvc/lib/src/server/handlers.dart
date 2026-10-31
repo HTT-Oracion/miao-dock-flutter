@@ -4,6 +4,7 @@ import 'package:protocol/protocol.dart';
 
 import '../engine/engine_facade.dart';
 import '../queue/task_queue.dart';
+import '../translate/credential_store.dart';
 import '../store/plans.dart';
 import '../store/library_store.dart';
 import 'http.dart';
@@ -90,6 +91,12 @@ class Handlers {
         await _health(req);
       case 'GET /api/v1/ping':
         await _ping(req);
+      case 'GET /api/v1/translate/credentials':
+        await _getCredentials(req);
+      case 'POST /api/v1/translate/credentials':
+        await _putCredentials(req);
+      case 'DELETE /api/v1/translate/credentials':
+        await _deleteCredentials(req);
       // ── tasks ───────────────────────────────────────────────────────────
       case 'GET /api/v1/tasks':
         await _listTasks(req);
@@ -225,6 +232,35 @@ class Handlers {
       'requiresToken': true,
       'serverTime': isoOf(DateTime.now()),
     });
+  }
+
+  CredentialStore get _credentials => CredentialStore(rootDir: store.rootDir);
+
+  /// 读凭证状态：**永不回传 secret**，只回答「配了没」。
+  Future<void> _getCredentials(HttpRequest req) async {
+    final c = _credentials.read();
+    await writeJson(req.response, 200, {'configured': c?.usable ?? false, if (c != null) ...c.toMaskedJson()});
+  }
+
+  Future<void> _putCredentials(HttpRequest req) async {
+    final body = await readJsonBody(req);
+    final platform = body['platform'];
+    final appKey = body['appKey'];
+    final appSecret = body['appSecret'];
+    if (platform is! String || platform.isEmpty) {
+      throw const ServiceError('INVALID_PLATFORM', '缺少平台标识');
+    }
+    if (appKey is! String || appSecret is! String || appKey.isEmpty || appSecret.isEmpty) {
+      throw const ServiceError('INVALID_CREDENTIALS', 'appKey 与 appSecret 都不能为空');
+    }
+    final saved = await _credentials.save(platform: platform, appKey: appKey, appSecret: appSecret);
+    // 响应里**不带**密钥本体：连自己刚提交的值都不回显，避免日志/抓包泄漏。
+    await writeJson(req.response, 200, {'configured': saved.usable, ...saved.toMaskedJson()});
+  }
+
+  Future<void> _deleteCredentials(HttpRequest req) async {
+    await _credentials.clear();
+    await writeJson(req.response, 200, {'configured': false});
   }
 
   // ── tasks ───────────────────────────────────────────────────────────────
