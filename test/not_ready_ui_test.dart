@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:miao_dock_flutter/features/manga/controller/engine_install_controller.dart';
 import 'package:miao_dock_flutter/features/manga/domain/not_ready_state.dart';
 import 'package:miao_dock_flutter/features/manga/ui/notready/not_ready_screen.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
@@ -70,6 +71,37 @@ void main() {
 
     expect(find.text('引擎已就绪，尚未启动'), findsOneWidget);
     expect(find.text('启动引擎'), findsWidgets);
+  });
+
+  testWidgets('下载中按设计稿展示逐条目行（已完成/进行中/等待）', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      host(
+        NotReadyScreen(
+          view: viewOf(NotReadyState.downloading),
+          onPrimary: () {},
+          onSecondary: () {},
+          onRetryService: () {},
+          downloadEntries: const [
+            InstallEntry(id: 'python', sizeMb: 26, state: 'done', percent: 1),
+            InstallEntry(id: 'src', sizeMb: 54, state: 'running', percent: 0.42),
+            InstallEntry(id: 'llm', sizeMb: 4053, state: 'waiting'),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 破坏点：只画一个总百分比 → 与设计稿「一列文件 + 每行进度条」不符，本条失败。
+    expect(find.text('python'), findsOneWidget);
+    expect(find.text('src'), findsOneWidget);
+    expect(find.text('llm'), findsOneWidget);
+    expect(find.text('已完成'), findsOneWidget);
+    expect(find.text('等待'), findsOneWidget);
+    expect(find.text('42%'), findsOneWidget);
   });
 
   testWidgets('失败态给「重新下载模型」而不是「重启」', (tester) async {

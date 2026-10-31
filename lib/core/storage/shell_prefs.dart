@@ -16,6 +16,7 @@ const String _kSidebarLabelsKey = 'miao.sidebar-labels';
 const String _kThemeModeKey = 'miao.theme-mode';
 const String _kTranslateSourceKey = 'miao.translate-source';
 const String _kEngineDirKey = 'miao.engine-dir';
+const String _kAutoStartEngineKey = 'miao.auto-start-engine';
 
 /// 偏好文件路径（均基于 `$HOME`）：macOS 与 Windows 用 Application Support、
 /// Linux 用 `.config`；Windows 走 `LOCALAPPDATA`。
@@ -110,3 +111,14 @@ String? readEngineDir() {
 }
 
 void persistEngineDir(String dir) => _writePref(_kEngineDirKey, dir);
+
+/// 「启动应用时自动起引擎」（design.html 默认「开」）。
+///
+/// 缺键返回 true：设计稿的默认值就是开，用户没动过就按开处理。
+bool readAutoStartEngine() {
+  final v = _readPrefs()[_kAutoStartEngineKey];
+  if (v == null) return true;
+  return v == 'true';
+}
+
+void persistAutoStartEngine(bool value) => _writePref(_kAutoStartEngineKey, value ? 'true' : 'false');

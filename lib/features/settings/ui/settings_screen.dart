@@ -6,6 +6,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../manga/controller/engine_controller.dart';
 import '../../manga/domain/not_ready_state.dart';
+import '../../../core/storage/shell_prefs.dart';
 import '../controller/engine_settings_controller.dart';
 import 'engine_parts_view.dart';
 
@@ -389,7 +390,10 @@ class _AutoStartNotifier extends Notifier<bool> {
   @override
   bool build() => true;
 
-  void set(bool v) => state = v;
+  void set(bool v) {
+    state = v;
+    persistAutoStartEngine(v);
+  }
 }
 
 /// 推理引擎行（C2 数据驱动）。

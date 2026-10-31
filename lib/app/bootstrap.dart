@@ -13,6 +13,7 @@ import '../../core/process/service_supervisor.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
 import '../../features/manga/data/http_manga_svc_client.dart';
+import 'engine_autostart.dart';
 
 /// 启动装配收口（AGENTS §3）：桌面 / 移动平台分支与 Fake / 真客户端注入只在这里发生，
 /// 业务层不感知平台差异。
@@ -72,7 +73,7 @@ Future<void> bootstrap(Widget app) async {
         mangaSvcClientProvider.overrideWithValue(HttpMangaSvcClient(locator)),
         if (supervisor != null) serviceSupervisorProvider.overrideWithValue(supervisor),
       ],
-      child: app,
+      child: EngineAutoStart(child: app),
     ),
   );
 }

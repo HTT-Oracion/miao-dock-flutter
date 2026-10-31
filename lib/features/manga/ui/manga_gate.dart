@@ -141,6 +141,7 @@ class _GateCard extends ConsumerWidget {
       onImportLocal: () => _import(context, ref),
       // 方案 C：整模块拦截，但留一条**不需要引擎**的只读出口。
       onBrowseLibrary: () => context.go('/manga/library'),
+      downloadEntries: install.entries,
     );
   }
 

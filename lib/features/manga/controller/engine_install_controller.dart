@@ -13,6 +13,19 @@ import '../controller/queue_controller.dart';
 /// 装配是**长任务**（数百 MB 到数 GB），而 UI 需要跨页面存活：
 /// 用户切到别的视图再回来，进度不能归零。放在 Notifier 里而不是 FutureBuilder 里，
 /// 就是为了这一点。
+/// 单个装配条目的进度（用于设计稿那种「一列文件」的下载卡）。
+@immutable
+class InstallEntry {
+  const InstallEntry({required this.id, required this.sizeMb, required this.state, this.percent});
+
+  final String id;
+  final double sizeMb;
+
+  /// `done` / `running` / `waiting` / `failed`
+  final String state;
+  final double? percent;
+}
+
 @immutable
 class EngineInstallState {
   const EngineInstallState({
@@ -25,6 +38,7 @@ class EngineInstallState {
     this.percent,
     this.error,
     this.logs = const [],
+    this.entries = const [],
   });
 
   final bool running;
@@ -40,6 +54,9 @@ class EngineInstallState {
   final String? error;
   final List<String> logs;
 
+  /// 逐条目状态（服务端返回）；空 = 还没开始。
+  final List<InstallEntry> entries;
+
   static const EngineInstallState idle = EngineInstallState();
 
   EngineInstallState copyWith({
@@ -52,6 +69,7 @@ class EngineInstallState {
     double? percent,
     String? error,
     List<String>? logs,
+    List<InstallEntry>? entries,
     bool clearError = false,
   }) => EngineInstallState(
     running: running ?? this.running,
@@ -63,6 +81,7 @@ class EngineInstallState {
     percent: percent ?? this.percent,
     error: clearError ? null : (error ?? this.error),
     logs: logs ?? this.logs,
+    entries: entries ?? this.entries,
   );
 }
 
@@ -123,6 +142,15 @@ class EngineInstallNotifier extends Notifier<EngineInstallState> {
       percent: (v['percent'] as num?)?.toDouble(),
       error: v['error'] as String?,
       logs: logs,
+      entries: [
+        for (final e in (v['entries'] as List? ?? const []).cast<Map<String, dynamic>>())
+          InstallEntry(
+            id: '${e['id']}',
+            sizeMb: (e['sizeMb'] as num?)?.toDouble() ?? 0,
+            state: '${e['state']}',
+            percent: (e['percent'] as num?)?.toDouble(),
+          ),
+      ],
     );
     if (!running) {
       _timer?.cancel();

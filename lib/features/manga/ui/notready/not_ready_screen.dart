@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/log_box.dart';
+import '../../controller/engine_install_controller.dart';
 import '../../domain/not_ready_state.dart';
 
 /// 启动引导页（D-012）—— 取代设计稿原 `guide` / `download` 两个独立整屏。
@@ -25,6 +26,7 @@ class NotReadyScreen extends StatelessWidget {
     required this.onRetryService,
     this.onImportLocal,
     this.onBrowseLibrary,
+    this.downloadEntries = const [],
     this.onTogglePause,
     this.paused = false,
     this.onExportLogs,
@@ -43,6 +45,9 @@ class NotReadyScreen extends StatelessWidget {
 
   /// 导入本地运行时（仅未装配态可用）。
   final VoidCallback? onImportLocal;
+
+  /// 下载中的逐条目状态（设计稿：下载卡是「一列文件 + 每行进度条」）。
+  final List<InstallEntry> downloadEntries;
 
   /// 门禁卡片上的「只读出口」：去漫画库（阅读已译作品不需要引擎）。
   ///
@@ -73,6 +78,7 @@ class NotReadyScreen extends StatelessWidget {
               onRetryService: onRetryService,
               onTogglePause: onTogglePause,
               paused: paused,
+              downloadEntries: downloadEntries,
               onExportLogs: onExportLogs,
               onImportLocal: onImportLocal,
               onBrowseLibrary: onBrowseLibrary,
@@ -95,6 +101,7 @@ class _NotReadyCard extends StatelessWidget {
     required this.onExportLogs,
     required this.onImportLocal,
     required this.onBrowseLibrary,
+    required this.downloadEntries,
   });
 
   final NotReadyView view;
@@ -106,6 +113,7 @@ class _NotReadyCard extends StatelessWidget {
   final void Function(String text, String suggestedName)? onExportLogs;
   final VoidCallback? onImportLocal;
   final VoidCallback? onBrowseLibrary;
+  final List<InstallEntry> downloadEntries;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +136,10 @@ class _NotReadyCard extends StatelessWidget {
           _LayerStrip(view: view),
           const SizedBox(height: 20),
           if (view.state != NotReadyState.downloading) ...[_StepsRow(), const SizedBox(height: 18)],
-          if (view.state == NotReadyState.downloading) ...[_DownloadSection(view: view), const SizedBox(height: 16)],
+          if (view.state == NotReadyState.downloading) ...[
+            _DownloadSection(view: view, entries: downloadEntries),
+            const SizedBox(height: 16),
+          ],
           if (view.state == NotReadyState.failed || view.state == NotReadyState.degraded) ...[
             LogBox(
               lines: view.logs.isEmpty ? _demoLogs(view.state) : view.logs,
@@ -407,39 +418,148 @@ class _StepsRow extends StatelessWidget {
 
 /// 下载进度区。
 class _DownloadSection extends StatelessWidget {
-  const _DownloadSection({required this.view});
+  const _DownloadSection({required this.view, required this.entries});
 
   final NotReadyView view;
+  final List<InstallEntry> entries;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final progress = view.downloadProgress;
+    final l10n = AppLocalizations.of(context);
+
+    // 没有条目（还没拿到服务端状态）时退回单条总进度，避免空白。
+    if (entries.isEmpty) {
+      final p = view.downloadProgress;
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: palette.line),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
+          color: palette.card,
+        ),
+        child: p == null
+            ? Text(l10n.nrDescDownloading, style: TextStyle(fontSize: 10.5, color: palette.mut))
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: p,
+                  minHeight: 4,
+                  backgroundColor: palette.hi,
+                  valueColor: AlwaysStoppedAnimation(palette.warn),
+                ),
+              ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
-        color: palette.card,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔴 无真实进度时不画假百分比（设计稿 §07「不编造进度数字」）。
-          if (progress == null)
-            Text(AppLocalizations.of(context).nrDescDownloading, style: TextStyle(fontSize: 10.5, color: palette.mut))
-          else ...[
+          for (final (i, e) in entries.indexed) ...[
+            if (i > 0) Container(height: 1, color: palette.line),
+            _DownloadRow(entry: e),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 下载卡里的一行（design.html `.dl-item`）。
+class _DownloadRow extends StatelessWidget {
+  const _DownloadRow({required this.entry});
+
+  final InstallEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final running = entry.state == 'running';
+    final done = entry.state == 'done';
+    final failed = entry.state == 'failed';
+
+    final chipText = done
+        ? l10n.engineEntryDone
+        : failed
+        ? l10n.engineEntryFailed
+        : running
+        ? '${((entry.percent ?? 0) * 100).round()}%'
+        : l10n.engineEntryWaiting;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                done
+                    ? LucideIcons.circleCheck
+                    : failed
+                    ? LucideIcons.circleX
+                    : running
+                    ? LucideIcons.download
+                    : LucideIcons.circle,
+                size: 13,
+                color: done
+                    ? palette.good
+                    : failed
+                    ? palette.bad
+                    : running
+                    ? palette.acc
+                    : palette.mut,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  entry.id,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10.5, color: entry.state == 'waiting' ? palette.mut : palette.ink),
+                ),
+              ),
+              Text('${entry.sizeMb.toStringAsFixed(0)} MB', style: TextStyle(fontSize: 9.5, color: palette.mut)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                decoration: BoxDecoration(
+                  color: done
+                      ? palette.good.withValues(alpha: 0.12)
+                      : running
+                      ? palette.accSoft
+                      : palette.hi,
+                  borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+                ),
+                child: Text(
+                  chipText,
+                  style: TextStyle(
+                    fontSize: 8.5,
+                    color: done
+                        ? palette.good
+                        : running
+                        ? palette.acc
+                        : palette.mut,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (running) ...[
+            const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
               child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 4,
+                value: entry.percent,
+                minHeight: 3,
                 backgroundColor: palette.hi,
-                valueColor: AlwaysStoppedAnimation(palette.warn),
+                valueColor: AlwaysStoppedAnimation(palette.acc),
               ),
             ),
-            const SizedBox(height: 6),
-            Text('${(progress * 100).round()}%', style: TextStyle(fontSize: 10, color: palette.ink2)),
           ],
         ],
       ),

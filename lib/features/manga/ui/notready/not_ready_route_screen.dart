@@ -64,6 +64,7 @@ class NotReadyRouteScreen extends ConsumerWidget {
       },
       onRetryService: () {},
       onExportLogs: null,
+      downloadEntries: ref.watch(engineInstallProvider).entries,
       // 导入本地运行时（D-015）：选目录 → 浅检查 → 通过则跳过下载。
       onImportLocal: () async {
         final result = await RuntimePickerDialog.show(

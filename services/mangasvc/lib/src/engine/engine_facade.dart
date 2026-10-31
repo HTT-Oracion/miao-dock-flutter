@@ -187,6 +187,7 @@ class EngineFacade {
   bool? _installOk;
   String? _installError;
   InstallProgress? _installProgress;
+  EngineInstallPlan? _installPlan;
   List<String> _installLog = [];
 
   bool _rebuildingDeps = false;
@@ -277,13 +278,14 @@ class EngineFacade {
     _installError = null;
     _installProgress = null;
 
-    final plan = resolveInstallPlan(
+    _installPlan = resolveInstallPlan(
       platformKey: currentPlatformKey(),
       backend: backend,
       includeNllb: includeNllb,
       parts: parts,
     );
     final installer = EngineInstaller(engineDir: engineDir);
+    final plan = _installPlan!;
     unawaited(() async {
       final r = await installer.install(plan, onProgress: (p) => _installProgress = p);
       _installLog = r.logs;
@@ -308,6 +310,9 @@ class EngineFacade {
       'percent': p?.percent,
       'error': _installError,
       'tail': List<String>.of(_installLog),
+      // 逐条目状态：设计稿的下载卡是「一列文件 + 每行进度条」，
+      // 只给一个总百分比与稿子不符。
+      'entries': _installEntries(),
     };
   }
 
@@ -335,6 +340,28 @@ class EngineFacade {
     'error': _depsError,
     'tail': List<String>.of(_depsTail),
   };
+
+  /// 逐条目状态（done / running / waiting）。
+  List<Map<String, dynamic>> _installEntries() {
+    final plan = _installPlan;
+    if (plan == null) return const [];
+    final cur = _installProgress?.index ?? -1;
+    final curPercent = _installProgress?.percent;
+    return [
+      for (final (i, e) in plan.entries.indexed)
+        {
+          'id': e.id,
+          'set': e.set,
+          'sizeMb': double.parse(e.sizeMb.toStringAsFixed(1)),
+          'state': i < cur
+              ? 'done'
+              : i == cur
+              ? (_installing ? 'running' : (_installError != null ? 'failed' : 'done'))
+              : 'waiting',
+          'percent': i == cur ? curPercent : (i < cur ? 1.0 : null),
+        },
+    ];
+  }
 
   /// `POST /engine/models/download`
   Future<Map<String, dynamic>> startDownload() => downloader.start();

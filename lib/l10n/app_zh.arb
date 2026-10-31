@@ -1349,5 +1349,17 @@
   "engineRecheck": "重新检查",
   "@engineRecheck": {
     "description": "设置：轻量重查装配状态"
+  },
+  "engineEntryDone": "已完成",
+  "@engineEntryDone": {
+    "description": "下载卡：条目状态"
+  },
+  "engineEntryWaiting": "等待",
+  "@engineEntryWaiting": {
+    "description": "下载卡：条目状态"
+  },
+  "engineEntryFailed": "失败",
+  "@engineEntryFailed": {
+    "description": "下载卡：条目状态"
   }
 }
