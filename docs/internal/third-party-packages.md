@@ -11,6 +11,11 @@
 | `flutter_riverpod` | 3.4.3 | 状态管理（唯一状态方案，见 AGENTS §3） | 根（App） |
 | `go_router` | 16.3.0 | 屏级路由事实源 | 根（App） |
 | `flutter_lints` | 6.0.0 | 静态检查基线 | 根（dev） |
+| `flutter_localizations` | SDK 内置 | 国际化基础（`Localizations` / `GlobalMaterialLocalizations`） | 根 |
+| `intl` | 0.20.3（transitive） | `gen_l10n` 生成物的运行时依赖；**不由我们直接声明版本**，随 `flutter_localizations` 锁定 | 根（传递） |
+
+> `flutter_localizations` 来自 Flutter SDK，不属于 pub 第三方包，不受 §纪律 1 的"候选包"约束；
+> 但因其把 `intl` 带进来，仍在此登记一笔，便于审计传递依赖。
 
 ## 二、候选清单（按引入时机分组）
 

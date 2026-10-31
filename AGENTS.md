@@ -54,6 +54,14 @@
 - 通用 UI 优先复用 `lib/shared/widgets/`；仅服务单屏的组件留在该屏内。
 - **组件库约束**：首选 Material 3（内置基座，经 `ThemeExtension` / 主题定制融入设计令牌）；内置无法满足的组件，次选以 `shadcn_ui` 为底自行封装进 `lib/shared/widgets/`，库类型不得泄漏到业务层。不引入其他整体组件库。
 - **图标约束**：所有图标统一使用 **lucide**（`lucide_icons_flutter`）或与其一致的线性风格；不混用其他图标体系（Material Icons、CupertinoIcons 等仅作兜底占位，不允许进入正式 UI）。
+- **国际化约束（D-006，强制）**：
+  - 实现方案为 Flutter 官方 `gen_l10n`：`flutter_localizations` + `l10n.yaml` + `lib/l10n/app_*.arb`，生成物 `lib/l10n/app_localizations*.dart` **不入库**（已在 `.gitignore`）。不引入 `easy_localization`、`slang`、`gettext` 等第三方 i18n 库。
+  - **当前阶段只出中文、不做任何语言切换**：`supportedLocales` 只允许含 `zh`；不得在 UI 上放语言选择器。新增语言是**独立提案**，须先过台账，且不得以「预留」为名提前铺 `en` 词条。
+  - **所有面向用户的中文文案必须走 ARB**：禁止在 `lib/` 的 Widget 里写死中文字面量（含按钮、提示、空态、错误、吐司、无障碍 `semanticsLabel` 与 `tooltip`）。`lib/l10n/` 与测试除外。
+  - ARB 词条 key 用**小驼峰语义名**（`viewDrop`、`actionCollapseSidebar`），不用中文、不用序号；每条必须有 `@key` 的 `description`。
+  - 需要拼接的文案用 ARB 占位符（`{count}` 等），不在 Dart 里做字符串相加 —— 否则后续加语言必然拆不开。
+  - 新增/修改文案后必须跑 `flutter gen-l10n`，并同步更新 `test/l10n_test.dart` 的断言基准。
+  - 后端契约里的**错误码**（如 `INVALID_IMAGE`）不进 ARB；界面按错误码映射到 ARB 词条，不直接展示服务端 `message` 原文。
 - 新增窗口入口（如未来托盘设置窗）时，在本文 §2 与 README 同步登记入口文件。
 
 ### 服务（services/，Dart）
@@ -124,6 +132,9 @@ flutter analyze
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 
+# 国际化词条生成（gen_l10n，配置见 l10n.yaml；生成物不入库）
+flutter gen-l10n
+
 # 单元与 widget 测试
 flutter test
 
@@ -141,7 +152,7 @@ dart run services/mangasvc/bin/mangasvc.dart
 dart compile exe services/mangasvc/bin/mangasvc.dart -o build/mangasvc
 ```
 
-- 生成代码（`*.g.dart` / `*.freezed.dart`）不入库；提交前以 build_runner 后无 diff 为准。
+- 生成代码（`*.g.dart` / `*.freezed.dart` / `lib/l10n/app_localizations*.dart`）不入库；提交前以 build_runner 后无 diff 为准。
 - Flutter SDK 版本用 fvm（或 puro）锁定，不依赖全局版本。
 - 测试怎么写、什么改动该不该写测试：`docs/internal/test-policy.md`（建档后生效）。
 

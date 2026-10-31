@@ -20,13 +20,83 @@
 
 ### P0 · 打通真实链路（不做完，后面全是假绿）
 
-| # | 任务 | 为什么是这个优先级 | 规模依据 |
-|---|---|---|---|
-| P0-1 | `mangasvc` 真实实现：`/tasks`、`/library`、`/library/create`、`/tasks/delete` | 漫画是唯一已有完整 UI 的域；服务端不落地，UI 永远只能跑 Fake，无法验收 | 原项目 4 个核心端点 |
-| P0-2 | `dio` 客户端 + 端口段探测（5180–5190） | P0-1 的消费方；`bootstrap.dart` 里已留 TODO 分支 | `third-party-packages.md` 已登记 |
-| P0-3 | 桌面端服务子进程生命周期 | 服务起不来，前面两项都白做；且决定 macOS/Windows 打包形态 | `core/process/` 目前是 `.gitkeep` |
+> **规模事实**：原项目 `mangasvc` 为 Rust 实现，`src-tauri/src/mangasvc/` 共 **24,616 行**
+> （engine 11,476 / store 3,663 / translate 2,538 / handlers 与队列等其余），
+> 路由表声明 **50+ 端点**（`handlers.rs` 的 `route()`）。上一版把 P0 估成「4 个端点」是错的，本版已纠正。
+>
+> **拆解原则**：按「能独立验收的最小闭环」切，而不是按模块切。每个子项都要能单独跑出一条可观察结果。
 
-> 这三项构成一条**垂直切片**：从「点提交」到「写进真实目录」。做完之后，漫画三视图才算真功能。
+#### P0-A 协议契约与传输层（先定契约，再写实现）
+
+| # | 任务 | 交付物 | 验收判据 | 依赖 |
+|---|---|---|---|---|
+| P0-A1 | 对齐 `packages/protocol` 的 HTTP 契约 | `MangasvcClient` 接口按 `/api/v1` 真实路径重写；DTO 补齐 `TaskDetail`、`QueueSnapshot`、`LibraryMeta` | 接口方法数与路由表一一对应，无遗漏 | — |
+| P0-A2 | 引入 `dio` 并建 `core/net` 客户端 | 拦截器：baseUrl 注入、超时、错误信封解析 | 单元测试：错误信封能还原 `code` / `message` | P0-A1 |
+| P0-A3 | 端口段探测（5180–5190） | 探测算法 + 单实例语义 | 端口被占用时能自动落到下一端口；全被占用时报明确错误 | P0-A2 |
+| P0-A4 | 令牌鉴权（pairing token） | 请求头注入与 401 处理 | 无令牌请求被拒；带令牌通过 | P0-A2 |
+
+#### P0-B `mangasvc` 服务端实现（按端点组，逐组可验收）
+
+| # | 任务 | 端点组 | 验收判据 | 规模参考 |
+|---|---|---|---|---|
+| P0-B1 | HTTP 骨架 + `/health` | `GET /health`、`GET /api/v1/health` | 进程起得来，健康检查返回就绪 | 最小可跑 |
+| P0-B2 | 任务列表与创建 | `GET/POST /api/v1/tasks`、`GET /api/v1/tasks/{id}` | 投放能进队列，列表能读回 | handlers |
+| P0-B3 | 任务变更 | `POST /tasks/delete`、`POST /tasks/{id}/cancel`、`POST /tasks/{id}/retry`、`POST /tasks/{id}/batches` | 取消保留已落盘；重试不重复提交 | handlers |
+| P0-B4 | 队列串行执行 | `GET /api/v1/queue` + `queue/drain.rs` 等价物 | **同一时刻只跑 1 个**（这是原项目硬约束） | `drain.rs` |
+| P0-B5 | 落盘存储层 | `store/` 等价物：书本 / 话 / 页三级 | 译文按「本 → 话 → 页」写入，重名不覆盖 | **3,663 行** |
+| P0-B6 | 漫画库读接口 | `GET /api/v1/library`、`/library/{name}/meta`、`/files/{seq}`、`/cover` | 书架能列出真实目录 | store |
+| P0-B7 | 漫画库写接口 | `POST /library/create`、`/meta`、`/cover`、`/delete`、`/unhide`、`/merge` | 新建 / 改名 / 删除生效 | store |
+| P0-B8 | 章节级操作 | `/chapters/{no}/resume`、`/retranslate`、`/renumber`、`/files/{seq}` | 补页与重译整话可用 | store |
+| P0-B9 | SSE 进度推送 | `GET /api/v1/tasks/{id}/events` | 队列进度实时推送，断线可重连 | `events.rs` |
+
+#### P0-C 引擎接入（P0 里最重的一块，可独立迭代）
+
+| # | 任务 | 说明 | 验收判据 |
+|---|---|---|---|
+| P0-C1 | 引擎状态机 | `GET /api/v1/engine/status`、`/runtime` | 五态机（stopped/starting/running/stopping/error）可观测 |
+| P0-C2 | 引擎选项与设置 | `GET/POST /api/v1/engine/options`、`/settings` | 设置页能读能写 |
+| P0-C3 | 模型校验 | `POST /api/v1/engine/models/verify` | 缺件能列出缺哪个 |
+| P0-C4 | 模型下载（含暂停 / 续传） | `POST /engine/models/download`、`/download/pause` | 进度真实、暂停可续 |
+| P0-C5 | 引擎空闲卸载 | `POST /api/v1/engine/unload` | 超时自动卸载权重 |
+| P0-C6 | 翻译引擎接入 | 对接 manga-image-translator + LLM | 一张图能出译文 |
+
+> **P0-C 建议单独立项**：原项目 `engine/` 有 **11,476 行**（含 supervisor 1,106、wheels 563、tier_downgrade 347），
+> 是整个迁移里最重的一块，不应和 P0-A/B 捆在同一迭代承诺里。
+
+#### P0-D 桌面端进程管理
+
+| # | 任务 | 交付物 | 验收判据 |
+|---|---|---|---|
+| P0-D1 | 子进程启动与就绪等待 | `core/process/`：拉起 `mangasvc`，等待就绪行协议 | 应用启动能带起服务 |
+| P0-D2 | 生命周期与退出清理 | 应用退出时终止子进程，不留僵尸 | 退出后端口释放 |
+| P0-D3 | 服务状态对 UI 的可观测性 | `ServiceStatus` provider，五态映射 | 侧栏设置脚的状态点跟随真实状态 |
+| P0-D4 | 打包形态 | `dart compile exe` 产物随应用分发 | 打包后能自启动服务 |
+
+#### P0-E 端到端验收（P0 的出口条件）
+
+| # | 任务 | 验收判据 |
+|---|---|---|
+| P0-E1 | 投放 → 队列 → 落盘 全链路 | 拖入 3 张图，任务进队列，译文按「本 → 话 → 页」写入真实目录 |
+| P0-E2 | 漫画库读回 | 重启应用后书架仍能看到刚才的书 |
+| P0-E3 | 故障注入 | 服务中途停止时，UI 显示失败态且**不清空已成功数据**（设计稿 §07） |
+| P0-E4 | 移动端远程模式 | Android 连桌面端地址，能拉到同一个书架 |
+
+#### P0 内部建议顺序
+
+```
+P0-A1（契约）→ P0-A2/A3/A4（传输）
+      ↓
+P0-B1（骨架）→ P0-B2/B3（任务）→ P0-B4（串行队列）→ P0-B5（落盘）
+      ↓                                        ↓
+P0-D1/D2（子进程）                      P0-B6/B7/B8（库读写）
+      ↓                                        ↓
+P0-E1（端到端）← 先跑通「投放一张图」
+      ↓
+P0-C1..C5（引擎）→ P0-C6（真翻译）→ P0-E2/E3/E4
+```
+
+> **关键判断**：P0-E1 应该在 **P0-C 之前**跑通 —— 用一个 mock 引擎先把「投放→落盘→读回」的管道打通，
+> 再接真引擎。否则引擎出问题时无法区分是管道错还是引擎错。
 
 ### P1 · 漫画域补全（已有 UI，补真实能力）
 
