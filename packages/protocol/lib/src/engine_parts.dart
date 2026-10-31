@@ -39,6 +39,12 @@ enum EnginePart {
   /// 翻译 LLM 权重（Sakura），由 llama-server 加载。
   llm('llm', '翻译模型', required: true),
 
+  /// manga-ocr 权重（`kha-white/manga-ocr-base`），`ocr: mocr` 必需（D-042）。
+  ///
+  /// 它不是本引擎自带的权重，而是 `manga_ocr` 包在**运行时**从 HuggingFace 拉的。
+  /// 放进清单是为了：① 下载可见（不静默联网）② 离线可用。
+  modelsMocr('models-mocr', 'OCR 模型', required: true),
+
   /// 离线英译中模型（nllb），**按需**：不装也能用日译中。
   modelsNllb('models-nllb', '离线英译中', required: false);
 
@@ -61,6 +67,7 @@ enum EnginePart {
     EnginePart.llama => 'bin/llama',
     EnginePart.modelsVisual => 'src/models',
     EnginePart.llm => 'llm',
+    EnginePart.modelsMocr => '.hf',
     EnginePart.modelsNllb => 'src/models/translators/nllb',
   };
 
@@ -103,6 +110,8 @@ String mapManifestDest(String dest) {
   if (d.startsWith('models/sakura/')) {
     return 'llm/${d.substring('models/sakura/'.length)}';
   }
+  // HF 缓存：dest 已经是最终相对路径，原样保留。
+  if (d.startsWith('.hf/')) return d;
   if (d.startsWith('bin/llama/')) {
     // bin/llama/llama-b11417/llama-server → bin/llama/llama-server
     final rest = d.substring('bin/llama/'.length);
@@ -119,6 +128,7 @@ EnginePart? partOfSet(String set) => switch (set) {
   'runtime' => EnginePart.llama,
   'visual' => EnginePart.modelsVisual,
   'llm' => EnginePart.llm,
+  'mocr' => EnginePart.modelsMocr,
   'translation' => EnginePart.modelsNllb,
   _ => null,
 };
@@ -148,6 +158,8 @@ EnginePart? partOfManifestDest(String dest) {
   if (d.startsWith('src/models/translators/nllb')) return EnginePart.modelsNllb;
   if (d.startsWith('src/models')) return EnginePart.modelsVisual;
   if (d.startsWith('src/')) return EnginePart.source;
+  // HF 缓存布局（`<engine>/.hf/hub/models--…`）：先判，避免与其它前缀混淆。
+  if (d.startsWith('.hf/')) return EnginePart.modelsMocr;
   if (d.startsWith('bin/llama')) return EnginePart.llama;
   if (d.startsWith('llm')) return EnginePart.llm;
   return null;

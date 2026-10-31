@@ -7,6 +7,7 @@ import 'package:protocol/protocol.dart';
 import 'engine_manifest_entry.dart';
 import 'engine_manifests.dart';
 import 'engine_manifests_extra.dart';
+import 'engine_manifests_mocr.dart';
 import 'model_download.dart';
 import 'runtime_setup.dart';
 
@@ -54,7 +55,7 @@ EngineInstallPlan resolveInstallPlan({
   Set<EnginePart>? parts,
 }) {
   final all = <String, EngineManifestEntry>{};
-  for (final e in [...kRuntimeManifest, ...kExtraRuntimeManifest, ...kModelManifest]) {
+  for (final e in [...kRuntimeManifest, ...kExtraRuntimeManifest, ...kModelManifest, ...kMocrManifest]) {
     all[e.id] = e; // 补充清单同 id 时覆盖生成物（便于修数）
   }
 
@@ -73,6 +74,8 @@ EngineInstallPlan resolveInstallPlan({
     if (e != null) picked.add(e);
   }
 
+  // mocr 是默认 OCR（D-041 定案），所以随视觉栈一起必装。
+  addIf((e) => e.set == 'mocr');
   addIf((e) => e.set == 'visual');
   addIf((e) => e.set == 'llm');
   if (includeNllb) addIf((e) => e.set == 'translation');
@@ -217,6 +220,13 @@ class EngineInstaller {
       }
     }
 
+    // mocr 走 HF 缓存布局：`from_pretrained` 需要 `refs/main` 才能定位到 snapshot。
+    if (plan.entries.any((e) => e.set == 'mocr')) {
+      final refs = File(_abs('.hf${sep}hub${sep}models--kha-white--manga-ocr-base${sep}refs${sep}main'));
+      refs.parent.createSync(recursive: true);
+      refs.writeAsStringSync('$mocrRepoRevision\n');
+      _log('[install] 写入 HF refs/main（${mocrRepoRevision.substring(0, 8)}）');
+    }
     _writeManifest(plan, sep);
     await _writeLaunchSpec(sep);
     _log('[install] ✓ 装配完成');
@@ -286,6 +296,11 @@ class EngineInstaller {
       'healthPath': '/openapi.json',
       'port': port,
       // 模型目录**不在这里传**：上游不支持（D-030），模型直接放在 src/models。
+      //
+      // 🔴 mocr 权重走 HF 缓存：必须把 HF_HOME 指到引擎目录内，否则
+      // `MangaOcr()` 会去 `~/.cache/huggingface` 找不到就**静默联网下载**。
+      // OFFLINE=1 是保险丝：宁可报错，也不要悄悄联网。
+      'env': {'HF_HOME': _abs('.hf'), 'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1'},
       'provisional': true,
     };
     File(_abs('launch.json')).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(data));
