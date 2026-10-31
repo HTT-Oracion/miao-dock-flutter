@@ -273,3 +273,21 @@
   - 端到端：真实服务 → 状态/探针/选项/校验/下载/暂停/启动 全链路通过。
   - 反证 2 轮：伪造 `percent` → 断言失败；未装配报 running → 断言失败。
 - **关联**：D-012 · D-015 · D-016 · P0-C1~C5。
+
+## D-019 P0-F5 设置页「翻译服务」组落地
+
+- **状态**：已完成（2026-10-31）
+- **做了什么**：
+  - `lib/features/settings/ui/settings_screen.dart`：左侧分组导航（计数与原项目 `SET_NAV` 同构）+「翻译服务」组。
+  - **服务卡片**：引擎组状态点（绿/黄）+ 主操作「启动 / 停止」（D-012 共用开关，一次点击拉起或停止两个进程）。
+  - **来源三选一**：`SegmentedButton`，本地翻译 / 大模型翻译 / 远程翻译；移动端切到需本机运行时的来源会被 controller 拒绝。
+  - **推理引擎行**：档位 / 加速后端 / 空闲卸载，由 C2 `getEngineOptions()` 的 `current` 初始化，保存走白名单校验。
+- **为什么**：C1~C5 已有真实状态数据，设置页是三层状态唯一的完整展示位（工具条只放摘要）。
+- **契约修正**：`setEngineSettings` 从 `void` 改为 `Future<bool>`（返回 `needsRestart`）—— 改 tier / accel 需重启引擎，UI 必须能拿到这个信号。服务端白名单校验早在 C2 已有。
+- **踩坑**：
+  1. 设置页用了 Riverpod，widget 测试宿主**必须包 ProviderScope**，否则 `No ProviderScope found`。
+  2. 拼接文案（`引擎 + 大模型 · 本地翻译`）不能用 `find.text` 精确匹配，改用 `find.textContaining`。
+  3. Dart 流分析**不提升三元里的可空值**：`trailing != null ? Text(trailing) : control` 会报 `String? → String`，需先落局部变量。
+  4. `_SettingRow` 的尾件用 `?tail`（null-aware collection element）替代 if-else 链，消除 lint。
+- **怎么验证**：`test/settings_ui_test.dart` 2 条（三层卡片要素 + 来源三选一 + 分组切换内容变化）。
+- **关联**：D-012 · C1~C5 · `engine_settings_controller.dart`。

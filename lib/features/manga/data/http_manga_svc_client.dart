@@ -311,7 +311,10 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<Map<String, dynamic>> getEngineOptions() => _get('/engine/options');
 
   @override
-  Future<void> setEngineSettings(Map<String, dynamic> settings) => _post('/engine/settings', body: settings);
+  Future<bool> setEngineSettings(Map<String, dynamic> settings) async {
+    final r = await _post('/engine/settings', body: settings);
+    return r['needsRestart'] == true;
+  }
 
   @override
   Future<void> unloadEngine() => _post('/engine/unload');

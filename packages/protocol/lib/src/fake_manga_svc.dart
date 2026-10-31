@@ -383,7 +383,7 @@ class FakeMangaSvcClient implements MangaSvcClient {
   Future<Map<String, dynamic>> getEngineOptions() => _unimplemented('GET /engine/options');
 
   @override
-  Future<void> setEngineSettings(Map<String, dynamic> settings) => _unimplemented('POST /engine/settings');
+  Future<bool> setEngineSettings(Map<String, dynamic> settings) => _unimplemented('POST /engine/settings');
 
   @override
   Future<void> unloadEngine() => _unimplemented('POST /engine/unload');

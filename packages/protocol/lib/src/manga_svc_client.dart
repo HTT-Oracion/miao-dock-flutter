@@ -127,7 +127,11 @@ abstract class MangaSvcClient {
   /// `GET /api/v1/translate/options` —— 可选项（方向 / 来源）。
   Future<TranslateOptions> getTranslateOptions();
 
-  /// `POST /api/v1/translate/settings` —— 写翻译设置。
+  /// `POST /api/v1/engine/settings` —— 写引擎设置。
+  ///
+  /// 返回 `needsRestart`：改 tier / accel 需要重启引擎才生效（C2 契约）。
+  /// 🔴 服务端做了**白名单校验**，未知键会被拒绝（`INVALID_SETTING`）。
+  Future<bool> setEngineSettings(Map<String, dynamic> settings);
   Future<void> setTranslateSettings(Map<String, dynamic> settings);
 
   /// `POST /api/v1/translate/credentials` —— 写平台凭据。
@@ -149,9 +153,6 @@ abstract class MangaSvcClient {
 
   /// `GET /api/v1/engine/options` —— 引擎可选项。
   Future<Map<String, dynamic>> getEngineOptions();
-
-  /// `POST /api/v1/engine/settings` —— 写引擎设置。
-  Future<void> setEngineSettings(Map<String, dynamic> settings);
 
   /// `POST /api/v1/engine/unload` —— 空闲卸载权重（不停进程）。
   Future<void> unloadEngine();

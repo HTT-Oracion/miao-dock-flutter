@@ -1009,5 +1009,218 @@
   "runtimeNotVerifiedHint": "当前只检查了目录结构（src / venv 是否存在）；版本匹配与模型齐全的校验尚未实现。",
   "@runtimeNotVerifiedHint": {
     "description": "导入：校验待做说明"
+  },
+  "settingsNavGeneral": "通用",
+  "@settingsNavGeneral": {
+    "description": "设置分组：通用"
+  },
+  "settingsNavTranslate": "翻译服务",
+  "@settingsNavTranslate": {
+    "description": "设置分组：翻译服务"
+  },
+  "settingsNavMedia": "播放·媒体",
+  "@settingsNavMedia": {
+    "description": "设置分组：播放·媒体"
+  },
+  "settingsNavResource": "资源与投放",
+  "@settingsNavResource": {
+    "description": "设置分组：资源与投放"
+  },
+  "settingsNavAbout": "关于",
+  "@settingsNavAbout": {
+    "description": "设置分组：关于"
+  },
+  "settingsBlurbTranslate": "本地服务、推理引擎与模型配置",
+  "@settingsBlurbTranslate": {
+    "description": "设置：翻译服务说明"
+  },
+  "settingsSectionSource": "翻译链路",
+  "@settingsSectionSource": {
+    "description": "设置小节：来源"
+  },
+  "settingsSectionSourceHead": "三选一 · 下一次翻译生效",
+  "@settingsSectionSourceHead": {
+    "description": "设置小节：来源说明"
+  },
+  "settingsSectionPairing": "服务与配对",
+  "@settingsSectionPairing": {
+    "description": "设置小节：服务"
+  },
+  "settingsSectionPairingHead": "本地服务由喵坞托管，可随时启停",
+  "@settingsSectionPairingHead": {
+    "description": "设置小节：服务说明"
+  },
+  "settingsSectionInference": "推理引擎",
+  "@settingsSectionInference": {
+    "description": "设置小节：推理"
+  },
+  "settingsSectionInferenceHead": "改档位 / 后端 / 模型目录需要重启引擎才生效",
+  "@settingsSectionInferenceHead": {
+    "description": "设置小节：推理说明"
+  },
+  "settingsSectionModels": "模型",
+  "@settingsSectionModels": {
+    "description": "设置小节：模型"
+  },
+  "settingsSectionModelsHead": "模型目录与完整性校验",
+  "@settingsSectionModelsHead": {
+    "description": "设置小节：模型说明"
+  },
+  "svcCardService": "漫画服务",
+  "@svcCardService": {
+    "description": "服务卡片：L0 名称"
+  },
+  "svcCardEngine": "引擎 + 大模型",
+  "@svcCardEngine": {
+    "description": "服务卡片：L1+L2 名称"
+  },
+  "svcCardSource": "翻译来源",
+  "@svcCardSource": {
+    "description": "服务卡片：来源"
+  },
+  "svcStateRunning": "运行中",
+  "@svcStateRunning": {
+    "description": "服务状态"
+  },
+  "svcStateStopped": "已停止",
+  "@svcStateStopped": {
+    "description": "服务状态"
+  },
+  "svcStateStarting": "启动中",
+  "@svcStateStarting": {
+    "description": "服务状态"
+  },
+  "svcStateStopping": "停止中",
+  "@svcStateStopping": {
+    "description": "服务状态"
+  },
+  "svcStateError": "异常",
+  "@svcStateError": {
+    "description": "服务状态"
+  },
+  "svcEngineReady": "引擎就绪",
+  "@svcEngineReady": {
+    "description": "服务卡片：引擎就绪"
+  },
+  "svcEngineOff": "未启动",
+  "@svcEngineOff": {
+    "description": "服务卡片：引擎未启动"
+  },
+  "svcStart": "启动",
+  "@svcStart": {
+    "description": "服务卡片：启动按钮"
+  },
+  "svcRestart": "重启",
+  "@svcRestart": {
+    "description": "服务卡片：重启按钮"
+  },
+  "svcStop": "停止",
+  "@svcStop": {
+    "description": "服务卡片：停止按钮"
+  },
+  "svcPortLabel": "{host}:{port}",
+  "@svcPortLabel": {
+    "description": "服务卡片：端口",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "svcAutoStart": "随应用启动服务",
+  "@svcAutoStart": {
+    "description": "设置：自动启动"
+  },
+  "svcAutoStartWhy": "应用启动时拉起漫画服务；关闭后需手动启动。",
+  "@svcAutoStartWhy": {
+    "description": "设置：自动启动说明"
+  },
+  "svcAutoStartEngine": "翻译时自动启动引擎",
+  "@svcAutoStartEngine": {
+    "description": "设置：引擎自动唤起"
+  },
+  "svcAutoStartEngineWhy": "投放或翻译时若引擎未启动，自动拉起引擎与大模型。",
+  "@svcAutoStartEngineWhy": {
+    "description": "设置：引擎自动唤起说明"
+  },
+  "svcIdleUnload": "空闲自动卸载",
+  "@svcIdleUnload": {
+    "description": "设置：空闲卸载"
+  },
+  "svcIdleUnloadWhy": "引擎空闲超过时长后自动卸载权重，释放显存。",
+  "@svcIdleUnloadWhy": {
+    "description": "设置：空闲卸载说明"
+  },
+  "settingSourceLabel": "翻译来源",
+  "@settingSourceLabel": {
+    "description": "设置行：翻译来源"
+  },
+  "settingSourceWhy": "本地翻译全程在本机；大模型翻译把文本发往云端；远程翻译整条链路交给其他端。",
+  "@settingSourceWhy": {
+    "description": "设置行：来源说明"
+  },
+  "settingTierLabel": "翻译档位",
+  "@settingTierLabel": {
+    "description": "设置行：档位"
+  },
+  "settingTierWhy": "按硬件探测；可手动锁定档位。",
+  "@settingTierWhy": {
+    "description": "设置行：档位说明"
+  },
+  "settingAccelLabel": "加速后端",
+  "@settingAccelLabel": {
+    "description": "设置行：加速后端"
+  },
+  "settingAccelWhy": "自动检测 CUDA / MPS / CPU。",
+  "@settingAccelWhy": {
+    "description": "设置行：加速后端说明"
+  },
+  "settingIdleLlmLabel": "空闲卸载 LLM",
+  "@settingIdleLlmLabel": {
+    "description": "设置行：LLM 卸载"
+  },
+  "settingIdleVisualLabel": "空闲卸载视觉",
+  "@settingIdleVisualLabel": {
+    "description": "设置行：视觉卸载"
+  },
+  "settingModelsDirLabel": "模型目录",
+  "@settingModelsDirLabel": {
+    "description": "设置行：模型目录"
+  },
+  "settingModelsDirWhy": "模型与字体的落盘位置；换引擎版本不重下模型。",
+  "@settingModelsDirWhy": {
+    "description": "设置行：模型目录说明"
+  },
+  "settingVerifyLabel": "校验完整性",
+  "@settingVerifyLabel": {
+    "description": "设置行：校验"
+  },
+  "settingRedownloadLabel": "重新下载模型",
+  "@settingRedownloadLabel": {
+    "description": "设置行：重下"
+  },
+  "settingMinutes": "{count} 分钟",
+  "@settingMinutes": {
+    "description": "设置：分钟档位",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingAuto": "自动",
+  "@settingAuto": {
+    "description": "设置：自动档"
+  },
+  "settingDirJaZh": "日译中",
+  "@settingDirJaZh": {
+    "description": "设置：方向"
+  },
+  "settingTierByHw": "按硬件探测",
+  "@settingTierByHw": {
+    "description": "设置：档位"
   }
 }
