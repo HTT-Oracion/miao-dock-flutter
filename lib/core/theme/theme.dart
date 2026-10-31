@@ -6,6 +6,21 @@ import 'tokens.dart';
 ///
 /// 说明：Material 的 `ColorScheme` 只承载"内置控件兜底色"，业务 UI 一律读
 /// [AppPalette]，避免同一语义出现两套真值。
+/// 零过渡：直接渲染目标页。本 Flutter 版本没有 `NoTransitionsBuilder`，
+/// 自己写一个 —— 效果等同「没有动画」。
+class _NoTransitionBuilder extends PageTransitionsBuilder {
+  const _NoTransitionBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => child;
+}
+
 ThemeData buildAppTheme(Brightness brightness) {
   final palette = brightness == Brightness.dark ? AppPalette.dark : AppPalette.light;
   final scheme = ColorScheme.fromSeed(seedColor: palette.acc, brightness: brightness).copyWith(
@@ -23,6 +38,18 @@ ThemeData buildAppTheme(Brightness brightness) {
     canvasColor: palette.bg,
     dividerColor: palette.line,
     splashFactory: NoSplash.splashFactory,
+    // 页签切换**不要**平台默认过渡（macOS 是 Cupertino 从右滑入）：
+    // 投放/队列/漫画库是同级的视图切换，不是层级导航，滑动反而像「翻页」。
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.macOS: _NoTransitionBuilder(),
+        TargetPlatform.windows: _NoTransitionBuilder(),
+        TargetPlatform.linux: _NoTransitionBuilder(),
+        TargetPlatform.android: _NoTransitionBuilder(),
+        TargetPlatform.iOS: _NoTransitionBuilder(),
+        TargetPlatform.fuchsia: _NoTransitionBuilder(),
+      },
+    ),
     highlightColor: Colors.transparent,
     hoverColor: palette.card,
     fontFamily: _fontFamily,
