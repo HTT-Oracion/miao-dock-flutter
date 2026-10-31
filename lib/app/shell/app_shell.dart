@@ -177,6 +177,12 @@ void _goView(BuildContext context, int moduleIndex, String viewId) {
   // 诊断：页面切不动时，先看这行有没有打出来（看出是「没触发」还是「触发了但没切」）。
   debugPrint('[nav] go /$base/$viewId（module=$moduleIndex）');
   context.go('/$base/$viewId');
+  // 再打一次「跳完之后路由器认为自己在哪」——
+  // 若这里仍是旧路径 ⇒ 路由没生效；若已是新路径 ⇒ 路由对、是渲染层没换。
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final router = GoRouter.maybeOf(context);
+    debugPrint('[nav] 现在路由 = ${router?.routerDelegate.currentConfiguration.uri}');
+  });
 }
 
 // ── 页面切换动效（design.html §06：opacity 0→1 + translateY(8→0)，300ms ease）──
