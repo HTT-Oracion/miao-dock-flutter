@@ -229,7 +229,9 @@ class TaskQueue {
         final seq = i + 1;
         final ext = src.contains('.') ? src.split('.').last.toLowerCase() : 'png';
         final original = File('${chapterDir.path}/${_pad(seq)}.$ext');
-        final translated = File('${chapterDir.path}/${_pad(seq)}_translated.$ext');
+        // 引擎一律回 PNG（实测 1 301 295 字节的 PNG 被写成了 .jpg），
+        // 扩展名必须跟真实格式一致，否则部分查看器会解不出来。
+        final translated = File('${chapterDir.path}/${_pad(seq)}_translated.png');
 
         // 原图：源文件存在就拷贝；测试里常见「路径不存在」，则写占位（不失败）。
         final srcFile = File(src);

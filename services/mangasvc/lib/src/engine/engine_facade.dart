@@ -186,10 +186,16 @@ class EngineFacade {
   /// 把一张图交给引擎翻译（队列执行器用）。
   ///
   /// 引擎没起时**抛错**而不是返回 null：调用方才好把「引擎未就绪」如实写进任务失败原因。
-  Future<Uint8List> translateImage(Uint8List bytes) async {
+  Future<Uint8List> translateImage(Uint8List bytes, {Duration readyTimeout = const Duration(seconds: 90)}) async {
+    // 引擎可能正在启动：**等它就绪**，而不是让这一页直接失败。
+    // 用户点完「启动引擎」立刻点翻译是常见操作，立刻失败会显得功能坏了。
+    final deadline = DateTime.now().add(readyTimeout);
+    while (runtime.port == null && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
     final port = runtime.port;
     if (port == null) {
-      throw StateError('引擎未启动（没有可用端口），无法翻译');
+      throw StateError('引擎未启动（等待 ${readyTimeout.inSeconds}s 仍无可用端口）');
     }
     final client = EngineClient(host: '127.0.0.1', port: port);
     final out = await client.translateImage(bytes);

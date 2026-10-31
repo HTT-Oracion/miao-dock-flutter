@@ -1136,3 +1136,26 @@
   4. **端到端验证**：一次真实「投放 → 翻译 → 落盘」尚未跑过。
 - **验证**：`dart analyze`/`flutter analyze` 干净；服务端 133 通过；应用 115 通过。
 - **关联**：D-037（门禁）· D-043（env）· D-045。
+
+## D-058 端到端真实跑通（投放 → 翻译 → 落盘）
+
+- **状态**：✅ **首次端到端跑通**（2026-11-01）
+- **实测**（`MIAO_MANGA_ENGINE_DIR=/tmp/full-eng`、`MIAO_MANGA_LIBRARY_DIR=/tmp/e2e-lib`）：
+  ```
+  POST /engine/start → engine.state = running（port 61240，由服务内 supervisor 拉起）
+  POST /tasks {comicName: e2e, 2 张图} → 最终 status = done，耗时 84s
+  产物：/tmp/e2e-lib/e2e/01_第1话/{001,002}.jpg + {001,002}_translated.png + manifest.json
+  001.jpg 266 802 B（hash ea40…） → 001_translated.png 1 301 295 B（hash 7297…，与手工验证一致）
+  ```
+- **过程中修掉三个真 bug**：
+  1. **服务内运行器仍按旧布局检查装配**（`venv/` + `<engine>/models`），新布局（`python/` + `src/models`）下直接报「引擎运行时未装配」。
+     改为**两套布局都认**（向后兼容），否则老目录导不进来。
+  2. `_defaultModelsDir()` 仍指向 `<engine>/models` → 改到 `<engine>/src/models`。
+  3. **译文扩展名与实际格式不符**：引擎回 PNG，却按原图扩展名写成 `.jpg`。
+     已固定为 `.png`（否则部分查看器解不出来）。
+- **仍存在（未修）**：
+  - 章节目录写死 `01_第1话` —— 真实漫画需要按「本 → 话」解析；
+  - 进度仍是按页 `done++`，未消费引擎 stage 帧；
+  - 未验证「手动导入引擎」路径（导入后用同一个 `_isAssembled` 判定，应一致但未实测）。
+- **验证**：`dart analyze`/`flutter analyze` 干净；服务端 133 通过；应用 115 通过。
+- **关联**：D-057 · D-027 · D-031。

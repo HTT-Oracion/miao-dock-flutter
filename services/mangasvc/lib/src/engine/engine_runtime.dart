@@ -69,8 +69,10 @@ class EngineRuntime {
   /// 运行时是否装配齐全（**浅检查**；完整校验见 P0-F6d）。
   bool get isAssembled {
     final src = Directory('$runtimeRoot${Platform.pathSeparator}src');
-    final venv = Directory('$runtimeRoot${Platform.pathSeparator}venv');
-    return src.existsSync() && venv.existsSync();
+    // 新布局（D-027）：`python/` 是自带解释器，不再是 `venv/`。
+    final python = Directory('$runtimeRoot${Platform.pathSeparator}python');
+    final legacyVenv = Directory('$runtimeRoot${Platform.pathSeparator}venv');
+    return src.existsSync() && (python.existsSync() || legacyVenv.existsSync());
   }
 
   /// 启动引擎 + 大模型。
@@ -88,7 +90,7 @@ class EngineRuntime {
     if (!isAssembled) {
       _state = EngineState.error;
       _phase = 'L1';
-      _lastError = '引擎运行时未装配：$runtimeRoot 缺少 src/ 或 venv/';
+      _lastError = '引擎运行时未装配：$runtimeRoot 缺少 src/ 或 python/';
       _log('[engine] not assembled: $runtimeRoot');
       return;
     }
@@ -209,14 +211,20 @@ class EngineRuntime {
   /// 运行时就绪探测（逐项独立报真伪）。
   Map<String, dynamic> _runtimeView() {
     final srcOk = Directory('$runtimeRoot${Platform.pathSeparator}src').existsSync();
-    final venvOk = Directory('$runtimeRoot${Platform.pathSeparator}venv').existsSync();
-    final modelsOk = Directory(modelsDir).existsSync();
+    final pythonOk =
+        Directory('$runtimeRoot${Platform.pathSeparator}python').existsSync() ||
+        Directory('$runtimeRoot${Platform.pathSeparator}venv').existsSync();
+    // 模型在 `src/models`（D-031），不在 `<engine>/models`。
+    // 两套布局都认：新布局模型在 `src/models`（D-031），旧布局在 `<engine>/models`。
+    final modelsOk =
+        Directory('$runtimeRoot${Platform.pathSeparator}src${Platform.pathSeparator}models').existsSync() ||
+        Directory(modelsDir).existsSync();
     final checks = [
       {'name': 'src', 'ok': srcOk, 'detail': '$runtimeRoot${Platform.pathSeparator}src'},
-      {'name': 'venv', 'ok': venvOk, 'detail': '$runtimeRoot${Platform.pathSeparator}venv'},
+      {'name': 'python', 'ok': pythonOk, 'detail': '$runtimeRoot${Platform.pathSeparator}python'},
       {'name': 'models', 'ok': modelsOk, 'detail': modelsDir},
     ];
-    return {'ready': srcOk && venvOk && modelsOk, 'checks': checks};
+    return {'ready': srcOk && pythonOk && modelsOk, 'checks': checks};
   }
 
   /// 释放资源：终止子进程，不留僵尸。

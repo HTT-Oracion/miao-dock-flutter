@@ -26,7 +26,10 @@ void main() {
 
   void assemble() {
     Directory('$rt/src').createSync(recursive: true);
+    // 新布局（D-027/D-031）：python/ 与 src/models。
     Directory('$rt/venv').createSync(recursive: true);
+    Directory('$rt/python').createSync(recursive: true);
+    Directory('$rt/src/models').createSync(recursive: true);
     File('$rt/src/version.txt').writeAsStringSync('0.9.1');
   }
 

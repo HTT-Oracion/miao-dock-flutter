@@ -35,7 +35,11 @@ void main(List<String> args) async {
     rt = '${tmp.path}/runtimes';
     models = '${tmp.path}/state/models-state';
     Directory('$rt/src').createSync(recursive: true);
+    // 新布局（D-027/D-031）：自带解释器在 `python/`，模型在 `src/models`。
+    // `venv/` 保留是因为部分用例在验证「按规格解析任意路径」。
     Directory('$rt/venv').createSync(recursive: true);
+    Directory('$rt/python').createSync(recursive: true);
+    Directory('$rt/src/models').createSync(recursive: true);
     File('$rt/src/version.txt').writeAsStringSync('1.2.3');
   });
 
