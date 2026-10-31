@@ -513,3 +513,29 @@
 - **怎么验证**：`services/mangasvc/test/engine_deps_test.dart` 7 条（前置检查、镜像默认与覆盖、空串语义、参数透传、非零退出）。
   反证：把默认源改空 → 「默认走国内镜像」立即红。
 - **关联**：D-028 · `engine-downloads.md` §三（pip 依赖）。
+
+## D-030 引擎模型目录的实际解析链（推翻 D-027 的假设）
+
+- **状态**：已查明（2026-11-01）；**需要改落点，待定案**
+- **查到了什么**（读源码得出，不是推测）：
+  1. HTTP API 入口是 `python server/main.py --host … --port … --start-instance`
+     （`server/main.py` 末尾直接 `uvicorn.run(app, …)`）。
+  2. 它会再 spawn 一个翻译进程（`server/main.py:244`）：
+     `python -m manga_translator shared --host … --port … --nonce …`，且 **`cwd=src`**。
+  3. 翻译进程的模型根 = `BASE_PATH/models`，其中 `BASE_PATH = os.path.dirname(MODULE_PATH)`
+     （`utils/generic.py:25`）→ 即 **`<engine>/src/models`**，与 cwd 无关。
+  4. `--model-dir` **只存在于顶层 `g_parser`**（`args.py:85`），而子命令
+     `ws` / `shared` 创建时**没有继承它**（`args.py:114` 起 `add_parser` 未传 `parents`），
+     所以**命令行无法指定模型目录**。
+- **结论**：D-027 把模型放在 `<engine>/models` 与引擎实际读取的 `<engine>/src/models` **不一致**。
+  按现状启动，引擎会去 `src/models` 找，找不到就表现为卡住或尝试联网下载。
+- **候选方案**：
+  | 方案 | 做法 | 代价 |
+  |---|---|---|
+  | A **软链** | 装配后建 `<engine>/src/models` → `../models` | macOS/Linux 天然支持；Windows 建软链需权限（开发者模式/管理员），可能失败 |
+  | B **直放** | 模型直接装到 `<engine>/src/models` | 与「MIT 的 model_dir 独立」初衷相悖，但零平台风险 |
+  | C **改上游** | 给 MIT 打补丁让 `shared` 支持 `--model-dir` | 维护成本；每次升级引擎要重打 |
+- **建议**：默认 **B（直接放 `src/models`）**，把 `<engine>/models` 去掉。
+  理由：软链在 Windows 上是**权限陷阱**（普通用户建不了），而「模型放哪」对我们的价值远低于「Windows 上能装上」。
+  若将来要支持「模型与运行时分离」，再引入 C 或平台分支。
+- **关联**：D-027（部分推翻）· `engine-downloads.md` §六。
