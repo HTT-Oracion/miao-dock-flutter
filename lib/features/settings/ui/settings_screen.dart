@@ -7,6 +7,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../manga/controller/engine_controller.dart';
 import '../../manga/domain/not_ready_state.dart';
 import '../controller/engine_settings_controller.dart';
+import 'engine_parts_view.dart';
 
 /// 设置屏 —— 本期先落「翻译服务」组（D-012 三层卡片 + 来源三选一 + 引擎设置）。
 ///
@@ -147,6 +148,9 @@ class _TranslateSection extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(l10n.settingsBlurbTranslate, style: TextStyle(fontSize: 10.5, color: palette.mut)),
           const SizedBox(height: 18),
+          // 引擎与模型（D-027）：目录 / 部件 / 校验，全部收在这一块。
+          const EnginePartsSection(),
+          const SizedBox(height: 14),
           const _ServiceCard(),
           const SizedBox(height: 18),
           _SectionTitle(title: l10n.settingsSectionSource, head: l10n.settingsSectionSourceHead),

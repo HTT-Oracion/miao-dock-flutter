@@ -442,7 +442,7 @@
 
 ## D-027 引擎目录收束为一个可搬的根（废止 D-016）
 
-- **状态**：开发中（2026-11-01；路径层与部件模型已落地，设置页部件表待做）
+- **状态**：已完成路径层 / 部件模型 / 校验 / 设置页部件表（2026-11-01）；下载流程与后端选择待接
 - **做了什么**：
   - 引擎目录 `<数据根>/manga/runtimes` → **`<数据根>/manga/engine`**。
   - 模型从 `<state>/models-state` 挪进 **`<engine>/models`**（MIT 的 `model_dir`）。
@@ -451,6 +451,9 @@
   - 新增「部件模型」（`packages/protocol/lib/src/engine_parts.dart`）：7 个部件 + manifest 前缀改写表 + 后端枚举。
   - 新增「校验」（`lib/core/storage/engine_inspect.dart`）：结构 → 可运行（真的 `import torch`）→ 元数据。
   - 导入对话框加「校验」按钮；**失败才出日志**（复用 `LogBox`），并给「重新下载缺失部件」。
+  - 设置页「引擎与模型」小节：目录 + 更改 + 导入 + 部件表 + 校验结论。
+  - 🔴 **三态**：未校验 / 通过 / 失败。「未校验」必须与「通过」长得不一样 ——
+    把没检查过的画成绿色，等于给出虚假的安心。
 - **为什么（推翻 D-016 的实测依据）**：
   - **venv 不可搬迁**：`pyvenv.cfg` 记录绝对路径，移动后 `bin/python` 直接坏
     （实测 `bad interpreter: No such file or directory`）。

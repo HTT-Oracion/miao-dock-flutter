@@ -1305,5 +1305,13 @@
         "type": "int"
       }
     }
+  },
+  "engineDirLabel": "引擎目录",
+  "@engineDirLabel": {
+    "description": "设置：引擎目录行标签"
+  },
+  "engineNotChecked": "尚未校验",
+  "@engineNotChecked": {
+    "description": "设置：校验结论占位（区别于通过）"
   }
 }
