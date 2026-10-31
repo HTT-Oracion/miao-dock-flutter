@@ -40,6 +40,8 @@ library;
 
 import 'dart:io';
 
+import 'package:protocol/protocol.dart';
+
 /// 平台应用数据目录。
 ///
 /// - macOS: `~/Library/Application Support`
@@ -143,12 +145,8 @@ String mangaLibraryDir() {
 /// 叠加 `%LOCALAPPDATA%` 后逼近上限。加 `\\?\` 前缀可绕过。
 /// 其他平台原样返回 —— 不要到处判断平台，统一走这里。
 String longPath(String path) {
-  if (!Platform.isWindows) return path;
-  if (path.startsWith(r'\\?\')) return path;
-  final abs = File(path).absolute.path;
-  // 短路径不加前缀：加了反而会绕过一些正常化的便利。
-  if (abs.length < 240) return abs;
-  return abs.startsWith(r'\\') ? '${r'\\?\UNC\'}${abs.substring(2)}' : '${r'\\?\'}$abs';
+  // 逻辑在协议包里（纯字符串、可测），这里只补「绝对化」这一步。
+  return longPathOf(File(path).absolute.path, isWindows: Platform.isWindows);
 }
 
 String _sep() => Platform.pathSeparator;

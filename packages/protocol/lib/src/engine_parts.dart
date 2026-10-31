@@ -109,6 +109,20 @@ String mapManifestDest(String dest) {
   return d;
 }
 
+/// 把 manifest 的 `extractTo`（解包目标）改写成本项目布局。
+///
+/// 与 [mapManifestDest] 同口径，但作用于「解到哪个目录」：
+/// - `python-3.11` → `python`（去掉版本层）
+/// - `bin/llama/llama-b11417` → `bin/llama`（换后端路径不变）
+String mapManifestExtractTo(String extractTo) {
+  final d = extractTo.replaceAll('\\', '/');
+  if (d.startsWith('python-')) return 'python';
+  if (d.startsWith('bin/llama/')) return 'bin/llama';
+  if (d.startsWith('models-store/')) return 'models/${d.substring('models-store/'.length)}';
+  if (d.startsWith('models/sakura')) return 'llm';
+  return d;
+}
+
 /// 判断一个 manifest `dest` 属于哪个部件（用于把下载进度归到部件上）。
 EnginePart? partOfManifestDest(String dest) {
   final d = mapManifestDest(dest);
@@ -122,6 +136,18 @@ EnginePart? partOfManifestDest(String dest) {
   if (d.startsWith('models/translators/nllb')) return EnginePart.modelsNllb;
   if (d.startsWith('models/')) return EnginePart.modelsVisual;
   return null;
+}
+
+/// 超长路径前缀（Windows `MAX_PATH` 规避）。
+///
+/// 纯字符串函数：不做绝对化、不碰文件系统，便于两端共用与测试。
+/// 传入的应是**绝对路径**（本项目所有落点都是绝对的）。
+String longPathOf(String path, {required bool isWindows}) {
+  if (!isWindows) return path;
+  if (path.startsWith(r'\\?\')) return path;
+  if (path.length < 240) return path;
+  if (path.startsWith(r'\\')) return r'\\?\UNC\' + path.substring(2);
+  return r'\\?\' + path;
 }
 
 /// llama.cpp 在 Windows / Linux 上可选的后端（D-027 定案：macOS 无此概念）。
