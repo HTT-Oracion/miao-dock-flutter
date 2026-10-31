@@ -7,6 +7,7 @@ import '../features/manga/controller/engine_controller.dart';
 import '../features/manga/controller/engine_install_controller.dart';
 import '../features/manga/controller/engine_ready_controller.dart';
 import '../features/manga/domain/not_ready_state.dart';
+import '../features/settings/controller/engine_dir_controller.dart';
 
 /// 启动应用时按设置自动起引擎（D-039）。
 ///
@@ -44,6 +45,13 @@ class _EngineAutoStartState extends ConsumerState<EngineAutoStart> {
     // 装配不完整就别起：只会得到一条「启动失败」。
     final presence = await probeEnginePresence(ref.read(engineRootProvider));
     if (!mounted || presence != EnginePresence.complete) return;
+
+    // 🔴 自动启动前**先校验**，并把结果留在「引擎目录」那一块（用户要求）。
+    // 校验不过就不启动 —— 否则用户看到的是一条语焉不详的失败，
+    // 而真正的原因（缺依赖 / 缺权重）明明已经查出来了。
+    final inspection = await ref.read(engineInspectionProvider.notifier).run();
+    if (!mounted || inspection == null || !inspection.ok) return;
+
     if (ref.read(engineStateProvider) != EngineRuntimeState.off) return;
 
     await ref.read(engineStateProvider.notifier).start();
