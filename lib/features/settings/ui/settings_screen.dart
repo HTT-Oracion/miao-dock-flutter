@@ -365,12 +365,6 @@ class _ServiceCard extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(color: running ? palette.good : palette.warn, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
