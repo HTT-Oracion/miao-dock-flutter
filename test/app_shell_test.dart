@@ -78,12 +78,14 @@ void main() {
     expect(find.byIcon(LucideIcons.clapperboard), findsOneWidget);
   });
 
-  testWidgets('漫画视图组图标 = folder-up / list-minus / book-text（§05）', (tester) async {
+  testWidgets('漫画视图组图标 = folder-up / list-minus / book-text / 引导（§05）', (tester) async {
     await tester.pumpWidget(host(child: rail()));
     await tester.pumpAndSettle();
     expect(find.byIcon(LucideIcons.folderUp), findsOneWidget);
     expect(find.byIcon(LucideIcons.listMinus), findsOneWidget);
     expect(find.byIcon(LucideIcons.bookText), findsOneWidget);
+    // 破坏点：引导页没有入口 → 用户看不到下载/装配入口，本条失败。
+    expect(find.byIcon(LucideIcons.sparkles), findsOneWidget);
   });
 
   testWidgets('音乐视图组渲染四视图（§03 侧栏按模块给视图组）', (tester) async {

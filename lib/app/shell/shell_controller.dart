@@ -35,6 +35,8 @@ const List<SidebarViewItem> mangaViews = [
   SidebarViewItem(id: 'drop'),
   SidebarViewItem(id: 'queue'),
   SidebarViewItem(id: 'library'),
+  // 启动引导（D-012）：住在右侧主体区、侧栏照常，所以它是**一个可点的视图**而不是整屏。
+  SidebarViewItem(id: 'notready'),
 ];
 
 /// 音乐模块视图（design.html 侧栏「音乐」分组）。

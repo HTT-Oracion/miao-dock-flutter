@@ -518,6 +518,8 @@ class _ViewGroup extends StatelessWidget {
     'drop': LucideIcons.folderUp,
     'queue': LucideIcons.listMinus,
     'library': LucideIcons.bookText,
+    // 引导页（D-012）：与设计稿 §05 的「启动引导」图标一致。
+    'notready': LucideIcons.sparkles,
     'discover': LucideIcons.compass,
     'playlist': LucideIcons.listMusic,
     'local': LucideIcons.hardDrive,

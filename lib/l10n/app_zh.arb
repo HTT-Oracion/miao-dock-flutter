@@ -1337,5 +1337,9 @@
   "backendReasonMac": "macOS 使用系统图形栈，无需选择后端",
   "@backendReasonMac": {
     "description": "后端探测结论"
+  },
+  "viewNotready": "启动引导",
+  "@viewNotready": {
+    "description": "侧栏视图：启动引导"
   }
 }
