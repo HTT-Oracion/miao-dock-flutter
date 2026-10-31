@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/theme.dart';
+import '../core/theme/theme_mode.dart';
 import 'router/routes.dart';
 
-/// 应用根组件：主题挂载 + go_router。
+/// 应用根组件：深浅双主题挂载 + go_router（设计稿 §01 / §06）。
+///
+/// `theme` 对应浅色（Material 的 `theme` 是默认亮色槽），`darkTheme` 对应深色；
+/// `themeMode` 由 [themeModeProvider] 控制，默认深色。
 class MiaoDockApp extends ConsumerWidget {
   const MiaoDockApp({super.key});
 
@@ -13,7 +17,9 @@ class MiaoDockApp extends ConsumerWidget {
     return MaterialApp.router(
       title: '喵坞 MiaoDock',
       debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
+      theme: buildAppTheme(Brightness.light),
+      darkTheme: buildAppTheme(Brightness.dark),
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
     );
   }
