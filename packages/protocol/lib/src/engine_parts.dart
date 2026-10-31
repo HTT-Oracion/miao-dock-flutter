@@ -59,9 +59,9 @@ enum EnginePart {
     EnginePart.source => 'src',
     EnginePart.deps => 'python',
     EnginePart.llama => 'bin/llama',
-    EnginePart.modelsVisual => 'models',
+    EnginePart.modelsVisual => 'src/models',
     EnginePart.llm => 'llm',
-    EnginePart.modelsNllb => 'models/translators/nllb',
+    EnginePart.modelsNllb => 'src/models/translators/nllb',
   };
 
   static EnginePart? byId(String id) {
@@ -95,7 +95,10 @@ String mapManifestDest(String dest) {
     return i < 0 ? 'python' : 'python/${d.substring(i + 1)}';
   }
   if (d.startsWith('models-store/')) {
-    return 'models/${d.substring('models-store/'.length)}';
+    // 🔴 必须落到 `src/models`：引擎的模型根是 `BASE_PATH/models`，
+    // 而 BASE_PATH 就是 `src/`（`utils/generic.py` + `utils/inference.py`）。
+    // 命令行**无法**指定模型目录（`--model-dir` 没被子命令继承，见 D-030）。
+    return 'src/models/${d.substring('models-store/'.length)}';
   }
   if (d.startsWith('models/sakura/')) {
     return 'llm/${d.substring('models/sakura/'.length)}';
@@ -129,7 +132,7 @@ String mapManifestExtractTo(String extractTo) {
   final d = extractTo.replaceAll('\\', '/');
   if (d.startsWith('python-')) return 'python';
   if (d.startsWith('bin/llama/')) return 'bin/llama';
-  if (d.startsWith('models-store/')) return 'models/${d.substring('models-store/'.length)}';
+  if (d.startsWith('models-store/')) return 'src/models/${d.substring('models-store/'.length)}';
   if (d.startsWith('models/sakura')) return 'llm';
   return d;
 }
@@ -141,11 +144,12 @@ EnginePart? partOfManifestDest(String dest) {
     // site-packages 里的东西是依赖，不是解释器本体。
     return d.contains('site-packages') ? EnginePart.deps : EnginePart.python;
   }
+  // 模型在 `src/models` 下，必须先判模型再判源码，否则都会被算成 source。
+  if (d.startsWith('src/models/translators/nllb')) return EnginePart.modelsNllb;
+  if (d.startsWith('src/models')) return EnginePart.modelsVisual;
   if (d.startsWith('src/')) return EnginePart.source;
   if (d.startsWith('bin/llama')) return EnginePart.llama;
   if (d.startsWith('llm')) return EnginePart.llm;
-  if (d.startsWith('models/translators/nllb')) return EnginePart.modelsNllb;
-  if (d.startsWith('models/')) return EnginePart.modelsVisual;
   return null;
 }
 

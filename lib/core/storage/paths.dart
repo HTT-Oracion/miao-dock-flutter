@@ -11,11 +11,11 @@
 ///       state/                             应用自产：令牌 / 队列 / 幂等表
 ///       engine/                            ★ 引擎目录：应用下载的一切都在这里
 ///         python/                            自带解释器 + site-packages（pip 依赖）
-///         src/                               引擎源码
 ///         bin/llama/                         llama-server（按后端换内容）
-///         models/                            MIT 的 model_dir（结构遵从上游）
-///           detection/ inpainting/ ocr/ fonts/
-///           translators/nllb/                按需
+///         src/                               引擎源码
+///           models/                          引擎的模型根（结构遵从上游）
+///             detection/ inpainting/ ocr/ fonts/
+///             translators/nllb/              按需
 ///         llm/                               llama-server 加载的权重（Sakura）
 ///         .engine.json                       安装清单
 ///     anime/engine/
@@ -102,13 +102,17 @@ String engineSrcDir([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_
 /// 路径固定，换后端 = 替换该目录内容（后端记在 `.engine.json`）。
 String engineLlamaDir([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_sep()}bin${_sep()}llama';
 
-/// MIT 的 model_dir（`<engine>/models`）。
+/// 引擎模型目录（`<engine>/src/models`，D-031）。
 ///
-/// 🔴 这个目录的**内部结构遵从上游**（`detection/` `inpainting/` `ocr/` `fonts/`
-/// `translators/nllb/`）。启动引擎时必须显式传 `--model-dir` 指到这里 ——
-/// MIT 的默认值是 `<src>/models`（`utils/inference.py`），不传就会去源码目录里找，
-/// 在离线机器上表现为「卡住」或静默走下载。
-String engineModelsDir([String? engineDir]) => '${engineDir ?? mangaEngineDir()}${_sep()}models';
+/// 🔴 **不能放 `<engine>/models`**：引擎的模型根是 `BASE_PATH/models`，
+/// 而 `BASE_PATH = os.path.dirname(MODULE_PATH)` 就是 `src/`
+/// （`utils/generic.py:25` + `utils/inference.py:94`）。
+/// 命令行也**无法**指定 —— `--model-dir` 只加在顶层 `g_parser`，
+/// 子命令 `ws` / `shared` 没继承（`args.py`），启动链路也不传（`server/main.py:244`）。
+/// 放错位置的症状是「引擎起来了但去别处找模型」，静默卡住或走联网下载。
+///
+/// 内部结构仍遵从上游：`detection/` `inpainting/` `ocr/` `fonts/` `translators/nllb/`。
+String engineModelsDir([String? engineDir]) => '${engineSrcDir(engineDir)}${_sep()}models';
 
 /// llama-server 加载的权重目录（`<engine>/llm`）。
 ///

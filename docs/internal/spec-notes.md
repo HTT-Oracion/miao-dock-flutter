@@ -539,3 +539,21 @@
   理由：软链在 Windows 上是**权限陷阱**（普通用户建不了），而「模型放哪」对我们的价值远低于「Windows 上能装上」。
   若将来要支持「模型与运行时分离」，再引入 C 或平台分支。
 - **关联**：D-027（部分推翻）· `engine-downloads.md` §六。
+
+## D-031 模型落点改为 `<engine>/src/models`（方案 B，部分推翻 D-027）
+
+- **状态**：已完成（2026-11-01）
+- **做了什么**：
+  - `mapManifestDest` 的 `models-store/` → **`src/models/`**（`models/sakura/` 仍是 `llm/`）。
+  - `engineModelsDir()` = `<engine>/src/models`；部件 `models-visual` / `models-nllb` 同步。
+  - 部件归属判定改为**先判模型再判源码**，否则 `src/models/...` 会被算成 `source`。
+  - 装配成功后写 `launch.json`：`python server/main.py --host 127.0.0.1 --port <空闲端口> --start-instance`，健康检查 `/openapi.json`。
+- **为什么选 B 而不是软链（方案 A）**：Windows 建软链需要管理员或开发者模式，**普通用户会失败**；
+  而这类失败在 macOS 上完全测不出来。「模型放哪」的收益远低于「Windows 上能装上」。
+- **为什么 launch 用 `server/main.py`**：HTTP API（`/translate/image/stream`）在 `server/main.py`；
+  `manga_translator shared` 是它自己 spawn 的**翻译子进程**，那上面没有这个路由。
+- **为什么健康检查用 `/openapi.json`**：上游没有 `/health`；FastAPI 默认提供 openapi，无需改上游。
+- **仍未验证**：`launch.json` 是**推测性**装配（字段 `provisional: true`）。
+  真正能否起来要等依赖装完 + 模型到位后实测；`--start-instance` 与 `upload-cache` 的工作目录行为也待确认。
+- **验证**：`test/paths_test.dart` 21 条、`engine_install_test.dart` 11 条（含 launch.json 内容断言）。
+- **关联**：D-027（部分推翻）· D-030 · `engine-downloads.md`。

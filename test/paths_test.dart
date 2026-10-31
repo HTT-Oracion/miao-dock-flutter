@@ -50,11 +50,11 @@ void main() {
       }
     });
 
-    test('模型跟着 engine 走，不再挂 state（废止 D-016）', () {
+    test('模型在 src/models（引擎实际读这里，D-030）', () {
       final models = engineModelsDir();
-      // 破坏点：模型仍放 state/models-state → 导入别人的 engine 目录后模型仍缺，本条失败。
+      // 破坏点：放回 <engine>/models → 引擎去 src/models 找不到，静默卡住，本条失败。
+      expect(models, '${engineSrcDir()}${Platform.pathSeparator}models');
       expect(models.startsWith(mangaEngineDir()), isTrue);
-      expect(models, endsWith('models'));
       expect(models.startsWith(mangaStateDir()), isFalse);
     });
 
@@ -81,9 +81,10 @@ void main() {
       expect(mapManifestDest('python-3.11/a/b'), 'python/a/b');
     });
 
-    test('models-store → models/（MIT 的 model_dir）', () {
-      expect(mapManifestDest('models-store/detection/d.ckpt'), 'models/detection/d.ckpt');
-      expect(mapManifestDest('models-store/translators/nllb/x'), 'models/translators/nllb/x');
+    test('models-store → src/models/（引擎的模型根）', () {
+      // 破坏点：落到 <engine>/models → 引擎根本不会去那里读，本条失败。
+      expect(mapManifestDest('models-store/detection/d.ckpt'), 'src/models/detection/d.ckpt');
+      expect(mapManifestDest('models-store/translators/nllb/x'), 'src/models/translators/nllb/x');
     });
 
     test('models/sakura → llm/（Sakura 归 llama-server）', () {
@@ -127,8 +128,8 @@ void main() {
       Directory('$root${sep}bin${sep}llama').createSync(recursive: true);
       File('$root${sep}bin${sep}llama${sep}llama-server').writeAsStringSync('');
       for (final sub in ['detection', 'inpainting', 'ocr', 'fonts']) {
-        Directory('$root${sep}models$sep$sub').createSync(recursive: true);
-        File('$root${sep}models$sep$sub${sep}f.bin').writeAsStringSync('x');
+        Directory('$root${sep}src${sep}models$sep$sub').createSync(recursive: true);
+        File('$root${sep}src${sep}models$sep$sub${sep}f.bin').writeAsStringSync('x');
       }
       Directory('$root${sep}llm').createSync(recursive: true);
       File('$root${sep}llm${sep}sakura.gguf').writeAsStringSync('gguf');

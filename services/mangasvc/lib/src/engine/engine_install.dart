@@ -228,8 +228,47 @@ class EngineInstaller {
     }
 
     _writeManifest(plan, sep);
+    await _writeLaunchSpec(sep);
     _log('[install] ✓ 装配完成');
     return InstallReport(ok: true, logs: List.of(_logs));
+  }
+
+  /// 写 `launch.json`（D-030）—— 引擎「怎么起」的唯一事实源。
+  ///
+  /// ## 为什么是 `server/main.py` 而不是 `-m manga_translator`
+  /// HTTP API（`/translate/image/stream`）在 `server/main.py` 里；
+  /// `manga_translator shared` 是它**自己 spawn 的翻译子进程**，API 在那边不存在。
+  ///
+  /// ## 健康检查为什么用 `/openapi.json`
+  /// FastAPI 默认提供，不需要改上游；`/health` 在上游并不存在。
+  ///
+  /// ## 端口为什么现挑
+  /// 写死会与「端口段探测」冲突；挑一个空闲端口记进来，重启时才可复现。
+  Future<void> _writeLaunchSpec(String sep) async {
+    final port = await _freePort();
+    final pythonRel = Platform.isWindows
+        ? 'python$sep'
+              'python.exe'
+        : 'python$sep'
+              'bin${sep}python3';
+    final data = {
+      'command': pythonRel,
+      'args': ['server${sep}main.py', '--host', '127.0.0.1', '--port', '$port', '--start-instance'],
+      'healthPath': '/openapi.json',
+      'port': port,
+      // 模型目录**不在这里传**：上游不支持（D-030），模型直接放在 src/models。
+      'provisional': true,
+    };
+    File(_abs('launch.json')).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(data));
+    _log('[install] 写入 launch.json（端口 $port）');
+  }
+
+  /// 找一个空闲端口（绑定 0 让系统分配，随即释放）。
+  static Future<int> _freePort() async {
+    final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final p = s.port;
+    await s.close();
+    return p;
   }
 
   /// 写 `.engine.json`：给「校验」与「换后端」判断现状用。

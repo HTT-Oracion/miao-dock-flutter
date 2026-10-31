@@ -131,7 +131,7 @@ void main() {
       expect(File('$engineDir/.download-cache/py.tar.gz').existsSync(), isTrue);
     });
 
-    test('普通条目 → 按前缀映射落到 models/ 与 llm/', () async {
+    test('普通条目 → 按前缀映射落到 src/models/ 与 llm/', () async {
       final model = await makeFile('detect.ckpt', 'MODEL');
       final gguf = await makeFile('s.gguf', 'GGUF');
       final plan = EngineInstallPlan(
@@ -158,7 +158,7 @@ void main() {
       final r = await EngineInstaller(engineDir: engineDir).install(plan);
       expect(r.ok, isTrue, reason: r.error);
       // 破坏点：映射写错 → 模型落到 models-store/ 或 models/sakura/，引擎读不到，本条失败。
-      expect(File('$engineDir/models/detection/detect-20241225.ckpt').readAsStringSync(), 'MODEL');
+      expect(File('$engineDir/src/models/detection/detect-20241225.ckpt').readAsStringSync(), 'MODEL');
       expect(File('$engineDir/llm/Sakura.gguf').readAsStringSync(), 'GGUF');
     });
 
@@ -182,7 +182,7 @@ void main() {
       // 破坏点：哈希不符也接受 → 装进去一个坏模型，翻译时才炸，本条失败。
       expect(r.ok, isFalse);
       expect(r.error, contains('sha256'));
-      expect(File('$engineDir/models/detection/x.ckpt').existsSync(), isFalse);
+      expect(File('$engineDir/src/models/detection/x.ckpt').existsSync(), isFalse);
     });
 
     test('成功后写 .engine.json（含后端与条目）', () async {
@@ -199,6 +199,28 @@ void main() {
       expect(m['llamaBackend'], 'vulkan');
       expect(m['platformKey'], 'win32-x64');
       expect((m['entries'] as List).length, 1);
+    });
+
+    test('写 launch.json：入口是 server/main.py，健康检查用 openapi', () async {
+      final f = await makeFile('a.bin', 'A');
+      final plan = EngineInstallPlan(
+        platformKey: 'darwin-arm64',
+        backend: LlamaBackend.auto,
+        entries: [EngineManifestEntry(id: 'a', set: 'visual', url: urlOf(f), dest: 'models-store/ocr/a.bin')],
+      );
+      await EngineInstaller(engineDir: engineDir).install(plan);
+
+      final l = jsonDecode(File('$engineDir/launch.json').readAsStringSync()) as Map;
+      final args = (l['args'] as List).cast<String>();
+      // 破坏点：用 `-m manga_translator` 起 → 那是翻译子进程，HTTP API 不在那，
+      // 客户端所有 /translate/* 都会 404，本条失败。
+      expect(args.first.replaceAll('\\', '/'), contains('server/main.py'));
+      expect(args, contains('--start-instance'));
+      // 破坏点：健康检查用 /health → 上游没有该路由，探针永远失败，本条失败。
+      expect(l['healthPath'], '/openapi.json');
+      expect(l['port'], isA<int>());
+      // 模型目录不在启动参数里（上游不支持，D-030）
+      expect(args.join(' '), isNot(contains('--model-dir')));
     });
   });
 }
