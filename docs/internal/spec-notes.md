@@ -330,3 +330,50 @@
 - **反证记录**：不真起进程却报 running → 2 条红（pid 为 null）；忽略健康探测结果 → 「健康地址指错」红。
 - **验证**：`services/mangasvc` **89 条**全绿（新增 launch/接线 9 条）。端到端真起子进程：规格正确 → running + pid + port；停止后端口可重绑（无僵尸）；manifest 下载 → 文件内容与 sha256 一致。
 - **关联**：P0-C6 · D-020 · `engine_launch.dart` · `supervisor.dart` · `model_download.dart`。
+
+## D-022 macOS 必须关闭 App Sandbox（P0-D 前置冲突）
+
+- **状态**：已完成（2026-10-31）
+- **做了什么**：`macos/Runner/{DebugProfile,Release}.entitlements` 的 `com.apple.security.app-sandbox` 改为 `false`。
+- **为什么（实测发现，不是预设）**：P0-D 接线后首次真机运行报
+  `起不了 mangasvc（.../dart）：Operation not permitted`。
+  沙盒同时挡住三件**产品硬需求**：
+  1. 拉起 `mangasvc` 子进程（P0-D1）；
+  2. 写 `~/Pictures/MiaoDock Mangas` 漫画库（D-015）——沙盒会把 HOME 重定向进容器；
+  3. 读 `~/Library/Application Support/MiaoDock` 下的引擎运行时（D-016）。
+- **代价 / 已知影响**：
+  - 无法上架 Mac App Store（本项目是本地桌面工具，不在目标内）。
+  - 沙盒关闭后 `HOME` 是真实用户目录，此前写在容器里的偏好会「看起来丢失」（仅影响开发期）。
+- **怎么验证**：关闭后 `[bootstrap] mangasvc dev-source → 端口 5180`，`/api/v1/health` 返回 200，
+  且 `rootDir` = `/Users/doro/Pictures/MiaoDock Mangas`（证明写的是真实用户目录）。
+- **关联**：P0-D1 · D-015 · D-016。
+
+## D-023 P0-D 桌面端进程管理落地
+
+- **状态**：D1/D2/D3 完成；D4 编译验证通过、打包未自动化
+- **做了什么**：
+  - `core/process/service_launch.dart`：解析启动方式（显式指定 → 随包 exe → 开发期源码）。
+  - `core/process/service_supervisor.dart`：spawn + **就绪行**判定 + 退出清理 + 崩溃重启。
+  - `core/process/service_controller.dart`：`ServiceStatus` provider + 生命周期清理观察者。
+  - `app/shell/readiness.dart`：服务进程 + 引擎两侧合成侧栏四色。
+  - `bootstrap.dart`：桌面端启动服务并注入容器。
+- **三条关键判据（都有断言 + 反证）**：
+  1. **就绪只认那一行**：`mangasvc listening on 127.0.0.1:<port>`。不用「端口能连上」——
+     端口可能被别的进程占着，连错进程后所有请求都会莫名其妙失败。断言比对**真实端口**。
+  2. **主动停止不重启**：否则「停止」变成「重启」。
+  3. **失败是最终结论**：超时路径里主动杀进程不得把 `failed` 改写成 `stopped`，
+     否则掩盖根因（只显示「已停止」）。杀进程触发的退出也不得覆盖超时这个根因。
+- **踩坑**：
+  - `Platform.resolvedExecutable` 在真实 App 里是**应用自己的二进制**，不是 dart ——
+    用它 `run` 脚本只会得到「找不到命令」。改为优先 `FLUTTER_ROOT` 下的 SDK dart。
+  - `flutter run -d macos` 起 App 的工作目录**不是项目根**（实测是 `/`）——
+    开发期解析还要从 App 二进制目录**向上找**项目根。
+  - `flutter test` 里 `Platform.resolvedExecutable` 是 `flutter_tester`，
+    测试若直接用它 spawn 会全红；复用产品代码的 dart 解析。
+  - 超时路径若 `unawaited(stop())`，调用方拿到的 pid 仍非空（进程还活着）。
+- **验证**：
+  - `test/service_supervisor_test.dart` 11 条；`test/readiness_test.dart` 3 条。
+  - 反证 4 轮：解析固定端口 → 端口断言红；不区分主动停止 → 红；忽略服务状态 → 红；解析到假端口 → 红。
+  - macOS 真机：自动拉起 → health 200 → Cmd+Q 后 `[lifecycle]` 两条日志出现、服务退出、端口释放。
+  - `dart compile exe` 产出 6.7 MB 自包含可执行文件，能打印就绪行并返回 health 200。
+- **关联**：P0-D1~D4 · D-022。

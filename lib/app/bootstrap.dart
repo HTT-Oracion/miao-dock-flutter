@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -5,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/net/port_probe.dart';
 import '../../core/net/service_locator.dart';
+import '../../core/process/service_controller.dart';
+import '../../core/process/service_launch.dart';
+import '../../core/process/service_supervisor.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
 import '../../features/manga/data/http_manga_svc_client.dart';
@@ -25,6 +30,26 @@ Future<void> bootstrap(Widget app) async {
 
   const forcedBaseUrl = String.fromEnvironment('MIAO_SVC_BASE_URL');
   const token = String.fromEnvironment('MIAO_SVC_TOKEN');
+  const serviceBin = String.fromEnvironment('MIAO_SERVICE_BIN');
+
+  // P0-D1：桌面端由应用自己拉起 mangasvc（服务常驻，D-012）。
+  // 指定了外部地址（联调）或非桌面端时不启动本地服务。
+  ServiceSupervisor? supervisor;
+  if (isDesktopPlatform && forcedBaseUrl.isEmpty) {
+    final plan = ServiceLaunchPlan.resolve(
+      forcedBin: serviceBin.isEmpty ? null : serviceBin,
+      overrideBin: Platform.environment['MIAO_SERVICE_BIN'],
+    );
+    if (plan != null) {
+      supervisor = ServiceSupervisor(plan: plan);
+      // 启动失败不阻塞进 UI：引导页会把「服务未就绪」如实画出来。
+      final port = await supervisor.start();
+      // 诊断输出：启动失败时日志里要能直接看到原因，而不是只留一个连不上的服务。
+      debugPrint('[bootstrap] mangasvc ${plan.origin} → ${port == null ? '失败：${supervisor.lastError}' : '端口 $port'}');
+    } else {
+      debugPrint('[bootstrap] 未启动 mangasvc：${ServiceLaunchPlan.lastError}');
+    }
+  }
 
   final ServiceLocator locator;
   if (forcedBaseUrl.isNotEmpty) {
@@ -36,7 +61,20 @@ Future<void> bootstrap(Widget app) async {
     locator = RemoteServiceLocator(baseUrl: forcedBaseUrl, token: token.isEmpty ? null : token);
   }
 
-  runApp(ProviderScope(overrides: [mangaSvcClientProvider.overrideWithValue(HttpMangaSvcClient(locator))], child: app));
+  // P0-D2：应用退出时带走子进程，避免留孤儿占端口。
+  if (supervisor != null) {
+    AppLifecycleCleanup(supervisor).attach();
+  }
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        mangaSvcClientProvider.overrideWithValue(HttpMangaSvcClient(locator)),
+        if (supervisor != null) serviceSupervisorProvider.overrideWithValue(supervisor),
+      ],
+      child: app,
+    ),
+  );
 }
 
 /// 移动端系统 UI（Android）：edge-to-edge 沉浸式。

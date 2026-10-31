@@ -5,5 +5,9 @@
   "lib/core/net/service_locator.dart": 2,
   "lib/core/window/window_controller.dart": 1,
   "lib/features/manga/domain/not_ready_state.dart": 1,
-  "_note": "诊断信息（异常 message / 开发者断言），不进 UI；UI 按错误 code 映射 ARB 词条。"
+  "_note": "诊断信息（异常 message / 进程日志 / debugPrint），不进 UI；UI 按错误 code 映射 ARB 词条。\nP0-D 新增的 4 个文件均为**纯诊断层**（无 Widget），服务失败若要在界面上展示，须走 state → ARB 映射，不得直接渲染 lastError。",
+  "lib/core/process/service_controller.dart": 2,
+  "lib/core/process/service_launch.dart": 3,
+  "lib/core/process/service_supervisor.dart": 5,
+  "lib/app/bootstrap.dart": 1
 }

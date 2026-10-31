@@ -2,11 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- 🔴 必须关闭 App Sandbox（P0-D，见 D-022）：
+	     沙盒会阻止 App 拉起 mangasvc 子进程、写 ~/Pictures 漫画库、
+	     读 ~/Library/Application Support 下的引擎运行时。三件都是产品硬需求。
+	     本应用是本地桌面工具，不走 Mac App Store，故不使用沙盒。 -->
 	<key>com.apple.security.app-sandbox</key>
-	<true/>
+	<false/>
 	<key>com.apple.security.cs.allow-jit</key>
 	<true/>
 	<key>com.apple.security.network.server</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
 	<true/>
 </dict>
 </plist>

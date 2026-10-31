@@ -9,6 +9,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
 import '../../features/manga/controller/engine_controller.dart';
+import 'readiness.dart';
 import '../../features/manga/domain/manga_task.dart';
 import '../../features/manga/domain/not_ready_state.dart';
 import '../../features/music/ui/sidebar_mini_player.dart';
@@ -135,7 +136,7 @@ class _DesktopShell extends ConsumerWidget {
             onSelectView: (v) => _goView(context, location.moduleIndex, v),
             queueCount: queueDepth,
             onOpenSettings: () => context.go('/settings'),
-            readiness: ref.watch(notReadyViewProvider).readiness,
+            readiness: ref.watch(shellReadinessProvider),
             miniPlayer: SidebarMiniPlayer(collapsed: collapsed),
             topInset: topInset,
           ),
@@ -413,7 +414,7 @@ class _MobileDrawer extends ConsumerWidget {
             Navigator.of(context).pop();
             context.go('/settings');
           },
-          readiness: ref.watch(notReadyViewProvider).readiness,
+          readiness: ref.watch(shellReadinessProvider),
           miniPlayer: SidebarMiniPlayer(collapsed: false),
         ),
       ),
