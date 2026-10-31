@@ -5,6 +5,9 @@ import 'package:protocol/protocol.dart';
 import '../engine/engine_facade.dart';
 import '../queue/task_queue.dart';
 import '../translate/credential_store.dart';
+import '../translate/youdao_client.dart';
+import '../translate/youdao_errors.dart';
+import '../translate/youdao_http.dart';
 import '../store/plans.dart';
 import '../store/library_store.dart';
 import 'http.dart';
@@ -97,6 +100,8 @@ class Handlers {
         await _putCredentials(req);
       case 'DELETE /api/v1/translate/credentials':
         await _deleteCredentials(req);
+      case 'POST /api/v1/translate/text':
+        await _translateText(req);
       // ── tasks ───────────────────────────────────────────────────────────
       case 'GET /api/v1/tasks':
         await _listTasks(req);
@@ -261,6 +266,42 @@ class Handlers {
   Future<void> _deleteCredentials(HttpRequest req) async {
     await _credentials.clear();
     await writeJson(req.response, 200, {'configured': false});
+  }
+
+  /// 文本翻译（D-053）：走在线平台，**不进引擎**。
+  ///
+  /// 这正是「大模型翻译」与「本地翻译」的分界：
+  /// 本地翻译把文本交给引擎里的 Sakura；这里直接调在线服务。
+  Future<void> _translateText(HttpRequest req) async {
+    final body = await readJsonBody(req);
+    final text = body['text'];
+    if (text is! String || text.trim().isEmpty) {
+      throw const ServiceError('INVALID_TEXT', '待翻译文本不能为空');
+    }
+    final cred = _credentials.read();
+    if (cred == null || !cred.usable) {
+      throw const ServiceError(
+        'TRANSLATE_NOT_CONFIGURED',
+        '尚未配置在线翻译密钥（appKey / appSecret），请到「设置 → 翻译服务」填写',
+        status: 409,
+      );
+    }
+
+    final client = YoudaoClient(
+      transport: youdaoTransport ?? makeYoudaoTransport(),
+      baseUrl: youdaoBaseUrl(),
+      appKey: cred.appKey,
+      appSecret: cred.appSecret,
+    );
+    try {
+      final result = await client.translateText(
+        YoudaoTranslateRequest(text: text, from: '${body['from'] ?? 'ja'}', to: '${body['to'] ?? 'zh-CHS'}'),
+      );
+      await writeJson(req.response, 200, {'text': result.text, 'langType': result.langType});
+    } on TranslateError catch (e) {
+      // 统一错误结构：code 给机器判，message 给人看，upstreamCode 给排障。
+      await writeJson(req.response, 502, e.toJson());
+    }
   }
 
   // ── tasks ───────────────────────────────────────────────────────────────

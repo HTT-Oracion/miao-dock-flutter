@@ -1018,3 +1018,28 @@
 - **仍未做**：`/translate/text` 的真实出网（`dart:io HttpClient` + 四层超时）、
   流式 `llm-trans`、测试凭证。
 - **关联**：D-047 · D-049 · D-050 · D-051。
+
+## D-053 `/translate/text` 端点 + 有道真实出网
+
+- **状态**：已实现（2026-11-01）；**尚未做真实网络验证**（只有编译与单测绿灯）
+- **出网层** `services/mangasvc/lib/src/translate/youdao_http.dart`：
+  - `dart:io HttpClient`，**不加 dio**（mangasvc 要 `dart:compile exe`，`dart:io` 已够用；
+    `third-party-packages.md` §纪律 3「一次一个目的」）；
+  - 超时近似三层：`connectionTimeout` 5s、`idleTimeout` 20s、整次请求 `Future.timeout` 30s。
+    🔴 Dart 没有逐阶段 ttfb/total 计时，只能整请求卡表；这点与 miao-dock 的四层**不完全等价**，已记录；
+  - `findProxy = DIRECT`：调外网也不要被系统代理劫走（与引擎调用同口径）；
+  - `youdaoBaseUrl()` 读 `MIAO_TRANSLATE_YOUDAO_BASE`（对齐 miao-dock 的验收接缝）。
+- **端点** `POST /api/v1/translate/text`（路由表里原本就有该路径，这次接上实现）：
+  - 入参 `{text, from, to}`；凭证**从 `<state>/credentials.json` 读取**（D-052），不再随请求传；
+  - 未配置 → `409 TRANSLATE_NOT_CONFIGURED`；
+  - 成功 → `{text, langType}`；失败 → `502 {code, message, upstreamCode, api}`。
+- **与「本地翻译」的分界**：本地翻译把文本交给引擎里的 Sakura；这条路**不进引擎**，
+  直接调在线服务 —— 这就是用户定义的「大模型翻译」。
+- **可测性**：模块级 `youdaoTransport` 覆盖点，让端点逻辑脱离网络被测。
+- **验证**：`dart analyze` 干净；服务端 140 通过；应用 115 通过。
+- **仍未做**：
+  1. **端点的集成测试**（还没用假 transport 跑过一次 `POST /translate/text`）；
+  2. 流式 `llm-trans`（双判 + SSE）；
+  3. 「测试凭证」；
+  4. 来源 = 大模型翻译时的**任务链路改道**（当前仍走引擎）。
+- **关联**：D-049 · D-050 · D-051 · D-052。
