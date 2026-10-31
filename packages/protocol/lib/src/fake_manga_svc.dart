@@ -389,6 +389,13 @@ class FakeMangaSvcClient implements MangaSvcClient {
   Future<void> unloadEngine() => _unimplemented('POST /engine/unload');
 
   @override
+  Future<Map<String, dynamic>> installEngine({required String engineDir, String? backend, bool includeNllb = false}) =>
+      _unimplemented('POST /engine/install');
+
+  @override
+  Future<Map<String, dynamic>> getEngineInstall() => _unimplemented('GET /engine/install');
+
+  @override
   Future<EngineStatus> startEngine() => _unimplemented('POST /engine/start');
 
   @override

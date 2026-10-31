@@ -2,7 +2,10 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
+import 'package:protocol/protocol.dart';
+
 import 'package:mangasvc/src/engine/engine_facade.dart';
+import 'package:mangasvc/src/engine/engine_install.dart';
 import 'package:mangasvc/src/server/http.dart';
 
 /// P0-C1~C5 断言：引擎状态 / 选项 / 校验 / 下载暂停 / 卸载。
@@ -135,6 +138,23 @@ void main() {
     test('下载会建 models 目录（支持后续续传）', () async {
       await facade.startDownload();
       expect(Directory(models).existsSync(), isTrue);
+    });
+  });
+
+  group('装配端点（D-027）', () {
+    test('初始为 idle，且 percent 为 null（不编造进度）', () {
+      final v = facade.installStatus();
+      // 破坏点：初始就报 running/0% → 界面显示一个永远不动的进度条，本条失败。
+      expect(v['state'], 'idle');
+      expect(v['running'], isFalse);
+      expect(v['percent'], isNull);
+    });
+
+    test('装配计划按当前平台解析，且不含对话轮次之外的平台条目', () {
+      final plan = resolveInstallPlan(platformKey: 'darwin-arm64', backend: LlamaBackend.auto);
+      // 破坏点：计划里混入别的平台包 → 装一份跑不起来的二进制，本条失败。
+      expect(plan.entries.every((e) => e.platform == null || e.platform == 'darwin-arm64'), isTrue);
+      expect(plan.entries.any((e) => e.id == 'python_runtime_darwin_arm64'), isTrue);
     });
   });
 

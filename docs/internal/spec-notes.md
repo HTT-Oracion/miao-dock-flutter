@@ -476,3 +476,24 @@
 - **反证**：nllb 改成必需 → 3 条红；Sakura 留在 `models/` 下 → 2 条红。
 - **验证**：`test/paths_test.dart` 21 条（两棵树、逐部件落点、前缀映射、平台分叉、长路径、结构级校验、后端枚举）。
 - **关联**：D-015 · D-016（废止）· D-025 · `engine-downloads.md`。
+
+## D-028 装配端点与真实小样验证
+
+- **状态**：已完成（2026-11-01）；deps（pip）与 launch 规格仍待做
+- **做了什么**：
+  - `POST/GET /api/v1/engine/install`：按平台 + 后端装配整个引擎目录，进度可轮询。
+  - `parts` 参数支持**只装某几个部件**（小样验证与「补下单个部件」共用一条路径）。
+  - 客户端加 `installEngine` / `getEngineInstall`。
+- **真实小样验证（macOS arm64，2026-11-01）**：
+  - 只装 `python + src + llama`（约 91 MB），真实走 GitHub / 南大镜像下载。
+  - 结果：`/tmp/sm-eng` 289 MB，`python/` `src/` `bin/llama/` 齐全，`.engine.json` 记录平台与条目 sha256。
+  - `python/bin/python3` **仍是符号链接**（`lrwx`）—— 系统 tar 保留了链接，与 D-020 的结论一致。
+  - App 侧 `inspectEngine` 对真实目录的结论：
+    `python OK (Python 3.11.17)` · `src OK` · `llama OK` · `deps FAILED`（`ModuleNotFoundError: No module named 'torch'`）· `models-visual / llm` 缺失 · `nllb` 按需。
+- **发现的两个阻塞点（下一步必做）**：
+  1. **`server/args.py` 没有 `--model-dir`** —— 模型目录如何传给引擎**尚未确认**，
+     `launch.json` 不能凭空写。需要读 `server/main.py` 的 `prepare()` / `instance.py` 找到真实入口参数。
+  2. **deps 未实现**：`python/` 里没有 torch，校验如实报 `ModuleNotFoundError`。
+- **踩坑**：`parts` 过滤最初只加在门面签名里、没往下传，导致一次真实请求按「全部必需件」下了 4.7 GB
+  （已及时停掉）。**教训：新增参数后必须验证它真的到达使用点**，否则默认分支会静默接管。
+- **关联**：D-027 · `engine_install.dart` · `engine-downloads.md`。

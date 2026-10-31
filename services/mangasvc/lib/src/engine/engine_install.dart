@@ -51,6 +51,7 @@ EngineInstallPlan resolveInstallPlan({
   required String platformKey,
   required LlamaBackend backend,
   bool includeNllb = false,
+  Set<EnginePart>? parts,
 }) {
   final all = <String, EngineManifestEntry>{};
   for (final e in [...kRuntimeManifest, ...kExtraRuntimeManifest, ...kModelManifest]) {
@@ -76,7 +77,18 @@ EngineInstallPlan resolveInstallPlan({
   addIf((e) => e.set == 'llm');
   if (includeNllb) addIf((e) => e.set == 'translation');
 
-  return EngineInstallPlan(entries: picked, platformKey: platformKey, backend: backend);
+  // 按部件过滤：`parts == null` 表示「全部必需件」。
+  // 这让「只装运行时做小样验证」与「补下单个部件」共用同一条代码路径。
+  final List<EngineManifestEntry> filtered;
+  if (parts != null) {
+    // 显式指定部件：完全按它来（补下单个部件也走这条路）。
+    filtered = picked.where((e) => parts.contains(partOfSet(e.set))).toList();
+  } else {
+    // 未指定：默认装「必需件」，nllb 只有在显式要求时才带上。
+    filtered = includeNllb ? picked : picked.where((e) => e.set != 'translation').toList();
+  }
+
+  return EngineInstallPlan(entries: filtered, platformKey: platformKey, backend: backend);
 }
 
 /// 后端 → llama 条目 id（CUDA 需要额外 cudart）。

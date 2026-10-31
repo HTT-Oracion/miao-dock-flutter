@@ -320,6 +320,13 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<void> unloadEngine() => _post('/engine/unload');
 
   @override
+  Future<Map<String, dynamic>> installEngine({required String engineDir, String? backend, bool includeNllb = false}) =>
+      _post('/engine/install', body: {'engineDir': engineDir, 'backend': ?backend, 'includeNllb': includeNllb});
+
+  @override
+  Future<Map<String, dynamic>> getEngineInstall() => _get('/engine/install');
+
+  @override
   Future<EngineStatus> startEngine() async => _engineStatusOf(await _post('/engine/start'));
 
   @override

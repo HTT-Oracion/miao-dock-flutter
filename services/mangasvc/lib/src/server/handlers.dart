@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:protocol/protocol.dart';
+
 import '../engine/engine_facade.dart';
 import '../queue/task_queue.dart';
 import '../store/plans.dart';
@@ -160,6 +162,20 @@ class Handlers {
         await writeJson(req.response, 200, await engine.startEngine());
       case 'POST /api/v1/engine/stop':
         await writeJson(req.response, 200, await engine.stopEngine());
+      case 'POST /api/v1/engine/install':
+        final body = await readJsonBody(req);
+        await writeJson(
+          req.response,
+          200,
+          await engine.startInstall(
+            engineDir: (body['engineDir'] as String?) ?? _defaultEngineDir(),
+            backend: LlamaBackend.byId((body['backend'] as String?) ?? 'auto') ?? LlamaBackend.auto,
+            includeNllb: body['includeNllb'] == true,
+            parts: (body['parts'] as List?)?.whereType<String>().map(EnginePart.byId).whereType<EnginePart>().toSet(),
+          ),
+        );
+      case 'GET /api/v1/engine/install':
+        await writeJson(req.response, 200, engine.installStatus());
       // ── 尚未实现（P0-B 其余项）──────────────────────────────────────────
       default:
         await writeErrorCode(req.response, 501, 'NOT_IMPLEMENTED', '端点尚未实现：${r.id}');

@@ -88,6 +88,9 @@ const List<RouteDef> routes = [
   // D-012：引擎与 LLM 共用开关，故有 start / stop 两个动作端点
   RouteDef(method: 'POST', pattern: '/api/v1/engine/start', group: 'engine'),
   RouteDef(method: 'POST', pattern: '/api/v1/engine/stop', group: 'engine'),
+  // D-027：装配整个引擎目录（按平台 + 后端），进度走 GET
+  RouteDef(method: 'POST', pattern: '/api/v1/engine/install', group: 'engine'),
+  RouteDef(method: 'GET', pattern: '/api/v1/engine/install', group: 'engine'),
 ];
 
 /// 路由匹配结果。

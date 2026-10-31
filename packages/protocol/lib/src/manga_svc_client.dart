@@ -157,6 +157,15 @@ abstract class MangaSvcClient {
   /// `POST /api/v1/engine/unload` —— 空闲卸载权重（不停进程）。
   Future<void> unloadEngine();
 
+  /// `POST /api/v1/engine/install` —— 装配整个引擎目录（D-027）。
+  ///
+  /// 立刻返回，装配在后台跑；进度用 [getEngineInstall] 轮询。
+  /// [backend] 只对 Windows / Linux 有意义（macOS 只有一种构建）。
+  Future<Map<String, dynamic>> installEngine({required String engineDir, String backend, bool includeNllb});
+
+  /// `GET /api/v1/engine/install` —— 装配进度。
+  Future<Map<String, dynamic>> getEngineInstall();
+
   /// `POST /api/v1/engine/start` —— 启动引擎 + 大模型（共用一个开关，D-012）。
   Future<EngineStatus> startEngine();
 

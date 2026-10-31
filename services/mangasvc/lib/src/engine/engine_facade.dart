@@ -2,7 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:protocol/protocol.dart';
+
 import '../server/http.dart';
+import 'engine_install.dart';
 import 'engine_runtime.dart';
 import 'model_download.dart' as dl;
 
@@ -178,6 +181,13 @@ class EngineFacade {
   final EngineRuntime runtime;
   final ModelDownloadCoordinator downloader;
 
+  // 装配状态（单实例：同一时刻只允许一次装配）。
+  bool _installing = false;
+  bool? _installOk;
+  String? _installError;
+  InstallProgress? _installProgress;
+  List<String> _installLog = [];
+
   /// `GET /engine/status`
   Map<String, dynamic> status() => runtime.toStatusView();
 
@@ -242,6 +252,56 @@ class EngineFacade {
         'visual': {'entries': files.length, 'ready': files.isNotEmpty},
       },
       'missing': files.isEmpty ? ['no model files'] : <String>[],
+    };
+  }
+
+  /// `POST /engine/install`（D-027）—— 按平台 + 后端装配整个引擎目录。
+  ///
+  /// 立刻返回，装配在后台跑；进度经 [installStatus] 轮询。
+  /// **不接受「已经装着就别装」的短路**：换后端时正是要重跑一次。
+  Future<Map<String, dynamic>> startInstall({
+    required String engineDir,
+    LlamaBackend backend = LlamaBackend.auto,
+    bool includeNllb = false,
+    Set<EnginePart>? parts,
+  }) async {
+    if (_installing) return installStatus();
+    _installing = true;
+    _installLog = [];
+    _installError = null;
+    _installProgress = null;
+
+    final plan = resolveInstallPlan(
+      platformKey: currentPlatformKey(),
+      backend: backend,
+      includeNllb: includeNllb,
+      parts: parts,
+    );
+    final installer = EngineInstaller(engineDir: engineDir);
+    unawaited(() async {
+      final r = await installer.install(plan, onProgress: (p) => _installProgress = p);
+      _installLog = r.logs;
+      _installError = r.error;
+      _installOk = r.ok;
+      _installing = false;
+    }());
+    return installStatus();
+  }
+
+  /// `GET /engine/install` —— 装配进度。
+  Map<String, dynamic> installStatus() {
+    final p = _installProgress;
+    return {
+      'state': _installing ? 'running' : (_installError != null ? 'failed' : (_installOk == null ? 'idle' : 'done')),
+      'running': _installing,
+      'index': p?.index ?? 0,
+      'total': p?.total ?? 0,
+      'entryId': p?.entryId,
+      'phase': p?.phase,
+      // null = 没有真实进度来源（不编造百分比）。
+      'percent': p?.percent,
+      'error': _installError,
+      'tail': List<String>.of(_installLog),
     };
   }
 

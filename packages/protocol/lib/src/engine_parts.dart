@@ -109,6 +109,17 @@ String mapManifestDest(String dest) {
   return d;
 }
 
+/// manifest 的 `set` → 部件（比用 `dest` 推断更可靠：归档条目的 dest 是缓存路径）。
+EnginePart? partOfSet(String set) => switch (set) {
+  'python' => EnginePart.python,
+  'source' => EnginePart.source,
+  'runtime' => EnginePart.llama,
+  'visual' => EnginePart.modelsVisual,
+  'llm' => EnginePart.llm,
+  'translation' => EnginePart.modelsNllb,
+  _ => null,
+};
+
 /// 把 manifest 的 `extractTo`（解包目标）改写成本项目布局。
 ///
 /// 与 [mapManifestDest] 同口径，但作用于「解到哪个目录」：
