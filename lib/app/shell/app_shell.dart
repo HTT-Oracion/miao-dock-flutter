@@ -153,6 +153,7 @@ class _DesktopShell extends ConsumerWidget {
                 Expanded(
                   child: MangaGate(
                     enabled: location.moduleIndex == 0,
+                    path: GoRouterState.of(context).uri.path,
                     child: _PageTransition(location: GoRouterState.of(context).uri.path, child: shell),
                   ),
                 ),
@@ -314,6 +315,7 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
             Expanded(
               child: MangaGate(
                 enabled: widget.location.moduleIndex == 0,
+                path: GoRouterState.of(context).uri.path,
                 child: _PageTransition(location: GoRouterState.of(context).uri.path, child: widget.shell),
               ),
             ),

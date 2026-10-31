@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:miao_dock_flutter/features/manga/controller/engine_ready_controller.dart';
+import 'package:miao_dock_flutter/features/manga/ui/manga_gate.dart';
 
 /// D-037：漫画模块门禁的判定顺序。
 void main() {
@@ -56,6 +57,13 @@ void main() {
     expect(gate(starting: true), MangaGateState.starting);
     expect(gate(failed: true), MangaGateState.failed);
     expect(gate(running: true), MangaGateState.ready);
+  });
+
+  test('漫画库不受门禁限制（引擎没起也能进）', () {
+    // 破坏点：把漫画库也拦住 → 作品明明在却进不去，本条失败。
+    expect(gateBypassedFor('/manga/library'), isTrue);
+    expect(gateBypassedFor('/manga/drop'), isFalse);
+    expect(gateBypassedFor('/manga/queue'), isFalse);
   });
 
   test('远程翻译不拦（本机不需要引擎）', () {

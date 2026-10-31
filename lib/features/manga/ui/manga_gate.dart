@@ -18,16 +18,28 @@ import 'notready/runtime_picker.dart';
 ///
 /// ## 为什么放在分支层而不是每个屏里
 /// 投放 / 队列 / 漫画库三处各写一遍，迟早漂移；而且新增视图时会忘记加。
+/// 门禁是否对该路径**放行**（纯函数，便于测试）。
+///
+/// 目前只有漫画库：阅读已译作品只读文件，不需要引擎。
+bool gateBypassedFor(String path) => path.startsWith('/manga/library');
+
 class MangaGate extends ConsumerWidget {
-  const MangaGate({super.key, required this.enabled, required this.child});
+  const MangaGate({super.key, required this.enabled, required this.child, this.path = ''});
 
   /// 只有漫画模块（moduleIndex == 0）才启用。
   final bool enabled;
+
+  /// 当前路由路径：漫画库**不走门禁**。
+  ///
+  /// 阅读已译作品只是读文件，不需要引擎。把它一起拦住，
+  /// 会出现「作品明明在，却因为引擎没起来而进不去」——比不拦更糟。
+  final String path;
   final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!enabled) return child;
+    if (gateBypassedFor(path)) return child;
 
     final gate = ref.watch(mangaGateProvider);
     if (gate == MangaGateState.ready) return child;
