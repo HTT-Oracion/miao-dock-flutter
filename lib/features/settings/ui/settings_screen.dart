@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/app_switch.dart';
 import '../../../shared/widgets/log_box.dart';
 import '../../../shared/widgets/setting_row.dart';
+import '../../../shared/widgets/toast.dart';
 import '../../manga/controller/engine_controller.dart';
 import '../../manga/controller/engine_install_controller.dart';
 import '../../manga/controller/engine_ready_controller.dart';
@@ -541,6 +542,8 @@ class _LlmCredentialSectionState extends ConsumerState<_LlmCredentialSection> {
                   .save(_platform, PlatformCredential(appKey: _key.text, appSecret: _secret.text));
               if (!mounted) return;
               setState(() => _saved = true);
+              if (!context.mounted) return;
+              showAppToast(context, l10n.llmCredSaved, tone: ToastTone.good);
             },
             style: _primaryStyle(palette),
             child: Text(l10n.llmCredSave, style: const TextStyle(fontSize: 9.5)),
@@ -662,7 +665,7 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     return SizedBox(
-      height: 28,
+      height: 34,
       child: TextField(
         controller: controller,
         obscureText: obscure,
