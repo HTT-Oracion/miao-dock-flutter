@@ -51,19 +51,35 @@
 2. dio 在部分 Content-Type 下返回 **String 而非 Map** —— 响应解析必须两种都能吃，否则正常响应被误判成协议错误。
 3. 契约状态词表是**下划线**（`partial_failed`/`canceled`），不是驼峰；未知状态**抛错不降级**。
 
-#### P0-B `mangasvc` 服务端实现（按端点组，逐组可验收）
+#### P0-B `mangasvc` 服务端实现（B1–B6 已完成骨架与主链路）
 
-| # | 任务 | 端点组 | 验收判据 | 规模参考 |
+| # | 任务 | 端点组 | 验收判据 | 状态 |
 |---|---|---|---|---|
-| P0-B1 | HTTP 骨架 + `/health` | `GET /health`、`GET /api/v1/health` | 进程起得来，健康检查返回就绪 | 最小可跑 |
-| P0-B2 | 任务列表与创建 | `GET/POST /api/v1/tasks`、`GET /api/v1/tasks/{id}` | 投放能进队列，列表能读回 | handlers |
-| P0-B3 | 任务变更 | `POST /tasks/delete`、`POST /tasks/{id}/cancel`、`POST /tasks/{id}/retry`、`POST /tasks/{id}/batches` | 取消保留已落盘；重试不重复提交 | handlers |
-| P0-B4 | 队列串行执行 | `GET /api/v1/queue` + `queue/drain.rs` 等价物 | **同一时刻只跑 1 个**（这是原项目硬约束） | `drain.rs` |
-| P0-B5 | 落盘存储层 | `store/` 等价物：书本 / 话 / 页三级 | 译文按「本 → 话 → 页」写入，重名不覆盖 | **3,663 行** |
-| P0-B6 | 漫画库读接口 | `GET /api/v1/library`、`/library/{name}/meta`、`/files/{seq}`、`/cover` | 书架能列出真实目录 | store |
-| P0-B7 | 漫画库写接口 | `POST /library/create`、`/meta`、`/cover`、`/delete`、`/unhide`、`/merge` | 新建 / 改名 / 删除生效 | store |
-| P0-B8 | 章节级操作 | `/chapters/{no}/resume`、`/retranslate`、`/renumber`、`/files/{seq}` | 补页与重译整话可用 | store |
-| P0-B9 | SSE 进度推送 | `GET /api/v1/tasks/{id}/events` | 队列进度实时推送，断线可重连 | `events.rs` |
+| P0-B1 | HTTP 骨架 + `/health` | `GET /health`、`GET /api/v1/health` | 进程起得来，健康检查返回就绪 | ✅ |
+| P0-B2 | 任务列表与创建 | `GET/POST /api/v1/tasks`、`GET /api/v1/tasks/{id}` | 投放能进队列，列表能读回 | ✅ |
+| P0-B3 | 任务变更 | `POST /tasks/delete`、`/cancel`、`/retry`、`/batches` | 取消保留已落盘；重试不重复提交 | ✅ |
+| P0-B4 | 队列串行执行 | `GET /api/v1/queue` | **同一时刻只跑 1 个** | ✅ |
+| P0-B5 | 落盘存储层 | 本 / 话 / 页三级 + manifest | 按「本 → 话 → 页」读写 | ✅ 基础版 |
+| P0-B6 | 漫画库读写 | `/library`、`/create`、`/meta`、`/cover`、`/files`、`/delete`、`/unhide` | 书架能列出真实目录 | ✅ 基础版 |
+| P0-B7 | 章节级操作 | `/chapters/{no}/resume`、`/retranslate`、`/renumber` | 补页与重译整话可用 | ⬜ 待做 |
+| P0-B8 | 返工计划 | `/library/{name}/resume`、`/retranslate` | 返工范围与覆盖数准确 | ⬜ 待做 |
+| P0-B9 | 翻译端点 | `/translate/*` 五条 | 文本翻译与设置可读写 | ⬜ 待做 |
+| P0-B10 | 引擎端点 | `/engine/*` 八条 | 状态 / 下载 / 校验 | ⬜ 待做（依赖 P0-C） |
+
+**P0-B 已完成部分的落地位置**：
+
+| 层 | 文件 |
+|---|---|
+| 路由表 | `services/mangasvc/lib/src/server/routes.dart`（46 条 = 45 客户端方法 + `/health` 双路径） |
+| HTTP / 信封 | `services/mangasvc/lib/src/server/http.dart` |
+| 分发 | `services/mangasvc/lib/src/server/handlers.dart` |
+| 服务本体 | `services/mangasvc/lib/src/server/server.dart`（端口段绑定 + 就绪行协议） |
+| 串行队列 | `services/mangasvc/lib/src/queue/task_queue.dart`（并发上限 1） |
+| 落盘 | `services/mangasvc/lib/src/store/library_store.dart`（目录即索引） |
+
+**实测发现的两个真实 bug**（写进代码注释）：
+1. `_hidden` 是 `Set`，`jsonEncode` 编码失败 → 首次 `/library` 请求直接 500。扫描真实目录时暴露。
+2. `matchRoute` 对已解码的 `uri.path` 又做了一次 `Uri.decodeComponent` → 双重解码。
 
 #### P0-C 引擎接入（P0 里最重的一块，可独立迭代）
 

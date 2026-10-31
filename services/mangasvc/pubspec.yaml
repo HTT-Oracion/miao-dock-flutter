@@ -7,3 +7,11 @@ environment:
   sdk: ^3.13.4
 
 resolution: workspace
+
+# 纯 Dart 依赖（AGENTS §2：不得引入 Flutter SDK）
+dependencies:
+  protocol:
+    path: ../../packages/protocol
+
+dev_dependencies:
+  test: ^1.25.0

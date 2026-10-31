@@ -11,6 +11,10 @@ dev-services:
 test:
     fvm flutter test
 
+# 服务端单测（纯 Dart，不需要 Flutter）
+test-svc:
+    fvm dart test services/mangasvc
+
 analyze:
     fvm flutter analyze
 

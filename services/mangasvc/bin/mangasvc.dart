@@ -1,15 +1,42 @@
 import 'dart:io';
 
+import 'package:mangasvc/src/server/server.dart';
+
 /// mangasvc 入口：参数解析与启动装配。
-/// `--engine mock` 起 B 级替身（服务自测不需要 Python，见 AGENTS.md §3）。
-void main(List<String> args) {
-  final engine = _engineArg(args);
-  // TODO: server/ 在 127.0.0.1:5180–5190 端口段绑定；engine/mock/ 提供假引擎端点
-  stderr.writeln('mangasvc: 骨架占位，engine=$engine');
+///
+/// 参数：
+///   `--engine <mock|real>`  引擎模式（默认 mock，服务自测不需要 Python）
+///   `--root <dir>`          落盘根目录（默认 `~/MiaoDock/library`）
+///   `--port <n>`            固定端口（默认在 5180–5190 探测）
+///
+/// 就绪信号：stdout 打印 `mangasvc listening on 127.0.0.1:<port>`，
+/// 父进程据此判定可以开始请求。
+Future<void> main(List<String> args) async {
+  final engine = _arg(args, '--engine') ?? 'mock';
+  final root = _arg(args, '--root');
+  final fixedPort = int.tryParse(_arg(args, '--port') ?? '');
+
+  final server = MangaSvcServer(
+    portStart: fixedPort ?? 5180,
+    portEnd: fixedPort ?? 5190,
+    rootDir: root,
+    engineMode: engine,
+  );
+
+  final port = await server.start();
+  stdout.writeln(readyLine(port));
+  await stdout.flush();
+
+  // 优雅退出：Ctrl+C / SIGTERM 时关服务，不留半开连接。
+  ProcessSignal.sigint.watch().listen((_) async {
+    await server.stop();
+    exit(0);
+  });
 }
 
-String _engineArg(List<String> args) {
-  final i = args.indexOf('--engine');
-  if (i < 0 || i + 1 >= args.length) return 'real';
+/// 取 `--key value` 形式的值；缺省返回 null。
+String? _arg(List<String> args, String key) {
+  final i = args.indexOf(key);
+  if (i < 0 || i + 1 >= args.length) return null;
   return args[i + 1];
 }
