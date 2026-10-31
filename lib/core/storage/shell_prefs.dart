@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// 缺键、空串、损坏内容一律按「没写过」处理。
 const String _kSidebarLabelsKey = 'miao.sidebar-labels';
 const String _kThemeModeKey = 'miao.theme-mode';
+const String _kTranslateSourceKey = 'miao.translate-source';
 
 /// 偏好文件路径（均基于 `$HOME`）：macOS 与 Windows 用 Application Support、
 /// Linux 用 `.config`；Windows 走 `LOCALAPPDATA`。
@@ -84,3 +85,15 @@ final sidebarLabelsProvider = NotifierProvider<SidebarLabelsNotifier, bool>(Side
 String readPersistedThemeMode() => _readPrefs()[_kThemeModeKey] ?? 'dark';
 
 void persistThemeMode(String mode) => _writePref(_kThemeModeKey, mode);
+
+/// 翻译来源（`local` / `llm` / `remote`）；null = 没写过，由平台默认决定。
+///
+/// 缺键时返回 null 而**不是** `'local'`：移动端要回落到 `remote`，
+/// 硬编码默认值会让移动端拿到不可用的本地来源。
+String? readTranslateSource() {
+  final v = _readPrefs()[_kTranslateSourceKey];
+  if (v == null || v.isEmpty) return null;
+  return v;
+}
+
+void persistTranslateSource(String source) => _writePref(_kTranslateSourceKey, source);

@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../app/shell/shell_controller.dart';
 import '../../app/shell/view_labels.dart';
 import '../../core/theme/tokens.dart';
+import '../../features/manga/domain/not_ready_state.dart';
 import '../../l10n/app_localizations.dart';
 
 /// 应用侧栏（design.html §03 / `app.css .sidebar`）：
@@ -27,6 +28,7 @@ class NavRail extends StatelessWidget {
     required this.onSelectView,
     required this.queueCount,
     required this.onOpenSettings,
+    this.readiness = ReadinessLevel.unconfigured,
     this.miniPlayer,
     this.topInset = 0,
   });
@@ -57,6 +59,9 @@ class NavRail extends StatelessWidget {
   final int queueCount;
 
   final VoidCallback onOpenSettings;
+
+  /// 「能否翻译」四色（D-012）—— 取代原「服务已启动」假绿点。
+  final ReadinessLevel readiness;
 
   /// MiniPlayer 槽位。音乐域尚未接真实播放状态时传 null —— **不渲染**，
   /// 绝不写死假曲目。
@@ -89,6 +94,7 @@ class NavRail extends StatelessWidget {
               onToggleCollapse: onToggleCollapse,
               moduleIndex: moduleIndex,
               onSelectModule: onSelectModule,
+              readiness: readiness,
               viewGroupLabel: viewGroupLabel,
               viewItems: viewItems,
               activeViewId: activeViewId,
@@ -113,6 +119,7 @@ class _RailBody extends StatelessWidget {
     required this.labels,
     required this.onToggleCollapse,
     required this.moduleIndex,
+    required this.readiness,
     required this.onSelectModule,
     required this.viewGroupLabel,
     required this.viewItems,
@@ -131,11 +138,14 @@ class _RailBody extends StatelessWidget {
   final int moduleIndex;
   final ValueChanged<int> onSelectModule;
   final String viewGroupLabel;
+  final ReadinessLevel readiness;
   final List<SidebarViewItem> viewItems;
   final String? activeViewId;
   final ValueChanged<String> onSelectView;
   final int queueCount;
   final VoidCallback onOpenSettings;
+
+  /// 「能否翻译」四色（D-012）—— 取代原「服务已启动」假绿点。
   final Widget? miniPlayer;
   final double topInset;
 
@@ -170,7 +180,7 @@ class _RailBody extends StatelessWidget {
               ),
             const Spacer(),
             ?miniPlayer,
-            _NavFoot(collapsed: collapsed, labels: labels, onOpenSettings: onOpenSettings),
+            _NavFoot(collapsed: collapsed, labels: labels, onOpenSettings: onOpenSettings, readiness: readiness),
           ],
         ),
       ),
@@ -625,11 +635,19 @@ class _ViewItemState extends State<_ViewItem> {
 
 /// 设置脚（`app.css .nav-foot`）：40 高、`--ink2`、右侧服务状态点。
 class _NavFoot extends StatefulWidget {
-  const _NavFoot({required this.collapsed, required this.labels, required this.onOpenSettings});
+  const _NavFoot({
+    required this.collapsed,
+    required this.labels,
+    required this.onOpenSettings,
+    required this.readiness,
+  });
 
   final bool collapsed;
   final bool labels;
   final VoidCallback onOpenSettings;
+
+  /// 「能否翻译」四色（D-012）—— 取代原「服务已启动」假绿点。
+  final ReadinessLevel readiness;
 
   @override
   State<_NavFoot> createState() => _NavFootState();
@@ -637,6 +655,13 @@ class _NavFoot extends StatefulWidget {
 
 class _NavFootState extends State<_NavFoot> {
   bool _hover = false;
+
+  Color _readinessColor(AppPalette palette) => switch (widget.readiness) {
+    ReadinessLevel.ready => palette.good,
+    ReadinessLevel.partial => palette.warn,
+    ReadinessLevel.broken => palette.bad,
+    ReadinessLevel.unconfigured => palette.mut,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -670,11 +695,12 @@ class _NavFootState extends State<_NavFoot> {
                       style: TextStyle(fontSize: 11, color: palette.ink2),
                     ),
                   ),
-                  // 服务状态点：色相只由圆点承载，文字保持中性（design.html §02）。
+                  // 「能否翻译」四色点：色相只由圆点承载，文字保持中性（design.html §02）。
+                  // 🔴 不再用写死的绿：那会让服务挂了也显示绿色。
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: BoxDecoration(color: palette.good, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: _readinessColor(palette), shape: BoxShape.circle),
                   ),
                 ],
               ],

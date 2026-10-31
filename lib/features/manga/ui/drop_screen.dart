@@ -12,6 +12,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/drop_controller.dart';
+import '../controller/engine_controller.dart';
 import '../controller/queue_controller.dart';
 
 /// 投放屏（设计稿 H 投放页，Note 05/06）：640px 单栏竖向流——
@@ -61,12 +62,19 @@ class _DropScreenState extends ConsumerState<DropScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(dropController);
     final ready = state.name.isNotEmpty && state.files.isNotEmpty;
+    final view = ref.watch(notReadyViewProvider);
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 30),
           children: [
+            // D-012：引擎未就绪不再整屏拦截 —— 投放、看库、补页都可正常用，
+            // 只在实际要翻译时提示。这条横幅可点击直达启动。
+            if (!view.canTranslate && view.needsLocalEngine) ...[
+              _EngineOffBanner(onStart: () => ref.read(engineStateProvider.notifier).start()),
+              const SizedBox(height: 12),
+            ],
             _Dropzone(
               hovering: _hovering,
               onHover: (v) => setState(() => _hovering = v),
@@ -274,6 +282,60 @@ class _PendingList extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// 引擎未启动提示条（D-012）—— 不挡内容，只提示「现在翻译不了」。
+class _EngineOffBanner extends StatelessWidget {
+  const _EngineOffBanner({required this.onStart});
+
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+      decoration: BoxDecoration(
+        color: palette.warn.withValues(alpha: 0.10),
+        border: Border.all(color: palette.warn.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
+      ),
+      child: Row(
+        children: [
+          Icon(LucideIcons.triangleAlert, size: 13, color: palette.warn),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: l10n.engineOffBanner,
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: palette.warn),
+                  ),
+                  TextSpan(
+                    text: ' · ${l10n.engineOffBannerDesc}',
+                    style: TextStyle(fontSize: 10.5, color: palette.ink2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          FilledButton(
+            onPressed: onStart,
+            style: FilledButton.styleFrom(
+              backgroundColor: palette.acc,
+              foregroundColor: palette.onAcc,
+              minimumSize: const Size(0, 26),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+            ),
+            child: Text(l10n.engineOffBannerAction),
+          ),
+        ],
       ),
     );
   }

@@ -678,5 +678,271 @@
   "errorStaleData": "以下为上次成功加载的数据",
   "@errorStaleData": {
     "description": "错误态：旧数据提示横幅"
+  },
+  "logBoxTitle": "运行日志",
+  "@logBoxTitle": {
+    "description": "日志组件：默认标题"
+  },
+  "logBoxLines": "{count} 行",
+  "@logBoxLines": {
+    "description": "日志组件：行数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logBoxCopy": "复制全部",
+  "@logBoxCopy": {
+    "description": "日志组件：复制按钮提示"
+  },
+  "logBoxExport": "导出 .txt",
+  "@logBoxExport": {
+    "description": "日志组件：导出按钮提示"
+  },
+  "logBoxCopied": "日志已复制",
+  "@logBoxCopied": {
+    "description": "日志组件：复制成功吐司"
+  },
+  "logBoxCopiedDetail": "{count} 行",
+  "@logBoxCopiedDetail": {
+    "description": "日志组件：复制成功说明",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logBoxCopyFailed": "复制失败",
+  "@logBoxCopyFailed": {
+    "description": "日志组件：复制失败吐司"
+  },
+  "logBoxExported": "日志已导出",
+  "@logBoxExported": {
+    "description": "日志组件：导出成功吐司"
+  },
+  "logBoxExportFailed": "导出失败",
+  "@logBoxExportFailed": {
+    "description": "日志组件：导出失败吐司"
+  },
+  "logBoxEmpty": "还没有日志输出",
+  "@logBoxEmpty": {
+    "description": "日志组件：空态"
+  },
+  "nrTitleUninstalled": "翻译引擎还没有装配",
+  "@nrTitleUninstalled": {
+    "description": "引导：未装配标题"
+  },
+  "nrDescUninstalled": "首次使用需要下载翻译引擎与大模型。下载与校验在「设置 → 翻译服务」随时可用。",
+  "@nrDescUninstalled": {
+    "description": "引导：未装配说明"
+  },
+  "nrTitleDownloading": "正在下载翻译引擎",
+  "@nrTitleDownloading": {
+    "description": "引导：下载中标题"
+  },
+  "nrDescDownloading": "下载期间可以继续浏览漫画库与查看已译作品；只有「开始翻译」需要等它完成。",
+  "@nrDescDownloading": {
+    "description": "引导：下载中说明"
+  },
+  "nrTitleInstalled": "引擎已就绪，尚未启动",
+  "@nrTitleInstalled": {
+    "description": "引导：已装未启动标题"
+  },
+  "nrDescInstalled": "引擎与大模型共用一个开关，一次启动两个进程。启动后即可投放图片开始翻译。",
+  "@nrDescInstalled": {
+    "description": "引导：已装未启动说明"
+  },
+  "nrTitleStarting": "正在启动引擎",
+  "@nrTitleStarting": {
+    "description": "引导：启动中标题"
+  },
+  "nrDescStarting": "正在拉起翻译引擎与大模型，首次装载较慢；之后即开即用。",
+  "@nrDescStarting": {
+    "description": "引导：启动中说明"
+  },
+  "nrTitleFailed": "引擎启动失败",
+  "@nrTitleFailed": {
+    "description": "引导：失败标题"
+  },
+  "nrDescFailed": "引擎进程未能就绪。下方保留了最近的诊断输出，可先重试，仍失败请查看完整日志。",
+  "@nrDescFailed": {
+    "description": "引导：失败说明"
+  },
+  "nrTitleDegraded": "漫画服务异常退出",
+  "@nrTitleDegraded": {
+    "description": "引导：服务异常标题"
+  },
+  "nrDescDegraded": "常驻的漫画服务进程已退出。队列与漫画库暂时不可用；已落盘的作品不会丢失。",
+  "@nrDescDegraded": {
+    "description": "引导：服务异常说明"
+  },
+  "nrChipUninstalled": "未装配",
+  "@nrChipUninstalled": {
+    "description": "引导状态胶囊"
+  },
+  "nrChipDownloading": "下载中",
+  "@nrChipDownloading": {
+    "description": "引导状态胶囊"
+  },
+  "nrChipNotStarted": "未启动",
+  "@nrChipNotStarted": {
+    "description": "引导状态胶囊"
+  },
+  "nrChipStarting": "启动中",
+  "@nrChipStarting": {
+    "description": "引导状态胶囊"
+  },
+  "nrChipFailed": "失败",
+  "@nrChipFailed": {
+    "description": "引导状态胶囊"
+  },
+  "nrChipDegraded": "服务异常",
+  "@nrChipDegraded": {
+    "description": "引导状态胶囊"
+  },
+  "nrActionDownload": "下载引擎与模型",
+  "@nrActionDownload": {
+    "description": "引导：主操作"
+  },
+  "nrActionStart": "启动引擎",
+  "@nrActionStart": {
+    "description": "引导：主操作"
+  },
+  "nrActionStarting": "启动中…",
+  "@nrActionStarting": {
+    "description": "引导：主操作（禁用）"
+  },
+  "nrActionRetry": "重试启动",
+  "@nrActionRetry": {
+    "description": "引导：主操作"
+  },
+  "nrActionRedownload": "重新下载模型",
+  "@nrActionRedownload": {
+    "description": "引导：次操作"
+  },
+  "nrActionRestartService": "重启漫画服务",
+  "@nrActionRestartService": {
+    "description": "引导：服务异常主操作"
+  },
+  "nrActionGoSettings": "先去设置看看",
+  "@nrActionGoSettings": {
+    "description": "引导：次操作"
+  },
+  "nrActionPause": "暂停下载",
+  "@nrActionPause": {
+    "description": "引导：暂停"
+  },
+  "nrActionResume": "继续下载",
+  "@nrActionResume": {
+    "description": "引导：继续"
+  },
+  "nrActionSettings": "设置",
+  "@nrActionSettings": {
+    "description": "引导：次操作"
+  },
+  "nrLayerService": "漫画服务",
+  "@nrLayerService": {
+    "description": "分层状态：L0"
+  },
+  "nrLayerServiceSub": "常驻 · 随应用启动",
+  "@nrLayerServiceSub": {
+    "description": "分层状态：L0 说明"
+  },
+  "nrLayerEngine": "引擎 + 大模型",
+  "@nrLayerEngine": {
+    "description": "分层状态：L1+L2"
+  },
+  "nrLayerEngineSub": "共用开关",
+  "@nrLayerEngineSub": {
+    "description": "分层状态：L1+L2 说明"
+  },
+  "nrLayerSource": "翻译来源",
+  "@nrLayerSource": {
+    "description": "分层状态：来源"
+  },
+  "nrStep1": "启动引擎",
+  "@nrStep1": {
+    "description": "引导三步 1"
+  },
+  "nrStep2": "投放图片（本机或插件，共用一条队列）",
+  "@nrStep2": {
+    "description": "引导三步 2"
+  },
+  "nrStep3": "在漫画库按「本 → 话 → 页」阅读",
+  "@nrStep3": {
+    "description": "引导三步 3"
+  },
+  "nrProgressTotal": "总进度",
+  "@nrProgressTotal": {
+    "description": "引导：下载总进度"
+  },
+  "nrProgressGroups": "{done} / {total} 组",
+  "@nrProgressGroups": {
+    "description": "引导：下载进度",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "nrDownloadDone": "引擎与模型已下载完成",
+  "@nrDownloadDone": {
+    "description": "引导：下载完成吐司"
+  },
+  "nrEngineStarted": "引擎已启动",
+  "@nrEngineStarted": {
+    "description": "引导：引擎启动成功吐司"
+  },
+  "nrServiceRestarting": "正在重启漫画服务…",
+  "@nrServiceRestarting": {
+    "description": "引导：重启中吐司"
+  },
+  "engineOffBanner": "引擎未启动",
+  "@engineOffBanner": {
+    "description": "横幅：标题"
+  },
+  "engineOffBannerDesc": "可以继续投放与浏览，但不会开始翻译",
+  "@engineOffBannerDesc": {
+    "description": "横幅：说明"
+  },
+  "engineOffBannerAction": "启动引擎",
+  "@engineOffBannerAction": {
+    "description": "横幅：按钮"
+  },
+  "sourceLocal": "本地翻译",
+  "@sourceLocal": {
+    "description": "翻译来源"
+  },
+  "sourceLlm": "大模型翻译",
+  "@sourceLlm": {
+    "description": "翻译来源"
+  },
+  "sourceRemote": "远程翻译",
+  "@sourceRemote": {
+    "description": "翻译来源"
+  },
+  "sourceLocalSub": "引擎 + 大模型 · 全程本机",
+  "@sourceLocalSub": {
+    "description": "翻译来源说明"
+  },
+  "sourceLlmSub": "引擎本机 · 大模型走云端",
+  "@sourceLlmSub": {
+    "description": "翻译来源说明"
+  },
+  "sourceRemoteSub": "本机不下载，交给其他端",
+  "@sourceRemoteSub": {
+    "description": "翻译来源说明"
+  },
+  "engineReady": "引擎就绪",
+  "@engineReady": {
+    "description": "工具条：引擎已就绪"
+  },
+  "engineNotStarted": "引擎未启动",
+  "@engineNotStarted": {
+    "description": "工具条：引擎未启动"
   }
 }

@@ -8,7 +8,9 @@ import '../../core/theme/theme_mode.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
+import '../../features/manga/controller/engine_controller.dart';
 import '../../features/manga/domain/manga_task.dart';
+import '../../features/manga/domain/not_ready_state.dart';
 import '../../features/music/ui/sidebar_mini_player.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_title_bar.dart';
@@ -133,6 +135,7 @@ class _DesktopShell extends ConsumerWidget {
             onSelectView: (v) => _goView(context, location.moduleIndex, v),
             queueCount: queueDepth,
             onOpenSettings: () => context.go('/settings'),
+            readiness: ref.watch(notReadyViewProvider).readiness,
             miniPlayer: SidebarMiniPlayer(collapsed: collapsed),
             topInset: topInset,
           ),
@@ -143,7 +146,7 @@ class _DesktopShell extends ConsumerWidget {
                 AppTitleBar(
                   topInset: topInset,
                   breadcrumb: _Crumbs(crumbs: location.crumbs),
-                  actions: [const _ThemeToggleButton()],
+                  actions: [if (location.moduleIndex == 0) const _TranslateStatusChips(), const _ThemeToggleButton()],
                 ),
                 Container(height: 1, color: palette.line),
                 Expanded(
@@ -410,9 +413,88 @@ class _MobileDrawer extends ConsumerWidget {
             Navigator.of(context).pop();
             context.go('/settings');
           },
+          readiness: ref.watch(notReadyViewProvider).readiness,
           miniPlayer: SidebarMiniPlayer(collapsed: false),
         ),
       ),
+    );
+  }
+}
+
+/// 工具条状态徽标（D-012）—— 取代原「服务运行中」。
+///
+/// 🔴 为什么要移除「服务运行中」：服务常驻后它永远显示绿色，**没有信息量**，
+/// 而且会误导 —— 服务绿 ≠ 能翻译。这里改为显示用户真正关心的两件事：
+/// 「引擎是否就绪」（可点击直接启动）与「当前翻译来源」。
+class _TranslateStatusChips extends ConsumerWidget {
+  const _TranslateStatusChips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final view = ref.watch(notReadyViewProvider);
+    final source = ref.watch(translateSourceProvider);
+    final engineReady = view.engine.isReady || !view.needsLocalEngine;
+
+    final sourceLabel = switch (source) {
+      TranslateSource.local => l10n.sourceLocal,
+      TranslateSource.llm => l10n.sourceLlm,
+      TranslateSource.remote => l10n.sourceRemote,
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 引擎就绪度：未就绪时**可点击**直接拉起（不让用户先去别的页面）
+        InkWell(
+          onTap: engineReady ? null : () => ref.read(engineStateProvider.notifier).start(),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(color: engineReady ? palette.good : palette.warn, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  engineReady ? l10n.engineReady : l10n.engineNotStarted,
+                  style: TextStyle(fontSize: 10, color: engineReady ? palette.ink2 : palette.warn),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Container(width: 1, height: 14, color: palette.line, margin: const EdgeInsets.symmetric(horizontal: 6)),
+        _Chip(label: sourceLabel),
+        const SizedBox(width: 8),
+        _Chip(label: l10n.dropSpec.split('；').first),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: palette.card,
+        border: Border.all(color: palette.line2),
+        borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+      ),
+      child: Text(label, style: TextStyle(fontSize: 9, color: palette.ink2)),
     );
   }
 }

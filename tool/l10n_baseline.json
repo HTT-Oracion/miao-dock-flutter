@@ -3,5 +3,7 @@
   "_exempt_reason": "以下 3 个文件的 4 处中文是「非 UI 文案」：诊断异常 message（不进界面，UI 按错误码映射 ARB）+ 系统窗口标题（runMounted 前无 BuildContext）。新增任何一条都算违规。",
   "lib/core/net/manga_svc_http.dart": 1,
   "lib/core/net/service_locator.dart": 2,
-  "lib/core/window/window_controller.dart": 1
+  "lib/core/window/window_controller.dart": 1,
+  "lib/features/manga/domain/not_ready_state.dart": 1,
+  "_note": "诊断信息（异常 message / 开发者断言），不进 UI；UI 按错误 code 映射 ARB 词条。"
 }
