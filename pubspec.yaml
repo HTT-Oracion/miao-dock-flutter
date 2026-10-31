@@ -32,4 +32,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # assets/icons 与 assets/fonts 落地后在此登记（见 README 目录树）
+  assets:
+    - assets/icons/

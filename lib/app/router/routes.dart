@@ -5,12 +5,19 @@ import '../../features/anime/ui/anime_screen.dart';
 import '../../features/manga/ui/drop_screen.dart';
 import '../../features/manga/ui/library_screen.dart';
 import '../../features/manga/ui/queue_screen.dart';
+import '../../features/music/ui/music_playlist_screen.dart';
 import '../../features/music/ui/music_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
 import '../shell/app_shell.dart';
 
 /// 屏级路由事实源（AGENTS §3）：go_router + StatefulShellRoute。
-/// 漫画视图（投放 / 队列 / 漫画库）是 /manga 的子路由，URL 即「屏 + 视图」的唯一事实源。
+///
+/// URL 即「屏 + 应用内视图」的唯一事实源（对应原项目 `router/routes.ts`）：
+///   · `/manga/{drop|queue|library}` —— 漫画翻译三视图；
+///   · `/music/{discover|playlist|local|history}` —— 音乐四视图；
+///   · `/anime`、`/settings` —— 单一屏。
+///
+/// 视图段名与 [mangaViews] / [musicViews] 的 id 必须同名，侧栏高亮据此判定。
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/manga/drop',
@@ -32,7 +39,27 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/music', builder: (_, _) => const MusicScreen())],
+            routes: [
+              GoRoute(
+                path: '/music',
+                redirect: (context, state) => state.matchedLocation == '/music' ? '/music/discover' : null,
+                routes: [
+                  GoRoute(
+                    path: 'discover',
+                    builder: (_, _) => const MusicScreen(view: MusicScreenView.discover),
+                  ),
+                  GoRoute(path: 'playlist', builder: (_, _) => const MusicPlaylistScreen()),
+                  GoRoute(
+                    path: 'local',
+                    builder: (_, _) => const MusicScreen(view: MusicScreenView.local),
+                  ),
+                  GoRoute(
+                    path: 'history',
+                    builder: (_, _) => const MusicScreen(view: MusicScreenView.history),
+                  ),
+                ],
+              ),
+            ],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: '/anime', builder: (_, _) => const AnimeScreen())],

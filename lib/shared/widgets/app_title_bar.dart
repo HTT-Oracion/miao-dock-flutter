@@ -5,34 +5,53 @@ import 'package:window_manager/window_manager.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 
-/// 桌面自绘标题栏（设计稿 G Top，56 高）：拖拽区 + 面包屑槽 + 右侧窗控。
-/// 仅桌面渲染；Web / 移动端由 AppShell 分流到移动顶栏。
-/// macOS 保留原生红绿灯（左侧预留 78px），自绘窗控仅在 Windows / Linux 渲染。
+/// 桌面自绘标题栏（design.html §03：高 56）：拖拽区 + 面包屑槽 + 右侧动作区 + 窗控。
+///
+/// ## 顶部让位带（`topInset`）
+/// macOS 用 `TitleBarStyle.hidden` 保留原生红绿灯，而红绿灯是**叠在客户区左上角**的，
+/// 恰好压在侧栏 logo 的位置上。故 macOS 下侧栏品牌行与工具条都要整体下移
+/// [AppMetrics.macTrafficLightBand]，这条带子本身仍是拖拽区 —— 否则窗口没法拖动。
 class AppTitleBar extends StatelessWidget {
-  const AppTitleBar({super.key, this.breadcrumb, this.actions});
+  const AppTitleBar({super.key, this.breadcrumb, this.actions, this.topInset = 0});
 
-  /// 面包屑等左侧内容（设计稿 TopL），由调用方按当前路由装配。
+  /// 面包屑等左侧内容（design.html TopL），由调用方按当前路由装配。
   final Widget? breadcrumb;
 
   /// 右侧动作区（窗控之前），如刷新、新建书架。
   final List<Widget>? actions;
 
+  /// 顶部让位高度（macOS 红绿灯带）；0 = 无让位。
+  final double topInset;
+
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Container(
-      height: 56,
-      color: AppTokens.pageBg,
-      child: DragToMoveArea(
-        child: Row(
-          children: [
-            SizedBox(width: isMacosPlatform ? 78.0 : 22.0),
-            Expanded(child: breadcrumb ?? const SizedBox.shrink()),
-            ...?actions,
-            const SizedBox(width: 12),
-            if (showWindowControls) const _WindowControls(),
-            const SizedBox(width: 10),
-          ],
-        ),
+      height: AppMetrics.toolbarHeight + topInset,
+      color: palette.bg,
+      child: Column(
+        children: [
+          if (topInset > 0)
+            SizedBox(
+              height: topInset,
+              child: isDesktopPlatform ? const DragToMoveArea(child: SizedBox.expand()) : null,
+            ),
+          Expanded(
+            child: DragToMoveArea(
+              child: Row(
+                children: [
+                  // 非 macOS 自绘窗控在右侧，左侧只留常规内边距；macOS 的红绿灯已由让位带避开。
+                  const SizedBox(width: 22),
+                  Expanded(child: breadcrumb ?? const SizedBox.shrink()),
+                  ...?actions,
+                  const SizedBox(width: 12),
+                  if (showWindowControls) const _WindowControls(),
+                  const SizedBox(width: 10),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -62,17 +81,25 @@ class _ControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const w = 34.0;
-    const h = 26.0;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: danger ? const Color(0xFFC75450) : AppTokens.divider,
-        child: SizedBox(
-          width: w,
-          height: h,
-          child: Icon(icon, size: 13, color: AppTokens.textSecondary),
+    final palette = AppPalette.of(context);
+    // app.css `.winctl button`：34×26、圆角 6、hover 变 `--hi`；关闭键 hover 为 `--bad`。
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
+            hoverColor: danger ? palette.bad : palette.hi,
+            child: SizedBox(
+              width: 34,
+              height: 26,
+              child: Icon(icon, size: 13, color: danger ? palette.ink2 : palette.ink2),
+            ),
+          ),
         ),
       ),
     );
