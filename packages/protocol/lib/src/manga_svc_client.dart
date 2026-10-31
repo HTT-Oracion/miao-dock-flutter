@@ -26,18 +26,6 @@ abstract class MangaSvcClient {
   /// ping 走鉴权，因此能同时证明「令牌对」。远程端要一次问清三件事就靠它。
   Future<Map<String, dynamic>> ping();
 
-  /// 在线翻译凭证（D-052）：服务端落盘 `<state>/credentials.json`。
-  ///
-  /// 返回**不含 secret** 的脱敏状态；调用方不得依赖回显值。
-  Future<Map<String, dynamic>> putTranslateCredentials({
-    required String platform,
-    required String appKey,
-    required String appSecret,
-  });
-
-  Future<Map<String, dynamic>> getTranslateCredentials();
-  Future<Map<String, dynamic>> deleteTranslateCredentials();
-
   // ── tasks ────────────────────────────────────────────────────────────────
 
   /// `GET /api/v1/tasks` —— 任务列表（含 `running` / `queued` 汇总）。

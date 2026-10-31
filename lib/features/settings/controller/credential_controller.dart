@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/secure_store.dart';
-import '../../manga/controller/queue_controller.dart';
 
 /// 在线翻译平台（D-047）。
 ///
@@ -54,26 +53,14 @@ class CredentialNotifier extends AsyncNotifier<Map<TranslatePlatform, PlatformCr
     return out;
   }
 
-  /// 保存凭证：**同时写两处**（D-052）。
+  /// 保存凭证：**只写本机钥匙串**（D-054 定案）。
   ///
-  /// 1. 本机钥匙串（App 自用，重启后仍可回填界面）；
-  /// 2. 服务端 `<state>/credentials.json`（翻译时服务端直接取用，不必每次随请求传）。
-  ///
-  /// 两处不一致的后果是「界面显示已配置，但翻译报未配置」——
-  /// 所以服务端写入失败时**要让它可见**，不要吞掉。
-  Future<String?> save(TranslatePlatform platform, PlatformCredential cred) async {
+  /// 服务端不落盘：调用 `/translate/text` 时把凭证放进请求体，用完即弃。
+  /// 唯一事实源就是这里，避免出现「两份密钥、换 key 只清一处」。
+  Future<void> save(TranslatePlatform platform, PlatformCredential cred) async {
     final store = ref.read(secureStoreProvider);
     await store.write(_keyOf(platform, 'key'), cred.appKey.trim());
     await store.write(_keyOf(platform, 'secret'), cred.appSecret.trim());
     state = AsyncValue.data({...(state.value ?? const {}), platform: cred});
-
-    try {
-      await ref
-          .read(mangaSvcClientProvider)
-          .putTranslateCredentials(platform: platform.id, appKey: cred.appKey.trim(), appSecret: cred.appSecret.trim());
-      return null;
-    } catch (e) {
-      return '$e';
-    }
   }
 }

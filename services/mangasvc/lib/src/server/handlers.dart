@@ -4,7 +4,6 @@ import 'package:protocol/protocol.dart';
 
 import '../engine/engine_facade.dart';
 import '../queue/task_queue.dart';
-import '../translate/credential_store.dart';
 import '../translate/youdao_client.dart';
 import '../translate/youdao_errors.dart';
 import '../translate/youdao_http.dart';
@@ -94,12 +93,6 @@ class Handlers {
         await _health(req);
       case 'GET /api/v1/ping':
         await _ping(req);
-      case 'GET /api/v1/translate/credentials':
-        await _getCredentials(req);
-      case 'POST /api/v1/translate/credentials':
-        await _putCredentials(req);
-      case 'DELETE /api/v1/translate/credentials':
-        await _deleteCredentials(req);
       case 'POST /api/v1/translate/text':
         await _translateText(req);
       // ── tasks ───────────────────────────────────────────────────────────
@@ -222,6 +215,43 @@ class Handlers {
     });
   }
 
+  /// 文本翻译（D-053/D-054）：走在线平台，**不进引擎**。
+  ///
+  /// 这是「大模型翻译」与「本地翻译」的分界：本地翻译把文本交给引擎里的 Sakura，
+  /// 这里直接调在线服务。
+  ///
+  /// 🔴 凭证**随请求传入**、用完即弃：唯一事实源是桌面端的系统钥匙串，
+  /// 服务端不落盘（D-054 定案，撤销 D-052）。
+  Future<void> _translateText(HttpRequest req) async {
+    final body = await readJsonBody(req);
+    final text = body['text'];
+    if (text is! String || text.trim().isEmpty) {
+      throw const ServiceError('INVALID_TEXT', '待翻译文本不能为空');
+    }
+    final rawCred = body['credentials'];
+    final cred = rawCred is Map ? Map<String, dynamic>.from(rawCred) : const <String, dynamic>{};
+    final appKey = '${cred['appKey'] ?? ''}';
+    final appSecret = '${cred['appSecret'] ?? ''}';
+    if (appKey.isEmpty || appSecret.isEmpty) {
+      throw const ServiceError('TRANSLATE_NOT_CONFIGURED', '未收到在线翻译密钥（appKey / appSecret）', status: 409);
+    }
+
+    final client = YoudaoClient(
+      transport: youdaoTransport ?? makeYoudaoTransport(),
+      baseUrl: youdaoBaseUrl(),
+      appKey: appKey,
+      appSecret: appSecret,
+    );
+    try {
+      final result = await client.translateText(
+        YoudaoTranslateRequest(text: text, from: '${body['from'] ?? 'ja'}', to: '${body['to'] ?? 'zh-CHS'}'),
+      );
+      await writeJson(req.response, 200, {'text': result.text, 'langType': result.langType});
+    } on TranslateError catch (e) {
+      await writeJson(req.response, 502, e.toJson());
+    }
+  }
+
   /// 远程连通性探测（D-045）。
   ///
   /// 能走到这里就说明**令牌是对的**（鉴权在路由之前）；返回内容再补齐
@@ -237,71 +267,6 @@ class Handlers {
       'requiresToken': true,
       'serverTime': isoOf(DateTime.now()),
     });
-  }
-
-  CredentialStore get _credentials => CredentialStore(rootDir: store.rootDir);
-
-  /// 读凭证状态：**永不回传 secret**，只回答「配了没」。
-  Future<void> _getCredentials(HttpRequest req) async {
-    final c = _credentials.read();
-    await writeJson(req.response, 200, {'configured': c?.usable ?? false, if (c != null) ...c.toMaskedJson()});
-  }
-
-  Future<void> _putCredentials(HttpRequest req) async {
-    final body = await readJsonBody(req);
-    final platform = body['platform'];
-    final appKey = body['appKey'];
-    final appSecret = body['appSecret'];
-    if (platform is! String || platform.isEmpty) {
-      throw const ServiceError('INVALID_PLATFORM', '缺少平台标识');
-    }
-    if (appKey is! String || appSecret is! String || appKey.isEmpty || appSecret.isEmpty) {
-      throw const ServiceError('INVALID_CREDENTIALS', 'appKey 与 appSecret 都不能为空');
-    }
-    final saved = await _credentials.save(platform: platform, appKey: appKey, appSecret: appSecret);
-    // 响应里**不带**密钥本体：连自己刚提交的值都不回显，避免日志/抓包泄漏。
-    await writeJson(req.response, 200, {'configured': saved.usable, ...saved.toMaskedJson()});
-  }
-
-  Future<void> _deleteCredentials(HttpRequest req) async {
-    await _credentials.clear();
-    await writeJson(req.response, 200, {'configured': false});
-  }
-
-  /// 文本翻译（D-053）：走在线平台，**不进引擎**。
-  ///
-  /// 这正是「大模型翻译」与「本地翻译」的分界：
-  /// 本地翻译把文本交给引擎里的 Sakura；这里直接调在线服务。
-  Future<void> _translateText(HttpRequest req) async {
-    final body = await readJsonBody(req);
-    final text = body['text'];
-    if (text is! String || text.trim().isEmpty) {
-      throw const ServiceError('INVALID_TEXT', '待翻译文本不能为空');
-    }
-    final cred = _credentials.read();
-    if (cred == null || !cred.usable) {
-      throw const ServiceError(
-        'TRANSLATE_NOT_CONFIGURED',
-        '尚未配置在线翻译密钥（appKey / appSecret），请到「设置 → 翻译服务」填写',
-        status: 409,
-      );
-    }
-
-    final client = YoudaoClient(
-      transport: youdaoTransport ?? makeYoudaoTransport(),
-      baseUrl: youdaoBaseUrl(),
-      appKey: cred.appKey,
-      appSecret: cred.appSecret,
-    );
-    try {
-      final result = await client.translateText(
-        YoudaoTranslateRequest(text: text, from: '${body['from'] ?? 'ja'}', to: '${body['to'] ?? 'zh-CHS'}'),
-      );
-      await writeJson(req.response, 200, {'text': result.text, 'langType': result.langType});
-    } on TranslateError catch (e) {
-      // 统一错误结构：code 给机器判，message 给人看，upstreamCode 给排障。
-      await writeJson(req.response, 502, e.toJson());
-    }
   }
 
   // ── tasks ───────────────────────────────────────────────────────────────

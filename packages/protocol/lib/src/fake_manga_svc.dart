@@ -259,18 +259,6 @@ class FakeMangaSvcClient implements MangaSvcClient {
   }
 
   @override
-  Future<Map<String, dynamic>> putTranslateCredentials({
-    required String platform,
-    required String appKey,
-    required String appSecret,
-  }) async => {'configured': true, 'platform': platform, 'hasKey': true, 'hasSecret': true};
-
-  @override
-  Future<Map<String, dynamic>> getTranslateCredentials() async => {'configured': false};
-
-  @override
-  Future<Map<String, dynamic>> deleteTranslateCredentials() async => {'configured': false};
-
   @override
   Future<Map<String, dynamic>> ping() async => {
     'ok': true,
