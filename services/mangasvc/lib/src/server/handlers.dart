@@ -88,6 +88,8 @@ class Handlers {
       case 'GET /health':
       case 'GET /api/v1/health':
         await _health(req);
+      case 'GET /api/v1/ping':
+        await _ping(req);
       // ── tasks ───────────────────────────────────────────────────────────
       case 'GET /api/v1/tasks':
         await _listTasks(req);
@@ -205,6 +207,23 @@ class Handlers {
       'sidecar': {'state': 'ready', 'port': req.connectionInfo?.localPort, 'engine': engineMode},
       'rootDir': store.rootDir,
       'startedAt': isoOf(startedAt),
+    });
+  }
+
+  /// 远程连通性探测（D-045）。
+  ///
+  /// 能走到这里就说明**令牌是对的**（鉴权在路由之前）；返回内容再补齐
+  /// 「对面引擎起没起」与「平台」两件事。
+  Future<void> _ping(HttpRequest req) async {
+    await writeJson(req.response, 200, {
+      'ok': true,
+      'service': 'mangasvc',
+      'version': '0.1.0',
+      'platform': Platform.operatingSystem,
+      'engineReady': engineMode == 'ready',
+      'engineMode': engineMode,
+      'requiresToken': true,
+      'serverTime': isoOf(DateTime.now()),
     });
   }
 

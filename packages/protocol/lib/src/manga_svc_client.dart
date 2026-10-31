@@ -20,6 +20,12 @@ abstract class MangaSvcClient {
   /// `GET /health`（兼容 `GET /api/v1/health`）。
   Future<HealthResponse> health();
 
+  /// `GET /api/v1/ping` —— 远程连通性探测（D-045）。
+  ///
+  /// 与 [health] 的区别：`/health` 不校验令牌，只能证明「服务在」；
+  /// ping 走鉴权，因此能同时证明「令牌对」。远程端要一次问清三件事就靠它。
+  Future<Map<String, dynamic>> ping();
+
   // ── tasks ────────────────────────────────────────────────────────────────
 
   /// `GET /api/v1/tasks` —— 任务列表（含 `running` / `queued` 汇总）。

@@ -305,6 +305,9 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<EngineStatus> getEngineStatus() async => _engineStatusOf(await _get('/engine/status'));
 
   @override
+  Future<Map<String, dynamic>> ping() => _get('/ping');
+
+  @override
   Future<RuntimeProbe> getEngineRuntime() async => _runtimeOf(await _get('/engine/runtime'));
 
   @override

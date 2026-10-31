@@ -133,3 +133,22 @@ bool readAutoStartService() {
 }
 
 void persistAutoStartService(bool value) => _writePref('miao.auto-start-service', value ? 'true' : 'false');
+
+/// 远程服务地址（`域名:端口` 或完整 URL）；null = 未配置。
+///
+/// 远程模式（手机 / 插件 / Web）用它连桌面端：本机不跑引擎，
+/// 所有翻译都发生在**对面**那台已经启动引擎的机器上（D-045）。
+String? readRemoteBaseUrl() {
+  final v = _readPrefs()['miao.remote-base-url'];
+  return (v == null || v.isEmpty) ? null : v;
+}
+
+void persistRemoteBaseUrl(String url) => _writePref('miao.remote-base-url', url);
+
+/// 远程令牌。远程连接必须带令牌，否则等于把桌面端暴露给同网段任何人。
+String? readRemoteToken() {
+  final v = _readPrefs()['miao.remote-token'];
+  return (v == null || v.isEmpty) ? null : v;
+}
+
+void persistRemoteToken(String token) => _writePref('miao.remote-token', token);

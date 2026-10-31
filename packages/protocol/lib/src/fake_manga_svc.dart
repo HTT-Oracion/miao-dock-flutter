@@ -255,6 +255,15 @@ class FakeMangaSvcClient implements MangaSvcClient {
   }
 
   @override
+  Future<Map<String, dynamic>> ping() async => {
+    'ok': true,
+    'service': 'mangasvc',
+    'platform': 'fake',
+    'engineReady': false,
+    'requiresToken': true,
+  };
+
+  @override
   Future<HealthResponse> health() async => HealthResponse(
     status: 'ok',
     service: 'mangasvc',

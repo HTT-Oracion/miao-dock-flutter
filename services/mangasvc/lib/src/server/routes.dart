@@ -32,6 +32,13 @@ const List<RouteDef> routes = [
   RouteDef(method: 'GET', pattern: '/health', group: 'health'),
   RouteDef(method: 'GET', pattern: '/api/v1/health', group: 'health'),
 
+  /// 远程连通性探测（D-045）：**不豁免令牌**。
+  ///
+  /// 与 `/health` 的区别是刻意的：`/health` 不需要令牌，所以它只能证明「服务在」，
+  /// 证明不了「令牌对」。远程端（手机 / 插件）要一次问清三件事：
+  /// 能不能连上、令牌对不对、对面引擎起没起 —— 这个端点就是为它准备的。
+  RouteDef(method: 'GET', pattern: '/api/v1/ping', group: 'health'),
+
   // ── tasks ───────────────────────────────────────────────────────────────
   RouteDef(method: 'GET', pattern: '/api/v1/tasks', group: 'tasks'),
   RouteDef(method: 'POST', pattern: '/api/v1/tasks', group: 'tasks'),

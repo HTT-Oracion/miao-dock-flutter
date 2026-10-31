@@ -1501,5 +1501,45 @@
   "settingRemoteOnlyNote": "本设备不运行本地引擎，只能使用远程翻译（连接已启动引擎的桌面端）。",
   "@settingRemoteOnlyNote": {
     "description": "平台能力提示"
+  },
+  "remoteTitle": "远程连接",
+  "@remoteTitle": {
+    "description": "远程连接文案"
+  },
+  "remoteTitleWhy": "本设备不运行引擎：填对面桌面端的地址与令牌，翻译全部在对面完成。",
+  "@remoteTitleWhy": {
+    "description": "远程连接文案"
+  },
+  "remoteBaseUrl": "服务地址",
+  "@remoteBaseUrl": {
+    "description": "远程连接文案"
+  },
+  "remoteBaseUrlHint": "例如 192.168.1.10:5180",
+  "@remoteBaseUrlHint": {
+    "description": "远程连接文案"
+  },
+  "remoteToken": "配对令牌",
+  "@remoteToken": {
+    "description": "远程连接文案"
+  },
+  "remoteTest": "测试连接",
+  "@remoteTest": {
+    "description": "远程连接文案"
+  },
+  "remoteTesting": "正在测试…",
+  "@remoteTesting": {
+    "description": "远程连接文案"
+  },
+  "remoteOk": "连接正常",
+  "@remoteOk": {
+    "description": "远程连接文案"
+  },
+  "remoteOkNoEngine": "连接正常，但对面引擎未启动",
+  "@remoteOkNoEngine": {
+    "description": "远程连接文案"
+  },
+  "remoteFail": "连接失败",
+  "@remoteFail": {
+    "description": "远程连接文案"
   }
 }

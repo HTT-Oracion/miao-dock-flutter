@@ -16,6 +16,7 @@ import '../../manga/controller/engine_controller.dart';
 import '../../manga/controller/engine_install_controller.dart';
 import '../../manga/controller/engine_ready_controller.dart';
 import '../../manga/domain/not_ready_state.dart';
+import '../../manga/controller/remote_controller.dart';
 import '../../manga/domain/platform_caps.dart';
 import '../controller/engine_dir_controller.dart';
 import '../controller/engine_settings_controller.dart';
@@ -258,6 +259,7 @@ class _TranslateSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final source = ref.watch(translateSourceProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
@@ -271,6 +273,7 @@ class _TranslateSection extends ConsumerWidget {
             const _RemoteOnlyNote(),
             SettingSubTitle(l10n.settingsSectionSource),
             const _SourceRow(),
+            const _RemoteSection(),
           ] else ...[
             // 三层状态条（项目口径 D-012，设计稿没有）：服务常驻 / 引擎共用开关 / 来源。
             const _LayerStrip(),
@@ -284,6 +287,7 @@ class _TranslateSection extends ConsumerWidget {
 
             SettingSubTitle(l10n.settingsSectionSource),
             const _SourceRow(),
+            if (source == TranslateSource.remote) const _RemoteSection(),
 
             SettingSubTitle(l10n.settingsSectionPairing),
             const _PairingRows(),
@@ -448,6 +452,143 @@ class _ServiceCard extends ConsumerWidget {
     TranslateSource.llm => l10n.sourceLlm,
     TranslateSource.remote => l10n.sourceRemote,
   };
+}
+
+/// 远程连接配置（D-045）：地址 + 令牌 + 测试连接。
+///
+/// 三件事一次问清：能连上 / 令牌对 / 对面引擎起没起。
+/// 用 `/api/v1/ping` 而不是 `/health`——后者不校验令牌，证明不了「令牌对」。
+class _RemoteSection extends ConsumerStatefulWidget {
+  const _RemoteSection();
+
+  @override
+  ConsumerState<_RemoteSection> createState() => _RemoteSectionState();
+}
+
+class _RemoteSectionState extends ConsumerState<_RemoteSection> {
+  late final TextEditingController _url;
+  late final TextEditingController _token;
+  bool _testing = false;
+  RemoteProbe? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    final cfg = ref.read(remoteConfigProvider);
+    _url = TextEditingController(text: cfg.baseUrl);
+    _token = TextEditingController(text: cfg.token);
+  }
+
+  @override
+  void dispose() {
+    _url.dispose();
+    _token.dispose();
+    super.dispose();
+  }
+
+  Future<void> _test() async {
+    final cfg = RemoteConfig(baseUrl: _url.text.trim(), token: _token.text.trim());
+    ref.read(remoteConfigProvider.notifier).save(baseUrl: _url.text, token: _token.text);
+    setState(() {
+      _testing = true;
+      _result = null;
+    });
+    final probe = await ref.read(remotePingProvider)(cfg);
+    if (!mounted) return;
+    setState(() {
+      _testing = false;
+      _result = probe;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SettingSubTitle(l10n.remoteTitle),
+        SettingRow(
+          label: l10n.remoteBaseUrl,
+          why: l10n.remoteTitleWhy,
+          control: SizedBox(
+            width: 220,
+            child: _Field(controller: _url, hint: l10n.remoteBaseUrlHint),
+          ),
+        ),
+        SettingRow(
+          label: l10n.remoteToken,
+          control: SizedBox(width: 220, child: _Field(controller: _token, obscure: true)),
+        ),
+        SettingRow(
+          label: l10n.remoteTest,
+          why: _result == null
+              ? null
+              : _result!.ok
+              ? (_result!.engineReady ? l10n.remoteOk : l10n.remoteOkNoEngine)
+              : '${l10n.remoteFail}：${_result!.message}',
+          control: FilledButton(
+            onPressed: _testing ? null : _test,
+            style: _primaryStyle(palette),
+            child: Text(_testing ? l10n.remoteTesting : l10n.remoteTest, style: const TextStyle(fontSize: 9.5)),
+          ),
+        ),
+        if (_result != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              _result!.ok
+                  ? (_result!.engineReady ? l10n.remoteOk : l10n.remoteOkNoEngine)
+                  : '${l10n.remoteFail}：${_result!.message}',
+              style: TextStyle(
+                fontSize: 9.5,
+                color: _result!.ok ? (_result!.engineReady ? palette.good : palette.warn) : palette.bad,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// 单行输入框（与 `.select` 同高，避免两种控件在同一列里参差不齐）。
+class _Field extends StatelessWidget {
+  const _Field({required this.controller, this.hint, this.obscure = false});
+
+  final TextEditingController controller;
+  final String? hint;
+  final bool obscure;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return SizedBox(
+      height: 28,
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        style: TextStyle(fontSize: 10, color: palette.ink),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: hint,
+          hintStyle: TextStyle(fontSize: 9.5, color: palette.mut),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          filled: true,
+          fillColor: palette.card,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
+            borderSide: BorderSide(color: palette.line2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
+            borderSide: BorderSide(color: palette.line2),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 非桌面端的说明条：讲清「为什么只有远程」。
