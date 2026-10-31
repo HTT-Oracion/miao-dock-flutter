@@ -136,7 +136,7 @@ class _FlakyClient extends FakeMangaSvcClient {
   MangaSvcErrorKind errorKind = MangaSvcErrorKind.unreachable;
 
   @override
-  Future<TaskListResponse> listTasks({TaskStatus? status}) async {
+  Future<TaskListResponse> listTasks({TaskStatus? status, String? source}) async {
     if (failing) throw MangaSvcException(kind: errorKind, message: '模拟失败');
     return TaskListResponse(
       count: 1,

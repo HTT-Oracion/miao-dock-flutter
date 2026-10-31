@@ -29,13 +29,19 @@ abstract class MangaSvcClient {
   // ── tasks ────────────────────────────────────────────────────────────────
 
   /// `GET /api/v1/tasks` —— 任务列表（含 `running` / `queued` 汇总）。
-  Future<TaskListResponse> listTasks({TaskStatus? status});
+  Future<TaskListResponse> listTasks({TaskStatus? status, String? source});
 
   /// `GET /api/v1/tasks/{taskId}` —— 单任务详情。
   Future<TaskRow> getTask(String taskId);
 
   /// `POST /api/v1/tasks` —— 建单（投放）。服务端按序号分批，每批 20 张。
-  Future<CreateTaskResponse> createTask({required String comicName, required List<String> imagePaths});
+  Future<CreateTaskResponse> createTask({
+    required String comicName,
+    required List<String> imagePaths,
+
+    /// 提交方身份（D-046）：`app` / `plugin` / `desktop`。缺省视为本机应用。
+    String client = 'app',
+  });
 
   /// `POST /api/v1/tasks/{taskId}/batches` —— 向已有任务追加批次（补页）。
   Future<CreateTaskResponse> appendBatch(String taskId, {required List<String> imagePaths});

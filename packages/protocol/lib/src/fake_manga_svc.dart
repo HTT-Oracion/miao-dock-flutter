@@ -97,7 +97,7 @@ class FakeMangaSvcClient implements MangaSvcClient {
   // ── tasks（真实实现）──────────────────────────────────────────────────────
 
   @override
-  Future<TaskListResponse> listTasks({TaskStatus? status}) async {
+  Future<TaskListResponse> listTasks({TaskStatus? status, String? source}) async {
     final rows = status == null ? List<TaskRow>.of(_tasks) : _tasks.where((t) => t.status == status).toList();
     return TaskListResponse(
       count: rows.length,
@@ -117,7 +117,11 @@ class FakeMangaSvcClient implements MangaSvcClient {
   }
 
   @override
-  Future<CreateTaskResponse> createTask({required String comicName, required List<String> imagePaths}) async {
+  Future<CreateTaskResponse> createTask({
+    required String comicName,
+    required List<String> imagePaths,
+    String client = 'app',
+  }) async {
     final now = DateTime.now();
     final position = _tasks.where((t) => t.status.occupiesQueue).length + 1;
     final row = TaskRow(

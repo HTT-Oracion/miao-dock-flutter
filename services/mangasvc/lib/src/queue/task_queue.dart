@@ -74,8 +74,15 @@ class TaskQueue {
   QueueTask? getTask(String id) => _find(id);
 
   /// 任务列表视图（契约 `TaskListResponse`）。
-  Map<String, dynamic> listView({String? status}) {
-    final rows = status == null ? _tasks : _tasks.where((t) => t.status.wire == status).toList();
+  /// 队列视图。
+  ///
+  /// [source] 用于**来源隔离**（D-046）：插件提交的只回插件，手机端投放的只回手机端。
+  /// 两个客户端连的是同一个桌面服务，不区分就会互相看到对方的任务。
+  Map<String, dynamic> listView({String? status, String? source}) {
+    var rows = status == null ? _tasks : _tasks.where((t) => t.status.wire == status).toList();
+    if (source != null && source.isNotEmpty) {
+      rows = rows.where((t) => t.source == source).toList();
+    }
     return {
       'count': rows.length,
       'total': _tasks.length,

@@ -78,5 +78,5 @@ class _FixedClient extends FakeMangaSvcClient {
   final TaskListResponse _response;
 
   @override
-  Future<TaskListResponse> listTasks({TaskStatus? status}) async => _response;
+  Future<TaskListResponse> listTasks({TaskStatus? status, String? source}) async => _response;
 }

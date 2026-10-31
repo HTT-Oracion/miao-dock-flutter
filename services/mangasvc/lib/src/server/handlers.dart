@@ -231,7 +231,16 @@ class Handlers {
 
   Future<void> _listTasks(HttpRequest req) async {
     final status = req.uri.queryParameters['status'];
-    await writeJson(req.response, 200, queue.listView(status: status));
+    // `client` 是调用方自己的身份；`source` 是显式过滤。两者都支持，方便插件/手机端自证。
+    final client = req.uri.queryParameters['client'];
+    final source =
+        req.uri.queryParameters['source'] ??
+        switch (client) {
+          'app' || 'mobile' => 'app',
+          'plugin' || 'extension' => 'plugin',
+          _ => null,
+        };
+    await writeJson(req.response, 200, queue.listView(status: status, source: source));
   }
 
   Future<void> _createTask(HttpRequest req) async {
@@ -245,9 +254,17 @@ class Handlers {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
     }
     final paths = imagePaths.whereType<String>().toList();
-    // 来源归因：服务端按 `X-Box-Client` 判定，缺省按 desktop。
-    final client = req.headers.value('x-box-client') ?? 'desktop';
-    final source = client == 'extension' ? 'extension' : 'desktop';
+    // 来源归因（D-046）：**请求体 `client` 优先**，缺省回落到 `X-Box-Client` 头。
+    // 定案用请求体字段（方案 B），保留 header 是为了兼容早期调用方。
+    final bodyClient = body['client'];
+    final client = (bodyClient is String && bodyClient.isNotEmpty)
+        ? bodyClient
+        : (req.headers.value('x-box-client') ?? 'desktop');
+    final source = switch (client) {
+      'app' || 'mobile' => 'app',
+      'plugin' || 'extension' => 'plugin',
+      _ => 'desktop',
+    };
     final created = await queue.createTask(comicName: comicName.trim(), imagePaths: paths, source: source);
     await writeJson(req.response, 200, created);
   }

@@ -44,8 +44,13 @@ class HttpMangaSvcClient implements MangaSvcClient {
   // ── tasks ────────────────────────────────────────────────────────────────
 
   @override
-  Future<TaskListResponse> listTasks({TaskStatus? status}) async {
-    final json = await _get('/tasks', query: status == null ? null : {'status': status.wire});
+  Future<TaskListResponse> listTasks({TaskStatus? status, String? source}) async {
+    final query = <String, dynamic>{
+      'status': ?status?.wire,
+      // 来源隔离（D-046）：只取自己提交的任务。
+      'source': ?source,
+    };
+    final json = await _get('/tasks', query: query.isEmpty ? null : query);
     return _taskListOf(json);
   }
 
@@ -56,8 +61,20 @@ class HttpMangaSvcClient implements MangaSvcClient {
   }
 
   @override
-  Future<CreateTaskResponse> createTask({required String comicName, required List<String> imagePaths}) async {
-    final json = await _post('/tasks', body: {'comicName': comicName, 'imagePaths': imagePaths});
+  Future<CreateTaskResponse> createTask({
+    required String comicName,
+    required List<String> imagePaths,
+    String client = 'app',
+  }) async {
+    final json = await _post(
+      '/tasks',
+      body: {
+        'comicName': comicName,
+        'imagePaths': imagePaths,
+        // 来源归因（D-046）：服务端据此做来源隔离，插件与手机端互不可见。
+        'client': client,
+      },
+    );
     return _createTaskOf(json);
   }
 
