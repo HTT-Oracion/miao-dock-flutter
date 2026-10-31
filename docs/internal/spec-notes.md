@@ -952,3 +952,19 @@
   3. 「测试凭证」（对应 miao-dock `selftest.rs`）；
   4. 设置页把「大模型翻译」接到这条路（当前只存了凭证）。
 - **关联**：D-047 · `miao-dock/src-tauri/src/mangasvc/translate/youdao.rs`。
+
+## D-050 有道错误码映射（两张表，按接口分开）
+
+- **状态**：完成（2026-11-01）；HTTP 调用与流式仍未接
+- **实现**：`services/mangasvc/lib/src/translate/youdao_errors.dart`
+  - `youdaoTextCodes`（22 条）/ `youdaoLlmCodes`（9 条），**逐条照抄** miao-dock `errors.rs`，文案未改写；
+  - `mapYoudaoCode(code, api:)` → `TranslateError{code, message, upstreamCode, api}`。
+- **为什么必须两张表**：文本接口与大模型接口码表**不同** ——
+  `205`/`203` 只在文本表，`902000`/`1` 只在大模型表。
+  混用会把「该应用未开通大模型翻译」误报成别的错误，用户会去查错方向。
+- **未登记码不吞**：文案里带平台 + 接口 + 原始码。只回「翻译失败」等于把排障线索扔掉。
+- **207 的文案**直接指向我们自己的问题（salt/curtime 复用），而不是暗示上游不稳。
+- **验证**：`youdao_errors_test.dart` 5 条（含「两张表按接口分开」这条反证）；服务端 128 通过。
+- **仍未做**：`POST /api` 文本调用、`/proxy/http/llm-trans` 流式（双判 + SSE）、
+  测试凭证、设置页接线路由。
+- **关联**：D-049 · `miao-dock/.../translate/errors.rs`。
