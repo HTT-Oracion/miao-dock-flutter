@@ -324,6 +324,13 @@ class HttpMangaSvcClient implements MangaSvcClient {
       _post('/engine/install', body: {'engineDir': engineDir, 'backend': ?backend, 'includeNllb': includeNllb});
 
   @override
+  Future<Map<String, dynamic>> rebuildDeps({required String engineDir, String? indexUrl}) =>
+      _post('/engine/deps/rebuild', body: {'engineDir': engineDir, 'indexUrl': ?indexUrl});
+
+  @override
+  Future<Map<String, dynamic>> getDepsStatus() => _get('/engine/deps');
+
+  @override
   Future<Map<String, dynamic>> getEngineInstall() => _get('/engine/install');
 
   @override

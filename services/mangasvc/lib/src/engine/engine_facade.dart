@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:protocol/protocol.dart';
 
 import '../server/http.dart';
+import 'engine_deps.dart';
 import 'engine_install.dart';
 import 'engine_runtime.dart';
 import 'model_download.dart' as dl;
@@ -188,6 +189,11 @@ class EngineFacade {
   InstallProgress? _installProgress;
   List<String> _installLog = [];
 
+  bool _rebuildingDeps = false;
+  bool? _depsOk;
+  String? _depsError;
+  List<String> _depsTail = [];
+
   /// `GET /engine/status`
   Map<String, dynamic> status() => runtime.toStatusView();
 
@@ -304,6 +310,31 @@ class EngineFacade {
       'tail': List<String>.of(_installLog),
     };
   }
+
+  /// `POST /engine/deps/rebuild`（D-029）—— 用 pip 重建依赖，国内镜像优先。
+  Future<Map<String, dynamic>> startDepsRebuild({required String engineDir, String? indexUrl}) async {
+    if (_rebuildingDeps) return depsStatus();
+    _rebuildingDeps = true;
+    _depsOk = null;
+    _depsError = null;
+    _depsTail = [];
+    unawaited(() async {
+      final r = await EngineDepsInstaller(engineDir: engineDir).rebuild(indexUrl: indexUrl);
+      _depsOk = r.ok;
+      _depsError = r.error;
+      _depsTail = r.log;
+      _rebuildingDeps = false;
+    }());
+    return depsStatus();
+  }
+
+  /// `GET /engine/deps` —— 依赖重建进度。
+  Map<String, dynamic> depsStatus() => {
+    'state': _rebuildingDeps ? 'running' : (_depsError != null ? 'failed' : (_depsOk == null ? 'idle' : 'done')),
+    'running': _rebuildingDeps,
+    'error': _depsError,
+    'tail': List<String>.of(_depsTail),
+  };
 
   /// `POST /engine/models/download`
   Future<Map<String, dynamic>> startDownload() => downloader.start();

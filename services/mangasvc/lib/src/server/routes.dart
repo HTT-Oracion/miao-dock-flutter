@@ -91,6 +91,8 @@ const List<RouteDef> routes = [
   // D-027：装配整个引擎目录（按平台 + 后端），进度走 GET
   RouteDef(method: 'POST', pattern: '/api/v1/engine/install', group: 'engine'),
   RouteDef(method: 'GET', pattern: '/api/v1/engine/install', group: 'engine'),
+  RouteDef(method: 'POST', pattern: '/api/v1/engine/deps/rebuild', group: 'engine'),
+  RouteDef(method: 'GET', pattern: '/api/v1/engine/deps', group: 'engine'),
 ];
 
 /// 路由匹配结果。

@@ -7,11 +7,11 @@ import 'package:mangasvc/src/server/routes.dart';
 /// 每条写明「破坏什么会导致它失败」。
 void main() {
   group('路由表与契约一致', () {
-    test('路由数 = 50 条（45 客户端方法 + health 双路径 + engine start/stop/install）', () {
+    test('路由数 = 52 条（45 客户端方法 + health 双路径 + engine 五条扩展）', () {
       // 破坏点：新增/删除任一路由 → 与客户端契约不再对应，本条失败。
       // 48 = 45 个 MangaSvcClient 方法 + /health 与 /api/v1/health 共用 1 个方法（+1）
       //      + engine/start、engine/stop（D-012 引擎共用开关，客户端暂无对应方法）
-      expect(routes.length, 50);
+      expect(routes.length, 52);
     });
 
     test('每条路由都有分组且 id 唯一', () {

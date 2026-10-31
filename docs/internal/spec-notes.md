@@ -497,3 +497,19 @@
 - **踩坑**：`parts` 过滤最初只加在门面签名里、没往下传，导致一次真实请求按「全部必需件」下了 4.7 GB
   （已及时停掉）。**教训：新增参数后必须验证它真的到达使用点**，否则默认分支会静默接管。
 - **关联**：D-027 · `engine_install.dart` · `engine-downloads.md`。
+
+## D-029 依赖重建走国内镜像优先
+
+- **状态**：已完成服务端（2026-11-01）；UI 按钮待接
+- **做了什么**：
+  - `engine_deps.dart`：用**自带 Python** 跑 `pip install -r src/requirements.txt`。
+  - 默认源 `https://pypi.tuna.tsinghua.edu.cn/simple`（国内优先，可覆盖；传空串表示用 pip 默认）。
+  - `POST /api/v1/engine/deps/rebuild` + `GET /api/v1/engine/deps`；客户端 `rebuildDeps` / `getDepsStatus`。
+  - 参数带 `--progress-bar off`：进度条会把日志刷满，排障时反而看不到错误。
+- **为什么是「重建」而不是「安装」**：带别人的引擎目录过来时，依赖可能因 Python 小版本 / 架构 / 平台不匹配而不可用；
+  这时需要的是重装依赖，**不是**重下 4 GB 模型（D-028 的 `deps` 部件就是为这个留的）。
+- **体积必须提前告知**：macOS 的 torch 是数百 MB 量级；**Windows CUDA 版约 2.5 GB**。
+  不告知就点，用户会以为只是几十 MB。
+- **怎么验证**：`services/mangasvc/test/engine_deps_test.dart` 7 条（前置检查、镜像默认与覆盖、空串语义、参数透传、非零退出）。
+  反证：把默认源改空 → 「默认走国内镜像」立即红。
+- **关联**：D-028 · `engine-downloads.md` §三（pip 依赖）。

@@ -176,6 +176,18 @@ class Handlers {
         );
       case 'GET /api/v1/engine/install':
         await writeJson(req.response, 200, engine.installStatus());
+      case 'POST /api/v1/engine/deps/rebuild':
+        final body = await readJsonBody(req);
+        await writeJson(
+          req.response,
+          200,
+          await engine.startDepsRebuild(
+            engineDir: (body['engineDir'] as String?) ?? _defaultEngineDir(),
+            indexUrl: body['indexUrl'] as String?,
+          ),
+        );
+      case 'GET /api/v1/engine/deps':
+        await writeJson(req.response, 200, engine.depsStatus());
       // ── 尚未实现（P0-B 其余项）──────────────────────────────────────────
       default:
         await writeErrorCode(req.response, 501, 'NOT_IMPLEMENTED', '端点尚未实现：${r.id}');

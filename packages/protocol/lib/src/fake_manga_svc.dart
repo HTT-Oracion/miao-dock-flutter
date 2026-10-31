@@ -393,6 +393,13 @@ class FakeMangaSvcClient implements MangaSvcClient {
       _unimplemented('POST /engine/install');
 
   @override
+  Future<Map<String, dynamic>> rebuildDeps({required String engineDir, String? indexUrl}) =>
+      _unimplemented('POST /engine/deps/rebuild');
+
+  @override
+  Future<Map<String, dynamic>> getDepsStatus() => _unimplemented('GET /engine/deps');
+
+  @override
   Future<Map<String, dynamic>> getEngineInstall() => _unimplemented('GET /engine/install');
 
   @override
