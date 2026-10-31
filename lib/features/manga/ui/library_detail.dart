@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:protocol/protocol.dart' show BookMeta, jsNumStr;
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/toast.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
-import '../domain/manga_status.dart';
-import 'library_search_results.dart';
+import '../controller/queue_controller.dart';
 import '../domain/lib_book.dart';
+import '../domain/manga_status.dart';
 import '../domain/manga_task.dart';
+import 'library_search_results.dart';
 
-/// 详情主区（设计稿 G Main）：Hero（封面 + 标题 + 元信息 + 动作）+ 章节卡（一行两话）。
+/// 详情主区（设计稿 G Main）：
+/// 头部（本地漫画库 + 刷新 + 新建）→ Hero（封面 + 标题 + 元信息 + 动作）→
+/// 章节区（卡片 / 简易胶囊，`.view-seg` 切换）。
 class LibraryDetail extends ConsumerWidget {
   const LibraryDetail({super.key});
 
@@ -20,22 +25,27 @@ class LibraryDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final query = ref.watch(shelfQueryProvider).trim();
     if (query.isNotEmpty) {
-      // 搜索态（设计稿 G Row 4）：右栏切换为分组命中结果。
       return LibrarySearchResults(query: query);
     }
     final state = ref.watch(libraryProvider);
     final books = state.value ?? ref.read(libraryProvider.notifier).lastGood;
 
-    // 失败且从没成功过：给整块错误态，**不能用空态冒充**（design.html §07）。
     if (books.isEmpty && state.hasError) {
       return ErrorState(error: state.error, onRetry: () => ref.read(libraryProvider.notifier).refresh());
     }
     if (books.isEmpty) {
-      return Center(
-        child: Text(
-          AppLocalizations.of(context).shelfEmpty,
-          style: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary),
-        ),
+      return Column(
+        children: [
+          _LibHeader(count: 0),
+          Expanded(
+            child: Center(
+              child: Text(
+                AppLocalizations.of(context).shelfEmpty,
+                style: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary),
+              ),
+            ),
+          ),
+        ],
       );
     }
     final selected = ref.watch(selectedBookProvider);
@@ -44,23 +54,120 @@ class LibraryDetail extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       children: [
+        _LibHeader(count: books.length),
+        const SizedBox(height: 12),
         _Hero(book: book),
-        const SizedBox(height: 16),
-        _SectionHeader(book: book),
-        const SizedBox(height: 10),
-        _ChapterGrid(book: book),
+        if (book.isBook) ...[
+          const SizedBox(height: 16),
+          _SectionHeader(book: book),
+          const SizedBox(height: 10),
+          if (book.chapters.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  AppLocalizations.of(context).shelfEmpty,
+                  style: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary),
+                ),
+              ),
+            )
+          else
+            ref.watch(libModeProvider) == 'capsule' ? _ChapterCapsules(book: book) : _ChapterGrid(book: book),
+        ],
       ],
     );
   }
 }
 
-class _Hero extends StatelessWidget {
+/// 主区头部（ver1.0 `.lib-main` 头）：本地漫画库 + 计数 + 刷新 + 新建漫画。
+class _LibHeader extends ConsumerWidget {
+  const _LibHeader({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Row(
+      children: [
+        const Icon(LucideIcons.libraryBig, size: 15, color: AppTokens.textSecondary),
+        const SizedBox(width: 8),
+        Text(
+          l10n.libLocalLibrary,
+          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+        ),
+        const SizedBox(width: 8),
+        Text('$count', style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+        const Spacer(),
+        _HeaderAction(
+          icon: LucideIcons.refreshCw,
+          label: l10n.libRefresh,
+          onTap: () async {
+            await ref.read(libraryProvider.notifier).refresh();
+          },
+        ),
+        const SizedBox(width: 8),
+        _HeaderAction(
+          icon: LucideIcons.folderPlus,
+          label: l10n.libCreateBook,
+          primary: true,
+          onTap: () async {
+            final name = await _CreateBookDialog.show(context);
+            if (name == null || !context.mounted) return;
+            try {
+              await ref.read(mangaSvcClientProvider).createBook(name);
+              await ref.read(libraryProvider.notifier).refresh();
+              if (context.mounted) showAppToast(context, l10n.libCreateBookOk(name), tone: ToastTone.good);
+            } catch (e) {
+              if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderAction extends StatelessWidget {
+  const _HeaderAction({required this.icon, required this.label, this.primary = false, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final bool primary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: primary ? AppTokens.accent : AppTokens.card,
+          borderRadius: BorderRadius.circular(6),
+          border: primary ? null : Border.all(color: AppTokens.divider),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 11, color: primary ? AppTokens.pageBg : AppTokens.textSecondary),
+            const SizedBox(width: 5),
+            Text(label, style: TextStyle(fontSize: 10.5, color: primary ? AppTokens.pageBg : AppTokens.textPrimary)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Hero extends ConsumerWidget {
   const _Hero({required this.book});
 
   final LibBook book;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(12)),
@@ -72,7 +179,11 @@ class _Hero extends StatelessWidget {
             height: 112,
             decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(8)),
             alignment: Alignment.center,
-            child: const Icon(LucideIcons.bookOpen, size: 24, color: AppTokens.textSecondary),
+            child: Icon(
+              book.isBook ? LucideIcons.bookOpen : LucideIcons.folder,
+              size: 24,
+              color: AppTokens.textSecondary,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -88,37 +199,85 @@ class _Hero extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 6,
                   children: [
-                    _MetaChip(AppLocalizations.of(context).bookAuthorLabel(book.author)),
-                    _MetaChip(AppLocalizations.of(context).bookChapterCount(book.chapterCount)),
-                    _MetaChip(AppLocalizations.of(context).bookPageCount(book.pageCount)),
+                    if (!book.isBook) _MetaChip(l10n.libUnmerged),
+                    if (book.isBook) _MetaChip(l10n.bookAuthorLabel(book.author)),
+                    _MetaChip(
+                      book.isBook ? l10n.bookChapterCount(book.chapterCount) : l10n.bookPageCount(book.pageCount),
+                    ),
+                    if (book.isBook) _MetaChip(l10n.bookPageCount(book.pageCount)),
                     _MetaChip(formatBytes(book.totalBytes)),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppTokens.accent,
-                        foregroundColor: AppTokens.pageBg,
+                    if (book.isBook) ...[
+                      _HeroButton(
+                        icon: LucideIcons.play,
+                        label: l10n.bookContinueTranslate,
+                        primary: true,
+                        onTap: () async {
+                          final client = ref.read(mangaSvcClientProvider);
+                          try {
+                            final plan = await client.getResumePlan(book.key);
+                            if (plan.pendingCount == 0) {
+                              if (context.mounted) {
+                                showAppToast(context, l10n.libAllTranslated, tone: ToastTone.info);
+                              }
+                              return;
+                            }
+                            await client.resumeBook(book.key);
+                            if (context.mounted) {
+                              showAppToast(context, l10n.libResumeSubmitted, tone: ToastTone.good);
+                            }
+                          } catch (e) {
+                            if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                          }
+                        },
                       ),
-                      onPressed: () {
-                        /* TODO: 继续翻译，随补页端点落地 */
-                      },
-                      icon: const Icon(LucideIcons.fileUp, size: 13),
-                      label: Text(AppLocalizations.of(context).bookContinueTranslate, style: TextStyle(fontSize: 12.5)),
-                    ),
+                      const SizedBox(width: 8),
+                      _HeroButton(
+                        icon: LucideIcons.pencil,
+                        label: l10n.libEditInfo,
+                        onTap: () async {
+                          final meta = await _EditBookDialog.show(context, book: book);
+                          if (meta == null || !context.mounted) return;
+                          try {
+                            await ref.read(mangaSvcClientProvider).setBookMeta(book.key, meta);
+                            await ref.read(libraryProvider.notifier).refresh();
+                            if (context.mounted) showAppToast(context, l10n.libEditInfoOk, tone: ToastTone.good);
+                          } catch (e) {
+                            if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                          }
+                        },
+                      ),
+                    ] else
+                      _HeroButton(
+                        icon: LucideIcons.gitMerge,
+                        label: l10n.libMerge,
+                        primary: true,
+                        onTap: () async {
+                          final result = await _MergeDialog.show(context, src: book.key);
+                          if (result == null || !context.mounted) return;
+                          try {
+                            await ref
+                                .read(mangaSvcClientProvider)
+                                .mergeChapter(book.key, targetBook: result.$1, no: result.$2);
+                            await ref.read(libraryProvider.notifier).refresh();
+                            if (context.mounted) showAppToast(context, l10n.libMergeOk, tone: ToastTone.good);
+                          } catch (e) {
+                            if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                          }
+                        },
+                      ),
                     const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTokens.textPrimary,
-                        side: const BorderSide(color: AppTokens.progressTrack),
-                      ),
-                      onPressed: () {
-                        /* TODO: 查看漫画阅读器 */
+                    _HeroButton(
+                      icon: LucideIcons.folderOpen,
+                      label: l10n.actionOpenNav,
+                      onTap: () async {
+                        await ref.read(mangaSvcClientProvider).revealBook(book.key);
+                        if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
                       },
-                      icon: const Icon(LucideIcons.bookOpen, size: 13),
-                      label: Text(AppLocalizations.of(context).bookViewComic, style: TextStyle(fontSize: 12.5)),
                     ),
                   ],
                 ),
@@ -128,6 +287,38 @@ class _Hero extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _HeroButton extends StatelessWidget {
+  const _HeroButton({required this.icon, required this.label, this.primary = false, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final bool primary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = primary
+        ? FilledButton.styleFrom(backgroundColor: AppTokens.accent, foregroundColor: AppTokens.pageBg)
+        : OutlinedButton.styleFrom(
+            foregroundColor: AppTokens.textPrimary,
+            side: const BorderSide(color: AppTokens.progressTrack),
+          );
+    return (primary
+        ? FilledButton.icon(
+            onPressed: onTap,
+            icon: Icon(icon, size: 13),
+            label: Text(label, style: const TextStyle(fontSize: 12.5)),
+            style: style,
+          )
+        : OutlinedButton.icon(
+            onPressed: onTap,
+            icon: Icon(icon, size: 13),
+            label: Text(label, style: const TextStyle(fontSize: 12.5)),
+            style: style,
+          ));
   }
 }
 
@@ -146,28 +337,56 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
+class _SectionHeader extends ConsumerWidget {
   const _SectionHeader({required this.book});
 
   final LibBook book;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final mode = ref.watch(libModeProvider);
     return Row(
       children: [
         Text(
-          AppLocalizations.of(context).bookChapters,
+          l10n.bookChapters,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
         ),
         const SizedBox(width: 8),
         Text(
-          AppLocalizations.of(context).bookChapterCount(book.chapterCount),
+          l10n.bookChapterCount(book.chapterCount),
           style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
         ),
+        const SizedBox(width: 10),
+        if (mode == 'capsule')
+          Text(l10n.libCapsuleLegend, style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
         const Spacer(),
-        Text(
-          AppLocalizations.of(context).bookOneRowTwoChapters,
-          style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+        // ver1.0 `.view-seg`：卡片 / 简易。
+        Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(color: AppTokens.navBg, borderRadius: BorderRadius.circular(6)),
+          child: Row(
+            children: [
+              for (final m in const [('card', 'libViewCard'), ('capsule', 'libViewCapsule')])
+                GestureDetector(
+                  onTap: () => ref.read(libModeProvider.notifier).set(m.$1),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: mode == m.$1 ? AppTokens.card : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      m.$1 == 'card' ? l10n.libViewCard : l10n.libViewCapsule,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: mode == m.$1 ? AppTokens.textPrimary : AppTokens.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -221,7 +440,7 @@ class _ChapterCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context).chapterTitle(chapter.no),
+                  AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
                   style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
                 ),
                 const SizedBox(height: 3),
@@ -246,6 +465,255 @@ class _ChapterCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 简易（胶囊）态：名字 + 状态圆点（待译 蓝 · 缺页 黄 · 已译完不显示）。
+class _ChapterCapsules extends StatelessWidget {
+  const _ChapterCapsules({required this.book});
+
+  final LibBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final c in book.chapters)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(999)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.chapterTitle(jsNumStr(c.no)),
+                  style: const TextStyle(fontSize: 11.5, color: AppTokens.textPrimary),
+                ),
+                if (!c.done) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: c.translatedSeqs.isEmpty
+                          ? MangaTaskStatus.translating.color
+                          : MangaTaskStatus.partialFailed.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── 对话框 ────────────────────────────────────────────────────────────────
+
+class _CreateBookDialog extends StatefulWidget {
+  const _CreateBookDialog();
+
+  static Future<String?> show(BuildContext context) =>
+      showDialog<String>(context: context, builder: (_) => const _CreateBookDialog());
+
+  @override
+  State<_CreateBookDialog> createState() => _CreateBookDialogState();
+}
+
+class _CreateBookDialogState extends State<_CreateBookDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      backgroundColor: AppTokens.card,
+      title: Text(l10n.libCreateBook, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      content: SizedBox(
+        width: 300,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          style: const TextStyle(fontSize: 12),
+          decoration: InputDecoration(hintText: l10n.libCreateBookNameHint, isDense: true),
+          onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(l10n.libCreateBook, style: const TextStyle(fontSize: 11.5)),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditBookDialog extends StatefulWidget {
+  const _EditBookDialog({required this.book});
+
+  final LibBook book;
+
+  static Future<BookMeta?> show(BuildContext context, {required LibBook book}) => showDialog<BookMeta>(
+    context: context,
+    builder: (_) => _EditBookDialog(book: book),
+  );
+
+  @override
+  State<_EditBookDialog> createState() => _EditBookDialogState();
+}
+
+class _EditBookDialogState extends State<_EditBookDialog> {
+  late final TextEditingController _title = TextEditingController(text: widget.book.name);
+  late final TextEditingController _author = TextEditingController(text: widget.book.author);
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _author.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      backgroundColor: AppTokens.card,
+      title: Text(l10n.libEditInfoTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      content: SizedBox(
+        width: 300,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _title,
+              style: const TextStyle(fontSize: 12),
+              decoration: InputDecoration(labelText: l10n.libCreateBookNameHint, isDense: true),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _author,
+              style: const TextStyle(fontSize: 12),
+              decoration: InputDecoration(labelText: l10n.bookAuthorLabel(''), isDense: true),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            BookMeta(
+              title: _title.text.trim().isEmpty ? widget.book.name : _title.text.trim(),
+              author: _author.text.trim(),
+            ),
+          ),
+          child: Text(l10n.libEditInfoOk, style: const TextStyle(fontSize: 11.5)),
+        ),
+      ],
+    );
+  }
+}
+
+class _MergeDialog extends StatefulWidget {
+  const _MergeDialog({required this.src});
+
+  final String src;
+
+  static Future<(String, double)?> show(BuildContext context, {required String src}) => showDialog<(String, double)>(
+    context: context,
+    builder: (_) => _MergeDialog(src: src),
+  );
+
+  @override
+  State<_MergeDialog> createState() => _MergeDialogState();
+}
+
+class _MergeDialogState extends State<_MergeDialog> {
+  final _noController = TextEditingController();
+  String? _target;
+
+  @override
+  void dispose() {
+    _noController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Consumer(
+      builder: (context, ref, _) {
+        final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
+        final targets = books.where((b) => b.isBook).toList();
+        return AlertDialog(
+          backgroundColor: AppTokens.card,
+          title: Text(l10n.libMergeTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          content: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: _target,
+                  isDense: true,
+                  style: const TextStyle(fontSize: 12),
+                  hint: Text(l10n.libMergeTargetHint, style: const TextStyle(fontSize: 12)),
+                  items: [
+                    for (final b in targets)
+                      DropdownMenuItem(
+                        value: b.key,
+                        child: Text(b.name, style: const TextStyle(fontSize: 12)),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _target = v),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _noController,
+                  style: const TextStyle(fontSize: 12),
+                  decoration: InputDecoration(labelText: l10n.libMergeNoHint, isDense: true),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
+            ),
+            FilledButton(
+              onPressed: _target == null
+                  ? null
+                  : () {
+                      final no = double.tryParse(_noController.text.trim());
+                      if (no == null) return;
+                      Navigator.of(context).pop((_target!, no));
+                    },
+              child: Text(l10n.libMerge, style: const TextStyle(fontSize: 11.5)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

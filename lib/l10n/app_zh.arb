@@ -340,7 +340,7 @@
     "description": "话：标题",
     "placeholders": {
       "no": {
-        "type": "int"
+        "type": "String"
       }
     }
   },
@@ -1666,5 +1666,124 @@
         "type": "String"
       }
     }
+  },
+  "libLocalLibrary": "本地漫画库",
+  "@libLocalLibrary": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libRefresh": "刷新",
+  "@libRefresh": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libCreateBook": "新建漫画",
+  "@libCreateBook": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libCreateBookNameHint": "漫画名",
+  "@libCreateBookNameHint": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libCreateBookOk": "已创建「{name}」",
+  "@libCreateBookOk": {
+    "description": "漫画库文案",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "libViewCard": "卡片",
+  "@libViewCard": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libViewCapsule": "简易",
+  "@libViewCapsule": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libCapsuleLegend": "待译 蓝 · 缺页 黄 · 已译完不显示",
+  "@libCapsuleLegend": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libEditInfo": "编辑信息",
+  "@libEditInfo": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libEditInfoTitle": "编辑漫画信息",
+  "@libEditInfoTitle": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libEditInfoOk": "已保存",
+  "@libEditInfoOk": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libAllTranslated": "这本漫画已全部翻译完成",
+  "@libAllTranslated": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libResumeSubmitted": "已提交继续翻译",
+  "@libResumeSubmitted": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libRevealDone": "已打开目录",
+  "@libRevealDone": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libMerge": "归并",
+  "@libMerge": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libMergeTitle": "归并到漫画",
+  "@libMergeTitle": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libMergeTargetHint": "目标漫画名",
+  "@libMergeTargetHint": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libMergeNoHint": "话号（如 1 或 1.5）",
+  "@libMergeNoHint": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libMergeOk": "已归并",
+  "@libMergeOk": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libUnmerged": "未归并单话",
+  "@libUnmerged": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libChapterStatusDone": "已译完",
+  "@libChapterStatusDone": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libChapterStatusPending": "待译",
+  "@libChapterStatusPending": {
+    "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libChapterStatusMissing": "缺页",
+  "@libChapterStatusMissing": {
+    "description": "漫画库文案",
+    "placeholders": null
   }
 }

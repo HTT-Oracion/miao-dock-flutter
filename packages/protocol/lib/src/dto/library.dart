@@ -111,7 +111,7 @@ class ChapterEntry {
   });
 
   /// 已归并：话号；未归并：null。
-  final int? no;
+  final double? no;
 
   final String dirName;
   final String absDir;

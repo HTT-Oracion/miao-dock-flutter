@@ -26,8 +26,10 @@ class LibraryNotifier extends AsyncNotifier<List<LibBook>> {
       ref.read(hiddenComicsProvider.notifier).set(response.hidden ?? const []);
       // 新服务端给 books；旧服务端只给 comics —— 后者无法还原「话」层级，按空书架处理。
       final books = response.books?.map(toLibBook).toList() ?? const <LibBook>[];
-      _lastGood = books;
-      return books;
+      final others = response.others?.map(toLibBookFromChapter).toList() ?? const <LibBook>[];
+      final all = [...books, ...others];
+      _lastGood = all;
+      return all;
     } catch (e, st) {
       // 保留 _lastGood，交给 UI 决定「横幅 + 旧数据」还是「整块错误态」。
       Error.throwWithStackTrace(e, st);
@@ -41,7 +43,9 @@ class LibraryNotifier extends AsyncNotifier<List<LibBook>> {
       final response = await ref.read(mangaSvcClientProvider).listLibrary();
       ref.read(hiddenComicsProvider.notifier).set(response.hidden ?? const []);
       final books = response.books?.map(toLibBook).toList() ?? const <LibBook>[];
-      _lastGood = books;
+      final others = response.others?.map(toLibBookFromChapter).toList() ?? const <LibBook>[];
+      final all = [...books, ...others];
+      _lastGood = all;
       return books;
     });
   }
@@ -68,6 +72,16 @@ class HiddenComicsNotifier extends Notifier<List<String>> {
   List<String> build() => const [];
 
   void set(List<String> v) => state = v;
+}
+
+/// 详情视图模式：`card`（卡片）/ `capsule`（简易，ver1.0 `.view-seg`）。
+final libModeProvider = NotifierProvider<LibModeNotifier, String>(LibModeNotifier.new);
+
+class LibModeNotifier extends Notifier<String> {
+  @override
+  String build() => 'card';
+
+  void set(String v) => state = v;
 }
 
 /// 是否在书架里展示隐藏区。

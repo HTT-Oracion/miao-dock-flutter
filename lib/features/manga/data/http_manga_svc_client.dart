@@ -518,7 +518,7 @@ BookEntry _bookOf(Map<String, dynamic> j) => BookEntry(
 ChapterEntry _chapterOf(Map<String, dynamic> j) {
   final mergedTo = j['mergedTo'];
   return ChapterEntry(
-    no: j['no'] is num ? (j['no'] as num).toInt() : null,
+    no: j['no'] is num ? (j['no'] as num).toDouble() : null,
     dirName: _stringOf(j['dirName']),
     absDir: _stringOf(j['absDir']),
     imageCount: _intOf(j['imageCount']),

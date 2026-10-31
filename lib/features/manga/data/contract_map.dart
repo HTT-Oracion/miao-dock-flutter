@@ -38,7 +38,7 @@ LibBook toLibBook(BookEntry book) => LibBook(
 
 /// `ChapterEntry` → [LibChapter]。
 LibChapter toLibChapter(ChapterEntry chapter) => LibChapter(
-  no: chapter.no ?? 0,
+  no: (chapter.no ?? 0).toDouble(),
   pageCount: chapter.seqMax,
   donePages: chapter.translatedCount,
   dirName: chapter.dirName,
@@ -64,3 +64,15 @@ MangaTaskStatus _statusOf(TaskStatus status) => switch (status) {
   TaskStatus.failed => MangaTaskStatus.failed,
   TaskStatus.canceled => MangaTaskStatus.cancelled,
 };
+
+/// `ChapterEntry`（未归并单话）→ [LibBook]：无话层、无封面状态沿用，`isBook=false`。
+LibBook toLibBookFromChapter(ChapterEntry c) => LibBook(
+  key: c.dirName,
+  name: c.dirName,
+  author: '',
+  chapters: const [],
+  totalBytes: 0,
+  hasCover: false,
+  modifiedAt: c.modifiedAt,
+  isBook: false,
+);

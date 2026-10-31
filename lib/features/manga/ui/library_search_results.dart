@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:protocol/protocol.dart' show jsNumStr;
+
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../controller/library_controller.dart';
@@ -158,7 +160,7 @@ class _HitRow extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              AppLocalizations.of(context).chapterTitle(chapter.no),
+              AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12.5, color: AppTokens.textPrimary),
             ),

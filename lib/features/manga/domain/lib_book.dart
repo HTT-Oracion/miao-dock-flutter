@@ -8,6 +8,7 @@ class LibBook {
     required this.totalBytes,
     this.hasCover = false,
     this.modifiedAt,
+    this.isBook = true,
   });
 
   /// 归并键（= 服务端 `dirName`）。
@@ -26,6 +27,9 @@ class LibBook {
   final bool hasCover;
 
   final DateTime? modifiedAt;
+
+  /// 是否单本（true）/未归并单话（false）。单话没有 manifest，话数恒 0。
+  final bool isBook;
 
   int get chapterCount => chapters.length;
   int get pageCount => chapters.fold(0, (sum, c) => sum + c.pageCount);
@@ -46,7 +50,7 @@ class LibChapter {
     this.merged = false,
   });
 
-  final int no;
+  final double no;
   final int pageCount;
   final int donePages;
 

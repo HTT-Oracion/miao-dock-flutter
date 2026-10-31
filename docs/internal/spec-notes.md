@@ -1585,3 +1585,24 @@
 - **验证**：`library_merge_test` 7 条（成功含小数话号/6 类守卫）；服务端 159 通过；应用 116 通过。
 - **客户端**：`mergeChapter(src, targetBook:, no:)` 对齐旧项目 body（原 `mergeChapters(chapterDirs)` 语义错误）。
 - **关联**：D-078（命名）· D-082（隐藏）。
+
+## D-084 漫画库详情主区（新建/刷新/简易模式/编辑/归并入/继续翻译/打开目录）
+
+- **状态**：完成（2026-11-01）；阅读器（B.6）与右键菜单（D）留后续
+- **对照**：ver1.0 `assets/app.js` 库视图（`.view-seg` 卡片/简易、`.lib-main` 头、hero 动作）
+  与 miao-dock `LibraryRight.tsx`（继续翻译 primary / 编辑信息）。
+- **书架数据修正**：`LibraryNotifier` 之前**只取 `response.books`，未归并单话（`others`）被整体丢弃**。
+  现在 `[...books, ...others]` 合并，`LibBook.isBook` 区分单本/单话 ——
+  单话从此出现在书架、可点进详情（查看逻辑：**未翻译完也能点进**，与状态无关）。
+- **话号小数贯穿 UI**：`LibChapter.no` / `ChapterEntry.no` 由 int 改 **double**，
+  `chapterTitle` 用 `jsNumStr` 显示（`1.5` 不显示成 `1.0`/`1.50`）。
+- **主区头部**：本地漫画库 + 计数 + 刷新（B.9）+ 新建漫画（B.1，对话框→`createBook`→吐司）。
+- **简易模式**（B.4）：`.view-seg` 卡片/简易切换（`libModeProvider`）；
+  简易 = 胶囊行：话名 + 状态圆点（待译 蓝 / 缺页 黄 / 已译完不显示），头部显示图例。
+- **Hero 动作**：
+  - 单本：继续翻译（先 `getResumePlan`，`pendingCount==0` → 「已全部翻译」吐司；否则 POST+吐司）、
+    编辑信息（B.5，仅单本）、打开目录（`reveal`）；
+  - 单话：归并（对话框选目标书 + 话号，调 D-083 `mergeChapter`）、打开目录。
+- **未做**：阅读器（B.6，下一轮）；「查看」按钮在阅读器落地时一并接。
+- **验证**：`flutter analyze` 干净；应用 116 通过；服务端 159 通过；l10n 棘轮通过。
+- **关联**：D-083（归并）· D-082（隐藏）· D-078（命名）。
