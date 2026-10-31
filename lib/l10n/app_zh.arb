@@ -1361,5 +1361,141 @@
   "engineEntryFailed": "失败",
   "@engineEntryFailed": {
     "description": "下载卡：条目状态"
+  },
+  "settingsBlurbGeneral": "外观、生命周期与本机自检等",
+  "@settingsBlurbGeneral": {
+    "description": "设置页文案"
+  },
+  "settingDarkMode": "深色模式",
+  "@settingDarkMode": {
+    "description": "设置页文案"
+  },
+  "settingDarkModeWhy": "切换应用明暗主题；只换变量不换结构。",
+  "@settingDarkModeWhy": {
+    "description": "设置页文案"
+  },
+  "settingCloseBehavior": "关闭窗口行为",
+  "@settingCloseBehavior": {
+    "description": "设置页文案"
+  },
+  "settingCloseBehaviorWhy": "点关闭 = 收起到托盘，服务继续跑；真正退出走托盘菜单并二次确认。",
+  "@settingCloseBehaviorWhy": {
+    "description": "设置页文案"
+  },
+  "settingCloseToTray": "收起到托盘",
+  "@settingCloseToTray": {
+    "description": "设置页文案"
+  },
+  "settingCloseQuit": "直接退出",
+  "@settingCloseQuit": {
+    "description": "设置页文案"
+  },
+  "settingNotWired": "暂未接入",
+  "@settingNotWired": {
+    "description": "设置页文案"
+  },
+  "settingSpecCheck": "规格自检",
+  "@settingSpecCheck": {
+    "description": "设置页文案"
+  },
+  "settingSpecCheckWhy": "启动即自检设置与断言；结果即时显示。",
+  "@settingSpecCheckWhy": {
+    "description": "设置页文案"
+  },
+  "settingSpecCheckRun": "运行自检",
+  "@settingSpecCheckRun": {
+    "description": "设置页文案"
+  },
+  "settingSidebarLabels": "侧栏图标标签",
+  "@settingSidebarLabels": {
+    "description": "设置页文案"
+  },
+  "settingSidebarLabelsWhy": "关掉后侧栏只留图标；悬停仍有提示。",
+  "@settingSidebarLabelsWhy": {
+    "description": "设置页文案"
+  },
+  "settingSidebarLabelsShow": "显示",
+  "@settingSidebarLabelsShow": {
+    "description": "设置页文案"
+  },
+  "settingLangZh": "简体中文",
+  "@settingLangZh": {
+    "description": "设置页文案"
+  },
+  "settingSectionModel": "模型",
+  "@settingSectionModel": {
+    "description": "设置页文案"
+  },
+  "settingSectionModelHead": "模型目录与完整性",
+  "@settingSectionModelHead": {
+    "description": "设置页文案"
+  },
+  "settingModelDirWhy": "模型与字体的落盘位置；引擎实际从这里读取。",
+  "@settingModelDirWhy": {
+    "description": "设置页文案"
+  },
+  "settingModelVerify": "校验完整性",
+  "@settingModelVerify": {
+    "description": "设置页文案"
+  },
+  "settingModelRedownload": "重新下载模型",
+  "@settingModelRedownload": {
+    "description": "设置页文案"
+  },
+  "settingDiagTitle": "诊断输出",
+  "@settingDiagTitle": {
+    "description": "设置页文案"
+  },
+  "settingsBackHome": "返回喵坞",
+  "@settingsBackHome": {
+    "description": "设置页文案"
+  },
+  "settingDirectionLabel": "翻译方向",
+  "@settingDirectionLabel": {
+    "description": "设置页文案"
+  },
+  "settingDirectionWhy": "按任务方向执行；此处为默认档。",
+  "@settingDirectionWhy": {
+    "description": "设置页文案"
+  },
+  "settingLibraryDirLabel": "落盘根目录",
+  "@settingLibraryDirLabel": {
+    "description": "设置页文案"
+  },
+  "settingLibraryDirWhy": "译文按「本 → 话 → 页」写入该目录；重名不覆盖。",
+  "@settingLibraryDirWhy": {
+    "description": "设置页文案"
+  },
+  "settingTierLite": "轻量",
+  "@settingTierLite": {
+    "description": "设置页文案"
+  },
+  "settingTierStandard": "标准",
+  "@settingTierStandard": {
+    "description": "设置页文案"
+  },
+  "settingTierHigh": "高质量",
+  "@settingTierHigh": {
+    "description": "设置页文案"
+  },
+  "settingSpecNotWired": "规格自检需要运行时断言集，尚未接入",
+  "@settingSpecNotWired": {
+    "description": "设置页文案"
+  },
+  "settingTrayNotWired": "托盘能力尚未接入，暂不可用",
+  "@settingTrayNotWired": {
+    "description": "设置页文案"
+  },
+  "settingLight": "浅色",
+  "@settingLight": {
+    "description": "主题标签"
+  },
+  "settingDark": "深色",
+  "@settingDark": {
+    "description": "主题标签"
+  },
+  "svcCardLocalService": "本地服务",
+  "@svcCardLocalService": {
+    "description": "服务卡片胶囊（设计稿 .pill-good）"
   }
 }

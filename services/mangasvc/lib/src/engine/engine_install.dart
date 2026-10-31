@@ -192,20 +192,10 @@ class EngineInstaller {
       _log('[install] ↓ $e.id → $targetRel');
 
       final downloader = _downloaderFactory(dir.path);
-      final r = await downloader.download(
-        url: e.url,
-        fileName: targetAbs.split(sep).last,
-        sha256: e.sha256,
-        onProgress: (received, total) => onProgress?.call(
-          InstallProgress(
-            index: i,
-            total: plan.entries.length,
-            entryId: e.id,
-            phase: 'download',
-            percent: (total == null || total <= 0) ? null : received / total,
-          ),
-        ),
-      );
+      // 网络抖动是常态（实测 0.2 MB 的小文件也会超时）：可重试错误退避重试，
+      // 已下的 `.part` 会在下一次尝试里续传，不会从头再来。
+      var r = await _downloadWithRetry(downloader, e, targetAbs.split(sep).last, onProgress, i, plan);
+
       if (!r.ok) {
         _log('[install] ✗ ${e.id} 下载失败：${r.error}');
         return InstallReport(ok: false, logs: List.of(_logs), error: r.error);
@@ -231,6 +221,45 @@ class EngineInstaller {
     await _writeLaunchSpec(sep);
     _log('[install] ✓ 装配完成');
     return InstallReport(ok: true, logs: List.of(_logs));
+  }
+
+  /// 带重试的下载（最多 3 次，退避 1s/2s）。
+  ///
+  /// 网络抖动是常态（实测 0.2 MB 的小文件也会超时）：可重试错误退避重试，
+  /// 已下的 `.part` 会在下一次尝试里续传，不会从头再来。
+  Future<DownloadResult> _downloadWithRetry(
+    ModelDownloader downloader,
+    EngineManifestEntry e,
+    String fileName,
+    void Function(InstallProgress)? onProgress,
+    int i,
+    EngineInstallPlan plan,
+  ) async {
+    Future<DownloadResult> once() => downloader.download(
+      url: e.url,
+      fileName: fileName,
+      sha256: e.sha256,
+      onProgress: (received, total) => onProgress?.call(
+        InstallProgress(
+          index: i,
+          total: plan.entries.length,
+          entryId: e.id,
+          phase: 'download',
+          percent: (total == null || total <= 0) ? null : received / total,
+        ),
+      ),
+    );
+
+    var attempt = 0;
+    var r = await once();
+    while (!r.ok && r.retryable && attempt < 2) {
+      attempt++;
+      final backoff = Duration(seconds: attempt);
+      _log('[install] ↻ ${e.id} 重试 $attempt（${backoff.inSeconds}s 后，断点续传）');
+      await Future<void>.delayed(backoff);
+      r = await once();
+    }
+    return r;
   }
 
   /// 写 `launch.json`（D-030）—— 引擎「怎么起」的唯一事实源。

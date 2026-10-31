@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/storage/shell_prefs.dart';
-import '../../core/theme/theme_mode.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
@@ -148,7 +147,7 @@ class _DesktopShell extends ConsumerWidget {
                 AppTitleBar(
                   topInset: topInset,
                   breadcrumb: _Crumbs(crumbs: location.crumbs),
-                  actions: [if (location.moduleIndex == 0) const _TranslateStatusChips(), const _ThemeToggleButton()],
+                  actions: [if (location.moduleIndex == 0) const _TranslateStatusChips()],
                 ),
                 Container(height: 1, color: palette.line),
                 Expanded(
@@ -275,25 +274,6 @@ class _Crumbs extends StatelessWidget {
 }
 
 /// 主题切换（design.html §01：深浅双主题；图标沿用 lucide 线性风格）。
-class _ThemeToggleButton extends ConsumerWidget {
-  const _ThemeToggleButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final l10n = AppLocalizations.of(context);
-    return IconButton(
-      icon: Icon(isDark ? LucideIcons.sun : LucideIcons.moon, size: 15),
-      color: palette.ink2,
-      tooltip: isDark ? l10n.actionToLightTheme : l10n.actionToDarkTheme,
-      onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
-    );
-  }
-}
-
-// ── 移动壳 ────────────────────────────────────────────────────────────────
-
 class _MobileShell extends ConsumerStatefulWidget {
   const _MobileShell({required this.shell, required this.location});
 
@@ -374,8 +354,6 @@ class _MobileTopBar extends StatelessWidget {
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink),
             ),
           ),
-          const _ThemeToggleButton(),
-          const SizedBox(width: 4),
         ],
       ),
     );

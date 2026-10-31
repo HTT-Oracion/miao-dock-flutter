@@ -63,6 +63,11 @@ class ModelDownloader {
 
     var already = part.existsSync() ? part.lengthSync() : 0;
     final client = _clientFactory();
+    // 🔴 Dart 默认 idleTimeout 只有 15s：4 GB 的 gguf 在慢镜像上必然被判定超时
+    // （实测断在 `Operation timed out`，而当时只下到几 MB）。
+    // 大文件下载必须放宽，否则「能下小文件、下不了大文件」这种问题极难自证。
+    client.idleTimeout = const Duration(minutes: 5);
+    client.connectionTimeout = const Duration(seconds: 30);
     _active = client;
 
     try {

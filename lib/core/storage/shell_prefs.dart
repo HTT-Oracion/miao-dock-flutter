@@ -122,3 +122,14 @@ bool readAutoStartEngine() {
 }
 
 void persistAutoStartEngine(bool value) => _writePref(_kAutoStartEngineKey, value ? 'true' : 'false');
+
+/// 「应用启动时自动拉起翻译服务」（设计稿「自动启动翻译服务」）。
+///
+/// 缺键返回 true：服务常驻是默认行为（D-012）。
+bool readAutoStartService() {
+  final v = _readPrefs()['miao.auto-start-service'];
+  if (v == null) return true;
+  return v == 'true';
+}
+
+void persistAutoStartService(bool value) => _writePref('miao.auto-start-service', value ? 'true' : 'false');

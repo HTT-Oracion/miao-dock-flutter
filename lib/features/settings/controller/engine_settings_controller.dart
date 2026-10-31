@@ -70,12 +70,15 @@ class EngineSettingsNotifier extends Notifier<EngineSettings> {
   /// 保存单项设置：走服务端白名单校验，成功后更新本地视图。
   ///
   /// 返回 `needsRestart` —— 改 tier / accel 需要重启引擎才生效（C2 契约）。
-  Future<bool> save({String? tier, String? accel, int? idleUnloadMinutes}) async {
+  Future<bool> save({String? tier, String? accel, int? idleUnloadMinutes, int? visualIdleUnloadMinutes}) async {
     final patch = <String, dynamic>{'tier': ?tier, 'accel': ?accel, 'idleUnloadMinutes': ?idleUnloadMinutes};
     final needsRestart = await ref.read(mangaSvcClientProvider).setEngineSettings(patch);
     if (tier != null) state = state.copyWith(tier: tier);
     if (accel != null) state = state.copyWith(accel: accel);
     if (idleUnloadMinutes != null) state = state.copyWith(idleUnloadMinutes: idleUnloadMinutes);
+    if (visualIdleUnloadMinutes != null) {
+      state = state.copyWith(visualIdleUnloadMinutes: visualIdleUnloadMinutes);
+    }
     return needsRestart;
   }
 }
