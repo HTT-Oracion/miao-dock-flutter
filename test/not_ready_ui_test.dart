@@ -43,8 +43,22 @@ void main() {
 
     // 破坏点：未装配态给了「启动引擎」→ 用户点了必然失败，本条失败。
     expect(find.text('下载引擎与模型'), findsOneWidget);
-    expect(find.text('先去设置看看'), findsOneWidget);
     expect(find.text('翻译引擎还没有装配'), findsOneWidget);
+  });
+
+  testWidgets('引导卡不出现「先去设置看看 / 设置」次级按钮', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // 破坏点：卡片里多出设置类按钮 → 与设计稿不符且分散主操作，本条失败。
+    // （这条是补的：此前删除只改了代码，没有断言拦住，回归过一次。）
+    for (final st in [NotReadyState.uninstalled, NotReadyState.installed, NotReadyState.failed]) {
+      await tester.pumpWidget(host(screen(st)));
+      await tester.pumpAndSettle();
+      expect(find.text('先去设置看看'), findsNothing, reason: '$st 不应有「先去设置看看」');
+      expect(find.text('设置'), findsNothing, reason: '$st 不应有「设置」');
+    }
   });
 
   testWidgets('已装未启动态显示启动主操作', (tester) async {

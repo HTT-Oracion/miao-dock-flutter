@@ -495,11 +495,10 @@ class _Actions extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: AppPalette.of(context).acc,
             foregroundColor: AppPalette.of(context).onAcc,
-            // design.html .btn.pri：高 26 / 内距 10 / 圆角 6 / 字 9.5
-            minimumSize: const Size(0, 26),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            minimumSize: const Size(0, 34),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-            textStyle: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600),
+            textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
           ),
           child: Text(primary),
         ),
@@ -513,16 +512,6 @@ class _Actions extends StatelessWidget {
             ),
             child: Text(l10n.nrActionRedownload),
           ),
-        if (view.state == NotReadyState.uninstalled && onSecondary != null)
-          OutlinedButton(
-            onPressed: onSecondary,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 34),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              textStyle: const TextStyle(fontSize: 9.5),
-            ),
-            child: Text(l10n.nrActionGoSettings),
-          ),
         // 导入本地运行时（D-015）：指向已有 runtimes，跳过下载。
         if (view.state == NotReadyState.uninstalled && onImportLocal != null)
           OutlinedButton.icon(
@@ -535,22 +524,12 @@ class _Actions extends StatelessWidget {
               textStyle: const TextStyle(fontSize: 9.5),
             ),
           ),
-        if (view.state == NotReadyState.installed && onSecondary != null)
-          OutlinedButton(
-            onPressed: onSecondary,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 34),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              textStyle: const TextStyle(fontSize: 9.5),
-            ),
-            child: Text(l10n.nrActionSettings),
-          ),
         // 只读出口：不需要引擎，因此不会与「等引擎」形成死循环。
         if (onBrowseLibrary != null)
           TextButton(
             onPressed: onBrowseLibrary,
-            style: TextButton.styleFrom(minimumSize: const Size(0, 26)),
-            child: Text(l10n.engineBrowseLibrary, style: const TextStyle(fontSize: 9.5)),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 34)),
+            child: Text(l10n.engineBrowseLibrary, style: const TextStyle(fontSize: 11)),
           ),
       ],
     );
