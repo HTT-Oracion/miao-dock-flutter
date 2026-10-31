@@ -1285,3 +1285,18 @@
   启动协议里**令牌必须是显式输出 + 显式接收**，不能靠约定。
 - **验证**：`flutter analyze` 干净；应用 116 通过。
 - **关联**：D-064（把 403 显示出来）· D-022（沙箱）· D-045（远程令牌）。
+
+## D-066 `--print-token` 漏了打包分支（403 未修好的真正原因）
+
+- **状态**：已修（2026-11-01）
+- **现象**：D-065 之后重启仍报同样的 403。
+- **根因**：`ServiceLaunchPlan.resolve` 有**三条分支**：
+  `dart-define/env`、**`bundled`（与 App 同目录的 mangasvc）**、`dev-source`（`dart run …dart`）。
+  D-065 只给 `dev-source` 加了 `--print-token`，而启动日志写的是
+  `[bootstrap] mangasvc bundled → 端口 5180` —— **实际走的是 bundled 分支**，args 仍是空数组。
+  于是服务照常要求令牌、应用照常拿不到 → 403 一模一样。
+- **修法**：三条分支全部追加 `--print-token`，并在 bundled 分支上写明原因，避免下次再漏。
+- **教训**：**多分支的启动装配，改一处等于没改**。判断实际走哪条分支要看运行时日志
+  （`origin` 字段就是为此存在的），不能凭印象。
+- **验证**：`flutter analyze` 干净；应用 116 通过；`grep args:` 三处均含 `--print-token`。
+- **关联**：D-065。

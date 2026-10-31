@@ -43,7 +43,8 @@ class ServiceLaunchPlan {
       if (f.existsSync()) {
         return ServiceLaunchPlan(
           executable: f.path,
-          args: const [],
+          // 必须让服务打印令牌，否则应用拿不到、每个请求 403。
+          args: const ['--print-token'],
           workingDirectory: f.parent.path,
           origin: 'dart-define/env',
         );
@@ -56,7 +57,14 @@ class ServiceLaunchPlan {
     final sep = Platform.pathSeparator;
     final bundled = '$exeDir${sep}mangasvc${Platform.isWindows ? '.exe' : ''}';
     if (File(bundled).existsSync()) {
-      return ServiceLaunchPlan(executable: bundled, args: const [], workingDirectory: exeDir, origin: 'bundled');
+      return ServiceLaunchPlan(
+        executable: bundled,
+        // 🔴 打包分支同样必须打印令牌：日志里的 `bundled → 端口 5180`
+        // 说明实际走的就是这条，漏了它整条鉴权链就是断的。
+        args: const ['--print-token'],
+        workingDirectory: exeDir,
+        origin: 'bundled',
+      );
     }
     tried.add(bundled);
 
