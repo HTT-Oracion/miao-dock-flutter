@@ -1506,3 +1506,20 @@
   设置页 1s 轮询下观感等同实时；真逐帧流式需改 `EngineClient` 的流式解析，留作后续。
 - **验证**：服务端 133 通过；`dart analyze` 干净。
 - **关联**：D-075（翻译日志入口）· D-043（帧协议）。
+
+## D-078 话号命名与 manifest 模型（阶段 0 起）
+
+- **状态**：完成第一块（2026-11-01）
+- **对照源码**：`miao-dock/src-tauri/src/mangasvc/library.rs`（`chapter_dir_name` /
+  `chapter_no_from_dir_name` / `is_valid_chapter_no` / `js_num_str` / `MAX_CHAPTER_NO=999`）。
+- **已落地**（`packages/protocol/lib/src/library_manifest.dart`，两端共用）：
+  - `chapterDirName`：`NN_第N话`，**两位零填充是对字符串长度做的**（`1→01`，`1.5→1.5`）；
+  - `chapterNoFromDirName`：正则 `^(\d{1,3}(?:\.\d{1,3})?)_第(\d{1,3}(?:\.\d{1,3})?)话$`，取话名里的数，不匹配返回 null；
+  - `isValidChapterNo`：`[1.0, 999.9]`，小数只匹配 `^\d{1,3}\.[1-9]$`；
+  - `LibraryManifest`：键序 `schema,title,author,cover,episodes`（可逐字节比对），
+    `episodes[] = {no, dir}`。
+- **一处行为对齐澄清**：`1.10` 在 double 里就是 `1.1`（Rust 同样格式化丢尾零），
+  会被当作合法话号 1.1 接受 —— 测试按此口径，不制造与旧项目的假差异。
+- **验证**：`episode_naming_test.dart` 6 条；服务端 139 通过；`flutter analyze` 干净。
+- **下一步（阶段 0 余下）**：任务 `dir_name` 命名与字段补齐、队列章节目录按话号写出。
+- **关联**：`miao-dock` library.rs:40-90。
