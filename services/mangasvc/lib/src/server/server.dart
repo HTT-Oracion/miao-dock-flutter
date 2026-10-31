@@ -4,6 +4,7 @@ import 'dart:io';
 import 'handlers.dart';
 import 'http.dart';
 import 'routes.dart';
+import 'security.dart';
 
 /// mangasvc 的 HTTP 服务本体。
 ///
@@ -15,7 +16,13 @@ import 'routes.dart';
 /// 不设单实例锁：两个实例会自然落到不同端口，客户端都能认出来。
 /// 这与原项目一致（`animesvc` 与 `mangasvc` 同段共存）。
 class MangaSvcServer {
-  MangaSvcServer({this.portStart = 5180, this.portEnd = 5190, this.rootDir, this.engineMode = 'mock'});
+  MangaSvcServer({
+    this.portStart = 5180,
+    this.portEnd = 5190,
+    this.rootDir,
+    this.engineMode = 'mock',
+    this.requireToken = true,
+  });
 
   final int portStart;
   final int portEnd;
@@ -26,7 +33,17 @@ class MangaSvcServer {
   /// 引擎模式：`mock`（B 级替身）/ `real`。
   final String engineMode;
 
+  /// 是否要求 `X-Box-Token`（E4：跨设备访问的鉴权面）。测试可关。
+  final bool requireToken;
+
+  /// 安全策略（启动时由 [start] 填充 token）。
+  late SecurityPolicy _policy = const SecurityPolicy();
+
   HttpServer? _server;
+  String? _token;
+
+  /// 当前服务令牌（父进程要把它传给客户端；`--print-token` 会输出）。
+  String? get token => _token;
   late final Handlers _handlers = Handlers(rootDir: rootDir, engineMode: engineMode);
 
   /// 实际绑定的端口（未启动为 null）。
@@ -39,6 +56,9 @@ class MangaSvcServer {
       try {
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, p, shared: false);
         _server = server;
+        final token = resolveToken(rootDir: _handlers.store.rootDir, enabled: requireToken);
+        _policy = SecurityPolicy(token: token);
+        _token = token;
         server.listen(_dispatch);
         await _handlers.init();
         return p;
@@ -58,6 +78,10 @@ class MangaSvcServer {
 
   Future<void> _dispatch(HttpRequest req) async {
     try {
+      // 安全层在最外层：Origin 白名单 → CORS 预检 → 令牌。
+      final verdict = await guardRequest(req, _policy);
+      if (verdict != SecurityVerdict.allow) return;
+
       final match = matchRouteSegments(req.method, req.uri.pathSegments);
       if (match == null) {
         await writeErrorCode(req.response, 404, 'NOT_FOUND', '端点不存在：${req.method} ${req.uri.path}');
@@ -65,13 +89,18 @@ class MangaSvcServer {
       }
       await _handlers.handle(req, match);
     } on ServiceError catch (e) {
-      await writeError(req.response, e);
+      // 响应可能已被写（如 SSE 流已开）——此时再写头会抛，吞掉即可。
+      try {
+        await writeError(req.response, e);
+      } catch (_) {}
     } catch (e, st) {
       // 未预期异常也要回信封，不能给客户端一个裸 500。
-      await writeError(
-        req.response,
-        ServiceError('INTERNAL', '服务内部错误：$e', details: {'stack': st.toString()}, status: 500),
-      );
+      try {
+        await writeError(
+          req.response,
+          ServiceError('INTERNAL', '服务内部错误：$e', details: {'stack': st.toString()}, status: 500),
+        );
+      } catch (_) {}
     }
   }
 }

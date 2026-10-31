@@ -133,7 +133,10 @@ class Handlers {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
     }
     final paths = imagePaths.whereType<String>().toList();
-    final created = await queue.createTask(comicName: comicName.trim(), imagePaths: paths);
+    // 来源归因：服务端按 `X-Box-Client` 判定，缺省按 desktop。
+    final client = req.headers.value('x-box-client') ?? 'desktop';
+    final source = client == 'extension' ? 'extension' : 'desktop';
+    final created = await queue.createTask(comicName: comicName.trim(), imagePaths: paths, source: source);
     await writeJson(req.response, 200, created);
   }
 

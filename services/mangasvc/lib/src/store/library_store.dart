@@ -57,6 +57,8 @@ class LibraryStore {
       if (entity is! Directory) continue;
       final name = _baseName(entity.path);
       if (name.startsWith('.')) continue; // 跳过隐藏目录
+      // 服务自己的状态目录（token / hidden-comics.json）不是漫画，必须排除。
+      if (name == 'state') continue;
 
       final chapters = _chaptersOf(entity);
       final hasManifest = _manifestOf(entity) != null;

@@ -8,6 +8,8 @@ import 'package:mangasvc/src/server/server.dart';
 ///   `--engine <mock|real>`  引擎模式（默认 mock，服务自测不需要 Python）
 ///   `--root <dir>`          落盘根目录（默认 `~/MiaoDock/library`）
 ///   `--port <n>`            固定端口（默认在 5180–5190 探测）
+///   `--no-token`            关闭 `X-Box-Token` 校验（**仅开发/自测**）
+///   `--print-token`         就绪后额外打印令牌（父进程接管用）
 ///
 /// 就绪信号：stdout 打印 `mangasvc listening on 127.0.0.1:<port>`，
 /// 父进程据此判定可以开始请求。
@@ -15,16 +17,22 @@ Future<void> main(List<String> args) async {
   final engine = _arg(args, '--engine') ?? 'mock';
   final root = _arg(args, '--root');
   final fixedPort = int.tryParse(_arg(args, '--port') ?? '');
+  final noToken = args.contains('--no-token');
+  final printToken = args.contains('--print-token');
 
   final server = MangaSvcServer(
     portStart: fixedPort ?? 5180,
     portEnd: fixedPort ?? 5190,
     rootDir: root,
     engineMode: engine,
+    requireToken: !noToken,
   );
 
   final port = await server.start();
   stdout.writeln(readyLine(port));
+  if (printToken && server.token != null) {
+    stdout.writeln('mangasvc token ${server.token}');
+  }
   await stdout.flush();
 
   // 优雅退出：Ctrl+C / SIGTERM 时关服务，不留半开连接。

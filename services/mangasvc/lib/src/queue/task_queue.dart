@@ -36,7 +36,11 @@ class TaskQueue {
   List<QueueTask> get tasks => List.unmodifiable(_tasks);
 
   /// 建单：新任务插到队首（与原项目一致，最新提交在最上）。
-  Future<Map<String, dynamic>> createTask({required String comicName, required List<String> imagePaths}) async {
+  Future<Map<String, dynamic>> createTask({
+    required String comicName,
+    required List<String> imagePaths,
+    String source = 'desktop',
+  }) async {
     if (imagePaths.isEmpty) {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
     }
@@ -49,6 +53,7 @@ class TaskQueue {
       total: imagePaths.length,
       createdAt: now,
       batches: List.of(imagePaths),
+      source: source,
     );
     _tasks.insert(0, task);
     _scheduleDrain();
@@ -273,6 +278,7 @@ class QueueTask {
     required this.total,
     required this.createdAt,
     required this.batches,
+    this.source = 'desktop',
   });
 
   final String taskId;
@@ -283,6 +289,9 @@ class QueueTask {
 
   /// 待处理的原图路径（按序号）。
   final List<String> batches;
+
+  /// 来源归因（`extension` / `desktop`），由 `X-Box-Client` 决定。
+  final String source;
 
   int total;
   int done = 0;
@@ -310,7 +319,7 @@ class QueueTask {
     'taskId': taskId,
     'comicName': comicName,
     'normalizedComicName': normalizedComicName,
-    'source': 'desktop',
+    'source': source,
     'status': status.wire,
     'queuePosition': 0,
     'progress': {'total': total, 'done': done, 'failed': failed, 'current': current},

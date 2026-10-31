@@ -4,6 +4,17 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:protocol/protocol.dart';
 
+/// 鉴权头名 —— 与原项目一致用 `X-Box-Token`（**不是** `Authorization: Bearer`）。
+///
+/// 🔴 契约细节：服务端只认 `x-box-token`，用错头名会得到 403 且看不出原因。
+const String kTokenHeader = 'X-Box-Token';
+
+/// 来源归因头：服务端据此把任务标记为 `extension` / `desktop`。
+const String kClientHeader = 'X-Box-Client';
+
+/// 桌面端来源标识。
+const String kClientDesktop = 'desktop';
+
 /// mangasvc 的 HTTP 传输层 —— 对应 P0-A2。
 ///
 /// 职责边界：**只做搬运与错误归口**，不做业务判断。
@@ -30,7 +41,8 @@ class MangaSvcHttpClient {
            validateStatus: (_) => true,
            headers: {
              'Accept': 'application/json',
-             if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+             if (token != null && token.isNotEmpty) kTokenHeader: token,
+             kClientHeader: kClientDesktop,
            },
          ),
        ) {
@@ -53,9 +65,9 @@ class MangaSvcHttpClient {
   void updateToken(String? value) {
     _token = value;
     if (value == null || value.isEmpty) {
-      _dio.options.headers.remove('Authorization');
+      _dio.options.headers.remove(kTokenHeader);
     } else {
-      _dio.options.headers['Authorization'] = 'Bearer $value';
+      _dio.options.headers[kTokenHeader] = value;
     }
   }
 

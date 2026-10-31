@@ -125,3 +125,24 @@
   - 反证 2 轮：删 manifest 写入 → E1 失败；路由改前缀匹配 → 3 条失败。
   - 手工实测文件内容：`001.png` 与 `001_translated.png` 字节对应，序号连续无错位。
 - **关联**：`migration-priority.md` P0-B7/B8 · P0-E1 · `plans.dart` · `library_store.dart`。
+
+## D-011 P0-E4 远程模式：安全层与鉴权头修正
+
+- **状态**：已完成（2026-10-31）
+- **做了什么**：
+  - 新增 `services/mangasvc/lib/src/server/security.dart`：Origin 白名单、CORS 预检与响应头、`X-Box-Token` 校验（定长比较）、`/health` 豁免。
+  - 令牌来源：`MIAO_TOKEN` 环境变量 > `<root>/state/token` > 随机生成（64 hex）。
+  - 服务端读 `X-Box-Client` 归因来源（`extension` / `desktop`）。
+  - 扫描排除 `state/` 目录（服务自己的状态，不是漫画）。
+- **为什么**：跨设备访问是**暴露面**（AGENTS §2 明文），不设防等于把本地服务开放给同网段任何人。
+- **修正 P0-A 的契约错误**：鉴权头原写成 `Authorization: Bearer`，**实际是 `X-Box-Token`**。头名不对 → 403，且错误信息完全看不出原因（调试成本极高）。
+- **踩坑**：
+  1. **`skip:` 在测试注册期求值**，早于 `setUpAll` —— 想在 skip 里做异步服务探测是不可能的。改为在 test 体内 `await` 探测，`markTestSkipped` + `return`。
+  2. `HttpResponse` 没有 `headersSent`；响应已写（SSE）后再写头会抛，只能 try/catch 兜住。
+  3. `state/` 目录被扫描成漫画：存 token 的地方出现在书架里。
+- **怎么验证**：
+  - `services/mangasvc/test/security_test.dart` 8 条：无 Origin 放行、`null` 放行、extension id 字符校验、普通网页拒绝、CORS 回显规则、令牌前缀不匹配、health 豁免。
+  - `test/p0e4_remote_test.dart` 4 条（真实服务）：远程地址+令牌可访问、无令牌 403、错误令牌 403、地址归一化。
+  - 实测：`curl` 覆盖 8 种场景（见 migration-priority.md E4 记录表）。
+  - 反证：令牌校验恒通过 → 2 条断言失败。
+- **关联**：`migration-priority.md` P0-E4 · `security.dart` · `manga_svc_http.dart` 的 `kTokenHeader`。
