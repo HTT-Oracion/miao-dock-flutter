@@ -818,3 +818,24 @@
   没有这层，用户第一次翻译必然失败，且错误看起来像功能坏了。
 - **验证**：服务端 117 通过；`/tmp/e2e_out.png` 与命令行结果一致（1 301 295 字节）。
 - **关联**：D-041 · D-042。
+
+## D-044 Web / 移动端只保留远程翻译（平台能力分层）
+
+- **状态**：已完成（2026-11-01）；**Web 编译通过**，浏览器内运行时未逐屏验证
+- **新增 `features/manga/domain/platform_caps.dart`**：
+  - `supportsLocalEngine` = 桌面且非 Web —— 本地引擎**只可能有这一种宿主**；
+  - `availableTranslateSources` = 桌面三选一 / 其余平台**只有远程**。
+- **为什么判定放在领域层**：这是业务约束不是 UI 细节，UI 藏选项可被别的入口绕过。
+- **落地**：
+  - `TranslateSourceNotifier`：默认值与 `set()` 都按 `supportsLocalEngine` 收口（历史遗留的本地来源也强制回落）；
+  - 设置页：非桌面**整块隐藏**引擎相关（三层条 / 部件表 / 服务卡 / 推理 / 模型 / 诊断），
+    只留「来源」并按只读行展示 + 一条说明；
+  - **不画灰掉的下拉**：没有可选项还画控件，等于给用户一个假开关。
+- **关于 `flutter build web`**：编译**本来就能过**（dart2js 给 `dart:io` 提供了会抛异常的桩），
+  所以「起不来」是运行时问题。已把启动路径上的文件/进程调用都按平台收口：
+  `shell_prefs`（kIsWeb 早退）、`service_controller`（unsupported）、`window_controller`（isDesktopPlatform）、
+  设置页引擎区块（非桌面不构建）。
+- **验证**：`flutter analyze` 干净；`flutter test` 115 通过；`flutter build web` 成功。
+- **仍未做**：`flutter run -d chrome` 的**真实浏览器运行**未验证（本机无法无头确认），
+  以及 ③ 有道智云凭证（持久化）与 ④ 远程连接输入/测试按钮。
+- **关联**：D-001 · D-012 · D-037 · D-040。

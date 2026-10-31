@@ -1497,5 +1497,9 @@
   "svcCardLocalService": "本地服务",
   "@svcCardLocalService": {
     "description": "服务卡片胶囊（设计稿 .pill-good）"
+  },
+  "settingRemoteOnlyNote": "本设备不运行本地引擎，只能使用远程翻译（连接已启动引擎的桌面端）。",
+  "@settingRemoteOnlyNote": {
+    "description": "平台能力提示"
   }
 }

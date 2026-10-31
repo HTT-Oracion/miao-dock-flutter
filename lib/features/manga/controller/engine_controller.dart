@@ -5,9 +5,9 @@ import 'package:protocol/protocol.dart';
 
 import '../../../core/storage/shell_prefs.dart';
 import 'queue_controller.dart';
-import '../../../core/window/window_controller.dart';
 import '../../../core/storage/paths.dart';
 import '../domain/not_ready_state.dart';
+import '../domain/platform_caps.dart';
 import 'engine_install_controller.dart';
 
 /// 引擎运行状态（L1 + L2 合并，共用一个开关 —— D-012）。
@@ -84,17 +84,17 @@ class TranslateSourceNotifier extends Notifier<TranslateSource> {
     final saved = readTranslateSource();
     if (saved != null) {
       final parsed = TranslateSource.parse(saved);
-      // 移动端读到历史遗留的本地来源 → 强制回落 remote（本机没有运行时）。
-      if (!isDesktopPlatform && parsed.requiresLocalRuntime) return TranslateSource.remote;
+      // Web / 移动端读到历史遗留的本地来源 → 强制回落 remote（本机跑不了引擎）。
+      if (!supportsLocalEngine && parsed.requiresLocalRuntime) return TranslateSource.remote;
       return parsed;
     }
-    // 移动端只有远程翻译（本机不跑服务，D-001）。
-    return isDesktopPlatform ? TranslateSource.local : TranslateSource.remote;
+    // Web / 移动端只有远程翻译（本机不跑引擎，D-001 / D-044）。
+    return supportsLocalEngine ? TranslateSource.local : TranslateSource.remote;
   }
 
   void set(TranslateSource value) {
-    // 移动端不允许切到需要本机运行时的来源。
-    if (!isDesktopPlatform && value.requiresLocalRuntime) return;
+    // Web / 移动端不允许切到需要本机运行时的来源（D-044）。
+    if (!supportsLocalEngine && value.requiresLocalRuntime) return;
     state = value;
     persistTranslateSource(value.wire);
   }

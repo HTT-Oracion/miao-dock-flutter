@@ -16,6 +16,7 @@ import '../../manga/controller/engine_controller.dart';
 import '../../manga/controller/engine_install_controller.dart';
 import '../../manga/controller/engine_ready_controller.dart';
 import '../../manga/domain/not_ready_state.dart';
+import '../../manga/domain/platform_caps.dart';
 import '../controller/engine_dir_controller.dart';
 import '../controller/engine_settings_controller.dart';
 import 'engine_parts_view.dart';
@@ -265,29 +266,36 @@ class _TranslateSection extends ConsumerWidget {
         children: [
           _Head(title: l10n.settingsNavTranslate, blurb: l10n.settingsBlurbTranslate),
 
-          // 三层状态条（项目口径 D-012，设计稿没有）：服务常驻 / 引擎共用开关 / 来源。
-          const _LayerStrip(),
-          const SizedBox(height: 12),
+          if (!supportsLocalEngine) ...[
+            // Web / 移动端：本机不跑引擎，引擎相关的设置**整块不出现**。
+            const _RemoteOnlyNote(),
+            SettingSubTitle(l10n.settingsSectionSource),
+            const _SourceRow(),
+          ] else ...[
+            // 三层状态条（项目口径 D-012，设计稿没有）：服务常驻 / 引擎共用开关 / 来源。
+            const _LayerStrip(),
+            const SizedBox(height: 12),
 
-          // 设计稿没有、项目已有的能力：引擎目录 + 部件表 + 校验 + 导入。
-          const EnginePartsSection(),
-          const SizedBox(height: 12),
+            // 设计稿没有、项目已有的能力：引擎目录 + 部件表 + 校验 + 导入。
+            const EnginePartsSection(),
+            const SizedBox(height: 12),
 
-          const _ServiceCard(),
+            const _ServiceCard(),
 
-          SettingSubTitle(l10n.settingsSectionSource),
-          const _SourceRow(),
+            SettingSubTitle(l10n.settingsSectionSource),
+            const _SourceRow(),
 
-          SettingSubTitle(l10n.settingsSectionPairing),
-          const _PairingRows(),
+            SettingSubTitle(l10n.settingsSectionPairing),
+            const _PairingRows(),
 
-          SettingSubTitle(l10n.settingsSectionInference),
-          const _InferenceRows(),
+            SettingSubTitle(l10n.settingsSectionInference),
+            const _InferenceRows(),
 
-          SettingSubTitle(l10n.settingsSectionModels),
-          const _ModelRows(),
+            SettingSubTitle(l10n.settingsSectionModels),
+            const _ModelRows(),
 
-          const _DiagOutput(),
+            const _DiagOutput(),
+          ],
         ],
       ),
     );
@@ -442,6 +450,31 @@ class _ServiceCard extends ConsumerWidget {
   };
 }
 
+/// 非桌面端的说明条：讲清「为什么只有远程」。
+class _RemoteOnlyNote extends StatelessWidget {
+  const _RemoteOnlyNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(color: palette.accSoft, borderRadius: BorderRadius.circular(AppMetrics.radiusCard)),
+      child: Row(
+        children: [
+          Icon(LucideIcons.info, size: 12, color: palette.acc),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(l10n.settingRemoteOnlyNote, style: TextStyle(fontSize: 9.5, color: palette.ink2)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Pill extends StatelessWidget {
   const _Pill({required this.text});
 
@@ -478,6 +511,10 @@ class _SourceRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final current = ref.watch(translateSourceProvider);
+    // Web / 移动端：没有可选项，不画下拉（画了就是假的可交互控件）。
+    if (!supportsLocalEngine) {
+      return SettingRow(label: l10n.settingSourceLabel, why: l10n.settingRemoteOnlyNote, def: l10n.sourceRemote);
+    }
     return SettingRow(
       label: l10n.settingSourceLabel,
       why: l10n.settingSourceWhy,
