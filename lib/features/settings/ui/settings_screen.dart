@@ -314,8 +314,6 @@ class _TranslateSection extends ConsumerWidget {
 
             SettingSubTitle(l10n.settingsSectionInference),
             const _InferenceRows(),
-
-            const _DiagOutput(),
           ],
         ],
       ),
@@ -927,27 +925,6 @@ class _InferenceRows extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DiagOutput extends ConsumerWidget {
-  const _DiagOutput();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final install = ref.watch(engineInstallProvider);
-    final lines = install.logs.isEmpty ? [l10n.engineNotChecked] : install.logs;
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SettingSubTitle(l10n.settingDiagTitle),
-          LogBox(lines: lines, title: l10n.settingDiagTitle, maxHeight: 150),
-        ],
-      ),
     );
   }
 }
