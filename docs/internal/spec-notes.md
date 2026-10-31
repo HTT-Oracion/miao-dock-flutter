@@ -621,3 +621,21 @@
 - **反证**：把「无卡」分支改成推荐 CUDA → 「没有 NVIDIA → 不推荐 CUDA」立即红。
 - **验证**：`test/backend_picker_test.dart` 3 条；全量 109 通过 + 11 跳过。
 - **关联**：D-027 · D-033 · D-035（镜像结论）。
+
+## D-035 依赖清单清洗（解决 404 索引）
+
+- **状态**：已完成（2026-11-01）；**完整 pip 安装未重跑**（需再下数百 MB）
+- **做了什么**：`sanitizeRequirements()` 读上游 `requirements.txt`，产出 `requirements.miaodock.txt`：
+  - 丢弃 `--extra-index-url` / `--index-url` / `--find-links` / `--trusted-host`（我们自己给源）；
+  - `pkg@https://…` 默认保留；传 `githubMirror` 时可整体加前缀改写。
+  - **不改上游原件**：出问题时能对照「我们改了什么」。
+- **为什么**：实测上游 `--extra-index-url https://frederik-uni.github.io/.../simple/` 已 **404**；
+  该索引上的包在 PyPI 上仍可装（`rusty-manga-image-translator 0.12.1` 实测存在），
+  所以**删掉这行反而是正解** —— 找镜像救不了一个已经不存在的索引。
+- **真实验证**（用真上游清单跑的，不是构造数据）：
+  - 只装 `src`（53.5 MB）到 `/tmp/deps-verify`；
+  - 清洗结果：**丢弃 1 个索引项、改写 0 个**，63 行 → 62 行；
+  - 清洗后 `pydensecrf@https://github.com/...` 保留，404 索引消失。
+- **仍未做的验证**：完整 `pip install`（会再下数百 MB 到 GB 级）。所以「依赖能装完」
+  仍属**未证实**；已证实的只是「清单不再指向 404 索引」。
+- **关联**：D-029 · D-032 · D-034。

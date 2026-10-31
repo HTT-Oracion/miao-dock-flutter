@@ -88,8 +88,64 @@ void main() {
       final args = r.log.firstWhere((l) => l.startsWith('ARGS:'));
       // 破坏点：漏掉 -r → pip 装了个空，依赖仍然缺，本条失败。
       expect(args, contains('-r'));
-      expect(args, contains('requirements.txt'));
+      // 现在传给 pip 的是**清洗版**清单（D-035）。
+      expect(args, contains('requirements'));
       expect(args, contains('--progress-bar'));
+    });
+  });
+
+  group('清单清洗', () {
+    void writeReqs(String body) {
+      final f = File('${engineSrcDirOf(engineDir)}${Platform.pathSeparator}requirements.txt');
+      f.parent.createSync(recursive: true);
+      f.writeAsStringSync(body);
+    }
+
+    test('丢弃失效索引项，其余保留', () {
+      writeReqs('torch\n--extra-index-url https://dead.example/simple/\npydensecrf@https://github.com/x/y.zip\n');
+      final r = sanitizeRequirements(engineDir);
+      expect(r.ok, isTrue);
+      // 破坏点：保留 404 索引 → pip 直接失败，本条失败。
+      expect(r.droppedIndexOptions, 1);
+      final out = File(r.path!).readAsStringSync();
+      expect(out, contains('torch'));
+      expect(out, isNot(contains('dead.example')));
+      // GitHub 直连默认保留（现在可达）
+      expect(out, contains('pydensecrf@https://github.com/x/y.zip'));
+    });
+
+    test('给镜像前缀时改写直连地址', () {
+      writeReqs('pydensecrf@https://github.com/x/y.zip\n');
+      final r = sanitizeRequirements(engineDir, githubMirror: 'https://gh-proxy.example/');
+      // 破坏点：镜像没生效 → 仍然直连 GitHub，弱网环境必失败，本条失败。
+      expect(r.rewrittenUrls, 1);
+      expect(File(r.path!).readAsStringSync(), contains('https://gh-proxy.example/https://github.com/x/y.zip'));
+    });
+
+    test('不改上游原文件（可对照排障）', () {
+      writeReqs('torch\n--extra-index-url https://dead.example/simple/\n');
+      sanitizeRequirements(engineDir);
+      // 破坏点：直接改上游文件 → 出问题时分不清「我们的改动」和「上游内容」，本条失败。
+      expect(
+        File('${engineSrcDirOf(engineDir)}${Platform.pathSeparator}requirements.txt').readAsStringSync(),
+        contains('dead.example'),
+      );
+    });
+
+    test('rebuild 用清洗版清单（日志可见）', () async {
+      makeFakePython();
+      writeReqs('torch\n--extra-index-url https://dead.example/simple/\n');
+      final r = await EngineDepsInstaller(engineDir: engineDir).rebuild();
+      expect(r.ok, isTrue);
+      final joined = r.log.join('\n');
+      expect(joined, contains('清洗清单'));
+      expect(joined, contains('requirements.miaodock.txt'));
+    });
+
+    test('缺清单时清洗失败并报路径', () {
+      final r = sanitizeRequirements(engineDir);
+      expect(r.ok, isFalse);
+      expect(r.error, contains('requirements.txt'));
     });
   });
 
