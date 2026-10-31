@@ -19,12 +19,18 @@ import 'routes.dart';
 class Handlers {
   /// 用 factory 保证 `store` 与 `queue` 共用**同一个** rootDir，
   /// 而不是各建一个 LibraryStore 实例（那会在惰性默认值上产生两份真相）。
-  factory Handlers({String? rootDir, String? runtimeRoot, String? modelsDir, String engineMode = 'mock'}) {
+  factory Handlers({
+    String? rootDir,
+    String? runtimeRoot,
+    String? modelsDir,
+    String? stateDir,
+    String engineMode = 'mock',
+  }) {
     final store = LibraryStore(rootDir: rootDir);
     final rt = runtimeRoot ?? _defaultEngineDir();
     final md = modelsDir ?? _defaultModelsDir();
     final facade = EngineFacade(runtimeRoot: rt, modelsDir: md);
-    final queue = TaskQueue(engineMode: engineMode, rootDir: store.rootDir);
+    final queue = TaskQueue(engineMode: engineMode, rootDir: store.rootDir, stateDir: stateDir);
     // 真实模式：把引擎能力注入队列（D-057）。
     // mock 模式不注入 —— 那种模式下的「译文」是原图字节，仅供界面演示。
     if (engineMode != 'mock') queue.translateImage = facade.translateImage;
@@ -75,7 +81,10 @@ class Handlers {
   /// 服务启动时刻（`/health` 用）。
   final DateTime startedAt = DateTime.now().toUtc();
 
-  Future<void> init() => store.init();
+  Future<void> init() async {
+    await store.init();
+    await queue.load();
+  }
 
   Future<void> dispose() async {
     await queue.dispose();

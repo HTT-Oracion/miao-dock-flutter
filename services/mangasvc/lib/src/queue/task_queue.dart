@@ -19,7 +19,77 @@ import '../server/http.dart';
 ///                     └──被取消────→ canceled
 /// ```
 class TaskQueue {
-  TaskQueue({this.engineMode = 'mock', required this.rootDir, this.translateImage});
+  TaskQueue({this.engineMode = 'mock', required this.rootDir, this.stateDir, this.translateImage});
+
+  /// 状态目录（队列持久化文件所在）；缺省 `<rootDir>/.miao-state`（与令牌同目录）。
+  final String? stateDir;
+
+  File get _queueFile =>
+      File('${stateDir ?? '$rootDir${Platform.pathSeparator}.miao-state'}${Platform.pathSeparator}queue.json');
+
+  /// 从磁盘恢复队列（D-076）：重启后历史不丢；未完成任务重置为 queued 重新跑。
+  Future<void> load() async {
+    try {
+      if (!_queueFile.existsSync()) return;
+      final m = jsonDecode(_queueFile.readAsStringSync());
+      if (m is! Map<String, dynamic>) return;
+      for (final raw in (m['tasks'] as List? ?? const [])) {
+        if (raw is! Map) continue;
+        final t = QueueTask(
+          taskId: '${raw['taskId']}',
+          comicName: '${raw['comicName']}',
+          normalizedComicName: '${raw['normalizedComicName'] ?? raw['comicName']}',
+          outputDir: '${raw['outputDir'] ?? raw['comicName']}',
+          createdAt: DateTime.tryParse('${raw['createdAt']}') ?? DateTime.now(),
+          total: (raw['total'] as num?)?.toInt() ?? 0,
+          batches: [for (final b in (raw['batches'] as List? ?? const [])) '$b'],
+          source: '${raw['source'] ?? 'desktop'}',
+        );
+        t
+          ..status = TaskStatus.values.firstWhere((x) => x.wire == '${raw['status']}', orElse: () => TaskStatus.queued)
+          ..done = (raw['done'] as num?)?.toInt() ?? 0
+          ..failed = (raw['failed'] as num?)?.toInt() ?? 0
+          ..current = (raw['current'] as num?)?.toInt() ?? 0
+          ..finishedAt = raw['finishedAt'] == null ? null : DateTime.tryParse('${raw['finishedAt']}')
+          ..lastError = raw['lastError'] as String?;
+        for (final r in (raw['failedReasons'] as List? ?? const [])) {
+          t.failedReasons.add('$r');
+        }
+        // 重启时 running 一定是被打断的：重置为 queued 从头跑。
+        if (t.status == TaskStatus.running) {
+          t
+            ..status = TaskStatus.queued
+            ..done = 0
+            ..failed = 0
+            ..current = 0
+            ..finishedAt = null;
+          t.failedReasons.clear();
+        }
+        _tasks.add(t);
+      }
+      if (_tasks.isNotEmpty) {
+        _logLine('从磁盘恢复 ${_tasks.length} 个任务');
+        if (_tasks.any((t) => t.status == TaskStatus.queued)) _scheduleDrain();
+      }
+    } catch (_) {
+      // 恢复失败不阻塞启动：宁可队列为空，不让服务起不来。
+    }
+  }
+
+  Future<void> _persist() async {
+    try {
+      final data = jsonEncode({
+        'updatedAt': isoNow(),
+        'tasks': [for (final t in _tasks) t.toPersistJson()],
+      });
+      final tmp = File('${_queueFile.path}.tmp');
+      await tmp.parent.create(recursive: true);
+      await tmp.writeAsString(data, flush: true);
+      await tmp.rename(_queueFile.path);
+    } catch (_) {
+      // 持久化失败不影响翻译本身。
+    }
+  }
 
   /// 真实翻译（D-057）：引擎就绪时由 `EngineFacade` 注入。
   ///
@@ -82,6 +152,7 @@ class TaskQueue {
     );
     _tasks.insert(0, task);
     _scheduleDrain();
+    await _persist();
     return task.toCreateResponse();
   }
 
@@ -126,7 +197,7 @@ class TaskQueue {
   };
 
   /// 批量删除：逐条回报，不整批失败。
-  Map<String, dynamic> deleteTasks(Set<String>? ids) {
+  Future<Map<String, dynamic>> deleteTasks(Set<String>? ids) async {
     final deleted = <String>[];
     final skipped = <Map<String, dynamic>>[];
     for (final t in List.of(_tasks)) {
@@ -138,6 +209,7 @@ class TaskQueue {
       deleted.add(t.taskId);
       _tasks.remove(t);
     }
+    if (deleted.isNotEmpty) await _persist();
     return {'deleted': deleted, 'skipped': skipped, 'deletedCount': deleted.length, 'skippedCount': skipped.length};
   }
 
@@ -147,6 +219,7 @@ class TaskQueue {
     if (t == null) throw const ServiceError('NOT_FOUND', '任务不存在', status: 404);
     t.cancelRequested = true;
     t.status = TaskStatus.canceled;
+    await _persist();
     t.subscription?.cancel();
     return {'taskId': t.taskId, 'status': 'canceled', 'keptItems': t.done, 'outputDir': t.outputDir};
   }
@@ -169,6 +242,7 @@ class TaskQueue {
       ..cancelRequested = false;
     t.failedReasons.clear();
     _scheduleDrain();
+    await _persist();
     return t.toCreateResponse();
   }
 
@@ -255,6 +329,8 @@ class TaskQueue {
       for (var i = 0; i < t.batches.length; i++) {
         if (t.cancelRequested) {
           t.status = TaskStatus.canceled;
+          await _persist();
+          await _persist();
           return;
         }
         final src = t.batches[i];
@@ -296,6 +372,7 @@ class TaskQueue {
       }
       t.finishedAt = DateTime.now().toUtc();
       t.status = t.failed > 0 ? TaskStatus.partialFailed : TaskStatus.done;
+      await _persist();
     } catch (e) {
       t.status = TaskStatus.failed;
       t.failAll('落盘失败：$e');
@@ -399,6 +476,25 @@ class QueueTask {
         for (var i = 0; i < failedReasons.length; i++)
           {'seq': i + 1, 'reason': 'ENGINE_ERROR', 'errorMessage': failedReasons[i]},
       ],
+  };
+
+  /// 持久化快照（D-076）。
+  Map<String, dynamic> toPersistJson() => {
+    'taskId': taskId,
+    'comicName': comicName,
+    'normalizedComicName': normalizedComicName,
+    'outputDir': outputDir,
+    'createdAt': createdAt.toIso8601String(),
+    'batches': batches,
+    'source': source,
+    'status': status.wire,
+    'total': total,
+    'done': done,
+    'failed': failed,
+    'current': current,
+    'finishedAt': finishedAt?.toIso8601String(),
+    'failedReasons': failedReasons,
+    'lastError': lastError,
   };
 
   /// 契约 `CreateTaskResponse`。

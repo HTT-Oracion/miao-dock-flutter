@@ -52,7 +52,7 @@ class MangaSvcServer {
 
   /// 当前服务令牌（父进程要把它传给客户端；`--print-token` 会输出）。
   String? get token => _token;
-  late final Handlers _handlers = Handlers(rootDir: rootDir, engineMode: engineMode);
+  late final Handlers _handlers = Handlers(rootDir: rootDir, engineMode: engineMode, stateDir: stateDir);
 
   /// 实际绑定的端口（未启动为 null）。
   int? get port => _server?.port;
