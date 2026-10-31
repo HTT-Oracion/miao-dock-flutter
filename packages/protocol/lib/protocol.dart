@@ -5,6 +5,7 @@ library;
 
 export 'src/dto/api_error.dart';
 export 'src/engine_config.dart';
+export 'src/comic_names.dart';
 export 'src/library_manifest.dart';
 export 'src/engine_parts.dart';
 export 'src/dto/engine.dart';

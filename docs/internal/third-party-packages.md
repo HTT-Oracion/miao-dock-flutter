@@ -12,6 +12,7 @@
 | `go_router` | 16.3.0 | 屏级路由事实源 | 根（App） |
 | `flutter_lints` | 6.0.0 | 静态检查基线 | 根（dev） |
 | `flutter_localizations` | SDK 内置 | 国际化基础（`Localizations` / `GlobalMaterialLocalizations`） | 根 |
+| `unorm_dart` | ^0.3.3 | Unicode 规范化（NFKC）：漫画名规范化对齐旧项目 `names.rs` | 根（protocol） |
 | `intl` | 0.20.3（transitive） | `gen_l10n` 生成物的运行时依赖；**不由我们直接声明版本**，随 `flutter_localizations` 锁定 | 根（传递） |
 
 > `flutter_localizations` 来自 Flutter SDK，不属于 pub 第三方包，不受 §纪律 1 的"候选包"约束；

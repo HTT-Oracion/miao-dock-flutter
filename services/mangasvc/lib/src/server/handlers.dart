@@ -310,6 +310,12 @@ class Handlers {
     if (comicName is! String || comicName.trim().isEmpty) {
       throw const ServiceError('INVALID_COMIC_NAME', '漫画名不能为空');
     }
+    // 规范化与旧项目 names.rs 一致（NFKC/剥非法字符/保留名/64 字符上限，D-079）。
+    final nameResult = normalizeComicName(comicName);
+    if (!nameResult.isOk) {
+      throw ServiceError(nameResult.code!, nameResult.message!);
+    }
+    final normalized = nameResult.name!;
     if (imagePaths is! List || imagePaths.isEmpty) {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
     }
@@ -325,7 +331,16 @@ class Handlers {
       'plugin' || 'extension' => 'plugin',
       _ => 'desktop',
     };
-    final created = await queue.createTask(comicName: comicName.trim(), imagePaths: paths, source: source);
+    final created = await queue.createTask(
+      comicName: normalized,
+      imagePaths: paths,
+      source: source,
+      langFrom: '${body['langFrom'] ?? 'ja'}',
+      langTo: '${body['langTo'] ?? 'zh'}',
+      translator: '${body['translator'] ?? 'sakura'}',
+      clientTaskRef: body['clientTaskRef'] as String?,
+      idempotencyKey: body['idempotencyKey'] as String?,
+    );
     await writeJson(req.response, 200, created);
   }
 

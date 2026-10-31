@@ -7,3 +7,7 @@ environment:
   sdk: ^3.13.4
 
 resolution: workspace
+
+dependencies:
+  # Unicode 规范化（NFKC）：漫画名规范化与旧项目 names.rs 一致。
+  unorm_dart: ^0.3.3

@@ -1523,3 +1523,23 @@
 - **验证**：`episode_naming_test.dart` 6 条；服务端 139 通过；`flutter analyze` 干净。
 - **下一步（阶段 0 余下）**：任务 `dir_name` 命名与字段补齐、队列章节目录按话号写出。
 - **关联**：`miao-dock` library.rs:40-90。
+
+## D-079/D-080/D-081 阶段 0 收尾：名称规范化 / 单话平铺布局 / 任务字段对齐
+
+- **状态**：完成（2026-11-01），阶段 0 结束
+- **D-079 漫画名规范化**（`protocol/src/comic_names.dart`，对照 `names.rs` 9 步）：
+  - U+0000 拒绝 → NFKC → 剥控制字符 → 剥 `[/\\:]` → 剥 Windows 非法字符 →
+    折叠 JS 空白 → 去首尾空格与尾点 → 64 字符上限 → 保留名（CON/PRN/…，忽略扩展名大小写）→ 空名检查；
+  - `is_safe_dir_name` 同步落地；错误码/文案同旧项目（`COMIC_NAME_REQUIRED`/`INVALID_COMIC_NAME`）；
+  - **新依赖** `unorm_dart ^0.3.3`（纯 Dart，NFKC 真实实现而非自造映射），已登记台账；
+  - 已接入 `POST /tasks`（服务端规范化，规范化后为空/超长/保留名按旧项目报错）。
+- **D-080 单话平铺布局**（对照 `store/exec.rs write_item`）：
+  - 投放产物改为 **`<库根>/<规范化名>/001.png` + `001_translated.<嗅探扩展名>`**，
+    **不再写 `01_第1话` 子目录、不再写 manifest**（单话无 manifest，话号归并时才产生）；
+  - 译文扩展名按引擎回包字节嗅探（`sniffImageType`）。
+- **D-081 任务字段对齐**（对照 `store/model.rs Task`）：
+  - 补 `dirName(=规范化名)/langFrom('ja')/langTo('zh')/translator('sakura')/clientTaskRef/idempotencyKey`，
+    默认值同旧项目（`Lang{ja→zh}`、`default_translator="sakura"`）；持久化与恢复全带。
+- **验证**：`comic_names_test` 9 条（含旧项目原用例 `"  a/b:c*  " → abc`）；服务端 148 通过；应用 116 通过。
+- **下一阶段**：A（隐藏机制：`hidden.json` + 删除=隐藏/物理 + 恢复）。
+- **关联**：`miao-dock` names.rs / store/pure.rs / store/exec.rs / store/model.rs。

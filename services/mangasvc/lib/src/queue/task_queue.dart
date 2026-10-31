@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import '../engine/engine_client.dart' show sniffImageType;
 import '../server/http.dart';
 
 /// 串行任务队列 —— 原项目硬约束：**同一时刻只跑 1 个**。
@@ -44,6 +45,11 @@ class TaskQueue {
           total: (raw['total'] as num?)?.toInt() ?? 0,
           batches: [for (final b in (raw['batches'] as List? ?? const [])) '$b'],
           source: '${raw['source'] ?? 'desktop'}',
+          langFrom: '${raw['langFrom'] ?? 'ja'}',
+          langTo: '${raw['langTo'] ?? 'zh'}',
+          translator: '${raw['translator'] ?? 'sakura'}',
+          clientTaskRef: raw['clientTaskRef'] as String?,
+          idempotencyKey: raw['idempotencyKey'] as String?,
         );
         t
           ..status = TaskStatus.values.firstWhere((x) => x.wire == '${raw['status']}', orElse: () => TaskStatus.queued)
@@ -134,6 +140,11 @@ class TaskQueue {
     required String comicName,
     required List<String> imagePaths,
     String source = 'desktop',
+    String langFrom = 'ja',
+    String langTo = 'zh',
+    String translator = 'sakura',
+    String? clientTaskRef,
+    String? idempotencyKey,
   }) async {
     if (imagePaths.isEmpty) {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
@@ -149,6 +160,11 @@ class TaskQueue {
       createdAt: now,
       batches: List.of(imagePaths),
       source: source,
+      langFrom: langFrom,
+      langTo: langTo,
+      translator: translator,
+      clientTaskRef: clientTaskRef,
+      idempotencyKey: idempotencyKey,
     );
     _tasks.insert(0, task);
     _scheduleDrain();
@@ -293,13 +309,17 @@ class TaskQueue {
     }
   }
 
-  /// 跑一个任务 —— **真的落盘**。
+  /// 跑一个任务 —— **真的落盘**（D-080）。
   ///
-  /// 落盘结构（与原项目一致）：
+  /// 落盘结构与 miao-dock 一致（`store/exec.rs` `write_item`）：
   /// ```
-  /// <root>/<comicName>/01_第1话/001.png              原图
-  /// <root>/<comicName>/01_第1话/001_translated.png   译文
+  /// <root>/<comicName>/001.png              原图（三位序号）
+  /// <root>/<comicName>/001_translated.png   译文（扩展名按引擎回包字节嗅探）
   /// ```
+  ///
+  /// 🔴 **不建 `01_第1话` 子目录、也不写 manifest**：
+  /// 投放产出的都是「单话」（目录平铺、无 manifest），
+  /// 话号与 manifest 只在「归并成书」时才产生（miao-dock 同）。
   ///
   /// **mock 引擎**：原图原样拷贝，译文写成同内容占位 —— 只是把管道跑通，
   /// 不假装做了翻译（文件内容是原图字节，`_translated` 后缀标明位置）。
@@ -316,15 +336,7 @@ class TaskQueue {
     t.status = TaskStatus.running;
     try {
       final bookDir = Directory('$rootDir/${t.comicName}');
-      final chapterDir = Directory('${bookDir.path}/01_第1话');
-      chapterDir.createSync(recursive: true);
-      // 建 manifest：没有它，书架子目录会被当成「未归并单话」而不是「本」。
-      final manifest = File('${bookDir.path}/manifest.json');
-      if (!manifest.existsSync()) {
-        manifest.writeAsStringSync(
-          jsonEncode({'title': t.comicName, 'author': '', 'createdAt': DateTime.now().toUtc().toIso8601String()}),
-        );
-      }
+      bookDir.createSync(recursive: true);
 
       for (var i = 0; i < t.batches.length; i++) {
         if (t.cancelRequested) {
@@ -336,10 +348,7 @@ class TaskQueue {
         final src = t.batches[i];
         final seq = i + 1;
         final ext = src.contains('.') ? src.split('.').last.toLowerCase() : 'png';
-        final original = File('${chapterDir.path}/${_pad(seq)}.$ext');
-        // 引擎一律回 PNG（实测 1 301 295 字节的 PNG 被写成了 .jpg），
-        // 扩展名必须跟真实格式一致，否则部分查看器会解不出来。
-        final translated = File('${chapterDir.path}/${_pad(seq)}_translated.png');
+        final original = File('${bookDir.path}/${_pad(seq)}.$ext');
 
         // 原图：源文件存在就拷贝；测试里常见「路径不存在」，则写占位（不失败）。
         final srcFile = File(src);
@@ -355,6 +364,9 @@ class TaskQueue {
             final out = await translator!(original.readAsBytesSync(), (line) {
               _logLine('[${t.comicName} 第${_pad(seq)}页] $line');
             });
+            // 译文扩展名按引擎回包字节嗅探（miao-dock `write_item` 同），
+            // 避免「内容是 PNG 却叫 .jpg」。
+            final translated = File('${bookDir.path}/${_pad(seq)}_translated.${sniffImageType(out) ?? 'png'}');
             translated.writeAsBytesSync(out);
             _logLine('完成 ${t.comicName} 第 ${_pad(seq)} 页');
           } catch (e) {
@@ -367,6 +379,7 @@ class TaskQueue {
           }
         } else {
           // mock 译文 = 原图字节（位置正确，内容不是真翻译）。
+          final translated = File('${bookDir.path}/${_pad(seq)}_translated.png');
           translated.writeAsBytesSync(original.readAsBytesSync());
         }
 
@@ -425,7 +438,28 @@ class QueueTask {
     required this.createdAt,
     required this.batches,
     this.source = 'desktop',
+    this.langFrom = 'ja',
+    this.langTo = 'zh',
+    this.translator = 'sakura',
+    this.clientTaskRef,
+    this.idempotencyKey,
   });
+
+  /// `dir_name`（miao-dock 同名字段）：任务落盘目录名 = 规范化漫画名。
+  String get dirName => normalizedComicName;
+
+  /// 语言方向（miao-dock `Lang` 默认 `ja → zh`）。
+  final String langFrom;
+  final String langTo;
+
+  /// 翻译器（miao-dock `default_translator = "sakura"`）。
+  final String translator;
+
+  /// 调用方任务引用（miao-dock `client_task_ref`，可为空）。
+  final String? clientTaskRef;
+
+  /// 幂等键（miao-dock `idempotency_key`，可为空）。
+  final String? idempotencyKey;
 
   final String taskId;
   final String comicName;
@@ -469,6 +503,11 @@ class QueueTask {
     'comicName': comicName,
     'normalizedComicName': normalizedComicName,
     'source': source,
+    'langFrom': langFrom,
+    'langTo': langTo,
+    'translator': translator,
+    'clientTaskRef': clientTaskRef,
+    'idempotencyKey': idempotencyKey,
     'status': status.wire,
     'queuePosition': 0,
     'progress': {'total': total, 'done': done, 'failed': failed, 'current': current},
@@ -491,6 +530,11 @@ class QueueTask {
     'createdAt': createdAt.toIso8601String(),
     'batches': batches,
     'source': source,
+    'langFrom': langFrom,
+    'langTo': langTo,
+    'translator': translator,
+    'clientTaskRef': clientTaskRef,
+    'idempotencyKey': idempotencyKey,
     'status': status.wire,
     'total': total,
     'done': done,
