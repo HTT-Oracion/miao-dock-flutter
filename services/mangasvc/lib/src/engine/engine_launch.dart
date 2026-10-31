@@ -19,12 +19,21 @@ import 'dart:io';
 /// ```
 /// `command` 相对 [runtimeRoot]；`port` 用于拼健康地址。
 class EngineLaunchSpec {
-  const EngineLaunchSpec({required this.command, required this.args, required this.healthPath, required this.port});
+  const EngineLaunchSpec({
+    required this.command,
+    required this.args,
+    required this.healthPath,
+    required this.port,
+    this.env = const {},
+  });
 
   final String command;
   final List<String> args;
   final String healthPath;
   final int port;
+
+  /// 启动时注入的环境变量（`launch.json` 的 `env` 字段）。
+  final Map<String, String> env;
 
   String healthUrl() => 'http://127.0.0.1:$port$healthPath';
 
@@ -61,6 +70,13 @@ class EngineLaunchSpec {
     final rawArgs = m['args'];
     final args = <String>[if (rawArgs is List) ...rawArgs.map((e) => e.toString())];
 
+    // env 是可选字段：老规格（没有该字段）按空处理，保持向后兼容。
+    final rawEnv = m['env'];
+    final env = <String, String>{
+      if (rawEnv is Map)
+        for (final e in rawEnv.entries) e.key.toString(): e.value.toString(),
+    };
+
     // command 已解析成绝对路径 ⇒ 不存在必须现在报错，而不是等 spawn 抛一个笼统的失败。
     final resolved = _resolve(runtimeRoot, command);
     if (!File(resolved).existsSync()) {
@@ -68,7 +84,7 @@ class EngineLaunchSpec {
     }
 
     return LaunchSpecResult.success(
-      EngineLaunchSpec(command: resolved, args: args, healthPath: healthPath, port: port),
+      EngineLaunchSpec(command: resolved, args: args, healthPath: healthPath, port: port, env: env),
     );
   }
 

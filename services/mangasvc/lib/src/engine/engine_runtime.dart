@@ -106,6 +106,7 @@ class EngineRuntime {
       processArgs: spec.args,
       healthUrl: spec.healthUrl(),
       workingDirectory: runtimeRoot,
+      environment: spec.env,
       healthTimeout: healthTimeout,
     );
     _supervisor = sup;

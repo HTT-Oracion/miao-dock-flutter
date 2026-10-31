@@ -796,3 +796,25 @@
 - **教训**：这类问题**单测永远抓不到**——必须真起进程、真发请求。之前 `launch.json` 标 `provisional`
   是对的预判。
 - **关联**：D-030 · D-031 · D-041。
+
+## D-043 启动 env 注入 + 子进程就绪重试（端到端跑通）
+
+- **状态**：✅ 用**我们自己的** supervisor + client 端到端验证通过（2026-11-01）
+- **实测**：
+  ```
+  env: {HF_HOME: /tmp/full-eng/.hf, HF_HUB_OFFLINE: 1, TRANSFORMERS_OFFLINE: 1}
+  START ok=true state=running
+  TRANSLATE ok=true bytes=1301295 elapsed=28s   → /tmp/e2e_out.png
+  ```
+  注意：这一次**没有在 shell 里预设任何环境变量**，全靠 `launch.json` 的 `env` 字段。
+- **补的三块**：
+  1. `launch.json` 支持 `env`；`EngineLaunchSpec.env` 解析（缺字段向后兼容为空）；
+     `EngineSupervisor` 用 `{...Platform.environment, ...env}` 注入子进程。
+  2. `launch.json` 写入 `--nonce None`（D-042 的根因修复落到代码里）。
+  3. 摘掉 `provisional` 标记。
+- **🔴 新发现的时序问题**：健康检查打的是**父进程** `/openapi.json`，它 200 ≠ 翻译子进程就绪。
+  实测紧接着发翻译会得到 `Translation service is starting up, please wait a moment and try again.`
+  → `EngineClient.translateImage` 增加**就绪重试**（默认 120s 上限 / 2s 间隔，只对该提示重试）。
+  没有这层，用户第一次翻译必然失败，且错误看起来像功能坏了。
+- **验证**：服务端 117 通过；`/tmp/e2e_out.png` 与命令行结果一致（1 301 295 字节）。
+- **关联**：D-041 · D-042。

@@ -38,7 +38,28 @@ class EngineClient {
   String get baseUrl => 'http://$host:$port';
 
   /// 翻译一张图。
-  Future<TranslateOutcome> translateImage(Uint8List bytes, {Map<String, dynamic>? config}) async {
+  ///
+  /// ## 为什么要「等子进程就绪」
+  /// 健康检查打的是**父进程**的 `/openapi.json`，它起来 ≠ 翻译子进程（`shared` 模式）就绪。
+  /// 实测：父进程 200 后立刻发翻译会得到
+  /// `Translation service is starting up, please wait a moment and try again.`
+  /// 这不是错误，是**启动时序**——必须重试，否则用户第一次翻译必然失败。
+  Future<TranslateOutcome> translateImage(
+    Uint8List bytes, {
+    Map<String, dynamic>? config,
+    Duration readyTimeout = const Duration(seconds: 120),
+    Duration readyInterval = const Duration(seconds: 2),
+  }) async {
+    final deadline = DateTime.now().add(readyTimeout);
+    while (true) {
+      final out = await _translateOnce(bytes, config: config);
+      final warming = !out.ok && (out.error?.message.contains('starting up') ?? false);
+      if (!warming || DateTime.now().isAfter(deadline)) return out;
+      await Future<void>.delayed(readyInterval);
+    }
+  }
+
+  Future<TranslateOutcome> _translateOnce(Uint8List bytes, {Map<String, dynamic>? config}) async {
     final ext = sniffImageType(bytes);
     if (ext == null) {
       // 本地拦截：空字节或非图片。

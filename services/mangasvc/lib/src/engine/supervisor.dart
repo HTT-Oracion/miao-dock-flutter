@@ -17,6 +17,7 @@ class EngineSupervisor {
     required this.processArgs,
     required this.healthUrl,
     this.workingDirectory,
+    this.environment,
     this.healthTimeout = const Duration(seconds: 60),
     this.healthInterval = const Duration(milliseconds: 150),
     this.maxRestarts = 3,
@@ -28,6 +29,12 @@ class EngineSupervisor {
   final List<String> processArgs;
   final String healthUrl;
   final String? workingDirectory;
+
+  /// 子进程环境变量（在父进程环境之上**追加/覆盖**）。
+  ///
+  /// 🔴 必须支持：mocr 权重走 HF 缓存，靠 `HF_HOME` + 两个 OFFLINE 开关定位。
+  /// 不注入的话引擎会去 `~/.cache/huggingface` 找不到，然后**静默联网下载**。
+  final Map<String, String>? environment;
 
   /// 等待健康应答的总时长（首次加载模型可能很慢）。
   final Duration healthTimeout;
@@ -74,7 +81,13 @@ class EngineSupervisor {
   Future<bool> _spawnAndWait() async {
     _state = SupervisorState.starting;
     try {
-      final proc = await Process.start(processPath, processArgs, workingDirectory: workingDirectory, runInShell: false);
+      final proc = await Process.start(
+        processPath,
+        processArgs,
+        workingDirectory: workingDirectory,
+        runInShell: false,
+        environment: environment == null ? null : {...Platform.environment, ...environment!},
+      );
       _proc = proc;
       _append('[supervisor] spawned pid=${proc.pid}');
 

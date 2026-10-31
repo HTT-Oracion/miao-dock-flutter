@@ -301,7 +301,6 @@ class EngineInstaller {
       // `MangaOcr()` 会去 `~/.cache/huggingface` 找不到就**静默联网下载**。
       // OFFLINE=1 是保险丝：宁可报错，也不要悄悄联网。
       'env': {'HF_HOME': _abs('.hf'), 'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1'},
-      'provisional': true,
     };
     File(_abs('launch.json')).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(data));
     _log('[install] 写入 launch.json（端口 $port）');
