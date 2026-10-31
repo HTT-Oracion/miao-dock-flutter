@@ -8,10 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/net/port_probe.dart';
 import '../../core/net/service_locator.dart';
 import '../../core/process/service_controller.dart';
+import '../../core/storage/shell_prefs.dart';
 import '../../core/process/service_launch.dart';
 import '../../core/process/service_supervisor.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
+import '../../features/manga/domain/platform_caps.dart';
 import '../../features/manga/data/http_manga_svc_client.dart';
 import 'engine_autostart.dart';
 
@@ -70,7 +72,15 @@ Future<void> bootstrap(Widget app) async {
   runApp(
     ProviderScope(
       overrides: [
-        mangaSvcClientProvider.overrideWithValue(HttpMangaSvcClient(locator)),
+        mangaSvcClientProvider.overrideWithValue(
+          HttpMangaSvcClient(
+            // Web / 移动端：本机没有服务，也没有端口探测（`ServerSocket` 在 Web 上不可用）。
+            // 一律走用户配置的远程地址（D-045）。
+            supportsLocalEngine
+                ? locator
+                : RemoteServiceLocator(baseUrl: readRemoteBaseUrl() ?? '', token: readRemoteToken()),
+          ),
+        ),
         if (supervisor != null) serviceSupervisorProvider.overrideWithValue(supervisor),
       ],
       child: EngineAutoStart(child: app),

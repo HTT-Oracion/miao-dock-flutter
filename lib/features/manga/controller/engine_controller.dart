@@ -108,6 +108,9 @@ final translateSourceProvider = NotifierProvider<TranslateSourceNotifier, Transl
 /// 🔴 这只是**粗判**，不是校验 —— 真正的部件级校验在设置页（`inspectEngine`）。
 /// 引导页要的是「该显示未装配还是已装配」，不该为此起子进程。
 final modelsInstalledProvider = Provider<bool>((ref) {
+  // Web / 移动端没有本地引擎：直接返回 false，不去碰文件系统
+  // （Web 上 `File.existsSync()` 会抛 Unsupported operation）。
+  if (!supportsLocalEngine) return false;
   // 装配刚完成也要立刻反映，不能等下次冷启动。
   final install = ref.watch(engineInstallProvider);
   if (install.done) return true;

@@ -907,3 +907,24 @@
 - **验证**：`flutter analyze` 干净；`flutter test` 115 通过；l10n 棘轮通过
   （平台名已挪进 ARB，控制器不再含中文）。
 - **关联**：D-040 · D-041 · D-045。
+
+## D-048 Web 运行时崩溃修复（Platform._environment）
+
+- **状态**：已修（2026-11-01）；`flutter build web` 通过，浏览器内待复验
+- **报错**：`Unsupported operation: Platform._environment`，从 `_DesktopShell` 构建时抛出
+  （Riverpod 报 `Tried to use a provider that is in error state`）。
+- **根因**：`dart:io` 的 `Platform` 在 Web 上**每个成员都会抛**，不只是文件 API。
+  启动路径上有四处踩到：
+  1. `paths.dart: appDataDir()` 读 `Platform.environment`；
+  2. `paths.dart: _env()` 读环境变量（`MIAO_ROOT` 等覆盖项）；
+  3. `paths.dart: _sep()` 用 `Platform.pathSeparator`；
+  4. `bootstrap.dart` 无条件用 `PortProbe` 建客户端（`ServerSocket` 在 Web 不可用）。
+- **修法**：
+  - `kIsWeb` 时 `appDataDir()` / `_home()` 返回虚拟根 `/web`，`_env()` 返回 null，`_sep()` 返回 `/`；
+  - `modelsInstalledProvider` 在非桌面**直接返回 false**，不碰文件系统；
+  - `bootstrap` 在非桌面改用 `RemoteServiceLocator`（读本地持久化的地址/令牌），
+    不再做端口探测。
+- **教训**：`dart2js` 对 `dart:io` 给的是「能编译、一调用就抛」的桩，
+  所以 `flutter build web` 通过**不代表能跑**。这类问题只能靠真实浏览器暴露。
+- **验证**：`flutter analyze` 干净；`flutter test` 115 通过；`flutter build web` 成功。
+- **关联**：D-044。

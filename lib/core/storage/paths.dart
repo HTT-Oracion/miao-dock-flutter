@@ -38,6 +38,8 @@
 /// | `MIAO_MANGA_STATE_DIR` | 漫画服务状态目录（默认 `<数据根>/manga/state`） |
 library;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'dart:io';
 
 import 'package:protocol/protocol.dart';
@@ -48,6 +50,10 @@ import 'package:protocol/protocol.dart';
 /// - Windows: `%LOCALAPPDATA%`
 /// - Linux: `~/.local/share`
 String appDataDir() {
+  // 🔴 Web 没有文件系统，也没有 `Platform.environment`（调用即抛
+  // `Unsupported operation: Platform._environment`）。
+  // 这里给一个**虚拟根**：Web 端不跑引擎，这些路径只用于拼字符串与判空，不会真去读写。
+  if (kIsWeb) return '/web';
   final env = Platform.environment;
   final home = env['HOME'] ?? env['USERPROFILE'] ?? '.';
   if (Platform.isMacOS) return '$home/Library/Application Support';
@@ -60,11 +66,14 @@ String appDataDir() {
 }
 
 String _home() {
+  if (kIsWeb) return '/web';
   final env = Platform.environment;
   return env['HOME'] ?? env['USERPROFILE'] ?? '.';
 }
 
 String? _env(String key) {
+  // Web 无环境变量（调用即抛 Unsupported operation）。
+  if (kIsWeb) return null;
   final v = Platform.environment[key];
   return (v == null || v.isEmpty) ? null : v;
 }
@@ -153,4 +162,5 @@ String longPath(String path) {
   return longPathOf(File(path).absolute.path, isWindows: Platform.isWindows);
 }
 
-String _sep() => Platform.pathSeparator;
+// `Platform.pathSeparator` 在 Web 上同样会抛，所以先判。
+String _sep() => kIsWeb ? '/' : Platform.pathSeparator;
