@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
 import '../domain/manga_status.dart';
@@ -23,8 +24,11 @@ class LibraryDetail extends ConsumerWidget {
     }
     final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
     if (books.isEmpty) {
-      return const Center(
-        child: Text('书架是空的', style: TextStyle(fontSize: 12.5, color: AppTokens.textSecondary)),
+      return Center(
+        child: Text(
+          AppLocalizations.of(context).shelfEmpty,
+          style: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary),
+        ),
       );
     }
     final selected = ref.watch(selectedBookProvider);
@@ -77,9 +81,9 @@ class _Hero extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 6,
                   children: [
-                    _MetaChip('作者 · ${book.author}'),
-                    _MetaChip('${book.chapterCount} 话'),
-                    _MetaChip('${book.pageCount} 页'),
+                    _MetaChip(AppLocalizations.of(context).bookAuthorLabel(book.author)),
+                    _MetaChip(AppLocalizations.of(context).bookChapterCount(book.chapterCount)),
+                    _MetaChip(AppLocalizations.of(context).bookPageCount(book.pageCount)),
                     _MetaChip(formatBytes(book.totalBytes)),
                   ],
                 ),
@@ -95,7 +99,7 @@ class _Hero extends StatelessWidget {
                         /* TODO: 继续翻译，随补页端点落地 */
                       },
                       icon: const Icon(LucideIcons.fileUp, size: 13),
-                      label: const Text('继续翻译', style: TextStyle(fontSize: 12.5)),
+                      label: Text(AppLocalizations.of(context).bookContinueTranslate, style: TextStyle(fontSize: 12.5)),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
@@ -107,7 +111,7 @@ class _Hero extends StatelessWidget {
                         /* TODO: 查看漫画阅读器 */
                       },
                       icon: const Icon(LucideIcons.bookOpen, size: 13),
-                      label: const Text('查看漫画', style: TextStyle(fontSize: 12.5)),
+                      label: Text(AppLocalizations.of(context).bookViewComic, style: TextStyle(fontSize: 12.5)),
                     ),
                   ],
                 ),
@@ -145,13 +149,19 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Text(
-          '章节',
+          AppLocalizations.of(context).bookChapters,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
         ),
         const SizedBox(width: 8),
-        Text('共 ${book.chapterCount} 话', style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+        Text(
+          AppLocalizations.of(context).bookChapterCount(book.chapterCount),
+          style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
+        ),
         const Spacer(),
-        Text('一行两话', style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary)),
+        Text(
+          AppLocalizations.of(context).bookOneRowTwoChapters,
+          style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+        ),
       ],
     );
   }
@@ -204,12 +214,12 @@ class _ChapterCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '第 ${chapter.no} 话',
+                  AppLocalizations.of(context).chapterTitle(chapter.no),
                   style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${chapter.pageCount} 页 · 已译 ${chapter.donePages}',
+                  AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
                   style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
                 ),
                 const SizedBox(height: 8),

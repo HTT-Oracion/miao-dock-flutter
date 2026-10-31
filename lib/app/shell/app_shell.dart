@@ -14,6 +14,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_title_bar.dart';
 import '../../shared/widgets/nav_rail.dart';
 import 'shell_controller.dart';
+import 'view_labels.dart';
 
 /// 响应式应用壳（design.html §03）：
 /// 桌面 = 侧栏（208/68）+ 工具条（56）+ 内容区；
@@ -64,24 +65,6 @@ class _ShellLocation {
   /// 侧栏视图组条目。
   final List<SidebarViewItem> viewItems;
 
-  /// 模块名（l10n）。
-  static String moduleName(AppLocalizations l10n, int index) => switch (index) {
-    0 => l10n.navManga,
-    1 => l10n.navMusic,
-    _ => l10n.navAnime,
-  };
-
-  /// 视图标题（与原项目 `TITLES` 逐字一致，仅取本期已实现的模块）。
-  static String viewTitle(AppLocalizations l10n, String id) => switch (id) {
-    'drop' => l10n.viewDrop,
-    'queue' => l10n.viewQueue,
-    'library' => l10n.viewLibrary,
-    'discover' => l10n.viewDiscover,
-    'playlist' => l10n.viewPlaylist,
-    'local' => l10n.viewLocal,
-    _ => l10n.viewHistory,
-  };
-
   static const _modules = {'manga': 0, 'music': 1, 'anime': 2};
 
   /// 路径 → 壳层位置。文案经 [AppLocalizations] 注入，不在本层写死中文。
@@ -99,11 +82,11 @@ class _ShellLocation {
         viewItems: const [],
       );
     }
-    final module = moduleName(l10n, index);
+    final module = moduleLabel(l10n, index);
     final items = index == 0 ? mangaViews : (index == 1 ? musicViews : const <SidebarViewItem>[]);
     final viewId = seg.length > 1 && items.any((v) => v.id == seg[1]) ? seg[1] : items.firstOrNull?.id;
     final crumbs = <String>[module];
-    if (viewId != null) crumbs.add(viewTitle(l10n, viewId));
+    if (viewId != null) crumbs.add(viewLabel(l10n, viewId));
     return _ShellLocation(moduleIndex: index, viewId: viewId, crumbs: crumbs, viewGroupLabel: module, viewItems: items);
   }
 

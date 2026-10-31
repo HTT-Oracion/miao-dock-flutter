@@ -115,31 +115,32 @@ class _TaskCard extends ConsumerWidget {
                   children: [
                     Text(
                       task.completedAt == null
-                          ? '队内 ${task.batchNo} 批'
-                          : '完成于 ${task.completedAt!.month}/${task.completedAt!.day}',
+                          ? AppLocalizations.of(context).queueBatchWithin(task.batchNo)
+                          : AppLocalizations.of(context)
+                                .queueFinishedAt(task.completedAt!.month, task.completedAt!.day),
                       style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary),
                     ),
                     const Spacer(),
                     if (!task.deletable)
                       AppTextAction(
-                        label: '取消',
+                        label: AppLocalizations.of(context).actionCancel,
                         onTap: () async {
                           final kept = await ref.read(queueProvider.notifier).cancelTask(task.id);
                           if (context.mounted) {
-                            showAppToast(context, '已取消「${task.name}」，保留了 $kept 张已落盘的译文');
+                            showAppToast(context, AppLocalizations.of(context).queueCancelledToast(task.name, kept));
                           }
                         },
                       ),
                     if (task.deletable) ...[
                       AppTextAction(
-                        label: '打开',
+                        label: AppLocalizations.of(context).actionOpen,
                         onTap: () {
                           /* TODO: 随落盘目录端点落地 */
                         },
                       ),
                       const SizedBox(width: 6),
                       AppTextAction(
-                        label: '更多',
+                        label: AppLocalizations.of(context).actionMore,
                         onTap: () {
                           /* TODO: 随详情菜单落地 */
                         },
@@ -163,10 +164,11 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(color: status.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
-      child: Text(status.label, style: TextStyle(fontSize: 11, color: status.color)),
+      child: Text(status.label(l10n), style: TextStyle(fontSize: 11, color: status.color)),
     );
   }
 }
@@ -188,12 +190,12 @@ class _MobileSelectionBar extends ConsumerWidget {
       child: Row(
         children: [
           Text(
-            '已选 ${selection.ids.length} 项',
+            AppLocalizations.of(context).queueSelectedCount(selection.ids.length),
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
           ),
           const Spacer(),
           AppGhostButton(
-            label: '全选本页',
+            label: AppLocalizations.of(context).queueSelectPage,
             onTap: () {
               final deletable = {
                 for (final t in tasks)
@@ -204,7 +206,7 @@ class _MobileSelectionBar extends ConsumerWidget {
           ),
           const SizedBox(width: 10),
           AppGhostButton(
-            label: '删除选中（${selection.ids.length}）',
+            label: AppLocalizations.of(context).queueDeleteSelected(selection.ids.length),
             onTap: selection.ids.isEmpty
                 ? null
                 : () async {
@@ -212,7 +214,7 @@ class _MobileSelectionBar extends ConsumerWidget {
                     final deleted = await ref.read(queueProvider.notifier).deleteTasks(ids);
                     ref.read(selectionProvider.notifier).clear();
                     if (context.mounted) {
-                      showAppToast(context, '已删除 $deleted 条任务记录');
+                      showAppToast(context, AppLocalizations.of(context).queueDeletedToast(deleted));
                     }
                   },
           ),

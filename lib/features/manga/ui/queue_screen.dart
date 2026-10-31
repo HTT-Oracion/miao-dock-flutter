@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_pager.dart';
 import '../controller/queue_controller.dart';
 import 'queue_empty.dart';
@@ -114,7 +115,7 @@ class _ErrorBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '任务列表加载失败：$message',
+              AppLocalizations.of(context).queueLoadFailed(message),
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12.5, color: Color(0xFFD98C84)),
             ),

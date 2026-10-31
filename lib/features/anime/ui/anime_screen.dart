@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// 番剧屏（待定）：占位，追番周表 / 排行榜等功能随产品裁定补充。
 class AnimeScreen extends StatelessWidget {
@@ -8,8 +9,11 @@ class AnimeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('番剧 · 待定', style: TextStyle(fontSize: 13, color: AppTokens.textSecondary)),
+    return Center(
+      child: Text(
+        AppLocalizations.of(context).animePending,
+        style: const TextStyle(fontSize: 13, color: AppTokens.textSecondary),
+      ),
     );
   }
 }

@@ -45,6 +45,21 @@ void main() {
     }
   }
 
+  // UI 层零容忍：Widget / 屏里一个中文都不许有（D-006 明文）。
+  final uiOffenders = <String>[];
+  for (final entity in Directory('lib').listSync(recursive: true)) {
+    if (entity is! File || !entity.path.endsWith('.dart')) continue;
+    final path = entity.path.replaceAll('\\', '/');
+    if (path.contains('/l10n/')) continue;
+    final isUi = path.contains('/ui/') || path.contains('/shared/widgets/') || path.contains('/app/shell/');
+    if (!isUi) continue;
+    final n = strLit.allMatches(entity.readAsStringSync()).where((m) => cn.hasMatch(m.group(0)!)).length;
+    if (n > 0) uiOffenders.add('$path: $n 处');
+  }
+  if (uiOffenders.isNotEmpty) {
+    violations.addAll(uiOffenders.map((o) => 'UI 层硬编码中文（必须走 ARB）：$o'));
+  }
+
   if (violations.isEmpty) {
     final total = actual.values.fold<int>(0, (a, b) => a + b);
     stdout.writeln('✔ l10n 棘轮通过：${actual.length} 个文件，共 $total 处待迁移中文（基线内渐进清零）');

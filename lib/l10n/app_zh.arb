@@ -145,5 +145,490 @@
   "sourceUnknown": "未知来源",
   "@sourceUnknown": {
     "description": "任务来源：无法判定"
+  },
+  "statusTranslating": "翻译中",
+  "@statusTranslating": {
+    "description": "任务状态：翻译中"
+  },
+  "statusQueued": "排队中",
+  "@statusQueued": {
+    "description": "任务状态：排队中"
+  },
+  "statusDone": "已完成",
+  "@statusDone": {
+    "description": "任务状态：已完成"
+  },
+  "statusPartialFailed": "部分失败",
+  "@statusPartialFailed": {
+    "description": "任务状态：部分失败"
+  },
+  "statusFailed": "失败",
+  "@statusFailed": {
+    "description": "任务状态：失败"
+  },
+  "statusCancelled": "已取消",
+  "@statusCancelled": {
+    "description": "任务状态：已取消"
+  },
+  "dropComicName": "漫画名",
+  "@dropComicName": {
+    "description": "投放：漫画名输入标签"
+  },
+  "dropComicNameHint": "同一名字会归入同一部漫画",
+  "@dropComicNameHint": {
+    "description": "投放：名字输入说明"
+  },
+  "dropPendingList": "待投放清单",
+  "@dropPendingList": {
+    "description": "投放：待投放清单标题"
+  },
+  "dropSubmit": "提交",
+  "@dropSubmit": {
+    "description": "投放：提交按钮"
+  },
+  "dropClear": "清空",
+  "@dropClear": {
+    "description": "投放：清空按钮"
+  },
+  "dropPickImages": "选择图片",
+  "@dropPickImages": {
+    "description": "投放：选择图片按钮"
+  },
+  "dropPickFolder": "选择文件夹",
+  "@dropPickFolder": {
+    "description": "投放：选择文件夹按钮"
+  },
+  "dropDropHint": "把图片或文件夹拖进这里",
+  "@dropDropHint": {
+    "description": "投放：拖拽区提示"
+  },
+  "dropDropHintActive": "松开即可选入图片",
+  "@dropDropHintActive": {
+    "description": "投放：拖拽悬停提示"
+  },
+  "dropSpec": "支持 png / jpg / jpeg / webp；服务端每批 20 张，超出的部分会自动排队（序号连续，不需要你分批）",
+  "@dropSpec": {
+    "description": "投放：规格说明"
+  },
+  "dropSubmittedToast": "已提交 {count} 张，队内第 {position} 位",
+  "@dropSubmittedToast": {
+    "description": "投放：提交成功吐司",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "position": {
+        "type": "int"
+      }
+    }
+  },
+  "dropBatchLabel": "第 {batch} 批",
+  "@dropBatchLabel": {
+    "description": "投放：批次标签",
+    "placeholders": {
+      "batch": {
+        "type": "int"
+      }
+    }
+  },
+  "dropEmptyFiles": "还没有待投放的图片",
+  "@dropEmptyFiles": {
+    "description": "投放：清单空态"
+  },
+  "imageFilter": "图片",
+  "@imageFilter": {
+    "description": "文件选择器：图片类型"
+  },
+  "shelfTitle": "我的书架",
+  "@shelfTitle": {
+    "description": "书架标题"
+  },
+  "shelfCount": "{count} 部",
+  "@shelfCount": {
+    "description": "书架：作品数量",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfSearchHint": "搜索漫画名 / 作者 / 话号…",
+  "@shelfSearchHint": {
+    "description": "书架：搜索框提示"
+  },
+  "shelfEmpty": "书架是空的",
+  "@shelfEmpty": {
+    "description": "书架：空态标题"
+  },
+  "shelfNoMatch": "没有与搜索词相关的作品",
+  "@shelfNoMatch": {
+    "description": "书架：搜索无结果"
+  },
+  "shelfUsedBytes": "已用容量 {size}",
+  "@shelfUsedBytes": {
+    "description": "书架：已用容量",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfBookMeta": "{author} · {chapters} 话 · {pages} 页",
+  "@shelfBookMeta": {
+    "description": "书架：作品元信息",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "chapters": {
+        "type": "int"
+      },
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "bookUnnamedAuthor": "未署名",
+  "@bookUnnamedAuthor": {
+    "description": "作品：作者为空时的占位"
+  },
+  "bookChapterCount": "{count} 话",
+  "@bookChapterCount": {
+    "description": "作品：话数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookPageCount": "{count} 页",
+  "@bookPageCount": {
+    "description": "作品：页数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookAuthorLabel": "作者 · {author}",
+  "@bookAuthorLabel": {
+    "description": "作品：作者行",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "bookContinueTranslate": "继续翻译",
+  "@bookContinueTranslate": {
+    "description": "作品：继续翻译按钮"
+  },
+  "bookViewComic": "查看漫画",
+  "@bookViewComic": {
+    "description": "作品：查看漫画按钮"
+  },
+  "bookChapters": "章节",
+  "@bookChapters": {
+    "description": "作品：章节分区标题"
+  },
+  "bookOneRowTwoChapters": "一行两话",
+  "@bookOneRowTwoChapters": {
+    "description": "作品：章节布局说明"
+  },
+  "chapterTitle": "第 {no} 话",
+  "@chapterTitle": {
+    "description": "话：标题",
+    "placeholders": {
+      "no": {
+        "type": "int"
+      }
+    }
+  },
+  "chapterMeta": "{pages} 页 · 已译 {done}",
+  "@chapterMeta": {
+    "description": "话：页数与进度",
+    "placeholders": {
+      "pages": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      }
+    }
+  },
+  "chapterDone": "已译完",
+  "@chapterDone": {
+    "description": "话状态：已译完"
+  },
+  "chapterEmpty": "空话",
+  "@chapterEmpty": {
+    "description": "话状态：空话"
+  },
+  "chapterPendingPages": "待译 {count} 页",
+  "@chapterPendingPages": {
+    "description": "话状态：待译页数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chapterProgress": "{done} / {total} 页",
+  "@chapterProgress": {
+    "description": "话进度",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfGoDrop": "去投放",
+  "@shelfGoDrop": {
+    "description": "空态引导：去投放"
+  },
+  "searchQuery": "搜索「{query}」",
+  "@searchQuery": {
+    "description": "搜索结果标题",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchSummary": "{books} 本作品 · {hits} 个话命中",
+  "@searchSummary": {
+    "description": "搜索结果摘要",
+    "placeholders": {
+      "books": {
+        "type": "int"
+      },
+      "hits": {
+        "type": "int"
+      }
+    }
+  },
+  "searchHint": "搜索命中会高亮 · 单话结果可以直接归并到另一本",
+  "@searchHint": {
+    "description": "搜索说明"
+  },
+  "searchEscHint": "Esc 退出搜索",
+  "@searchEscHint": {
+    "description": "搜索：退出提示"
+  },
+  "searchChapterHits": "{count} 个话命中",
+  "@searchChapterHits": {
+    "description": "搜索结果：话命中数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchOpenShelf": "打开书架",
+  "@searchOpenShelf": {
+    "description": "搜索：打开书架"
+  },
+  "queueTitle": "任务队列",
+  "@queueTitle": {
+    "description": "队列标题"
+  },
+  "queueEmptyTitle": "还没有翻译任务",
+  "@queueEmptyTitle": {
+    "description": "队列空态标题"
+  },
+  "queueEmptyDesc": "在漫画页用插件提交，或把图片拖进这个窗口",
+  "@queueEmptyDesc": {
+    "description": "队列空态说明"
+  },
+  "queueGoSettings": "去设置里配对插件",
+  "@queueGoSettings": {
+    "description": "队列空态引导"
+  },
+  "queueSourceLocal": "本机投放",
+  "@queueSourceLocal": {
+    "description": "队列来源：本机投放"
+  },
+  "queueBatchWithin": "队内 {batch} 批",
+  "@queueBatchWithin": {
+    "description": "队列：批次位次",
+    "placeholders": {
+      "batch": {
+        "type": "int"
+      }
+    }
+  },
+  "queueFinishedAt": "完成于 {month}/{day}",
+  "@queueFinishedAt": {
+    "description": "队列：完成时间",
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "actionCancel": "取消",
+  "@actionCancel": {
+    "description": "通用动作：取消"
+  },
+  "actionOpen": "打开",
+  "@actionOpen": {
+    "description": "通用动作：打开"
+  },
+  "actionMore": "更多",
+  "@actionMore": {
+    "description": "通用动作：更多"
+  },
+  "queueCancelledToast": "已取消「{name}」，保留了 {kept} 张已落盘的译文",
+  "@queueCancelledToast": {
+    "description": "队列：取消吐司",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "kept": {
+        "type": "int"
+      }
+    }
+  },
+  "queueTotalCount": "共 {count} 条任务",
+  "@queueTotalCount": {
+    "description": "队列：总条数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueMultiSelect": "多选",
+  "@queueMultiSelect": {
+    "description": "队列：多选按钮"
+  },
+  "queueSelectedCount": "已选 {count} 项",
+  "@queueSelectedCount": {
+    "description": "队列：已选数量",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueSelectPage": "全选本页",
+  "@queueSelectPage": {
+    "description": "队列：全选本页"
+  },
+  "queueSelectAll": "选择全部 {count} 条",
+  "@queueSelectAll": {
+    "description": "队列：全选",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueDeleteSelected": "删除选中（{count}）",
+  "@queueDeleteSelected": {
+    "description": "队列：删除选中",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueLoadFailed": "任务列表加载失败：{message}",
+  "@queueLoadFailed": {
+    "description": "队列：加载失败",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "colComic": "漫画",
+  "@colComic": {
+    "description": "队列表头：漫画"
+  },
+  "colProgress": "进度",
+  "@colProgress": {
+    "description": "队列表头：进度"
+  },
+  "colStatus": "状态",
+  "@colStatus": {
+    "description": "队列表头：状态"
+  },
+  "colActions": "操作",
+  "@colActions": {
+    "description": "队列表头：操作"
+  },
+  "pagerTotalTasks": "条任务",
+  "@pagerTotalTasks": {
+    "description": "分页器：任务计数单位"
+  },
+  "pagerTotal": "共 {total} {unit}",
+  "@pagerTotal": {
+    "description": "分页器：总计",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "pagerPageSize": "{size} 条 / 页",
+  "@pagerPageSize": {
+    "description": "分页器：每页条数",
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "musicDiscoverEmpty": "官方榜单与推荐歌单需要接入音乐源后才可用。",
+  "@musicDiscoverEmpty": {
+    "description": "音乐发现：空态说明"
+  },
+  "musicLocalEmpty": "本地曲库尚未接入；接入后在此选择文件或文件夹导入。",
+  "@musicLocalEmpty": {
+    "description": "音乐本地：空态说明"
+  },
+  "musicHistoryEmpty": "播放历史随音乐域落地后在此展示。",
+  "@musicHistoryEmpty": {
+    "description": "音乐历史：空态说明"
+  },
+  "musicPlaylistEmpty": "歌单随音乐域落地后在此展示。",
+  "@musicPlaylistEmpty": {
+    "description": "音乐歌单：空态说明"
+  },
+  "animePending": "番剧 · 待定",
+  "@animePending": {
+    "description": "番剧屏占位"
+  },
+  "settingsPending": "设置 · 开发中",
+  "@settingsPending": {
+    "description": "设置屏占位"
+  },
+  "queueDeletedToast": "已删除 {count} 条任务记录",
+  "@queueDeletedToast": {
+    "description": "队列：删除吐司",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueCancelMulti": "取消多选",
+  "@queueCancelMulti": {
+    "description": "队列：退出多选"
+  },
+  "queueDeleteHint": "删除只清记录，不动漫画库里的文件",
+  "@queueDeleteHint": {
+    "description": "队列：删除说明"
   }
 }

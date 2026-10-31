@@ -33,11 +33,11 @@ class QueueTable extends ConsumerWidget {
     final someChecked = !allChecked && rows.any((t) => selection.ids.contains(t.id));
 
     return AppTable(
-      columns: const [
-        AppTableColumn('漫画', flex: true),
-        AppTableColumn('进度', width: 180),
-        AppTableColumn('状态', width: 120),
-        AppTableColumn('操作', width: 150),
+      columns: [
+        AppTableColumn(AppLocalizations.of(context).colComic, flex: true),
+        AppTableColumn(AppLocalizations.of(context).colProgress, width: 180),
+        AppTableColumn(AppLocalizations.of(context).colStatus, width: 120),
+        AppTableColumn(AppLocalizations.of(context).colActions, width: 150),
       ],
       rowCount: rows.length,
       headerLeading: selection.enabled
@@ -141,6 +141,7 @@ class _StatusCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Row(
       children: [
         Container(
@@ -149,7 +150,7 @@ class _StatusCell extends StatelessWidget {
           decoration: BoxDecoration(color: task.status.color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(task.status.label, style: const TextStyle(fontSize: 12.5, color: AppTokens.textPrimary)),
+        Text(task.status.label(l10n), style: const TextStyle(fontSize: 12.5, color: AppTokens.textPrimary)),
       ],
     );
   }
@@ -167,24 +168,24 @@ class _ActionCell extends ConsumerWidget {
       children: [
         if (!task.deletable)
           AppTextAction(
-            label: '取消',
+            label: AppLocalizations.of(context).actionCancel,
             onTap: () async {
               final kept = await ref.read(queueProvider.notifier).cancelTask(task.id);
               if (context.mounted) {
-                showAppToast(context, '已取消「${task.name}」，保留了 $kept 张已落盘的译文');
+                showAppToast(context, AppLocalizations.of(context).queueCancelledToast(task.name, kept));
               }
             },
           ),
         if (task.deletable)
           AppTextAction(
-            label: '打开',
+            label: AppLocalizations.of(context).actionOpen,
             onTap: () {
               /* TODO: 打开落盘目录，随服务端点落地 */
             },
           ),
         const SizedBox(width: 6),
         AppTextAction(
-          label: '更多',
+          label: AppLocalizations.of(context).actionMore,
           onTap: () {
             /* TODO: 右键菜单同源操作，随详情落地 */
           },

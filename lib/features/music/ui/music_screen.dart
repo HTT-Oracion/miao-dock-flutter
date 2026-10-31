@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_state.dart';
 
-/// 音乐模块内的视图（与 [musicViews] 的 id 一一对应）。
+/// 音乐模块内的视图（与 `musicViews` 的 id 一一对应）。
 enum MusicScreenView { discover, playlist, local, history }
 
 /// 音乐屏：本期（应用主体框架）只承载路由与空态。
@@ -17,19 +18,28 @@ class MusicScreen extends StatelessWidget {
 
   final MusicScreenView view;
 
-  static const _meta = {
-    MusicScreenView.discover: (LucideIcons.compass, '发现', '官方榜单与推荐歌单需要接入音乐源后才可用。'),
-    MusicScreenView.local: (LucideIcons.hardDrive, '本地音乐', '本地曲库尚未接入；接入后在此选择文件或文件夹导入。'),
-    MusicScreenView.history: (LucideIcons.history, '播放历史', '播放历史随音乐域落地后在此展示。'),
-    MusicScreenView.playlist: (LucideIcons.listMusic, '我的歌单', '歌单随音乐域落地后在此展示。'),
+  /// 视图 → 图标（图标不随语言变化，可静态）。
+  static const _icons = {
+    MusicScreenView.discover: LucideIcons.compass,
+    MusicScreenView.playlist: LucideIcons.listMusic,
+    MusicScreenView.local: LucideIcons.hardDrive,
+    MusicScreenView.history: LucideIcons.history,
+  };
+
+  /// 视图 → ARB 文案（标题 + 说明）。
+  static ({String title, String description}) _textOf(AppLocalizations l10n, MusicScreenView v) => switch (v) {
+    MusicScreenView.discover => (title: l10n.viewDiscover, description: l10n.musicDiscoverEmpty),
+    MusicScreenView.playlist => (title: l10n.viewPlaylist, description: l10n.musicPlaylistEmpty),
+    MusicScreenView.local => (title: l10n.viewLocal, description: l10n.musicLocalEmpty),
+    MusicScreenView.history => (title: l10n.viewHistory, description: l10n.musicHistoryEmpty),
   };
 
   @override
   Widget build(BuildContext context) {
-    final meta = _meta[view]!;
+    final text = _textOf(AppLocalizations.of(context), view);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppMetrics.contentPadding, vertical: 18),
-      child: EmptyState(icon: meta.$1, title: meta.$2, description: meta.$3),
+      child: EmptyState(icon: _icons[view]!, title: text.title, description: text.description),
     );
   }
 }

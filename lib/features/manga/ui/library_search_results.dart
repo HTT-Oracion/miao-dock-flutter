@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../controller/library_controller.dart';
 import '../domain/manga_status.dart';
 import '../domain/lib_book.dart';
@@ -32,26 +33,29 @@ class LibrarySearchResults extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         children: [
           Text(
-            '搜索「$query」',
+            AppLocalizations.of(context).searchQuery(query),
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppTokens.textPrimary),
           ),
           const SizedBox(height: 4),
           Text(
-            '${groups.length} 本作品 · $hitCount 个话命中',
+            AppLocalizations.of(context).searchSummary(groups.length, hitCount),
             style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
           ),
           const SizedBox(height: 14),
           for (final group in groups) ...[_GroupCard(group: group), const SizedBox(height: 12)],
           const SizedBox(height: 6),
-          const Row(
+          Row(
             children: [
               Expanded(
                 child: Text(
-                  '搜索命中会高亮 · 单话结果可以直接归并到另一本',
-                  style: TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+                  AppLocalizations.of(context).searchHint,
+                  style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
                 ),
               ),
-              Text('Esc 退出搜索', style: TextStyle(fontSize: 11.5, color: AppTokens.textSecondary)),
+              Text(
+                AppLocalizations.of(context).searchEscHint,
+                style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+              ),
             ],
           ),
         ],
@@ -99,7 +103,7 @@ class _GroupCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${group.chapters.length} 个话命中',
+                  AppLocalizations.of(context).searchChapterHits(group.chapters.length),
                   style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
                 ),
                 const Spacer(),
@@ -121,7 +125,10 @@ class _OpenShelfLink extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
-      child: const Text('打开书架', style: TextStyle(fontSize: 12, color: AppTokens.accent)),
+      child: Text(
+        AppLocalizations.of(context).searchOpenShelf,
+        style: const TextStyle(fontSize: 12, color: AppTokens.accent),
+      ),
     );
   }
 }
@@ -134,8 +141,10 @@ class _HitRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badge = chapter.done
-        ? '已译完'
-        : (chapter.donePages == 0 ? '空话' : '待译 ${chapter.pageCount - chapter.donePages} 页');
+        ? AppLocalizations.of(context).chapterDone
+        : (chapter.donePages == 0
+              ? AppLocalizations.of(context).chapterEmpty
+              : AppLocalizations.of(context).chapterPendingPages(chapter.pageCount - chapter.donePages));
     final badgeColor = chapter.done
         ? MangaTaskStatus.done.color
         : (chapter.donePages == 0 ? MangaTaskStatus.cancelled.color : MangaTaskStatus.translating.color);
@@ -149,7 +158,7 @@ class _HitRow extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              '第 ${chapter.no} 话',
+              AppLocalizations.of(context).chapterTitle(chapter.no),
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12.5, color: AppTokens.textPrimary),
             ),
@@ -166,7 +175,7 @@ class _HitRow extends StatelessWidget {
           SizedBox(
             width: 76,
             child: Text(
-              '${chapter.donePages} / ${chapter.pageCount} 页',
+              AppLocalizations.of(context).chapterProgress(chapter.donePages, chapter.pageCount),
               textAlign: TextAlign.right,
               style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
             ),

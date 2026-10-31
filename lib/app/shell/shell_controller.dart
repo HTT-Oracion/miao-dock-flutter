@@ -20,50 +20,27 @@ class NavCollapsedNotifier extends Notifier<bool> {
 
 /// 当前模块的视图清单 —— 侧栏视图组的事实源（design.html §03 侧栏结构）。
 ///
-/// 顺序即工作流时序，与原项目 `TRANSLATE_VIEWS` 一致（投放 → 队列 → 漫画库），
-/// 不在此处另立枚举：视图 id 必须与路由段同名。
-enum MangaView {
-  drop('投放'),
-  queue('队列'),
-  library('漫画库');
-
-  const MangaView(this.label);
-
-  final String label;
-}
-
-enum MusicView {
-  discover('发现'),
-  playlist('我的歌单'),
-  local('本地音乐'),
-  history('播放历史');
-
-  const MusicView(this.label);
-
-  final String label;
-}
-
-/// 侧栏视图项（图标由 UI 层按 id 映射，域层不依赖 Flutter 图标类型）。
+/// 顺序即工作流时序，与原项目 `TRANSLATE_VIEWS` 一致（投放 → 队列 → 漫画库）。
+/// **只存 id，不存文案**：文案由 UI 层按 id 查 ARB（AGENTS §3 国际化约束）。
 @immutable
 class SidebarViewItem {
-  const SidebarViewItem({required this.id, required this.label});
+  const SidebarViewItem({required this.id});
 
   /// 路由段名：`/manga/<id>` 或 `/music/<id>`。
   final String id;
-  final String label;
 }
 
-/// 漫画模块视图（原项目 `TRANSLATE_VIEWS`，逐字）。
+/// 漫画模块视图（原项目 `TRANSLATE_VIEWS` 的顺序）。
 const List<SidebarViewItem> mangaViews = [
-  SidebarViewItem(id: 'drop', label: '投放'),
-  SidebarViewItem(id: 'queue', label: '队列'),
-  SidebarViewItem(id: 'library', label: '漫画库'),
+  SidebarViewItem(id: 'drop'),
+  SidebarViewItem(id: 'queue'),
+  SidebarViewItem(id: 'library'),
 ];
 
 /// 音乐模块视图（design.html 侧栏「音乐」分组）。
 const List<SidebarViewItem> musicViews = [
-  SidebarViewItem(id: 'discover', label: '发现'),
-  SidebarViewItem(id: 'playlist', label: '我的歌单'),
-  SidebarViewItem(id: 'local', label: '本地音乐'),
-  SidebarViewItem(id: 'history', label: '播放历史'),
+  SidebarViewItem(id: 'discover'),
+  SidebarViewItem(id: 'playlist'),
+  SidebarViewItem(id: 'local'),
+  SidebarViewItem(id: 'history'),
 ];

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/shell/shell_controller.dart';
+import '../../app/shell/view_labels.dart';
 import '../../core/theme/tokens.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -529,7 +530,7 @@ class _ViewGroup extends StatelessWidget {
           for (final item in items)
             _ViewItem(
               icon: _icons[item.id] ?? LucideIcons.listMinus,
-              label: item.label,
+              label: viewLabel(AppLocalizations.of(context), item.id),
               active: activeId == item.id,
               showLabel: labels,
               count: item.id == 'queue' ? queueCount : null,
@@ -664,7 +665,10 @@ class _NavFootState extends State<_NavFoot> {
                 if (showText) ...[
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text('设置', style: TextStyle(fontSize: 11, color: palette.ink2)),
+                    child: Text(
+                      AppLocalizations.of(context).navSettings,
+                      style: TextStyle(fontSize: 11, color: palette.ink2),
+                    ),
                   ),
                   // 服务状态点：色相只由圆点承载，文字保持中性（design.html §02）。
                   Container(

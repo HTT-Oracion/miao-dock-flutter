@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/theme/tokens.dart';
+import '../../l10n/app_localizations.dart';
 import 'buttons.dart';
 
 /// 通用分页器（设计稿 H Note 04/10，antd Table 风格）：
@@ -16,7 +17,7 @@ class AppPager extends StatefulWidget {
     required this.onPage,
     required this.onPageSize,
     this.pageSizes = const [10, 20, 50],
-    this.totalLabel = '条任务',
+    this.totalLabel,
   });
 
   final int total;
@@ -25,7 +26,9 @@ class AppPager extends StatefulWidget {
   final ValueChanged<int> onPage;
   final ValueChanged<int> onPageSize;
   final List<int> pageSizes;
-  final String totalLabel;
+
+  /// 总数单位（如「条任务」）；null = 用 ARB 默认文案。
+  final String? totalLabel;
 
   @override
   State<AppPager> createState() => _AppPagerState();
@@ -45,7 +48,8 @@ class _AppPagerState extends State<AppPager> {
           Row(
             children: [
               Text(
-                '共 ${widget.total} ${widget.totalLabel}',
+                AppLocalizations.of(context)
+                    .pagerTotal(widget.total, widget.totalLabel ?? AppLocalizations.of(context).pagerTotalTasks),
                 style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
               ),
               const Spacer(),
@@ -98,7 +102,7 @@ class _SizeSelector extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        AppGhostButton(label: '$current 条 / 页', onTap: onToggle),
+        AppGhostButton(label: AppLocalizations.of(context).pagerPageSize(current), onTap: onToggle),
         if (open)
           Positioned(
             bottom: 30,
@@ -125,7 +129,10 @@ class _SizeSelector extends StatelessWidget {
                                   ? const Icon(LucideIcons.x, size: 0, color: Colors.transparent)
                                   : null,
                             ),
-                            Text('$size 条 / 页', style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
+                            Text(
+                              AppLocalizations.of(context).pagerPageSize(size),
+                              style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary),
+                            ),
                           ],
                         ),
                       ),

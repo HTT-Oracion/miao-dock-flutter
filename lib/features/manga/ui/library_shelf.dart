@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
 import '../domain/lib_book.dart';
@@ -50,12 +51,15 @@ class _ShelfHead extends StatelessWidget {
         children: [
           const Icon(LucideIcons.bookOpen, size: 14, color: AppTokens.textSecondary),
           const SizedBox(width: 8),
-          const Text(
-            '我的书架',
+          Text(
+            AppLocalizations.of(context).shelfTitle,
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
           ),
           const Spacer(),
-          Text('$count 部', style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+          Text(
+            AppLocalizations.of(context).shelfCount(count),
+            style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
+          ),
         ],
       ),
     );
@@ -82,9 +86,9 @@ class _ShelfSearch extends ConsumerWidget {
             child: TextField(
               onChanged: (v) => ref.read(shelfQueryProvider.notifier).set(v),
               style: const TextStyle(fontSize: 12.5),
-              decoration: const InputDecoration(
-                hintText: '搜索漫画名 / 作者 / 话号…',
-                hintStyle: TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context).shelfSearchHint,
+                hintStyle: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -111,7 +115,10 @@ class _ShelfList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (books.isEmpty) {
       return Center(
-        child: Text('没有与搜索词相关的作品', style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+        child: Text(
+          AppLocalizations.of(context).shelfNoMatch,
+          style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
+        ),
       );
     }
     return ListView.builder(
@@ -163,7 +170,11 @@ class _BookRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${book.author} · ${book.chapterCount} 话 · ${book.pageCount} 页',
+                        AppLocalizations.of(context).shelfBookMeta(
+                          book.hasAuthor ? book.author : AppLocalizations.of(context).bookUnnamedAuthor,
+                          book.chapterCount,
+                          book.pageCount,
+                        ),
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
                       ),
@@ -210,11 +221,17 @@ class _ShelfFoot extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
-          Text('已用容量 ${formatBytes(bytes)}', style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary)),
+          Text(
+            AppLocalizations.of(context).shelfUsedBytes(formatBytes(bytes)),
+            style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+          ),
           const Spacer(),
           GestureDetector(
             onTap: () => context.go('/manga/drop'),
-            child: const Text('去投放', style: TextStyle(fontSize: 11.5, color: AppTokens.accent)),
+            child: Text(
+              AppLocalizations.of(context).shelfGoDrop,
+              style: TextStyle(fontSize: 11.5, color: AppTokens.accent),
+            ),
           ),
         ],
       ),

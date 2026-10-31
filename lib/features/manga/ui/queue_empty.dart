@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../core/theme/tokens.dart';
+import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 
-/// 队列空态（设计稿 H Note 06，逐字文案）：还没有翻译任务。
+/// 队列空态（设计稿 H Note 06，逐字文案）：只给「还没有翻译任务」+ 两个引导动作。
 class QueueEmpty extends StatelessWidget {
   const QueueEmpty({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -24,12 +26,12 @@ class QueueEmpty extends StatelessWidget {
             child: const Icon(LucideIcons.layers, size: 28, color: AppTokens.textSecondary),
           ),
           const SizedBox(height: 14),
-          const Text(
-            '还没有翻译任务',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+          Text(
+            l10n.queueEmptyTitle,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
           ),
           const SizedBox(height: 6),
-          const Text('在漫画页用插件提交，或把图片拖进这个窗口', style: TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+          Text(l10n.queueEmptyDesc, style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
           const SizedBox(height: 18),
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -37,7 +39,7 @@ class QueueEmpty extends StatelessWidget {
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: AppTokens.accent, foregroundColor: AppTokens.pageBg),
                 onPressed: () => context.go('/settings'),
-                child: const Text('去设置里配对插件'),
+                child: Text(l10n.queueGoSettings),
               ),
               const SizedBox(width: 10),
               OutlinedButton(
@@ -46,7 +48,7 @@ class QueueEmpty extends StatelessWidget {
                   side: const BorderSide(color: AppTokens.progressTrack),
                 ),
                 onPressed: () => context.go('/manga/drop'),
-                child: const Text('本机投放'),
+                child: Text(l10n.queueSourceLocal),
               ),
             ],
           ),

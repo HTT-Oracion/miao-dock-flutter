@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,6 +12,8 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 ///   2. 词条可正常解析（delegate 挂得上）；
 ///   3. 关键壳层词条非空。
 void main() {
+  _uiZeroHardcodedChinese();
+
   testWidgets('supportedLocales 只有 zh（当前不做语言切换）', (tester) async {
     // 破坏点：给 supportedLocales 加 en 等语言，本条失败。
     expect(AppLocalizations.supportedLocales.length, 1);
@@ -57,5 +61,28 @@ void main() {
       // 破坏点：把词条改成 "Drop" 之类英文占位，本条失败（设计稿 §08 文案纪律）。
       expect(RegExp(r'[\u4e00-\u9fff]').hasMatch(s), isTrue, reason: '「$s」应为中文');
     }
+  });
+}
+
+/// UI 层零硬编码中文（D-006）。
+///
+/// 与 `tool/check_l10n.dart` 呼应：脚本进 CI，这条进 `flutter test`，
+/// 两条都需要通过 —— 只靠一条容易被绕过（CI 未跑、或本地只跑 test）。
+void _uiZeroHardcodedChinese() {
+  test('UI 层不得出现中文硬编码（必须走 ARB）', () {
+    final cn = RegExp(r'[\u4e00-\u9fff]');
+    final strLit = RegExp(r"'([^'\\]|\\.)*'");
+    final offenders = <String>[];
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      final path = entity.path.replaceAll('\\', '/');
+      if (path.contains('/l10n/')) continue;
+      final isUi = path.contains('/ui/') || path.contains('/shared/widgets/') || path.contains('/app/shell/');
+      if (!isUi) continue;
+      final n = strLit.allMatches(entity.readAsStringSync()).where((m) => cn.hasMatch(m.group(0)!)).length;
+      if (n > 0) offenders.add('$path: $n 处');
+    }
+    // 破坏点：在任一 UI 文件里写死中文，本条失败。
+    expect(offenders, isEmpty, reason: 'UI 层硬编码中文：\n${offenders.join('\n')}');
   });
 }

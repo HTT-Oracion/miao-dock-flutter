@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/drop_controller.dart';
 import '../controller/queue_controller.dart';
@@ -28,7 +29,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
   Future<void> _pickImages() async {
     final files = await openFiles(
       acceptedTypeGroups: [
-        const XTypeGroup(label: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp']),
+        XTypeGroup(label: AppLocalizations.of(context).imageFilter, extensions: const ['png', 'jpg', 'jpeg', 'webp']),
       ],
     );
     ref.read(dropController.notifier).addFiles(files.map((f) => f.path));
@@ -51,7 +52,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
     final result = await ref.read(queueProvider.notifier).submit(comicName: state.name, imagePaths: state.files);
     ref.read(dropController.notifier).clear();
     if (mounted) {
-      showAppToast(context, '已提交 ${result.submitted} 张，队内第 ${result.position} 位');
+      showAppToast(context, AppLocalizations.of(context).dropSubmittedToast(result.submitted, result.position));
       context.go('/manga/queue');
     }
   }
@@ -73,14 +74,14 @@ class _DropScreenState extends ConsumerState<DropScreen> {
               onPickImages: _pickImages,
               onPickFolder: _pickFolder,
             ),
-            const _FieldLabel('漫画名', required: true),
+            _FieldLabel(AppLocalizations.of(context).dropComicName, required: true),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 1),
               child: TextField(
                 onChanged: ref.read(dropController.notifier).setName,
                 style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: '同一名字会归入同一部漫画',
+                  hintText: AppLocalizations.of(context).dropComicNameHint,
                   hintStyle: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary),
                   filled: true,
                   fillColor: AppTokens.card,
@@ -89,7 +90,10 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                 ),
               ),
             ),
-            if (state.files.isNotEmpty) ...[const _FieldLabel('待投放清单'), _PendingList(files: state.files)],
+            if (state.files.isNotEmpty) ...[
+              _FieldLabel(AppLocalizations.of(context).dropPendingList),
+              _PendingList(files: state.files),
+            ],
             const SizedBox(height: 18),
             Row(
               children: [
@@ -101,7 +105,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                     disabledForegroundColor: AppTokens.textSecondary,
                   ),
                   onPressed: ready ? _submit : null,
-                  child: const Text('提交'),
+                  child: Text(AppLocalizations.of(context).dropSubmit),
                 ),
                 const SizedBox(width: 10),
                 OutlinedButton(
@@ -110,7 +114,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                     side: const BorderSide(color: AppTokens.progressTrack),
                   ),
                   onPressed: state.files.isEmpty ? null : () => ref.read(dropController.notifier).clear(),
-                  child: const Text('清空'),
+                  child: Text(AppLocalizations.of(context).dropClear),
                 ),
               ],
             ),
@@ -158,23 +162,23 @@ class _Dropzone extends StatelessWidget {
           children: [
             Icon(LucideIcons.fileUp, size: 22, color: hovering ? AppTokens.accent : AppTokens.textSecondary),
             const SizedBox(height: 8),
-            const Text(
-              '把图片或文件夹拖进这里',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+            Text(
+              AppLocalizations.of(context).dropDropHint,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
             ),
             const SizedBox(height: 4),
-            const Text(
-              '支持 png / jpg / jpeg / webp；服务端每批 20 张，超出的部分会自动排队（序号连续，不需要你分批）',
+            Text(
+              AppLocalizations.of(context).dropSpec,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: AppTokens.textSecondary),
+              style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary),
             ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _ZoneButton(label: '选择图片', onTap: onPickImages),
+                _ZoneButton(label: AppLocalizations.of(context).dropPickImages, onTap: onPickImages),
                 const SizedBox(width: 8),
-                _ZoneButton(label: '选择文件夹', onTap: onPickFolder),
+                _ZoneButton(label: AppLocalizations.of(context).dropPickFolder, onTap: onPickFolder),
               ],
             ),
           ],
@@ -254,7 +258,10 @@ class _PendingList extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Text('第 ${i ~/ 20 + 1} 批', style: const TextStyle(fontSize: 11, color: AppTokens.accent)),
+                Text(
+                  AppLocalizations.of(context).dropBatchLabel(i ~/ 20 + 1),
+                  style: const TextStyle(fontSize: 11, color: AppTokens.accent),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

@@ -55,7 +55,8 @@ List<SearchGroup> searchGroups(WidgetRef ref) {
   final groups = <SearchGroup>[];
   for (final book in books) {
     final bookHit = book.name.contains(query) || book.author.contains(query);
-    final chapterHits = book.chapters.where((c) => '第 ${c.no} 话'.contains(query)).toList();
+    // 话号匹配不拼中文文案：直接按数字比对，`3` / `第3话` / `第 3 话` 都能命中。
+    final chapterHits = book.chapters.where((c) => '${c.no}'.contains(query) || query.contains('${c.no}')).toList();
     if (bookHit) {
       groups.add((book: book, chapters: book.chapters));
     } else if (chapterHits.isNotEmpty) {
