@@ -1,19 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/engine_inspect.dart';
-import '../../../core/storage/paths.dart';
+import '../../manga/controller/engine_install_controller.dart';
 
-/// 当前引擎目录（D-027）。
+/// 当前引擎目录 —— **代理到 `engineRootProvider`**（D-061）。
 ///
-/// 不持久化是有意的：目录是「安装位置」，每次下载都要重新确认（D-015 定案），
-/// 应用启动时回落到默认值即可；用户改选后仅在本会话内生效。
+/// ## 为什么必须只有一个来源
+/// 之前这里是个独立、且**不落盘**的 provider：设置页「导入」只改它，
+/// 而门禁（`mangaGateProvider`）读的是 `engineRootProvider`。
+/// 结果：导入成功后**投放页仍然显示下载页**——用户以为导入没生效。
+///
+/// 现在本 provider 只做转发：读走 watch，写走对方 notifier，落盘由对方负责。
 final engineDirProvider = NotifierProvider<EngineDirNotifier, String>(EngineDirNotifier.new);
 
 class EngineDirNotifier extends Notifier<String> {
   @override
-  String build() => mangaEngineDir();
+  String build() => ref.watch(engineRootProvider);
 
-  void set(String dir) => state = dir;
+  void set(String dir) => ref.read(engineRootProvider.notifier).set(dir);
 }
 
 /// 引擎校验结果。

@@ -1,3 +1,5 @@
+import '../storage/shell_prefs.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -15,6 +17,12 @@ import 'service_launch.dart';
 /// ## 退出清理
 /// App 退出时必须把子进程带走，否则下次启动端口仍被占、用户只能重启机器。
 /// 这里 `stop()` 先 SIGTERM 给宽限期，超时再 SIGKILL；并在 [dispose] 复用同一路径。
+/// 已落盘的引擎目录；未设置则返回 null（让服务用自己的默认值）。
+String? _engineDirEnv() {
+  final dir = readEngineDir();
+  return (dir == null || dir.isEmpty) ? null : dir;
+}
+
 class ServiceSupervisor {
   ServiceSupervisor({
     required this.plan,
@@ -95,6 +103,11 @@ class ServiceSupervisor {
         plan.args,
         workingDirectory: plan.workingDirectory,
         runInShell: false,
+        // 🔴 把「用户选的引擎目录」交给服务进程（D-061）。
+        // 服务的引擎目录默认是 appData 下那个；用户手动导入到别处时，
+        // 不传这个环境变量，服务会去查一个空目录并回「未装配」——
+        // 表现就是「导入成功、点启动没反应」。
+        environment: {...Platform.environment, 'MIAO_MANGA_ENGINE_DIR': ?_engineDirEnv()},
       );
       _proc = proc;
       _append('[service] spawned pid=${proc.pid} (${plan.origin})');
