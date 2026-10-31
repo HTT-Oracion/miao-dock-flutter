@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:protocol/protocol.dart';
 
@@ -6,6 +8,20 @@ import '../domain/manga_task.dart';
 
 /// mangasvc 客户端：默认 A 级 Fake；真实现由 bootstrap 按平台注入（AGENTS §3）。
 final mangaSvcClientProvider = Provider<MangaSvcClient>((ref) => FakeMangaSvcClient());
+
+/// 队列轮询（D-074）。
+///
+/// 🔴 之前**没有任何轮询**：任务列表只在投递/取消时刷新一次。
+/// 服务端其实在跑，但界面永远停在提交那一刻的快照 —— 看起来就是「一直排队中」，
+/// 取消后进度也还在动（实际是界面不会再更新）。
+///
+/// 用「被 watch 才启动」的 Provider 承载定时器：页面在场才轮询，离开自动停。
+final queuePollerProvider = Provider<void>((ref) {
+  final timer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+    ref.read(queueProvider.notifier).refresh();
+  });
+  ref.onDispose(timer.cancel);
+});
 
 /// 队列任务列表（串行队列全量）。
 final queueProvider = AsyncNotifierProvider<QueueNotifier, List<MangaTask>>(QueueNotifier.new);

@@ -17,6 +17,8 @@ class QueueScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 挂上轮询：页面在场时每 1.5s 拉一次，离开自动停。
+    ref.watch(queuePollerProvider);
     final queue = ref.watch(queueProvider);
     return LayoutBuilder(
       builder: (context, constraints) {
