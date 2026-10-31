@@ -26,14 +26,30 @@
 >
 > **拆解原则**：按「能独立验收的最小闭环」切，而不是按模块切。每个子项都要能单独跑出一条可观察结果。
 
-#### P0-A 协议契约与传输层（先定契约，再写实现）
+#### P0-A 协议契约与传输层（✅ 已完成 2026-10-31）
 
-| # | 任务 | 交付物 | 验收判据 | 依赖 |
+| # | 任务 | 交付物 | 验收判据 | 状态 |
 |---|---|---|---|---|
-| P0-A1 | 对齐 `packages/protocol` 的 HTTP 契约 | `MangasvcClient` 接口按 `/api/v1` 真实路径重写；DTO 补齐 `TaskDetail`、`QueueSnapshot`、`LibraryMeta` | 接口方法数与路由表一一对应，无遗漏 | — |
-| P0-A2 | 引入 `dio` 并建 `core/net` 客户端 | 拦截器：baseUrl 注入、超时、错误信封解析 | 单元测试：错误信封能还原 `code` / `message` | P0-A1 |
-| P0-A3 | 端口段探测（5180–5190） | 探测算法 + 单实例语义 | 端口被占用时能自动落到下一端口；全被占用时报明确错误 | P0-A2 |
-| P0-A4 | 令牌鉴权（pairing token） | 请求头注入与 401 处理 | 无令牌请求被拒；带令牌通过 | P0-A2 |
+| P0-A1 | 对齐 `packages/protocol` 的 HTTP 契约 | `MangaSvcClient` 接口按 `/api/v1` 真实路由重写，**50 个端点一一对应**；DTO 补齐 `TaskRow`/`TaskListResponse`/`LibraryResponse`/`EngineStatus`/`ModelDownloadView`/`ApiError` | 方法数 = 路由表端点数；契约词表原样往返 | ✅ |
+| P0-A2 | 引入 `dio` 并建 `core/net` 客户端 | `MangaSvcHttpClient`：baseUrl/超时/令牌注入 + 错误信封解析 + JSON 字符串兜底 | 错误信封还原 `code`/`message`/`details`；401 归 `unauthorized` | ✅ |
+| P0-A3 | 端口段探测（5180–5190） | `PortProbe`：TCP 可达 + `/health` 200 + `service` 字段匹配 | 非 mangasvc 服务占用端口时不误判 | ✅ |
+| P0-A4 | 令牌鉴权 | `ServiceLocator`（桌面 Local / 移动 Remote）+ `Authorization: Bearer` | 令牌可热切换；空地址给明确错误 | ✅ |
+
+**落地位置**：
+
+| 层 | 文件 |
+|---|---|
+| 契约 | `packages/protocol/lib/src/manga_svc_client.dart`（50 端点） |
+| DTO | `packages/protocol/lib/src/dto/{task_status,task_row,library,engine,api_error}.dart` |
+| 传输 | `lib/core/net/manga_svc_http.dart`、`port_probe.dart`、`service_locator.dart` |
+| 实现 | `lib/features/manga/data/http_manga_svc_client.dart` |
+| 转换 | `lib/features/manga/data/contract_map.dart`（DTO → domain） |
+| 装配 | `lib/app/bootstrap.dart`（平台分支注入） |
+
+**踩坑记录（写进代码注释）**：
+1. `flutter_test` 的 `TestWidgetsFlutterBinding` **拦截所有 HttpClient 并强制返回 400** —— 传输层与 widget 层测试必须**分文件**，同文件出现 `testWidgets` 会掐断整份 suite 的真实网络。
+2. dio 在部分 Content-Type 下返回 **String 而非 Map** —— 响应解析必须两种都能吃，否则正常响应被误判成协议错误。
+3. 契约状态词表是**下划线**（`partial_failed`/`canceled`），不是驼峰；未知状态**抛错不降级**。
 
 #### P0-B `mangasvc` 服务端实现（按端点组，逐组可验收）
 

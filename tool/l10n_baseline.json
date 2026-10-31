@@ -19,5 +19,8 @@
   "lib/features/manga/controller/library_controller.dart": 1,
   "lib/features/manga/ui/queue_screen.dart": 1,
   "lib/features/settings/ui/settings_screen.dart": 1,
-  "lib/shared/widgets/nav_rail.dart": 1
+  "lib/shared/widgets/nav_rail.dart": 1,
+  "lib/core/net/service_locator.dart": 2,
+  "lib/core/net/manga_svc_http.dart": 1,
+  "_note": "service_locator / manga_svc_http 的中文是开发者诊断信息（异常 message），不进 UI；UI 按错误 code 映射 ARB 词条。"
 }

@@ -7,7 +7,7 @@ import '../../../../shared/widgets/toast.dart';
 import '../controller/queue_controller.dart';
 import '../domain/manga_status.dart';
 
-import 'package:protocol/protocol.dart';
+import '../domain/manga_task.dart';
 
 /// 队列顶栏（设计稿 H SumBar）：共 N 条 + 非零状态图例 + 多选；
 /// 多选态整条变操作栏（已选 N 项 · 全选本页 · 删除选中 · 取消）。

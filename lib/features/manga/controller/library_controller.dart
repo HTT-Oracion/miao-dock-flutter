@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:protocol/protocol.dart';
+
+import '../data/contract_map.dart';
+import '../domain/lib_book.dart';
 
 import 'queue_controller.dart';
 
@@ -8,7 +10,11 @@ final libraryProvider = AsyncNotifierProvider<LibraryNotifier, List<LibBook>>(Li
 
 class LibraryNotifier extends AsyncNotifier<List<LibBook>> {
   @override
-  Future<List<LibBook>> build() => ref.watch(mangasvcClientProvider).listLibrary();
+  Future<List<LibBook>> build() async {
+    final response = await ref.watch(mangaSvcClientProvider).listLibrary();
+    // 新服务端给 books；旧服务端只给 comics —— 后者无法还原「话」层级，故按空书架处理。
+    return response.books?.map(toLibBook).toList() ?? const <LibBook>[];
+  }
 }
 
 /// 当前选中的作品 key；null = 未选中（详情区展示空态指引）。

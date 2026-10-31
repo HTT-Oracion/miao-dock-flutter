@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:protocol/protocol.dart';
 
+import '../data/contract_map.dart';
+import '../domain/manga_task.dart';
+
 /// mangasvc 客户端：默认 A 级 Fake；真实现由 bootstrap 按平台注入（AGENTS §3）。
-final mangasvcClientProvider = Provider<MangasvcClient>((ref) => FakeMangasvcClient());
+final mangaSvcClientProvider = Provider<MangaSvcClient>((ref) => FakeMangaSvcClient());
 
 /// 队列任务列表（串行队列全量）。
 final queueProvider = AsyncNotifierProvider<QueueNotifier, List<MangaTask>>(QueueNotifier.new);
@@ -23,7 +26,8 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
 
   Future<List<MangaTask>> _fetch() async {
     try {
-      final tasks = await ref.read(mangasvcClientProvider).listTasks();
+      final response = await ref.read(mangaSvcClientProvider).listTasks();
+      final tasks = response.tasks.map(toMangaTask).toList();
       _lastGood = tasks;
       state = AsyncData(tasks);
     } catch (e, st) {
@@ -35,7 +39,7 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
   /// 删除任务记录；ids 为空集表示全量删除可删任务（设计稿 H Note 10）。
   /// 返回实际删除条数（吐司用）。
   Future<int> deleteTasks(Set<String> ids) async {
-    final client = ref.read(mangasvcClientProvider);
+    final client = ref.read(mangaSvcClientProvider);
     final all = state.value ?? const <MangaTask>[];
     final targets = all.where((t) => t.deletable).toList();
     final affected = ids.isEmpty ? targets : targets.where((t) => ids.contains(t.id)).toList();
@@ -48,14 +52,17 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
   Future<int> cancelTask(String taskId) async {
     final all = state.value ?? const <MangaTask>[];
     final task = all.firstWhere((t) => t.id == taskId);
-    await ref.read(mangasvcClientProvider).cancelTask(taskId);
+    await ref.read(mangaSvcClientProvider).cancelTask(taskId);
     await refresh();
     return task.donePages;
   }
 
   /// 投放，返回提交结果（吐司用）。
-  Future<SubmitResult> submit({required String comicName, required List<String> imagePaths}) {
-    return ref.read(mangasvcClientProvider).submit(comicName: comicName, imagePaths: imagePaths);
+  /// 投放，返回提交结果（吐司用）。
+  Future<SubmitOutcome> submit({required String comicName, required List<String> imagePaths}) async {
+    final res = await ref.read(mangaSvcClientProvider).createTask(comicName: comicName, imagePaths: imagePaths);
+    await refresh();
+    return SubmitOutcome(submitted: imagePaths.length, position: res.queuePosition);
   }
 }
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:protocol/protocol.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/app_checkbox.dart';
@@ -9,6 +8,8 @@ import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/queue_controller.dart';
 import '../domain/manga_status.dart';
+import '../../../l10n/app_localizations.dart';
+import '../domain/manga_task.dart';
 
 /// 队列表格（设计稿 H TableCard）：40 表头 + 58px 行；
 /// 勾选模式让位 36px 勾选列，选中行主题色底 + 左 3px 色条（H Note 03）；
@@ -79,6 +80,7 @@ class _NameCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +92,7 @@ class _NameCell extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          '${task.subtitle} · 第 ${task.batchNo} 批',
+          l10n.queueTaskSubtitle(task.donePages, task.pageCount, task.batchNo),
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
         ),

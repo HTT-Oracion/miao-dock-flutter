@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:protocol/protocol.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
 import '../domain/manga_status.dart';
 import 'library_search_results.dart';
+import '../domain/lib_book.dart';
+import '../domain/manga_task.dart';
 
 /// 详情主区（设计稿 G Main）：Hero（封面 + 标题 + 元信息 + 动作）+ 章节卡（一行两话）。
 class LibraryDetail extends ConsumerWidget {

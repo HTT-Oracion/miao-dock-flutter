@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:protocol/protocol.dart';
+
+import 'manga_task.dart';
 
 import '../../../core/theme/tokens.dart';
 

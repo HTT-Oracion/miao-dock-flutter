@@ -3,7 +3,11 @@
 /// `lib/` 与 `services/*` 都只从这里 import，不得各自另写一套。
 library;
 
-export 'src/dto/lib_book.dart';
-export 'src/dto/manga_task.dart';
-export 'src/mangasvc_client.dart';
-export 'src/fake_mangasvc.dart';
+export 'src/dto/api_error.dart';
+export 'src/dto/engine.dart';
+export 'src/dto/library.dart';
+export 'src/dto/task_row.dart';
+export 'src/dto/task_status.dart';
+export 'src/fake_manga_svc.dart';
+
+export 'src/manga_svc_client.dart';

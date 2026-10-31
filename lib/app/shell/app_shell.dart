@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:protocol/protocol.dart';
 
 import '../../core/storage/shell_prefs.dart';
 import '../../core/theme/theme_mode.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
+import '../../features/manga/domain/manga_task.dart';
 import '../../features/music/ui/sidebar_mini_player.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_title_bar.dart';

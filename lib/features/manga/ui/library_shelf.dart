@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:protocol/protocol.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
+import '../domain/lib_book.dart';
 
 /// 书架左栏（设计稿 G Shelf，260 宽）：书架头 + 搜索 + 书架行 + 容量脚。
 class LibraryShelf extends ConsumerWidget {

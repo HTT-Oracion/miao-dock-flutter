@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:protocol/protocol.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../controller/library_controller.dart';
 import '../domain/manga_status.dart';
+import '../domain/lib_book.dart';
+import '../domain/manga_task.dart';
 
 /// 搜索分组态（设计稿 G Row 4）：右栏按作品分组的命中结果。
 /// 分组 = 作品命中（全话列出）或话号命中（仅命中话）；页脚常驻操作提示，Esc 退出。

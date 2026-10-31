@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:protocol/protocol.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/app_checkbox.dart';
@@ -8,6 +7,8 @@ import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/queue_controller.dart';
 import '../domain/manga_status.dart';
+import '../../../l10n/app_localizations.dart';
+import '../domain/manga_task.dart';
 
 /// 队列移动端（H Note 08）：卡片流替代表格——
 /// 任务名 + 状态徽标 + 位次/完成时间 + 进度条 + 行内主动作；多选态前置勾选框。
@@ -44,6 +45,7 @@ class _TaskCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final selected = selection.ids.contains(task.id);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -87,7 +89,12 @@ class _TaskCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${task.subtitle} · 第 ${task.batchNo} 批 · ${task.source}',
+                  l10n.queueTaskSubtitleWithSource(
+                    task.donePages,
+                    task.pageCount,
+                    task.batchNo,
+                    _sourceLabel(l10n, task.source),
+                  ),
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
                 ),
@@ -214,3 +221,10 @@ class _MobileSelectionBar extends ConsumerWidget {
     );
   }
 }
+
+/// 任务来源 → ARB 文案。
+String _sourceLabel(AppLocalizations l10n, MangaTaskSource source) => switch (source) {
+  MangaTaskSource.desktop => l10n.sourceDesktop,
+  MangaTaskSource.extension => l10n.sourceExtension,
+  MangaTaskSource.unknown => l10n.sourceUnknown,
+};

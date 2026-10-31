@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:protocol/protocol.dart';
 
 import '../../../shared/widgets/app_pager.dart';
 import '../controller/queue_controller.dart';
@@ -10,6 +9,7 @@ import 'queue_mobile.dart';
 import 'queue_skeleton.dart';
 import 'queue_sum_bar.dart';
 import 'queue_table.dart';
+import '../domain/manga_task.dart';
 
 /// 队列屏（设计稿 H 帧）：默认 / 空 / 加载 / 异常四态。
 /// 数据未到 → 骨架；错误 → 横幅 + 上次成功数据仍在（H Note 07）；无数据 → 空态。
