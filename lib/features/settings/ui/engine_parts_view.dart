@@ -7,6 +7,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/log_box.dart';
 import '../../manga/ui/notready/runtime_picker.dart';
+import '../../manga/controller/engine_ready_controller.dart';
 import '../controller/engine_dir_controller.dart';
 
 /// 设置页「引擎与模型」小节的**部件表**（D-027）。
@@ -82,6 +83,13 @@ class EnginePartsSection extends ConsumerWidget {
                   minimumSize: const Size(0, 30),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
+              ),
+              const SizedBox(width: 8),
+              // 轻量重查：只重做门禁用的快检（毫秒级），不起子进程。
+              TextButton(
+                onPressed: busy ? null : () => ref.read(enginePresenceProvider.notifier).refresh(),
+                style: TextButton.styleFrom(minimumSize: const Size(0, 30)),
+                child: Text(l10n.engineRecheck, style: const TextStyle(fontSize: 10.5)),
               ),
               const SizedBox(width: 10),
               Expanded(child: _Verdict(inspection: inspection)),

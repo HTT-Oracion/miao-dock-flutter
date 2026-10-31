@@ -24,6 +24,7 @@ class NotReadyScreen extends StatelessWidget {
     required this.onSecondary,
     required this.onRetryService,
     this.onImportLocal,
+    this.onBrowseLibrary,
     this.onTogglePause,
     this.paused = false,
     this.onExportLogs,
@@ -42,6 +43,11 @@ class NotReadyScreen extends StatelessWidget {
 
   /// 导入本地运行时（仅未装配态可用）。
   final VoidCallback? onImportLocal;
+
+  /// 门禁卡片上的「只读出口」：去漫画库（阅读已译作品不需要引擎）。
+  ///
+  /// 🔴 它**不是**当初被删掉的「稍后再说」——那个跳的是同样需要引擎的队列，会死循环。
+  final VoidCallback? onBrowseLibrary;
 
   /// 下载中：暂停 / 继续。
   final VoidCallback? onTogglePause;
@@ -69,6 +75,7 @@ class NotReadyScreen extends StatelessWidget {
               paused: paused,
               onExportLogs: onExportLogs,
               onImportLocal: onImportLocal,
+              onBrowseLibrary: onBrowseLibrary,
             ),
           ),
         ),
@@ -87,6 +94,7 @@ class _NotReadyCard extends StatelessWidget {
     required this.paused,
     required this.onExportLogs,
     required this.onImportLocal,
+    required this.onBrowseLibrary,
   });
 
   final NotReadyView view;
@@ -97,6 +105,7 @@ class _NotReadyCard extends StatelessWidget {
   final bool paused;
   final void Function(String text, String suggestedName)? onExportLogs;
   final VoidCallback? onImportLocal;
+  final VoidCallback? onBrowseLibrary;
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +145,7 @@ class _NotReadyCard extends StatelessWidget {
             onTogglePause: onTogglePause,
             paused: paused,
             onImportLocal: onImportLocal,
+            onBrowseLibrary: onBrowseLibrary,
           ),
         ],
       ),
@@ -447,6 +457,7 @@ class _Actions extends StatelessWidget {
     required this.onTogglePause,
     required this.paused,
     required this.onImportLocal,
+    required this.onBrowseLibrary,
   });
 
   final NotReadyView view;
@@ -456,6 +467,7 @@ class _Actions extends StatelessWidget {
   final VoidCallback? onTogglePause;
   final bool paused;
   final VoidCallback? onImportLocal;
+  final VoidCallback? onBrowseLibrary;
 
   @override
   Widget build(BuildContext context) {
@@ -530,6 +542,13 @@ class _Actions extends StatelessWidget {
               textStyle: const TextStyle(fontSize: 11),
             ),
             child: Text(l10n.nrActionSettings),
+          ),
+        // 只读出口：不需要引擎，因此不会与「等引擎」形成死循环。
+        if (onBrowseLibrary != null)
+          TextButton(
+            onPressed: onBrowseLibrary,
+            style: TextButton.styleFrom(minimumSize: const Size(0, 34)),
+            child: Text(l10n.engineBrowseLibrary, style: const TextStyle(fontSize: 11)),
           ),
       ],
     );

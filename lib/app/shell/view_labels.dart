@@ -8,7 +8,6 @@ String viewLabel(AppLocalizations l10n, String id) => switch (id) {
   'drop' => l10n.viewDrop,
   'queue' => l10n.viewQueue,
   'library' => l10n.viewLibrary,
-  'notready' => l10n.viewNotready,
   'discover' => l10n.viewDiscover,
   'playlist' => l10n.viewPlaylist,
   'local' => l10n.viewLocal,

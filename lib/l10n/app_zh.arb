@@ -1341,5 +1341,13 @@
   "viewNotready": "启动引导",
   "@viewNotready": {
     "description": "侧栏视图：启动引导"
+  },
+  "engineBrowseLibrary": "先去漫画库看看",
+  "@engineBrowseLibrary": {
+    "description": "门禁卡片：不需要引擎的只读出口"
+  },
+  "engineRecheck": "重新检查",
+  "@engineRecheck": {
+    "description": "设置：轻量重查装配状态"
   }
 }
