@@ -480,8 +480,6 @@ class _TranslateStatusChips extends ConsumerWidget {
         Container(width: 1, height: 14, color: palette.line, margin: const EdgeInsets.symmetric(horizontal: 6)),
         _Chip(label: sourceLabel),
         const SizedBox(width: 8),
-        _Chip(label: l10n.dropSpec.split('；').first),
-        const SizedBox(width: 8),
       ],
     );
   }

@@ -678,3 +678,28 @@
 - **验证**：`test/manga_gate_test.dart` 7 条；全量 116 通过 + 11 跳过。
 - **待办**：装配完成后**不自动启动引擎**（等用户点）；「启动应用即自动起引擎」由设置项控制，尚未接。
 - **关联**：D-012（部分修订）· D-033 · D-036（撤销）。
+
+## D-038 卡片按钮对齐设计稿 + 引擎启动入口路径修正
+
+- **状态**：已完成（2026-11-01）
+- **UI（按用户实测反馈）**：
+  - 按钮规格对齐 `design.html .btn`：高 **26**（原 34）/ 内距 **10** / 圆角 **6** / 字 **9.5**。
+    原实现用了 Material 默认圆角与 34 高，与稿子差得明显。
+  - 去掉「先去设置看看」与「设置」两个次级按钮（只留主操作 + 只读出口）。
+  - 去掉顶栏「支持 png / jpg …」徽标（那是从 `dropSpec` 截出来的，位置不对）。
+- **引擎启动实测（关键成果）**：用 `/tmp/full-eng`（python + src + 全量依赖）按 launch 规格启动：
+  ```
+  ./python/bin/python3 src/server/main.py --host 127.0.0.1 --port 59999 --start-instance
+  → INFO: Application startup complete.
+  → Uvicorn running on http://127.0.0.1:59999
+  → GET /openapi.json = 200
+  → 子进程 [shared] Running in shared mode 也起来了
+  ```
+  **这是引擎第一次真正跑起来**：`torch 2.15.0` 可导入，FastAPI 起来，健康检查 200。
+- **修掉的一个真 bug**：`launch.json` 里写的是 `server/main.py`，而 cwd 是引擎根，
+  实测报 `can't open file '/private/tmp/full-eng/server/main.py'`。
+  正确入口是 **`src/server/main.py`**。已修并保留注释说明「cwd 与相对路径必须一致」。
+- **仍未验证**：带模型的真实翻译（缺 llama + 4.7 GB 权重）；`launch.json` 的 `provisional` 标记暂不摘。
+- **踩坑**：`flutter test` 反复因 5180 被占而红 —— 是**用户手动开着的 App** 在保活服务。
+  这类「环境假红」两次都伪装成代码回归，值得在排障清单里固化（先看端口，再看代码）。
+- **关联**：D-027 · D-031 · D-035。
