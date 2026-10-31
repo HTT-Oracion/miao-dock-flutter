@@ -357,9 +357,10 @@ class _ServiceCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+      // 不做边框高亮：这只是一张普通卡片，主色描边会让它看起来像「正在报警」。
       decoration: BoxDecoration(
         color: palette.card,
-        border: Border.all(color: palette.acc, width: 1.5),
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(AppMetrics.radiusCardLg),
       ),
       child: Row(
@@ -379,6 +380,13 @@ class _ServiceCard extends ConsumerWidget {
                     Text(
                       subtitle,
                       style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: palette.ink),
+                    ),
+                    const SizedBox(width: 6),
+                    // 状态圆点：放在文字右侧、尺寸收小（8px）。
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(color: running ? palette.good : palette.warn, shape: BoxShape.circle),
                     ),
                     const SizedBox(width: 8),
                     _Pill(text: l10n.svcCardLocalService),
