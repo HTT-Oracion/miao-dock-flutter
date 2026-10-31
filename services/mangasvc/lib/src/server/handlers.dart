@@ -26,7 +26,7 @@ class Handlers {
     String? stateDir,
     String engineMode = 'mock',
   }) {
-    final store = LibraryStore(rootDir: rootDir);
+    final store = LibraryStore(rootDir: rootDir, stateDir: stateDir);
     final rt = runtimeRoot ?? _defaultEngineDir();
     final md = modelsDir ?? _defaultModelsDir();
     final facade = EngineFacade(runtimeRoot: rt, modelsDir: md);

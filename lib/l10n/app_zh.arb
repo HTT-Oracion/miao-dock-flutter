@@ -1642,5 +1642,29 @@
   "translateLogEmpty": "暂无翻译日志（翻译任务的事件会出现在这里）",
   "@translateLogEmpty": {
     "description": "队列与翻译日志文案"
+  },
+  "shelfShowHidden": "显示已隐藏",
+  "@shelfShowHidden": {
+    "description": "书架隐藏功能文案",
+    "placeholders": null
+  },
+  "shelfHiddenSection": "已隐藏的漫画",
+  "@shelfHiddenSection": {
+    "description": "书架隐藏功能文案",
+    "placeholders": null
+  },
+  "shelfRestore": "恢复",
+  "@shelfRestore": {
+    "description": "书架隐藏功能文案",
+    "placeholders": null
+  },
+  "shelfRestoredToast": "已恢复「{name}」",
+  "@shelfRestoredToast": {
+    "description": "书架隐藏功能文案",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -23,6 +23,7 @@ class LibraryNotifier extends AsyncNotifier<List<LibBook>> {
   Future<List<LibBook>> build() async {
     try {
       final response = await ref.watch(mangaSvcClientProvider).listLibrary();
+      ref.read(hiddenComicsProvider.notifier).set(response.hidden ?? const []);
       // 新服务端给 books；旧服务端只给 comics —— 后者无法还原「话」层级，按空书架处理。
       final books = response.books?.map(toLibBook).toList() ?? const <LibBook>[];
       _lastGood = books;
@@ -38,6 +39,7 @@ class LibraryNotifier extends AsyncNotifier<List<LibBook>> {
     state = const AsyncLoading<List<LibBook>>();
     state = await AsyncValue.guard(() async {
       final response = await ref.read(mangaSvcClientProvider).listLibrary();
+      ref.read(hiddenComicsProvider.notifier).set(response.hidden ?? const []);
       final books = response.books?.map(toLibBook).toList() ?? const <LibBook>[];
       _lastGood = books;
       return books;
@@ -57,6 +59,26 @@ class SelectedBookNotifier extends Notifier<String?> {
 
 /// 书架搜索词（收窄书架用；防抖随交互打磨补）。
 final shelfQueryProvider = NotifierProvider<ShelfQueryNotifier, String>(ShelfQueryNotifier.new);
+
+/// 服务端返回的隐藏清单（`hidden-comics.json`）。
+final hiddenComicsProvider = NotifierProvider<HiddenComicsNotifier, List<String>>(HiddenComicsNotifier.new);
+
+class HiddenComicsNotifier extends Notifier<List<String>> {
+  @override
+  List<String> build() => const [];
+
+  void set(List<String> v) => state = v;
+}
+
+/// 是否在书架里展示隐藏区。
+final showHiddenProvider = NotifierProvider<ShowHiddenNotifier, bool>(ShowHiddenNotifier.new);
+
+class ShowHiddenNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void toggle() => state = !state;
+}
 
 class ShelfQueryNotifier extends Notifier<String> {
   @override

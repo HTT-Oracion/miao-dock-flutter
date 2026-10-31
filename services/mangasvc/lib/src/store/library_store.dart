@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:protocol/protocol.dart' show LibraryManifest;
+
 import '../server/http.dart';
 import 'plans.dart';
 
@@ -20,9 +22,15 @@ import 'plans.dart';
 /// 不维护数据库：扫目录就能还原书架，用户手动拷进拷出也不会失联。
 /// 代价是扫描要读每个目录，故 `scan()` 做了浅层缓存（按 mtime 失效）。
 class LibraryStore {
-  LibraryStore({String? rootDir}) : _rootDir = rootDir; // ignore: prefer_initializing_formals
+  LibraryStore({String? rootDir, String? stateDir})
+    : _rootDir = rootDir,
+      _stateDir = stateDir; // ignore: prefer_initializing_formals
 
   String? _rootDir;
+  String? _stateDir;
+
+  /// 状态目录（hidden-comics.json 等；缺省 `<库根>/.miao-state`，与令牌同目录）。
+  String get stateDir => _stateDir ??= '$rootDir${Platform.pathSeparator}.miao-state';
 
   /// 落盘根目录（惰性创建）。
   String get rootDir => _rootDir ??= _defaultRoot();
@@ -41,8 +49,21 @@ class LibraryStore {
     return '$home${Platform.pathSeparator}Pictures${Platform.pathSeparator}MiaoDock Mangas';
   }
 
-  /// 初始化：确保根目录存在。
+  /// 初始化：确保根目录存在 + 读隐藏清单（`{comics:[...]}`，miao-dock 同构）。
   Future<void> init() async {
+    try {
+      final f = File('$stateDir${Platform.pathSeparator}hidden-comics.json');
+      if (f.existsSync()) {
+        final m = jsonDecode(f.readAsStringSync());
+        if (m is Map && m['comics'] is List) {
+          _hidden
+            ..clear()
+            ..addAll([for (final n in m['comics'] as List) '$n']);
+        }
+      }
+    } catch (_) {
+      // 坏文件当作没有隐藏。
+    }
     final dir = Directory(rootDir);
     if (!dir.existsSync()) dir.createSync(recursive: true);
   }
@@ -295,20 +316,30 @@ class LibraryStore {
       throw const ServiceError('DUPLICATE_BOOK', '同名漫画已存在');
     }
     dir.createSync(recursive: true);
-    File('${dir.path}/manifest.json').writeAsStringSync(jsonEncode({'title': name, 'author': ''}));
+    // 全字段 manifest（键序同旧项目 default_manifest：schema,title,author,cover,episodes）。
+    File('${dir.path}/manifest.json')
+        .writeAsStringSync(jsonEncode(LibraryManifest(title: name, author: '', cover: null, episodes: []).toJson()));
   }
 
   /// 删本：`deleteFiles=false` 只隐藏（目录仍在），true 连目录一起删。
   Future<Map<String, dynamic>> deleteBook(String name, {required bool deleteFiles}) async {
     final dir = Directory('$rootDir/$name');
-    if (!dir.existsSync() && !_hidden.contains(name)) {
-      throw const ServiceError('NOT_FOUND', '该本不存在', status: 404);
-    }
     if (deleteFiles) {
-      if (dir.existsSync()) dir.deleteSync(recursive: true);
-    } else {
-      _hidden.add(name);
+      // 物理删除：目录不存在 → 清残留隐藏记录并 404（miao-dock 同）。
+      if (!dir.existsSync()) {
+        _hidden.remove(name);
+        _persistHidden();
+        throw const ServiceError('TASK_NOT_FOUND', '漫画目录不存在', status: 404);
+      }
+      dir.deleteSync(recursive: true);
+      _hidden.remove(name);
       _persistHidden();
+    } else {
+      // 隐藏不要求目录存在（miao-dock `hide_comic` 同样不检查）。
+      if (!_hidden.contains(name)) {
+        _hidden.add(name);
+        _persistHidden();
+      }
     }
     return {
       'comicName': name,
@@ -326,10 +357,15 @@ class LibraryStore {
 
   final Set<String> _hidden = {};
 
+  /// 隐藏清单（测试与 UI 用）。
+  List<String> get hiddenList => _hidden.toList();
+
   void _persistHidden() {
     try {
-      final f = File('$rootDir/hidden-comics.json');
-      f.writeAsStringSync(jsonEncode(_hidden.toList()));
+      // miao-dock 同构：`{comics:[...]}`，落在状态目录而不是库根。
+      final f = File('$stateDir${Platform.pathSeparator}hidden-comics.json');
+      f.parent.createSync(recursive: true);
+      f.writeAsStringSync(jsonEncode({'comics': _hidden.toList()}));
     } catch (_) {
       // 忽略名单写失败不影响主流程
     }

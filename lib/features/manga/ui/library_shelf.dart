@@ -5,8 +5,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/buttons.dart';
+import '../../../shared/widgets/toast.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../core/utils/format.dart';
+import '../controller/queue_controller.dart';
 import '../controller/library_controller.dart';
 import '../domain/lib_book.dart';
 
@@ -41,7 +44,7 @@ class LibraryShelf extends ConsumerWidget {
           _ShelfSearch(query: query),
           Expanded(
             // 加载中显示**卡片骨架**（设计稿：书是卡片，不是表格行）。
-            child: shelfLoading(ref) ? const _ShelfCardSkeleton() : _ShelfList(books: books, selected: selected),
+            child: shelfLoading(ref) ? const _ShelfCardSkeleton() : _ShelfBody(books: books, selected: selected),
           ),
           _ShelfFoot(books: allBooks),
         ],
@@ -118,31 +121,64 @@ class _ShelfSearch extends ConsumerWidget {
   }
 }
 
-class _ShelfList extends ConsumerWidget {
-  const _ShelfList({required this.books, required this.selected});
+/// 书架主体：正常书目 +（开关打开时）已隐藏区。
+class _ShelfBody extends ConsumerWidget {
+  const _ShelfBody({required this.books, required this.selected});
 
   final List<LibBook> books;
   final String? selected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (books.isEmpty) {
+    final showHidden = ref.watch(showHiddenProvider);
+    final hidden = ref.watch(hiddenComicsProvider);
+    final l10n = AppLocalizations.of(context);
+
+    if (books.isEmpty && (!showHidden || hidden.isEmpty)) {
       return Center(
-        child: Text(
-          AppLocalizations.of(context).shelfNoMatch,
-          style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
-        ),
+        child: Text(l10n.shelfNoMatch, style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
       );
     }
-    return ListView.builder(
+
+    return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      itemCount: books.length,
-      itemExtent: 56,
-      itemBuilder: (context, i) => _BookRow(
-        book: books[i],
-        active: books[i].key == selected,
-        onTap: () => ref.read(selectedBookProvider.notifier).select(books[i].key),
-      ),
+      children: [
+        for (final b in books)
+          _BookRow(
+            book: b,
+            active: b.key == selected,
+            onTap: () => ref.read(selectedBookProvider.notifier).select(b.key),
+          ),
+        if (showHidden && hidden.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            l10n.shelfHiddenSection,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTokens.textSecondary),
+          ),
+          const SizedBox(height: 4),
+          for (final name in hidden)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(name, style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+                  ),
+                  AppTextAction(
+                    label: l10n.shelfRestore,
+                    onTap: () async {
+                      await ref.read(mangaSvcClientProvider).unhideBook(name);
+                      await ref.read(libraryProvider.notifier).refresh();
+                      if (context.mounted) {
+                        showAppToast(context, l10n.shelfRestoredToast(name), tone: ToastTone.good);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ],
     );
   }
 }
@@ -221,13 +257,13 @@ class _CoverThumb extends StatelessWidget {
   }
 }
 
-class _ShelfFoot extends StatelessWidget {
+class _ShelfFoot extends ConsumerWidget {
   const _ShelfFoot({required this.books});
 
   final List<LibBook> books;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bytes = books.fold(0, (s, b) => s + b.totalBytes);
     return Container(
       height: 44,
@@ -244,6 +280,18 @@ class _ShelfFoot extends StatelessWidget {
             child: Text(
               AppLocalizations.of(context).shelfGoDrop,
               style: TextStyle(fontSize: 11.5, color: AppTokens.accent),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // 「显示已隐藏」开关（miao-dock：隐藏清单在服务端，这里只做开关）。
+          GestureDetector(
+            onTap: () => ref.read(showHiddenProvider.notifier).toggle(),
+            child: Text(
+              AppLocalizations.of(context).shelfShowHidden,
+              style: TextStyle(
+                fontSize: 11.5,
+                color: ref.watch(showHiddenProvider) ? AppTokens.accent : AppTokens.textSecondary,
+              ),
             ),
           ),
         ],

@@ -1543,3 +1543,21 @@
 - **验证**：`comic_names_test` 9 条（含旧项目原用例 `"  a/b:c*  " → abc`）；服务端 148 通过；应用 116 通过。
 - **下一阶段**：A（隐藏机制：`hidden.json` + 删除=隐藏/物理 + 恢复）。
 - **关联**：`miao-dock` names.rs / store/pure.rs / store/exec.rs / store/model.rs。
+
+## D-082 阶段 A：隐藏机制对齐 + 书架「显示已隐藏」
+
+- **状态**：完成（2026-11-01），阶段 A 结束
+- **对照**：`miao-dock` `library_delete`（body `{deleteFiles}`）+ `store.rs hide_comic/forget_hidden` + `platform/paths.rs hidden_comics_file()`。
+- **服务端对齐**：
+  - `deleteFiles=false` → **隐藏**（不检查目录存在性，`hide_comic` 同）；
+  - `deleteFiles=true` → 目录不存在 → 清残留隐藏记录 + 404（`TASK_NOT_FOUND`）；存在 → 物理删 + 清记录；
+  - `hidden-comics.json` 从「库根、裸数组」改为 **`<stateDir>/hidden-comics.json`、`{comics:[...]}`**（同构旧项目），
+    启动 `init()` 时恢复；
+  - `createBook` 顺带对齐：manifest 写**全字段**（schema/title/author/cover/episodes），不再只写 title/author。
+- **App 端**：
+  - `hiddenComicsProvider`（服务端返回的隐藏清单，随 `listLibrary` 刷新）；
+  - `showHiddenProvider` 开关，`_ShelfFoot` 底部「显示已隐藏」；
+  - `_ShelfBody`：开关开时书架尾部列出「已隐藏的漫画」+ 每行「恢复」（`POST /unhide` + 绿色吐司）。
+- **验证**：`library_hidden_test` 4 条（隐藏保留目录/物理删除/恢复/去重）；服务端 152 通过；应用 116 通过。
+- **下一阶段**：B 漫画库功能（新建漫画 UI、单话归并 UI、查看逻辑、简易模式、编辑、阅读器、封面、状态联动、刷新）。
+- **关联**：D-079（名称规范化）· D-080（单话平铺）。
