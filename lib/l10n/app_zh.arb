@@ -1,0 +1,61 @@
+{
+  "@@locale": "zh",
+
+  "appName": "喵坞 MiaoDock",
+  "@appName": { "description": "应用名称，用于窗口标题" },
+  "brandName": "喵坞",
+  "@brandName": { "description": "侧栏品牌名（Logo 旁）" },
+  "brandTagline": "漫画翻译 · 音乐 · 番剧",
+  "@brandTagline": { "description": "侧栏品牌副标" },
+
+  "navManga": "漫画翻译",
+  "@navManga": { "description": "侧栏模块：漫画翻译" },
+  "navMusic": "音乐",
+  "@navMusic": { "description": "侧栏模块：音乐" },
+  "navAnime": "番剧",
+  "@navAnime": { "description": "侧栏模块：番剧（占位）" },
+  "navSettings": "设置",
+  "@navSettings": { "description": "侧栏底部设置入口" },
+
+  "viewDrop": "投放",
+  "@viewDrop": { "description": "漫画视图：投放" },
+  "viewQueue": "队列",
+  "@viewQueue": { "description": "漫画视图：队列" },
+  "viewLibrary": "漫画库",
+  "@viewLibrary": { "description": "漫画视图：漫画库" },
+  "viewDiscover": "发现",
+  "@viewDiscover": { "description": "音乐视图：发现" },
+  "viewPlaylist": "我的歌单",
+  "@viewPlaylist": { "description": "音乐视图：我的歌单" },
+  "viewLocal": "本地音乐",
+  "@viewLocal": { "description": "音乐视图：本地音乐" },
+  "viewHistory": "播放历史",
+  "@viewHistory": { "description": "音乐视图：播放历史" },
+
+  "titleAnimePending": "番剧 · 待定",
+  "@titleAnimePending": { "description": "番剧屏占位文案" },
+  "titleDesktopLyrics": "桌面歌词",
+  "@titleDesktopLyrics": { "description": "桌面歌词功能名（桌面专属）" },
+
+  "actionExpandSidebar": "展开侧栏",
+  "@actionExpandSidebar": { "description": "侧栏收起态按钮提示" },
+  "actionCollapseSidebar": "收起侧栏",
+  "@actionCollapseSidebar": { "description": "侧栏展开态按钮提示" },
+  "actionOpenNav": "打开导航",
+  "@actionOpenNav": { "description": "移动端汉堡按钮提示" },
+  "actionToLightTheme": "切换到浅色主题",
+  "@actionToLightTheme": { "description": "主题切换按钮提示（当前为深色）" },
+  "actionToDarkTheme": "切换到深色主题",
+  "@actionToDarkTheme": { "description": "主题切换按钮提示（当前为浅色）" },
+
+  "queueWaitingBadge": "{count}",
+  "@queueWaitingBadge": {
+    "description": "侧栏队列徽标：待办数（运行中 + 排队中）",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "themeToLightToast": "已切换为浅色主题",
+  "@themeToLightToast": { "description": "切主题吐司" },
+  "themeToDarkToast": "已切换为深色主题",
+  "@themeToDarkToast": { "description": "切主题吐司" }
+}

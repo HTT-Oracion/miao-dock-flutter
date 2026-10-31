@@ -29,9 +29,10 @@ coverage/
 **/linux/flutter/ephemeral/
 **/android/.gradle/
 
-# ---- 生成的代码（build_runner；不入库，见 AGENTS.md §5）----
+# ---- 生成的代码（build_runner / gen_l10n；不入库，见 AGENTS.md §5）----
 *.g.dart
 *.freezed.dart
+lib/l10n/app_localizations*.dart
 
 # ---- fvm ----
 .fvm/

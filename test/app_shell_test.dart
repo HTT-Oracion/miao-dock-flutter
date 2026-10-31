@@ -4,12 +4,15 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:miao_dock_flutter/app/shell/shell_controller.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
+import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 import 'package:miao_dock_flutter/shared/widgets/nav_rail.dart';
 
 /// 壳层断言（design.html §03 / §05）—— 每条都写明「破坏什么会让它失败」。
 void main() {
   Widget host({required Widget child}) => MaterialApp(
     theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: child),
   );
 

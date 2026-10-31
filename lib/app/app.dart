@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/theme.dart';
 import '../core/theme/theme_mode.dart';
+import '../l10n/app_localizations.dart';
 import 'router/routes.dart';
 
 /// 应用根组件：深浅双主题挂载 + go_router（设计稿 §01 / §06）。
@@ -15,7 +16,10 @@ class MiaoDockApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: '喵坞 MiaoDock',
+      // 当前仅中文，不做语言切换；supportedLocales 只列 zh（见 D-006）。
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(Brightness.light),
       darkTheme: buildAppTheme(Brightness.dark),

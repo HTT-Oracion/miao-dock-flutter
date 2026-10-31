@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:miao_dock_flutter/app/shell/shell_controller.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
+import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 import 'package:miao_dock_flutter/shared/widgets/nav_rail.dart';
 
 /// 侧栏折叠交互断言（design.html §03 / §05 / §06）。
@@ -16,6 +17,8 @@ void main() {
   Widget harness() => ProviderScope(
     child: MaterialApp(
       theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Consumer(
         builder: (context, ref, _) {
           final collapsed = ref.watch(navCollapsedProvider);

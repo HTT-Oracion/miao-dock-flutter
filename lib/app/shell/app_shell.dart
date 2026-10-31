@@ -10,6 +10,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
 import '../../features/music/ui/sidebar_mini_player.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_title_bar.dart';
 import '../../shared/widgets/nav_rail.dart';
 import 'shell_controller.dart';
@@ -25,7 +26,7 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final location = _ShellLocation.of(GoRouterState.of(context).uri.path);
+    final location = _ShellLocation.of(GoRouterState.of(context).uri.path, AppLocalizations.of(context));
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth > AppMetrics.breakpoint;
@@ -63,47 +64,47 @@ class _ShellLocation {
   /// 侧栏视图组条目。
   final List<SidebarViewItem> viewItems;
 
-  static const _moduleNames = ['漫画翻译', '音乐', '番剧'];
+  /// 模块名（l10n）。
+  static String moduleName(AppLocalizations l10n, int index) => switch (index) {
+    0 => l10n.navManga,
+    1 => l10n.navMusic,
+    _ => l10n.navAnime,
+  };
 
   /// 视图标题（与原项目 `TITLES` 逐字一致，仅取本期已实现的模块）。
-  static const _viewTitles = {
-    'drop': '投放',
-    'queue': '任务队列',
-    'library': '本地漫画库',
-    'discover': '发现',
-    'playlist': '我的歌单',
-    'local': '本地音乐',
-    'history': '播放历史',
+  static String viewTitle(AppLocalizations l10n, String id) => switch (id) {
+    'drop' => l10n.viewDrop,
+    'queue' => l10n.viewQueue,
+    'library' => l10n.viewLibrary,
+    'discover' => l10n.viewDiscover,
+    'playlist' => l10n.viewPlaylist,
+    'local' => l10n.viewLocal,
+    _ => l10n.viewHistory,
   };
 
   static const _modules = {'manga': 0, 'music': 1, 'anime': 2};
 
-  static _ShellLocation of(String path) {
+  /// 路径 → 壳层位置。文案经 [AppLocalizations] 注入，不在本层写死中文。
+  static _ShellLocation of(String path, AppLocalizations l10n) {
     final seg = path.split('/').where((s) => s.isNotEmpty).toList();
     if (seg.isEmpty) return _empty;
     final index = _modules[seg[0]] ?? -1;
     if (index < 0) {
       // 设置页：全局层，无模块、无视图组。
-      return const _ShellLocation(
+      return _ShellLocation(
         moduleIndex: -1,
         viewId: null,
-        crumbs: ['喵坞', '设置'],
-        viewGroupLabel: '设置',
-        viewItems: [],
+        crumbs: [l10n.brandName, l10n.navSettings],
+        viewGroupLabel: l10n.navSettings,
+        viewItems: const [],
       );
     }
+    final module = moduleName(l10n, index);
     final items = index == 0 ? mangaViews : (index == 1 ? musicViews : const <SidebarViewItem>[]);
     final viewId = seg.length > 1 && items.any((v) => v.id == seg[1]) ? seg[1] : items.firstOrNull?.id;
-    final crumbs = <String>[_moduleNames[index]];
-    final title = viewId == null ? null : _viewTitles[viewId];
-    if (title != null) crumbs.add(title);
-    return _ShellLocation(
-      moduleIndex: index,
-      viewId: viewId,
-      crumbs: crumbs,
-      viewGroupLabel: _moduleNames[index],
-      viewItems: items,
-    );
+    final crumbs = <String>[module];
+    if (viewId != null) crumbs.add(viewTitle(l10n, viewId));
+    return _ShellLocation(moduleIndex: index, viewId: viewId, crumbs: crumbs, viewGroupLabel: module, viewItems: items);
   }
 
   static const _empty = _ShellLocation(moduleIndex: -1, viewId: null, crumbs: [], viewGroupLabel: '', viewItems: []);
@@ -290,10 +291,11 @@ class _ThemeToggleButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context);
     return IconButton(
       icon: Icon(isDark ? LucideIcons.sun : LucideIcons.moon, size: 15),
       color: palette.ink2,
-      tooltip: isDark ? '切换到浅色主题' : '切换到深色主题',
+      tooltip: isDark ? l10n.actionToLightTheme : l10n.actionToDarkTheme,
       onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
     );
   }
@@ -319,7 +321,7 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
     final palette = AppPalette.of(context);
     final labels = ref.watch(sidebarLabelsProvider);
     final queueDepth = _queueDepth(ref.watch(queueProvider).value ?? const []);
-    final title = widget.location.crumbs.isEmpty ? '喵坞' : widget.location.crumbs.last;
+    final title = widget.location.crumbs.isEmpty ? AppLocalizations.of(context).brandName : widget.location.crumbs.last;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -367,7 +369,7 @@ class _MobileTopBar extends StatelessWidget {
             child: IconButton(
               icon: const Icon(LucideIcons.menu, size: 17),
               color: palette.ink2,
-              tooltip: '打开导航',
+              tooltip: AppLocalizations.of(context).actionOpenNav,
               onPressed: onMenu,
             ),
           ),

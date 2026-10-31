@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/shell/shell_controller.dart';
 import '../../core/theme/tokens.dart';
+import '../../l10n/app_localizations.dart';
 
 /// 应用侧栏（design.html §03 / `app.css .sidebar`）：
 /// 展开 208 / 收起 68；品牌 52 → 分隔线 → 模块 → 分隔线 → 视图组 → 弹性 → MiniPlayer → 设置脚。
@@ -203,6 +204,7 @@ class _Brand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
     // 收起态：品牌竖排（logo 在上、展开钮在下），与 app.css `.sidebar.mini .brand` 同构。
     if (collapsed) {
       return Padding(
@@ -211,7 +213,11 @@ class _Brand extends StatelessWidget {
           children: [
             const _MiaoLogo(size: 32),
             const SizedBox(height: 8),
-            _CollapseButton(icon: LucideIcons.panelLeftOpen, tooltip: '展开侧栏', onTap: onToggleCollapse),
+            _CollapseButton(
+              icon: LucideIcons.panelLeftOpen,
+              tooltip: AppLocalizations.of(context).actionExpandSidebar,
+              onTap: onToggleCollapse,
+            ),
           ],
         ),
       );
@@ -232,12 +238,12 @@ class _Brand extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '喵坞',
+                      l10n.brandName,
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink),
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      '漫画翻译 · 音乐 · 番剧',
+                      l10n.brandTagline,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 9, color: palette.mut),
@@ -247,7 +253,11 @@ class _Brand extends StatelessWidget {
               ),
             ] else
               const Spacer(),
-            _CollapseButton(icon: LucideIcons.panelLeftClose, tooltip: '收起侧栏', onTap: onToggleCollapse),
+            _CollapseButton(
+              icon: LucideIcons.panelLeftClose,
+              tooltip: AppLocalizations.of(context).actionCollapseSidebar,
+              onTap: onToggleCollapse,
+            ),
           ],
         ),
       ),
@@ -342,11 +352,15 @@ class _ModuleGroup extends StatelessWidget {
   final ValueChanged<int> onSelectModule;
 
   /// 顺序即侧栏渲染顺序（design.html：漫画翻译 / 音乐 / 番剧）。
-  static const _modules = [
-    (LucideIcons.languages, '漫画翻译'),
-    (LucideIcons.music, '音乐'),
-    (LucideIcons.clapperboard, '番剧'),
-  ];
+  /// 模块图标；顺序固定（design.html：漫画翻译 / 音乐 / 番剧）。
+  static const _icons = [LucideIcons.languages, LucideIcons.music, LucideIcons.clapperboard];
+
+  /// 模块序号 → 文案（0 漫画翻译 / 1 音乐 / 2 番剧）。
+  static String _moduleLabel(AppLocalizations l10n, int index) => switch (index) {
+    0 => l10n.navManga,
+    1 => l10n.navMusic,
+    _ => l10n.navAnime,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -354,10 +368,10 @@ class _ModuleGroup extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 10),
       child: Column(
         children: [
-          for (final (i, m) in _modules.indexed)
+          for (final (i, icon) in _icons.indexed)
             _ModuleItem(
-              icon: m.$1,
-              label: m.$2,
+              icon: icon,
+              label: _moduleLabel(AppLocalizations.of(context), i),
               active: moduleIndex == i,
               collapsed: collapsed,
               showLabel: labels,

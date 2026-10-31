@@ -16,3 +16,11 @@ analyze:
 
 format:
     fvm dart format .
+
+# 生成国际化词条（D-006）
+l10n:
+    fvm flutter gen-l10n
+
+# 中文硬编码棘轮检查（D-006）
+check-l10n:
+    fvm dart run tool/check_l10n.dart
