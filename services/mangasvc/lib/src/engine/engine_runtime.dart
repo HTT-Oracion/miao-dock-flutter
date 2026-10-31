@@ -36,6 +36,9 @@ class EngineRuntime {
   int? _enginePid;
   int? _llmPid;
   int? _enginePort;
+
+  /// 引擎端口（未启动为 null）。队列执行器要用它建客户端。
+  int? get port => _enginePort;
   int? _llmPort;
   bool _warmed = false;
   final DateTime startedAt = DateTime.now().toUtc();

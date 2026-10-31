@@ -23,12 +23,12 @@ class Handlers {
     final store = LibraryStore(rootDir: rootDir);
     final rt = runtimeRoot ?? _defaultEngineDir();
     final md = modelsDir ?? _defaultModelsDir();
-    return Handlers._(
-      store,
-      TaskQueue(engineMode: engineMode, rootDir: store.rootDir),
-      EngineFacade(runtimeRoot: rt, modelsDir: md),
-      engineMode,
-    );
+    final facade = EngineFacade(runtimeRoot: rt, modelsDir: md);
+    final queue = TaskQueue(engineMode: engineMode, rootDir: store.rootDir);
+    // 真实模式：把引擎能力注入队列（D-057）。
+    // mock 模式不注入 —— 那种模式下的「译文」是原图字节，仅供界面演示。
+    if (engineMode != 'mock') queue.translateImage = facade.translateImage;
+    return Handlers._(store, queue, facade, engineMode);
   }
 
   Handlers._(this.store, this.queue, this.engine, this.engineMode);

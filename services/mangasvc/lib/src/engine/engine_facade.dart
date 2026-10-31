@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:protocol/protocol.dart';
 
 import '../server/http.dart';
 import 'engine_deps.dart';
 import 'engine_install.dart';
+import 'engine_client.dart';
 import 'engine_runtime.dart';
 import 'model_download.dart' as dl;
 
@@ -180,6 +182,23 @@ class EngineFacade {
   final String runtimeRoot;
   final String modelsDir;
   final EngineRuntime runtime;
+
+  /// 把一张图交给引擎翻译（队列执行器用）。
+  ///
+  /// 引擎没起时**抛错**而不是返回 null：调用方才好把「引擎未就绪」如实写进任务失败原因。
+  Future<Uint8List> translateImage(Uint8List bytes) async {
+    final port = runtime.port;
+    if (port == null) {
+      throw StateError('引擎未启动（没有可用端口），无法翻译');
+    }
+    final client = EngineClient(host: '127.0.0.1', port: port);
+    final out = await client.translateImage(bytes);
+    if (!out.ok || out.image == null) {
+      throw StateError(out.error?.message ?? '引擎翻译失败（无错误信息）');
+    }
+    return out.image!;
+  }
+
   final ModelDownloadCoordinator downloader;
 
   // 装配状态（单实例：同一时刻只允许一次装配）。

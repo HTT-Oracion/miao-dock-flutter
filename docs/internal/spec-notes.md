@@ -1111,3 +1111,28 @@
 - **实现时还要碰的点**：启动引擎时注入 `CUSTOM_OPENAI_API_BASE=http://127.0.0.1:<mangasvc端口>/v1`
   —— mangasvc 端口是动态的，不能写死在 `launch.json`；`EngineSupervisor` 已支持 `environment`（D-043）。
 - **关联**：D-049~D-054（有道文本链路）· D-053（出网）。
+
+## D-057 队列执行器接引擎（真实翻译主链路）
+
+- **状态**：主链路已接（2026-11-01）；**尚未端到端跑过一次真实翻译**
+- **改之前**：`_runOne` 第一行就是
+  ```dart
+  if (engineMode != 'mock') { t.status = failed; t.failAll('引擎未接入（P0-C 待实现）'); return; }
+  ```
+  也就是「引擎在跑」时任务 100% 失败；mock 模式下「译文」直接是**原图字节**。
+- **改动**：
+  1. `EngineRuntime.port` 暴露给外部（此前是私有 `_enginePort`）；
+  2. `EngineFacade.translateImage(bytes)`：用当前端口建 `EngineClient` 翻译一张图，
+     **引擎没起时抛错**（让调用方如实记录失败原因，而不是返回 null）；
+  3. `TaskQueue.translateImage` 注入点 + `_runOne` 真实分支：
+     逐页翻译、**单页失败只记该页**（`lastError` / `failed++`）不拖垮整本；
+  4. `Handlers` 工厂在 `engineMode != 'mock'` 时把 facade 能力注入队列；
+  5. CLI `--engine` 默认从 `mock` 改为 **`real`** —— 真实服务不该默认演示数据。
+- **仍未做**：
+  1. **落盘目录**：现在写 `<rootDir>/<漫画名>/01_第1话/`，章节名硬编码；
+     项目口径是漫画库 `~/Pictures/MiaoDock Mangas`（D-015），需要把队列输出根与库根对齐；
+  2. **真实进度**：仍是按页 `done++`，没有消费引擎的 stage 帧；
+  3. **引擎未就绪的等待**：现在引擎没起 → 该页失败；合理行为是等就绪（客户端已有 120s 重试，执行器没用）；
+  4. **端到端验证**：一次真实「投放 → 翻译 → 落盘」尚未跑过。
+- **验证**：`dart analyze`/`flutter analyze` 干净；服务端 133 通过；应用 115 通过。
+- **关联**：D-037（门禁）· D-043（env）· D-045。

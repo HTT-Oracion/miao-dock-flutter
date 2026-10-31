@@ -16,7 +16,8 @@ import 'package:mangasvc/src/server/server.dart';
 /// 就绪信号：stdout 打印 `mangasvc listening on 127.0.0.1:<port>`，
 /// 父进程据此判定可以开始请求。
 Future<void> main(List<String> args) async {
-  final engine = _arg(args, '--engine') ?? 'mock';
+  // 默认真实模式：mock 下的「译文」是原图字节，只用于界面演示（D-057）。
+  final engine = _arg(args, '--engine') ?? 'real';
   final root = _arg(args, '--root');
   final state = _arg(args, '--state');
   final fixedPort = int.tryParse(_arg(args, '--port') ?? '');

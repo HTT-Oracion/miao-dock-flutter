@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import '../server/http.dart';
 
@@ -18,7 +19,12 @@ import '../server/http.dart';
 ///                     └──被取消────→ canceled
 /// ```
 class TaskQueue {
-  TaskQueue({this.engineMode = 'mock', required this.rootDir});
+  TaskQueue({this.engineMode = 'mock', required this.rootDir, this.translateImage});
+
+  /// 真实翻译（D-057）：引擎就绪时由 `EngineFacade` 注入。
+  ///
+  /// null = 没有引擎能力，只跑 mock（把原图字节当译文，仅供界面演示）。
+  Future<Uint8List> Function(Uint8List bytes)? translateImage;
 
   final String engineMode;
 
@@ -193,9 +199,12 @@ class TaskQueue {
   /// 不假装做了翻译（文件内容是原图字节，`_translated` 后缀标明位置）。
   /// **real 引擎**：P0-C 接入，当前显式失败，绝不假装成功。
   Future<void> _runOne(QueueTask t) async {
-    if (engineMode != 'mock') {
+    final translator = translateImage;
+    final real = engineMode != 'mock';
+    // 非 mock 模式必须有真实翻译能力，否则如实失败（不偷偷写成 mock）。
+    if (real && translator == null) {
       t.status = TaskStatus.failed;
-      t.failAll('引擎未接入（P0-C 待实现）');
+      t.failAll('引擎未接入（缺少翻译能力）');
       return;
     }
     t.status = TaskStatus.running;
@@ -229,8 +238,20 @@ class TaskQueue {
         } else {
           original.writeAsBytesSync([0]);
         }
-        // mock 译文 = 原图字节（位置正确，内容不是真翻译）。
-        translated.writeAsBytesSync(original.readAsBytesSync());
+        if (real) {
+          // 真实翻译：引擎出图；失败只让**这一页**失败，不拖垮整本。
+          try {
+            final out = await translator!(original.readAsBytesSync());
+            translated.writeAsBytesSync(out);
+          } catch (e) {
+            t.failed++;
+            t.lastError = '$e';
+            continue;
+          }
+        } else {
+          // mock 译文 = 原图字节（位置正确，内容不是真翻译）。
+          translated.writeAsBytesSync(original.readAsBytesSync());
+        }
 
         await Future<void>.delayed(const Duration(milliseconds: 10));
         t.done++;
@@ -299,6 +320,9 @@ class QueueTask {
 
   /// 来源归因（`extension` / `desktop`），由 `X-Box-Client` 决定。
   final String source;
+
+  /// 最近一次页面级失败原因（真实翻译时逐页记录，不中断整本）。
+  String? lastError;
 
   int total;
   int done = 0;
