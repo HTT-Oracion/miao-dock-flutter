@@ -54,11 +54,14 @@ Future<void> bootstrap(Widget app) async {
     }
   }
 
+  // 服务自报的令牌优先（编译期常量通常为空）。
+  final serviceToken = supervisor?.token ?? (token.isEmpty ? null : token);
+
   final ServiceLocator locator;
   if (forcedBaseUrl.isNotEmpty) {
     locator = RemoteServiceLocator(baseUrl: forcedBaseUrl, token: token.isEmpty ? null : token);
   } else if (isDesktopPlatform) {
-    locator = LocalServiceLocator(probe: const PortProbe(), token: token.isEmpty ? null : token);
+    locator = LocalServiceLocator(probe: const PortProbe(), token: serviceToken);
   } else {
     // 移动端 / Web：地址来自设置域（待 P5 落地后接入），此处先用同一个 define 兜住。
     locator = RemoteServiceLocator(baseUrl: forcedBaseUrl, token: token.isEmpty ? null : token);

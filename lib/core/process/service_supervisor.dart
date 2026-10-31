@@ -23,6 +23,15 @@ String? _engineDirEnv() {
   return (dir == null || dir.isEmpty) ? null : dir;
 }
 
+/// 从服务输出里取令牌：`mangasvc token <hex>`。
+String? _parseToken(String line) {
+  const marker = 'mangasvc token ';
+  final i = line.indexOf(marker);
+  if (i < 0) return null;
+  final v = line.substring(i + marker.length).trim();
+  return v.isEmpty ? null : v;
+}
+
 class ServiceSupervisor {
   ServiceSupervisor({
     required this.plan,
@@ -92,6 +101,12 @@ class ServiceSupervisor {
   /// 最近一次失败原因。
   String? lastError;
 
+  /// 服务打印的令牌（`mangasvc token <hex>`）。
+  ///
+  /// 🔴 应用启动服务时**必须**拿到它：服务默认要求令牌，而客户端原来只从
+  /// 编译期常量取，通常为空 ⇒ 所有请求 403。
+  String? token;
+
   Future<int?> _spawn() async {
     _setState(ServiceProcessState.starting);
     _readyCompleter = Completer<int>();
@@ -151,6 +166,9 @@ class ServiceSupervisor {
   void _onStdout(String line) {
     if (line.trim().isEmpty) return;
     _append(line);
+    // 服务在就绪后紧接着打印令牌；这里必须先抓下来，客户端才能通过鉴权。
+    final t = _parseToken(line);
+    if (t != null) token = t;
     final m = _readyRe.firstMatch(line);
     if (m != null) {
       final port = int.tryParse(m.group(2)!);

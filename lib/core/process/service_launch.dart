@@ -80,7 +80,8 @@ class ServiceLaunchPlan {
       final dart = resolveDartExecutable();
       return ServiceLaunchPlan(
         executable: dart,
-        args: ['run', script],
+        // `--print-token`：应用必须拿到服务生成的令牌，否则每个请求都 403。
+        args: ['run', script, '--print-token'],
         // script = <root>/services/mangasvc/bin/mangasvc.dart ⇒ 上溯 4 层到项目根
         workingDirectory: File(script).parent.parent.parent.parent.path,
         origin: 'dev-source',
