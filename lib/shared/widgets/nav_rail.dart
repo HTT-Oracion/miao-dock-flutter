@@ -180,7 +180,14 @@ class _RailBody extends StatelessWidget {
               ),
             const Spacer(),
             ?miniPlayer,
-            _NavFoot(collapsed: collapsed, labels: labels, onOpenSettings: onOpenSettings, readiness: readiness),
+            _NavFoot(
+              collapsed: collapsed,
+              labels: labels,
+              onOpenSettings: onOpenSettings,
+              readiness: readiness,
+              // 视图组为空 ⇒ 当前就是设置页（设置页没有视图组）。
+              settingsActive: viewItems.isEmpty,
+            ),
           ],
         ),
       ),
@@ -526,6 +533,9 @@ class _ViewGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 没有视图项时不画分组标题（设置页就是这种情况）：
+    // 那会变成「番剧」下方孤零零一行「设置」小字，纯噪音（design.html grp-label 只在有项时出现）。
+    if (items.isEmpty) return const SizedBox.shrink();
     final palette = AppPalette.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -640,6 +650,7 @@ class _NavFoot extends StatefulWidget {
     required this.labels,
     required this.onOpenSettings,
     required this.readiness,
+    this.settingsActive = false,
   });
 
   final bool collapsed;
@@ -648,6 +659,9 @@ class _NavFoot extends StatefulWidget {
 
   /// 「能否翻译」四色（D-012）—— 取代原「服务已启动」假绿点。
   final ReadinessLevel readiness;
+
+  /// 当前是否在设置页（决定底部设置项高亮）。
+  final bool settingsActive;
 
   @override
   State<_NavFoot> createState() => _NavFootState();
@@ -681,18 +695,23 @@ class _NavFootState extends State<_NavFoot> {
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: _hover ? palette.card : Colors.transparent,
+              // hover 与「当前页」共用同一个容器与内距 —— 两处区域必须一致。
+              color: (_hover || widget.settingsActive) ? palette.card : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                Icon(LucideIcons.settings, size: 14, color: palette.ink2),
+                Icon(LucideIcons.settings, size: 14, color: widget.settingsActive ? palette.acc : palette.ink2),
                 if (showText) ...[
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       AppLocalizations.of(context).navSettings,
-                      style: TextStyle(fontSize: 11, color: palette.ink2),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: widget.settingsActive ? palette.ink : palette.ink2,
+                        fontWeight: widget.settingsActive ? FontWeight.w600 : FontWeight.w400,
+                      ),
                     ),
                   ),
                   // 「能否翻译」四色点：色相只由圆点承载，文字保持中性（design.html §02）。
