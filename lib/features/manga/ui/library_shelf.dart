@@ -271,24 +271,17 @@ class _ShelfFoot extends ConsumerWidget {
             style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
           ),
           const Spacer(),
-          GestureDetector(
+          _TextLink(
+            label: AppLocalizations.of(context).shelfGoDrop,
+            color: AppTokens.accent,
             onTap: () => context.go('/manga/drop'),
-            child: Text(
-              AppLocalizations.of(context).shelfGoDrop,
-              style: TextStyle(fontSize: 11.5, color: AppTokens.accent),
-            ),
           ),
           const SizedBox(width: 10),
           // 「显示已隐藏」开关（miao-dock：隐藏清单在服务端，这里只做开关）。
-          GestureDetector(
+          _TextLink(
+            label: AppLocalizations.of(context).shelfShowHidden,
+            color: ref.watch(showHiddenProvider) ? AppTokens.accent : AppTokens.textSecondary,
             onTap: () => ref.read(showHiddenProvider.notifier).toggle(),
-            child: Text(
-              AppLocalizations.of(context).shelfShowHidden,
-              style: TextStyle(
-                fontSize: 11.5,
-                color: ref.watch(showHiddenProvider) ? AppTokens.accent : AppTokens.textSecondary,
-              ),
-            ),
           ),
         ],
       ),
@@ -339,6 +332,38 @@ class _ShelfCardSkeleton extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// 文字链接（cursor 手型 + hover 提亮）。
+class _TextLink extends StatefulWidget {
+  const _TextLink({required this.label, required this.color, required this.onTap});
+
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  State<_TextLink> createState() => _TextLinkState();
+}
+
+class _TextLinkState extends State<_TextLink> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Text(
+          widget.label,
+          style: TextStyle(fontSize: 11.5, color: _hover ? AppTokens.textPrimary : widget.color),
+        ),
+      ),
     );
   }
 }

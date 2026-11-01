@@ -163,12 +163,14 @@ class _HeaderAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return _HoverTap(
       onTap: onTap,
-      child: Container(
+      builder: (hover) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: primary ? AppTokens.accent : AppTokens.card,
+          color: primary
+              ? (hover ? const Color(0xFFF0B96A) : AppTokens.accent)
+              : (hover ? AppTokens.navBg : AppTokens.card),
           borderRadius: BorderRadius.circular(6),
           border: primary ? null : Border.all(color: AppTokens.divider),
         ),
@@ -509,15 +511,19 @@ class _PageGrid extends ConsumerWidget {
       itemBuilder: (context, i) {
         final seq = i + 1;
         final done = book.directTranslated.contains(seq);
-        return GestureDetector(
+        return _HoverTap(
           onTap: () {
             ref
                 .read(readerSessionProvider.notifier)
                 .open(ReaderSession(key: book.key, pages: total, translated: book.directTranslated));
             context.go('/manga/reader');
           },
-          child: Container(
-            decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(8)),
+          builder: (hover) => Container(
+            decoration: BoxDecoration(
+              color: hover ? AppTokens.navBg : AppTokens.card,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: hover ? AppTokens.accent : Colors.transparent),
+            ),
             alignment: Alignment.center,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -598,86 +604,104 @@ class _ChapterGrid extends StatelessWidget {
   }
 }
 
-class _ChapterCard extends ConsumerWidget {
+class _ChapterCard extends ConsumerStatefulWidget {
   const _ChapterCard({required this.book, required this.chapter});
 
   final LibBook book;
   final LibChapter chapter;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ChapterCard> createState() => _ChapterCardState();
+}
+
+class _ChapterCardState extends ConsumerState<_ChapterCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final book = widget.book;
+    final chapter = widget.chapter;
     final color = chapter.done ? MangaTaskStatus.done.color : MangaTaskStatus.translating.color;
-    return GestureDetector(
-      onTap: () {
-        // 查看逻辑同 miao-dock：**未翻译完也能点进**（缺译文的页回退原图）。
-        ref
-            .read(readerSessionProvider.notifier)
-            .open(
-              ReaderSession(
-                key: book.key,
-                chapterNo: chapter.no,
-                pages: chapter.pageCount,
-                translated: chapter.translatedSeqs,
-              ),
-            );
-        context.go('/manga/reader');
-      },
-      child: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(10)),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 64,
-                  decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(6)),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: () {
+          // 查看逻辑同 miao-dock：**未翻译完也能点进**（缺译文的页回退原图）。
+          ref
+              .read(readerSessionProvider.notifier)
+              .open(
+                ReaderSession(
+                  key: book.key,
+                  chapterNo: chapter.no,
+                  pages: chapter.pageCount,
+                  translated: chapter.translatedSeqs,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppTokens.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
-                        style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: SizedBox(
-                          height: 4,
-                          child: LinearProgressIndicator(
-                            value: chapter.ratio,
-                            backgroundColor: AppTokens.progressTrack,
-                            valueColor: AlwaysStoppedAnimation(color),
+              );
+          context.go('/manga/reader');
+        },
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTokens.card,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _hover ? AppTokens.accent : Colors.transparent),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 64,
+                    decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(6)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTokens.textPrimary,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 3),
+                        Text(
+                          AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
+                          style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: SizedBox(
+                            height: 4,
+                            child: LinearProgressIndicator(
+                              value: chapter.ratio,
+                              backgroundColor: AppTokens.progressTrack,
+                              valueColor: AlwaysStoppedAnimation(color),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // 悬浮菜单：点它不能顺带打开阅读器（miao-dock：stopPropagation）。
-          Positioned(
-            right: 0,
-            top: 0,
-            child: ChapterMenuButton(book: book, chapter: chapter),
-          ),
-        ],
+            // 悬浮菜单：点它不能顺带打开阅读器（miao-dock：stopPropagation）。
+            Positioned(
+              right: 0,
+              top: 0,
+              child: ChapterMenuButton(book: book, chapter: chapter),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1125,12 +1149,12 @@ class _CoverChoice extends StatelessWidget {
         : active
         ? AppTokens.pageBg
         : AppTokens.textPrimary;
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: Container(
+    return _HoverTap(
+      onTap: enabled ? onTap : () {},
+      builder: (hover) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: active ? AppTokens.accent : AppTokens.navBg,
+          color: active ? AppTokens.accent : (hover && enabled ? AppTokens.card : AppTokens.navBg),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: AppTokens.divider),
         ),
@@ -1163,12 +1187,14 @@ class _ViewSeg extends StatelessWidget {
       child: Row(
         children: [
           for (final m in const ['card', 'capsule'])
-            GestureDetector(
+            _HoverTap(
               onTap: () => onSelect(m),
-              child: Container(
+              builder: (hover) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: mode == m ? AppTokens.card : Colors.transparent,
+                  color: mode == m
+                      ? AppTokens.card
+                      : (hover ? AppTokens.card.withValues(alpha: 0.5) : Colors.transparent),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -1225,6 +1251,31 @@ class _BackToShelfState extends State<_BackToShelf> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 通用「可点 + hover」包装：cursor 变手型，并把 hover 态透传给 builder。
+class _HoverTap extends StatefulWidget {
+  const _HoverTap({required this.onTap, required this.builder});
+
+  final VoidCallback onTap;
+  final Widget Function(bool hover) builder;
+
+  @override
+  State<_HoverTap> createState() => _HoverTapState();
+}
+
+class _HoverTapState extends State<_HoverTap> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(onTap: widget.onTap, child: widget.builder(_hover)),
     );
   }
 }

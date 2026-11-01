@@ -125,11 +125,14 @@ class _OpenShelfLink extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
-      child: Text(
-        AppLocalizations.of(context).searchOpenShelf,
-        style: const TextStyle(fontSize: 12, color: AppTokens.accent),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
+        child: Text(
+          AppLocalizations.of(context).searchOpenShelf,
+          style: const TextStyle(fontSize: 12, color: AppTokens.accent),
+        ),
       ),
     );
   }
