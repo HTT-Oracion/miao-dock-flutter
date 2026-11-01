@@ -138,6 +138,7 @@ class _ShelfBody extends ConsumerWidget {
       children: [
         for (final b in books)
           _BookRow(
+            key: ValueKey('shelf-row-${b.key}'),
             book: b,
             active: b.key == selected,
             onTap: () => ref.read(selectedBookProvider.notifier).select(b.key),
@@ -177,7 +178,7 @@ class _ShelfBody extends ConsumerWidget {
 }
 
 class _BookRow extends ConsumerStatefulWidget {
-  const _BookRow({required this.book, required this.active, required this.onTap});
+  const _BookRow({super.key, required this.book, required this.active, required this.onTap});
 
   final LibBook book;
   final bool active;

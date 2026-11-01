@@ -100,7 +100,7 @@ class LibraryGrid extends ConsumerWidget {
                   childAspectRatio: 0.62,
                 ),
                 itemCount: shown.length,
-                itemBuilder: (context, i) => _BookCard(book: shown[i]),
+                itemBuilder: (context, i) => _BookCard(key: ValueKey('grid-card-${shown[i].key}'), book: shown[i]),
               ),
             ),
         ],
@@ -110,7 +110,7 @@ class LibraryGrid extends ConsumerWidget {
 }
 
 class _BookCard extends ConsumerStatefulWidget {
-  const _BookCard({required this.book});
+  const _BookCard({super.key, required this.book});
 
   final LibBook book;
 
