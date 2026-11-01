@@ -29,7 +29,8 @@ void main() {
     expect(find.text('深色模式'), findsOneWidget);
     expect(find.text('关闭窗口行为'), findsOneWidget);
     expect(find.text('规格自检'), findsOneWidget);
-    expect(find.text('侧栏图标标签'), findsOneWidget);
+    // 文案改为「侧栏展开」：与侧栏的收起/展开按钮是同一状态。
+    expect(find.text('侧栏展开'), findsOneWidget);
   });
 
   testWidgets('翻译服务组展示（含三层卡片要素）', (tester) async {

@@ -154,30 +154,25 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    FilledButton(
-                      onPressed: (state.name.isNotEmpty && state.files.isNotEmpty) ? _submit : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: palette.acc,
-                        foregroundColor: palette.onAcc,
-                        minimumSize: const Size(0, 34),
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-                        textStyle: const TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600),
-                      ),
-                      child: Text(state.files.isEmpty ? l10n.dropSubmit : '${l10n.dropSubmit} ${state.files.length}'),
+                    AppButton(
+                      label: state.files.isEmpty ? l10n.dropSubmit : '${l10n.dropSubmit} ${state.files.length}',
+                      onTap: (state.name.isNotEmpty && state.files.isNotEmpty) ? _submit : null,
+                      clickable: state.name.isNotEmpty && state.files.isNotEmpty,
+                      variant: AppButtonVariant.primary,
+                      height: 34,
+                      horizontalPadding: 18,
+                      fontSize: AppFont.px11,
                     ),
                     const SizedBox(width: 8),
-                    OutlinedButton(
-                      onPressed: state.files.isEmpty ? null : () => ref.read(dropController.notifier).clear(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: palette.ink2,
-                        minimumSize: const Size(0, 34),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        side: BorderSide(color: palette.line2),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-                        textStyle: const TextStyle(fontSize: AppFont.px9_5),
-                      ),
-                      child: Text(l10n.dropClear),
+                    AppButton(
+                      label: l10n.dropClear,
+                      onTap: state.files.isEmpty ? null : () => ref.read(dropController.notifier).clear(),
+                      clickable: state.files.isNotEmpty,
+                      variant: AppButtonVariant.ghost,
+                      border: true,
+                      height: 34,
+                      horizontalPadding: 14,
+                      fontSize: AppFont.px9_5,
                     ),
                   ],
                 ),

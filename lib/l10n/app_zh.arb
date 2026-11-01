@@ -1406,13 +1406,13 @@
   "@settingSpecCheckRun": {
     "description": "设置页文案"
   },
-  "settingSidebarLabels": "侧栏图标标签",
+  "settingSidebarLabels": "侧栏展开",
   "@settingSidebarLabels": {
-    "description": "设置页文案"
+    "description": "与侧边栏收起/展开按钮同一状态"
   },
-  "settingSidebarLabelsWhy": "关掉后侧栏只留图标；悬停仍有提示。",
+  "settingSidebarLabelsWhy": "与侧栏上的收起/展开按钮是同一个开关：关掉即收起为图标栏（悬停仍有提示）。",
   "@settingSidebarLabelsWhy": {
-    "description": "设置页文案"
+    "description": "说明与侧栏按钮联动"
   },
   "settingSidebarLabelsShow": "显示",
   "@settingSidebarLabelsShow": {
@@ -2169,5 +2169,13 @@
   "readerShowTranslated": "显示翻译",
   "@readerShowTranslated": {
     "description": "阅读器原图/译文切换"
+  },
+  "settingSidebarCollapsed": "已收起",
+  "@settingSidebarCollapsed": {
+    "description": "侧栏展开状态值"
+  },
+  "settingSidebarExpanded": "已展开",
+  "@settingSidebarExpanded": {
+    "description": "侧栏展开状态值"
   }
 }

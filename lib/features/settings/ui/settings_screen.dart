@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/process/service_controller.dart';
 import '../../../core/storage/paths.dart';
 import '../../../core/storage/shell_prefs.dart';
+import '../../../app/shell/shell_controller.dart';
 import '../../../core/theme/theme_mode.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
@@ -228,7 +232,7 @@ class _GeneralSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final themeMode = ref.watch(themeModeProvider);
-    final labels = ref.watch(sidebarLabelsProvider);
+    final collapsed = ref.watch(navCollapsedProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
@@ -261,18 +265,26 @@ class _GeneralSection extends ConsumerWidget {
             label: l10n.settingSpecCheck,
             why: l10n.settingSpecNotWired,
             dimmed: true,
-            control: FilledButton(
-              onPressed: null,
-              style: _primaryStyle(AppPalette.of(context)),
-              child: Text(l10n.settingSpecCheckRun, style: const TextStyle(fontSize: AppFont.px9_5)),
+            control: AppButton(
+              label: l10n.settingSpecCheckRun,
+              variant: AppButtonVariant.primary,
+              onTap: null,
+              clickable: false,
             ),
           ),
-          SettingRow(
-            label: l10n.settingSidebarLabels,
-            why: l10n.settingSidebarLabelsWhy,
-            def: l10n.settingSidebarLabelsShow,
-            control: AppSwitch(value: labels, onChanged: (v) => ref.read(sidebarLabelsProvider.notifier).set(v)),
-          ),
+          // 侧栏展开开关：与侧栏自身的收起/展开按钮**同一个状态**（navCollapsedProvider）。
+          // 移动端没有可折叠侧栏（用底部导航），因此不显示该设置。
+          if (MediaQuery.sizeOf(context).width > AppMetrics.breakpoint)
+            SettingRow(
+              label: l10n.settingSidebarLabels,
+              why: l10n.settingSidebarLabelsWhy,
+              def: collapsed ? l10n.settingSidebarCollapsed : l10n.settingSidebarExpanded,
+              control: AppSwitch(
+                // 开关「开」= 展开（不折叠），与用户直觉一致。
+                value: !collapsed,
+                onChanged: (v) => ref.read(navCollapsedProvider.notifier).set(!v),
+              ),
+            ),
         ],
       ),
     );
@@ -342,6 +354,9 @@ class _TranslateLogBox extends ConsumerWidget {
       title: l10n.translateLogTitle,
       lines: lines.isEmpty ? [l10n.translateLogEmpty] : lines,
       maxHeight: 140,
+      // 真正导出 .txt：弹保存对话框，用户能选位置、能取消。
+      // 之前没传这个回调 ⇒ 点下载只复制到剪贴板，看起来"没生效"。
+      onExport: (text, suggestedName) => _saveLog(context, text, suggestedName),
     );
   }
 }
@@ -425,9 +440,13 @@ class _ServiceCard extends ConsumerWidget {
               ],
             ),
           ),
-          FilledButton(
+          AppButton(
             // 运行中可停止；未启动时必须满足前置条件且不在启动中。
-            onPressed: running
+            label: starting ? l10n.svcStart : (running ? l10n.svcStop : l10n.svcStart),
+            loading: starting,
+            variant: AppButtonVariant.primary,
+            fontSize: AppFont.px9_5,
+            onTap: running
                 ? () => ref.read(engineStateProvider.notifier).stop()
                 : (canStart
                       ? () async {
@@ -441,22 +460,6 @@ class _ServiceCard extends ConsumerWidget {
                           );
                         }
                       : null),
-            style: _primaryStyle(palette),
-            child: starting
-                // 启动中：按钮内显示 loading，且不可再次点击。
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 11,
-                        height: 11,
-                        child: CircularProgressIndicator(strokeWidth: 1.6, color: palette.onAcc),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(l10n.svcStart, style: const TextStyle(fontSize: AppFont.px9_5)),
-                    ],
-                  )
-                : Text(running ? l10n.svcStop : l10n.svcStart, style: const TextStyle(fontSize: AppFont.px9_5)),
           ),
         ],
       ),
@@ -513,7 +516,6 @@ class _LlmCredentialSectionState extends ConsumerState<_LlmCredentialSection> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final creds = ref.watch(credentialProvider).value;
     _loadOnce(creds);
@@ -554,8 +556,11 @@ class _LlmCredentialSectionState extends ConsumerState<_LlmCredentialSection> {
         SettingRow(
           label: l10n.llmCredSave,
           why: _saved ? l10n.llmCredSaved : null,
-          control: FilledButton(
-            onPressed: () async {
+          control: AppButton(
+            label: l10n.llmCredSave,
+            variant: AppButtonVariant.primary,
+            fontSize: AppFont.px9_5,
+            onTap: () async {
               await ref
                   .read(credentialProvider.notifier)
                   .save(_platform, PlatformCredential(appKey: _key.text, appSecret: _secret.text));
@@ -564,8 +569,6 @@ class _LlmCredentialSectionState extends ConsumerState<_LlmCredentialSection> {
               if (!context.mounted) return;
               showAppToast(context, l10n.llmCredSaved, tone: ToastTone.good);
             },
-            style: _primaryStyle(palette),
-            child: Text(l10n.llmCredSave, style: const TextStyle(fontSize: AppFont.px9_5)),
           ),
         ),
       ],
@@ -740,16 +743,6 @@ class _Pill extends StatelessWidget {
     );
   }
 }
-
-/// 主按钮样式（`.btn.pri` + 卡片内联 34/18/11）。
-ButtonStyle _primaryStyle(AppPalette palette) => FilledButton.styleFrom(
-  backgroundColor: palette.acc,
-  foregroundColor: palette.onAcc,
-  minimumSize: const Size(0, 34),
-  padding: const EdgeInsets.symmetric(horizontal: 18),
-  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-  textStyle: const TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600),
-);
 
 class _SourceRow extends ConsumerWidget {
   const _SourceRow();
@@ -979,4 +972,18 @@ class _PlaceholderSection extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 保存翻译日志为 .txt（桌面走系统保存对话框）。
+/// 返回 false = 用户取消，调用方不弹「已导出」。
+Future<bool> _saveLog(BuildContext context, String text, String suggestedName) async {
+  final location = await getSaveLocation(
+    suggestedName: suggestedName,
+    acceptedTypeGroups: const [
+      XTypeGroup(label: 'Text', extensions: ['txt']),
+    ],
+  );
+  if (location == null) return false;
+  await File(location.path).writeAsString(text);
+  return true;
 }

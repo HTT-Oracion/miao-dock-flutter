@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
+import 'buttons.dart';
 
 /// 通用空态（设计稿空书架变体）：图标 + 标题 + 说明 + 可选主按钮。
 class EmptyState extends StatelessWidget {
@@ -42,11 +43,7 @@ class EmptyState extends StatelessWidget {
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: palette.accent, foregroundColor: palette.pageBg),
-                onPressed: onAction,
-                child: Text(actionLabel!),
-              ),
+              AppButton(label: actionLabel!, onTap: onAction, variant: AppButtonVariant.primary),
             ],
           ],
         ),

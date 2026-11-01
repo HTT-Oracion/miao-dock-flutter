@@ -146,6 +146,12 @@ class AppPalette extends ThemeExtension<AppPalette> {
     return hsl.withLightness((hsl.lightness + 0.08).clamp(0.0, 1.0)).toColor();
   }
 
+  /// 危险主按钮 hover：与 [accHover] 同规则（提亮 8%），用于 danger 变体。
+  Color get badHover {
+    final hsl = HSLColor.fromColor(bad);
+    return hsl.withLightness((hsl.lightness + 0.08).clamp(0.0, 1.0)).toColor();
+  }
+
   Color get textPrimary => ink;
   Color get textSecondary => mut;
   Color get textMuted => ink2;

@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:protocol/protocol.dart';
 
 import '../../core/theme/tokens.dart';
+import 'buttons.dart';
 import '../../l10n/app_localizations.dart';
 
 /// 错误态（design.html §07「失败」行）：
@@ -112,18 +113,12 @@ class _ErrorBannerState extends State<ErrorBanner> {
               ),
               const SizedBox(width: 8),
               // 重试：反馈先于响应由调用方负责（它自己切 loading）。
-              TextButton(
-                onPressed: widget.onRetry,
-                style: TextButton.styleFrom(
-                  foregroundColor: danger,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  minimumSize: const Size(0, 28),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  l10n.errorRetry,
-                  style: const TextStyle(fontSize: AppFont.px11_5, fontWeight: FontWeight.w600),
-                ),
+              AppButton(
+                label: l10n.errorRetry,
+                onTap: widget.onRetry,
+                variant: AppButtonVariant.link,
+                color: danger,
+                fontSize: AppFont.px11_5,
               ),
             ],
           ),
@@ -213,17 +208,14 @@ class ErrorState extends StatelessWidget {
               style: TextStyle(fontSize: AppFont.px11_5, height: 1.6, color: palette.textSecondary),
             ),
             const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(LucideIcons.refreshCw, size: 13),
-              label: Text(l10n.errorRetry),
-              style: FilledButton.styleFrom(
-                backgroundColor: palette.accent,
-                foregroundColor: palette.pageBg,
-                minimumSize: const Size(0, 34),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                textStyle: const TextStyle(fontSize: AppFont.px12, fontWeight: FontWeight.w600),
-              ),
+            AppButton(
+              label: l10n.errorRetry,
+              icon: LucideIcons.refreshCw,
+              onTap: onRetry,
+              variant: AppButtonVariant.primary,
+              height: 34,
+              horizontalPadding: 16,
+              fontSize: AppFont.px12,
             ),
           ],
         ),

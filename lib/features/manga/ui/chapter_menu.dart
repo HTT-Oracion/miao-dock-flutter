@@ -5,6 +5,7 @@ import 'package:protocol/protocol.dart' show jsNumStr;
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_dropdown.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
@@ -91,16 +92,19 @@ class ChapterMenuButton extends ConsumerWidget {
   Future<double?> _askNewNo(BuildContext context) async {
     final ctrl = TextEditingController(text: jsNumStr(chapter.no));
     final l10n = AppLocalizations.of(context);
-    final palette = AppPalette.of(context);
-    return showDialog<double>(
+    return showAppDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: palette.card,
-        title: Text(
-          l10n.chapterEditNoTitle,
-          style: const TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600),
-        ),
-        content: SizedBox(
+      builder: (context) => AppDialog(
+        title: l10n.chapterEditNoTitle,
+        actions: [
+          AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
+          AppButton(
+            label: l10n.libEditInfoOk,
+            variant: AppButtonVariant.primary,
+            onTap: () => Navigator.of(context).pop(double.tryParse(ctrl.text.trim())),
+          ),
+        ],
+        child: SizedBox(
           width: 260,
           child: AppInput(
             controller: ctrl,
@@ -109,16 +113,6 @@ class ChapterMenuButton extends ConsumerWidget {
             onSubmitted: (v) => Navigator.of(context).pop(double.tryParse(v.trim())),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11_5)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(double.tryParse(ctrl.text.trim())),
-            child: Text(l10n.libEditInfoOk, style: const TextStyle(fontSize: AppFont.px11_5)),
-          ),
-        ],
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../shared/widgets/buttons.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -40,19 +41,17 @@ class QueueEmpty extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: palette.accent, foregroundColor: palette.pageBg),
-                onPressed: () => context.go('/settings'),
-                child: Text(l10n.queueGoSettings),
+              AppButton(
+                label: l10n.queueGoSettings,
+                onTap: () => context.go('/settings'),
+                variant: AppButtonVariant.primary,
               ),
               const SizedBox(width: 10),
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: palette.textPrimary,
-                  side: BorderSide(color: palette.progressTrack),
-                ),
-                onPressed: () => context.go('/manga/drop'),
-                child: Text(l10n.queueSourceLocal),
+              AppButton(
+                label: l10n.queueSourceLocal,
+                onTap: () => context.go('/manga/drop'),
+                variant: AppButtonVariant.ghost,
+                border: true,
               ),
             ],
           ),

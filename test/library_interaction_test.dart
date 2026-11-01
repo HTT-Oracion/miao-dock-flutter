@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:miao_dock_flutter/shared/widgets/buttons.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/manga/domain/lib_book.dart';
 import 'package:miao_dock_flutter/features/manga/ui/shelf_menu.dart';
@@ -81,8 +82,9 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    final btn = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '归并'));
+    // 按钮已统一到 shared/buttons 的 AppButton（不再有 FilledButton）。
+    final btn = tester.widget<AppButton>(find.widgetWithText(AppButton, '归并'));
     // 破坏点：允许空目标直接提交 → 服务端 404，用户看到无意义报错。
-    expect(btn.onPressed, isNull);
+    expect(btn.onTap, isNull);
   });
 }

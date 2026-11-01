@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/theme/tokens.dart';
+import 'toast.dart';
 import '../../l10n/app_localizations.dart';
 
 /// 日志组件（D-013）—— **hover / focus 时右上角浮出「复制 / 导出 .txt」**。
@@ -30,9 +31,10 @@ class LogBox extends StatefulWidget {
 
   /// 导出回调。
   ///
-  /// 桌面端由调用方接文件保存对话框（用户能选位置、能取消）；
+  /// 桌面端由调用方接文件保存对话框（用户能选位置、能取消）。
+  /// **返回 true 才算导出成功**（用户取消 = false，不弹"已导出"）。
   /// null 时退化为「只复制到剪贴板 + 吐司提示」，**不静默假装导出**。
-  final void Function(String text, String suggestedName)? onExport;
+  final Future<bool> Function(String text, String suggestedName)? onExport;
 
   @override
   State<LogBox> createState() => _LogBoxState();
@@ -90,11 +92,6 @@ class _LogBoxState extends State<LogBox> {
                     children: [
                       Text(
                         widget.title ?? l10n.logBoxTitle,
-                        style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
-                      ),
-                      const Spacer(),
-                      Text(
-                        l10n.logBoxLines(lines.length),
                         style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
                       ),
                     ],
@@ -180,7 +177,7 @@ class _LogBoxState extends State<LogBox> {
     }
   }
 
-  void _export(List<String> lines, AppLocalizations l10n) {
+  Future<void> _export(List<String> lines, AppLocalizations l10n) async {
     final text = lines.join('\n');
     final now = DateTime.now();
     final name = 'miaodock-log-${now.year}-${_two(now.month)}-${_two(now.day)}.txt';
@@ -191,25 +188,18 @@ class _LogBoxState extends State<LogBox> {
       return;
     }
     try {
-      handler(text, name);
+      // 🔴 必须 await：保存对话框是异步的，先弹「已导出」会在用户取消时误报。
+      final ok = await handler(text, name);
+      if (!mounted || !ok) return;
       _toast(l10n.logBoxExported, name);
     } catch (_) {
-      _toast(l10n.logBoxExportFailed, '');
+      if (mounted) _toast(l10n.logBoxExportFailed, '');
     }
   }
 
+  /// 统一走项目吐司（右上角），与其它反馈一致。
   void _toast(String title, String detail) {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
-    messenger
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(detail.isEmpty ? title : '$title · $detail'),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    showAppToast(context, detail.isEmpty ? title : '$title · $detail', tone: ToastTone.info);
   }
 
   static String _two(int v) => v.toString().padLeft(2, '0');

@@ -9,6 +9,7 @@ import 'package:protocol/protocol.dart' show BookMeta, jsNumStr;
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
@@ -894,7 +895,7 @@ class _CreateBookDialog extends StatefulWidget {
   const _CreateBookDialog();
 
   static Future<String?> show(BuildContext context) =>
-      showDialog<String>(context: context, builder: (_) => const _CreateBookDialog());
+      showAppDialog<String>(context: context, builder: (_) => const _CreateBookDialog());
 
   @override
   State<_CreateBookDialog> createState() => _CreateBookDialogState();
@@ -911,15 +912,18 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      backgroundColor: palette.card,
-      title: Text(
-        l10n.libCreateBook,
-        style: const TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600),
-      ),
-      content: SizedBox(
+    return AppDialog(
+      title: l10n.libCreateBook,
+      actions: [
+        AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
+        AppButton(
+          label: l10n.libCreateBook,
+          variant: AppButtonVariant.primary,
+          onTap: () => Navigator.of(context).pop(_controller.text.trim()),
+        ),
+      ],
+      child: SizedBox(
         width: 300,
         child: AppInput(
           controller: _controller,
@@ -928,16 +932,6 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
           onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11_5)),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: Text(l10n.libCreateBook, style: const TextStyle(fontSize: AppFont.px11_5)),
-        ),
-      ],
     );
   }
 }
@@ -947,7 +941,7 @@ class _EditBookDialog extends ConsumerStatefulWidget {
 
   final LibBook book;
 
-  static Future<EditBookResult?> show(BuildContext context, {required LibBook book}) => showDialog<EditBookResult>(
+  static Future<EditBookResult?> show(BuildContext context, {required LibBook book}) => showAppDialog<EditBookResult>(
     context: context,
     builder: (_) => _EditBookDialog(book: book),
   );
@@ -1000,119 +994,107 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final hasCover = widget.book.hasCover;
-    return Dialog(
-      backgroundColor: palette.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        width: 420,
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.libEditInfoTitle,
-              style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.textPrimary),
-            ),
-            const SizedBox(height: 14),
-            // 封面区（ver1.0 `.cover-box`：预览 96×128 在左，操作竖排在右）
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 96,
-                  height: 128,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: palette.cardCover,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: palette.divider),
-                  ),
-                  child: _preview(),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _CoverChoice(
-                        icon: LucideIcons.imagePlus,
-                        label: l10n.libCoverPickLocal,
-                        active: _cover == CoverIntent.local,
-                        onTap: _pickLocal,
-                      ),
-                      const SizedBox(height: 6),
-                      _CoverChoice(
-                        icon: LucideIcons.fileImage,
-                        label: l10n.libCoverFromFirst,
-                        active: _cover == CoverIntent.first,
-                        enabled: widget.book.isBook ? widget.book.chapters.isNotEmpty : widget.book.directPages > 0,
-                        onTap: () => setState(() => _cover = CoverIntent.first),
-                      ),
-                      const SizedBox(height: 6),
-                      _CoverChoice(
-                        icon: LucideIcons.trash2,
-                        label: l10n.libCoverRemove,
-                        active: _cover == CoverIntent.remove,
-                        enabled: hasCover || _cover == CoverIntent.local || _cover == CoverIntent.first,
-                        onTap: () => setState(() {
-                          _cover = CoverIntent.remove;
-                          _bytes = null;
-                        }),
-                      ),
-                      if (_cover == CoverIntent.local) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          _fileName == null ? l10n.libCoverPickHint : l10n.libCoverPicked(_fileName!),
-                          style: TextStyle(fontSize: AppFont.px10_5, color: palette.textSecondary),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // 文字信息
-            Text(
-              l10n.libCreateBookNameHint,
-              style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
-            ),
-            const SizedBox(height: 5),
-            AppInput(controller: _title, hint: l10n.libCreateBookNameHint),
-            const SizedBox(height: 12),
-            Text(
-              l10n.bookAuthorLabel(''),
-              style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
-            ),
-            const SizedBox(height: 5),
-            AppInput(controller: _author, hint: l10n.bookAuthorLabel('')),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                _DialogButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
-                const SizedBox(width: 8),
-                _DialogButton(
-                  label: l10n.libEditInfoOk,
-                  primary: true,
-                  enabled: !(_cover == CoverIntent.local && _bytes == null),
-                  onTap: () => Navigator.of(context).pop(
-                    EditBookResult(
-                      meta: BookMeta(
-                        title: _title.text.trim().isEmpty ? widget.book.name : _title.text.trim(),
-                        author: _author.text.trim(),
-                      ),
-                      cover: _cover,
-                      coverBytes: _bytes,
-                      coverFileName: _fileName,
+    return AppDialog(
+      title: l10n.libEditInfoTitle,
+      width: 420,
+      actions: [
+        AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
+        AppButton(
+          label: l10n.libEditInfoOk,
+          variant: AppButtonVariant.primary,
+          // 选了「本地图片」但还没选文件时不可保存（半落盘状态比失败更糟）。
+          onTap: (_cover == CoverIntent.local && _bytes == null)
+              ? null
+              : () => Navigator.of(context).pop(
+                  EditBookResult(
+                    meta: BookMeta(
+                      title: _title.text.trim().isEmpty ? widget.book.name : _title.text.trim(),
+                      author: _author.text.trim(),
                     ),
+                    cover: _cover,
+                    coverBytes: _bytes,
+                    coverFileName: _fileName,
                   ),
                 ),
-              ],
-            ),
-          ],
         ),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 封面区（ver1.0 `.cover-box`：预览 96×128 在左，操作竖排在右）
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 96,
+                height: 128,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: palette.cardCover,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: palette.divider),
+                ),
+                child: _preview(),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _CoverChoice(
+                      icon: LucideIcons.imagePlus,
+                      label: l10n.libCoverPickLocal,
+                      active: _cover == CoverIntent.local,
+                      onTap: _pickLocal,
+                    ),
+                    const SizedBox(height: 6),
+                    _CoverChoice(
+                      icon: LucideIcons.fileImage,
+                      label: l10n.libCoverFromFirst,
+                      active: _cover == CoverIntent.first,
+                      enabled: widget.book.isBook ? widget.book.chapters.isNotEmpty : widget.book.directPages > 0,
+                      onTap: () => setState(() => _cover = CoverIntent.first),
+                    ),
+                    const SizedBox(height: 6),
+                    _CoverChoice(
+                      icon: LucideIcons.trash2,
+                      label: l10n.libCoverRemove,
+                      active: _cover == CoverIntent.remove,
+                      enabled: hasCover || _cover == CoverIntent.local || _cover == CoverIntent.first,
+                      onTap: () => setState(() {
+                        _cover = CoverIntent.remove;
+                        _bytes = null;
+                      }),
+                    ),
+                    if (_cover == CoverIntent.local) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _fileName == null ? l10n.libCoverPickHint : l10n.libCoverPicked(_fileName!),
+                        style: TextStyle(fontSize: AppFont.px10_5, color: palette.textSecondary),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 文字信息
+          Text(
+            l10n.libCreateBookNameHint,
+            style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
+          ),
+          const SizedBox(height: 5),
+          AppInput(controller: _title, hint: l10n.libCreateBookNameHint),
+          const SizedBox(height: 12),
+          Text(
+            l10n.bookAuthorLabel(''),
+            style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
+          ),
+          const SizedBox(height: 5),
+          AppInput(controller: _author, hint: l10n.bookAuthorLabel('')),
+        ],
       ),
     );
   }
@@ -1146,29 +1128,6 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
         }
         return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
       },
-    );
-  }
-}
-
-class _DialogButton extends StatelessWidget {
-  const _DialogButton({required this.label, required this.onTap, this.primary = false, this.enabled = true});
-
-  final String label;
-  final VoidCallback onTap;
-  final bool primary;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppButton(
-      label: label,
-      onTap: enabled ? onTap : null,
-      clickable: enabled,
-      variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
-      border: !primary,
-      height: 26,
-      horizontalPadding: 12,
-      fontSize: AppFont.px10_5,
     );
   }
 }

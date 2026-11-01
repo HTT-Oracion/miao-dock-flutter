@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/tokens.dart';
+import '../../../../shared/widgets/buttons.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/log_box.dart';
 import '../../controller/engine_install_controller.dart';
@@ -59,7 +60,8 @@ class NotReadyScreen extends StatelessWidget {
   final bool paused;
 
   /// 导出日志（桌面端接文件保存对话框）。
-  final void Function(String text, String suggestedName)? onExportLogs;
+  /// 返回 true 才算导出成功（用户取消 = false）。
+  final Future<bool> Function(String text, String suggestedName)? onExportLogs;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +112,9 @@ class _NotReadyCard extends StatelessWidget {
   final VoidCallback onRetryService;
   final VoidCallback? onTogglePause;
   final bool paused;
-  final void Function(String text, String suggestedName)? onExportLogs;
+
+  /// 返回 true 才算导出成功（用户取消 = false）。
+  final Future<bool> Function(String text, String suggestedName)? onExportLogs;
   final VoidCallback? onImportLocal;
   final VoidCallback? onBrowseLibrary;
   final List<InstallEntry> downloadEntries;
@@ -619,50 +623,46 @@ class _Actions extends StatelessWidget {
       runSpacing: 10,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        FilledButton(
-          onPressed: view.state == NotReadyState.starting
+        AppButton(
+          label: primary,
+          onTap: view.state == NotReadyState.starting
               ? null
               : (view.state == NotReadyState.degraded
                     ? onRetryService
                     : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary)),
-          style: FilledButton.styleFrom(
-            backgroundColor: AppPalette.of(context).acc,
-            foregroundColor: AppPalette.of(context).onAcc,
-            minimumSize: const Size(0, 34),
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-            textStyle: const TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600),
-          ),
-          child: Text(primary),
+          clickable: view.state != NotReadyState.starting,
+          variant: AppButtonVariant.primary,
+          height: 34,
+          horizontalPadding: 18,
+          fontSize: AppFont.px11,
         ),
         if (view.state == NotReadyState.failed && onSecondary != null)
-          OutlinedButton(
-            onPressed: onSecondary,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 34),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              textStyle: const TextStyle(fontSize: AppFont.px9_5),
-            ),
-            child: Text(l10n.nrActionRedownload),
+          AppButton(
+            label: l10n.nrActionRedownload,
+            onTap: onSecondary,
+            variant: AppButtonVariant.secondary,
+            height: 34,
+            horizontalPadding: 14,
+            fontSize: AppFont.px9_5,
           ),
         // 导入本地运行时（D-015）：指向已有 runtimes，跳过下载。
         if (view.state == NotReadyState.uninstalled && onImportLocal != null)
-          OutlinedButton.icon(
-            onPressed: onImportLocal,
-            icon: const Icon(LucideIcons.folderInput, size: 12),
-            label: Text(l10n.runtimeImport),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 34),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              textStyle: const TextStyle(fontSize: AppFont.px9_5),
-            ),
+          AppButton(
+            label: l10n.runtimeImport,
+            icon: LucideIcons.folderInput,
+            onTap: onImportLocal,
+            variant: AppButtonVariant.secondary,
+            height: 34,
+            horizontalPadding: 14,
+            fontSize: AppFont.px9_5,
           ),
         // 只读出口：不需要引擎，因此不会与「等引擎」形成死循环。
         if (onBrowseLibrary != null)
-          TextButton(
-            onPressed: onBrowseLibrary,
-            style: TextButton.styleFrom(minimumSize: const Size(0, 34)),
-            child: Text(l10n.engineBrowseLibrary, style: const TextStyle(fontSize: AppFont.px11)),
+          AppButton(
+            label: l10n.engineBrowseLibrary,
+            onTap: onBrowseLibrary,
+            variant: AppButtonVariant.link,
+            fontSize: AppFont.px11,
           ),
       ],
     );

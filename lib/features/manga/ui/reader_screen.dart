@@ -65,9 +65,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               style: TextStyle(fontSize: AppFont.px12_5, color: palette.textSecondary),
             ),
             const SizedBox(height: 10),
-            TextButton(
-              onPressed: () => context.go('/manga/library'),
-              child: Text(l10n.readerClose, style: const TextStyle(fontSize: AppFont.px12)),
+            AppButton(
+              label: l10n.readerClose,
+              onTap: () => context.go('/manga/library'),
+              variant: AppButtonVariant.link,
+              fontSize: AppFont.px12,
             ),
           ],
         ),

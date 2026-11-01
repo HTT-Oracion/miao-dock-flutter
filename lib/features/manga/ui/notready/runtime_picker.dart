@@ -7,6 +7,8 @@ import '../../../../core/storage/engine_inspect.dart';
 import '../../../../core/storage/paths.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/log_box.dart';
 
 /// 引擎目录选择 / 导入（D-027）。
@@ -29,7 +31,7 @@ class RuntimePickerDialog extends ConsumerStatefulWidget {
   final bool importMode;
 
   static Future<RuntimePickResult?> show(BuildContext context, {String? initialDir, bool importMode = false}) {
-    return showDialog<RuntimePickResult>(
+    return showAppDialog<RuntimePickResult>(
       context: context,
       builder: (_) => RuntimePickerDialog(initialDir: initialDir ?? mangaEngineDir(), importMode: importMode),
     );
@@ -91,81 +93,37 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Dialog(
-      backgroundColor: palette.panel,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusModal)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      _isImport ? LucideIcons.folderInput : LucideIcons.hardDriveDownload,
-                      size: 16,
-                      color: palette.acc,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _isImport ? l10n.runtimeImportTitle : l10n.runtimePickTitle,
-                        style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.ink),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(LucideIcons.x, size: 14),
-                      color: palette.ink2,
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _isImport ? l10n.runtimeImportDesc : l10n.runtimePickDesc,
-                  style: TextStyle(fontSize: AppFont.px11, height: 1.6, color: palette.ink2),
-                ),
-                const SizedBox(height: 14),
-                _DirRow(
-                  dir: _dir,
-                  label: _isImport ? l10n.runtimeImportPick : l10n.runtimePickDefault,
-                  onChange: _pickDir,
-                ),
-                if (_isImport) ..._buildCheckSection(context, palette, l10n),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11)),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      // 导入必须校验过才允许：没验就导入，问题会推迟到翻译时才暴露。
-                      onPressed: !_isImport || _inspection != null
-                          ? () =>
-                                Navigator.of(context)
-                                    .pop(RuntimePickResult(dir: _dir, imported: _isImport, inspection: _inspection))
-                          : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: palette.acc,
-                        foregroundColor: palette.onAcc,
-                        minimumSize: const Size(0, 34),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        textStyle: const TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600),
-                      ),
-                      child: Text(_isImport ? l10n.runtimeImportOk : l10n.runtimePickConfirm),
-                    ),
-                  ],
-                ),
-              ],
+    return AppDialog(
+      title: _isImport ? l10n.runtimeImportTitle : l10n.runtimePickTitle,
+      icon: _isImport ? LucideIcons.folderInput : LucideIcons.hardDriveDownload,
+      width: 640,
+      onClose: () => Navigator.of(context).pop(),
+      actions: [
+        AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
+        AppButton(
+          label: _isImport ? l10n.runtimeImportOk : l10n.runtimePickConfirm,
+          variant: AppButtonVariant.primary,
+          // 导入必须校验过才允许：没验就导入，问题会推迟到翻译时才暴露。
+          onTap: !_isImport || _inspection != null
+              ? () =>
+                    Navigator.of(context)
+                        .pop(RuntimePickResult(dir: _dir, imported: _isImport, inspection: _inspection))
+              : null,
+        ),
+      ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _isImport ? l10n.runtimeImportDesc : l10n.runtimePickDesc,
+              style: TextStyle(fontSize: AppFont.px11, height: 1.6, color: palette.ink2),
             ),
-          ),
+            const SizedBox(height: 14),
+            _DirRow(dir: _dir, label: _isImport ? l10n.runtimeImportPick : l10n.runtimePickDefault, onChange: _pickDir),
+            if (_isImport) ..._buildCheckSection(context, palette, l10n),
+          ],
         ),
       ),
     );
@@ -176,19 +134,15 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
       const SizedBox(height: 12),
       Row(
         children: [
-          OutlinedButton.icon(
-            onPressed: _checking ? null : _runCheck,
-            icon: _checking
-                ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(LucideIcons.shieldCheck, size: 13),
-            label: Text(
-              _checking ? l10n.engineChecking : l10n.engineCheck,
-              style: const TextStyle(fontSize: AppFont.px11),
-            ),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 32),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-            ),
+          AppButton(
+            label: _checking ? l10n.engineChecking : l10n.engineCheck,
+            icon: LucideIcons.shieldCheck,
+            onTap: _checking ? null : _runCheck,
+            clickable: !_checking,
+            variant: AppButtonVariant.secondary,
+            height: 32,
+            horizontalPadding: 14,
+            fontSize: AppFont.px11,
           ),
           const SizedBox(width: 10),
           if (_inspection != null)
@@ -264,9 +218,11 @@ class _DirRow extends StatelessWidget {
               ],
             ),
           ),
-          TextButton(
-            onPressed: onChange,
-            child: Text(l10n.runtimePickChange, style: const TextStyle(fontSize: AppFont.px11)),
+          AppButton(
+            label: l10n.runtimePickChange,
+            onTap: onChange,
+            variant: AppButtonVariant.link,
+            fontSize: AppFont.px11,
           ),
         ],
       ),
@@ -359,16 +315,14 @@ class _RedownloadHint extends StatelessWidget {
             style: TextStyle(fontSize: AppFont.px10_5, height: 1.5, color: palette.ink2),
           ),
           const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: onRedownload,
-            icon: const Icon(LucideIcons.download, size: 12),
-            label: Text(l10n.engineRedownloadMissing, style: const TextStyle(fontSize: AppFont.px11)),
-            style: FilledButton.styleFrom(
-              backgroundColor: palette.acc,
-              foregroundColor: palette.onAcc,
-              minimumSize: const Size(0, 30),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-            ),
+          AppButton(
+            label: l10n.engineRedownloadMissing,
+            icon: LucideIcons.download,
+            onTap: onRedownload,
+            variant: AppButtonVariant.primary,
+            height: 30,
+            horizontalPadding: 14,
+            fontSize: AppFont.px11,
           ),
         ],
       ),

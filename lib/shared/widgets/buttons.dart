@@ -109,6 +109,9 @@ enum AppButtonVariant {
   /// 幽灵：无底色，hover 变 card（返回书架 / 弹窗取消）。
   ghost,
 
+  /// 危险主操作（删除确认等）：`bad` 底 + pageBg 字，hover 提亮 `badHover`。
+  danger,
+
   /// 文字链接：无底无内边距，hover 提亮（去投放 / 显示已隐藏）。
   link,
 }
@@ -132,6 +135,7 @@ class AppButton extends StatefulWidget {
     this.border = false,
     this.width,
     this.clickable = true,
+    this.loading = false,
   });
 
   /// 文案；**留空 = 纯图标按钮**（此时必须给 [icon]）。
@@ -163,6 +167,10 @@ class AppButton extends StatefulWidget {
   /// - `clickable == false` → 真禁用：光标 `forbidden`、文字变灰。
   final bool clickable;
 
+  /// 加载中：按钮内显示 spinner + 文案，**不可点**（防止重复提交），
+  /// 但外观保持启用色（启动引擎等长任务时按钮不能灰成不可用）。
+  final bool loading;
+
   @override
   State<AppButton> createState() => _AppButtonState();
 }
@@ -173,7 +181,9 @@ class _AppButtonState extends State<AppButton> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final enabled = widget.clickable;
+    // loading 外观按启用画、行为按禁用走。
+    final enabled = widget.clickable && !widget.loading;
+    final showEnabled = enabled || widget.loading;
     final v = widget.variant;
 
     if (v == AppButtonVariant.link) {
@@ -183,7 +193,7 @@ class _AppButtonState extends State<AppButton> {
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
         child: GestureDetector(
-          onTap: widget.onTap,
+          onTap: enabled ? widget.onTap : null,
           child: Text(
             widget.label,
             style: TextStyle(
@@ -201,14 +211,17 @@ class _AppButtonState extends State<AppButton> {
     final Color fg;
     switch (v) {
       case AppButtonVariant.primary:
-        bg = enabled ? (_hover ? palette.accHover : palette.accent) : palette.divider;
-        fg = enabled ? palette.pageBg : palette.textSecondary;
+        bg = showEnabled ? (_hover && enabled ? palette.accHover : palette.accent) : palette.divider;
+        fg = showEnabled ? palette.pageBg : palette.textSecondary;
+      case AppButtonVariant.danger:
+        bg = showEnabled ? (_hover && enabled ? palette.badHover : palette.bad) : palette.divider;
+        fg = showEnabled ? palette.pageBg : palette.textSecondary;
       case AppButtonVariant.secondary:
-        bg = enabled && _hover ? palette.card : palette.divider;
-        fg = enabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
+        bg = showEnabled && _hover && enabled ? palette.card : palette.divider;
+        fg = showEnabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
       case AppButtonVariant.ghost:
-        bg = enabled && _hover ? palette.card : Colors.transparent;
-        fg = enabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
+        bg = showEnabled && _hover && enabled ? palette.card : Colors.transparent;
+        fg = showEnabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
       case AppButtonVariant.link:
         throw StateError('link variant must be handled above');
     }
@@ -231,7 +244,7 @@ class _AppButtonState extends State<AppButton> {
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
           // onTap 为 null 时 InkWell 不吸收手势，交给外层（如 MenuAnchor 的触发器）。
-          onTap: widget.onTap,
+          onTap: enabled ? widget.onTap : null,
           child: Container(
             width: widget.width,
             height: widget.height,
@@ -246,7 +259,14 @@ class _AppButtonState extends State<AppButton> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (widget.icon != null) ...[
+                if (widget.loading) ...[
+                  SizedBox(
+                    width: widget.fontSize + 2,
+                    height: widget.fontSize + 2,
+                    child: CircularProgressIndicator(strokeWidth: 1.6, color: fg),
+                  ),
+                  if (widget.label.isNotEmpty) const SizedBox(width: 6),
+                ] else if (widget.icon != null) ...[
                   Icon(widget.icon, size: widget.fontSize + 1, color: fg),
                   if (widget.label.isNotEmpty) const SizedBox(width: 5),
                 ],

@@ -2407,3 +2407,27 @@
   微调时红时绿，本条之后稳定。
 - **验证**：`flutter analyze` 干净；全量 **161 通过 + 8 跳过全绿**；l10n 棘轮通过。
 - **关联**：D-118（颜色纪律先例）· D-003（视觉以设计稿为准）。
+
+## D-123 全项目按钮归零 + 侧栏开关联动 + 日志导出修复
+
+- **状态**：完成（2026-11-02）
+- **① 弹窗复核**：`AppDialog` / `showAppDialog` 已是唯一实现，**原生 `AlertDialog` 0 处**；
+  弹窗内按钮此前已用 `AppButton`。本项无需改动。
+- **② 原生按钮清零：36 处 → 0 处**（`FilledButton`/`OutlinedButton`/`TextButton`/`ElevatedButton`）：
+  `engine_parts_view`（更改/导入/校验/重查/重新下载）、`drop_screen`、`reader_screen`、
+  `runtime_picker`、`not_ready_screen`、`queue_empty`、`shared/error_state`、`shared/empty_state`。
+- **③ 设置页下拉**：复核为**全部 `AppSelect`/`AppSwitch`**，无需改动。
+- **④ 侧栏开关联动**：设置页「侧栏图标标签」改为 **「侧栏展开」**，
+  直接绑定 `navCollapsedProvider`（与侧栏收起/展开按钮**同一状态**），
+  文案键改为 `settingSidebarLabels`=侧栏展开、`why` 说明联动；
+  **移动端不显示**（`MediaQuery.width > AppMetrics.breakpoint` 才渲染）。
+- **⑤ 翻译日志**：
+  - 去掉标题右侧的「N 行」（`logBoxLines` 不再使用）；
+  - 复制/导出反馈从 **SnackBar 改为项目右上角 toast**（`showAppToast`）；
+  - **导出原本没生效**：`_TranslateLogBox` 未传 `onExport` ⇒ `handler == null` 时退化成只复制。
+    现接入 `getSaveLocation` 真正写 `.txt`；回调签名改为 `Future<bool>`，
+    **await 后才知道结果** —— 用户取消不弹「已导出」（原实现先弹后写，取消会误报）。
+- **⑥ 样式微调**：停止 / 保存凭证字号 `AppFont.px9_5`；更改…/导入本地运行时之间补 8px；
+  校验按钮 `secondary` → **`primary`**；`AppButtonVariant.link` 的 hover 字色改为
+  `palette.accHover`（与 primary 的 hover 背景同色）。
+- **验证**：应用 154 通过（`settings_ui_test` 文案同步）；analyze 干净；l10n 通过。

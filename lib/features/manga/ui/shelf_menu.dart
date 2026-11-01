@@ -4,6 +4,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_checkbox.dart';
+import '../../../shared/widgets/buttons.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_dropdown.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/app_select.dart';
@@ -90,10 +93,11 @@ class ShelfContextMenu {
 }
 
 /// 归并对话框（书架菜单与详情页共用）。
-Future<(String, double)?> showMergeDialog(BuildContext context, {required String src}) => showDialog<(String, double)>(
-  context: context,
-  builder: (_) => _MergeDialog(src: src),
-);
+Future<(String, double)?> showMergeDialog(BuildContext context, {required String src}) =>
+    showAppDialog<(String, double)>(
+      context: context,
+      builder: (_) => _MergeDialog(src: src),
+    );
 
 class _MergeDialog extends ConsumerStatefulWidget {
   const _MergeDialog({required this.src});
@@ -116,17 +120,26 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
     final targets = books.where((b) => b.isBook).toList();
-    return AlertDialog(
-      backgroundColor: palette.card,
-      title: Text(
-        l10n.libMergeTitle,
-        style: const TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600),
-      ),
-      content: SizedBox(
+    return AppDialog(
+      title: l10n.libMergeTitle,
+      actions: [
+        AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
+        AppButton(
+          label: l10n.libMerge,
+          variant: AppButtonVariant.primary,
+          onTap: _target == null
+              ? null
+              : () {
+                  final no = double.tryParse(_noController.text.trim());
+                  if (no == null) return;
+                  Navigator.of(context).pop((_target!, no));
+                },
+        ),
+      ],
+      child: SizedBox(
         width: 300,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -144,29 +157,13 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11_5)),
-        ),
-        FilledButton(
-          onPressed: _target == null
-              ? null
-              : () {
-                  final no = double.tryParse(_noController.text.trim());
-                  if (no == null) return;
-                  Navigator.of(context).pop((_target!, no));
-                },
-          child: Text(l10n.libMerge, style: const TextStyle(fontSize: AppFont.px11_5)),
-        ),
-      ],
     );
   }
 }
 
 /// 删除确认（miao-dock `DeleteComicModal`）：勾选框**默认不勾** = 隐藏。
 Future<bool?> showDeleteComicDialog(BuildContext context, {required LibBook book}) {
-  return showDialog<bool>(
+  return showAppDialog<bool>(
     context: context,
     builder: (_) => _DeleteDialog(book: book),
   );
@@ -189,13 +186,17 @@ class _DeleteDialogState extends State<_DeleteDialog> {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final book = widget.book;
-    return AlertDialog(
-      backgroundColor: palette.card,
-      title: Text(
-        l10n.shelfDeleteTitle(book.name),
-        style: const TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600),
-      ),
-      content: SizedBox(
+    return AppDialog(
+      title: l10n.shelfDeleteTitle(book.name),
+      actions: [
+        AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
+        AppButton(
+          label: l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),
+          variant: AppButtonVariant.danger,
+          onTap: () => Navigator.of(context).pop(_deleteFiles),
+        ),
+      ],
+      child: SizedBox(
         width: 340,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -211,10 +212,11 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 SizedBox(
                   width: 18,
                   height: 18,
-                  child: Checkbox(
+                  // 勾选框走共享 AppCheckbox（tristate: false —— 确认弹窗是纯布尔切换）。
+                  child: AppCheckbox(
                     value: _deleteFiles,
+                    tristate: false,
                     onChanged: (v) => setState(() => _deleteFiles = v ?? false),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -234,20 +236,6 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11_5)),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: palette.bad),
-          onPressed: () => Navigator.of(context).pop(_deleteFiles),
-          child: Text(
-            l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),
-            style: const TextStyle(fontSize: AppFont.px11_5),
-          ),
-        ),
-      ],
     );
   }
 }

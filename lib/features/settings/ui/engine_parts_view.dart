@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/storage/engine_inspect.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/log_box.dart';
 import '../../manga/ui/notready/runtime_picker.dart';
 import '../../manga/controller/engine_ready_controller.dart';
@@ -60,14 +61,21 @@ class EnginePartsSection extends ConsumerWidget {
                   style: TextStyle(fontSize: AppFont.px10, color: palette.mut, fontFamily: 'monospace'),
                 ),
               ),
-              TextButton(
-                onPressed: busy ? null : () => _changeDir(context, ref),
-                child: Text(l10n.runtimePickChange, style: const TextStyle(fontSize: AppFont.px10_5)),
+              AppButton(
+                label: l10n.runtimePickChange,
+                onTap: busy ? null : () => _changeDir(context, ref),
+                clickable: !busy,
+                variant: AppButtonVariant.link,
+                fontSize: AppFont.px10_5,
               ),
-              TextButton.icon(
-                onPressed: busy ? null : () => _importDir(context, ref),
-                icon: const Icon(LucideIcons.folderInput, size: 12),
-                label: Text(l10n.runtimeImport, style: const TextStyle(fontSize: AppFont.px10_5)),
+              const SizedBox(width: 8),
+              AppButton(
+                label: l10n.runtimeImport,
+                icon: LucideIcons.folderInput,
+                onTap: busy ? null : () => _importDir(context, ref),
+                clickable: !busy,
+                variant: AppButtonVariant.link,
+                fontSize: AppFont.px10_5,
               ),
             ],
           ),
@@ -75,26 +83,24 @@ class EnginePartsSection extends ConsumerWidget {
           // ── 校验按钮 + 结论 ───────────────────────────────────────
           Row(
             children: [
-              OutlinedButton.icon(
-                onPressed: busy ? null : () => ref.read(engineInspectionProvider.notifier).run(),
-                icon: busy
-                    ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(LucideIcons.shieldCheck, size: 12),
-                label: Text(
-                  busy ? l10n.engineChecking : l10n.engineCheck,
-                  style: const TextStyle(fontSize: AppFont.px10_5),
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 30),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                ),
+              AppButton(
+                label: busy ? l10n.engineChecking : l10n.engineCheck,
+                icon: LucideIcons.shieldCheck,
+                onTap: busy ? null : () => ref.read(engineInspectionProvider.notifier).run(),
+                clickable: !busy,
+                variant: AppButtonVariant.primary,
+                height: 30,
+                horizontalPadding: 12,
+                fontSize: AppFont.px10_5,
               ),
               const SizedBox(width: 8),
               // 轻量重查：只重做门禁用的快检（毫秒级），不起子进程。
-              TextButton(
-                onPressed: busy ? null : () => ref.read(enginePresenceProvider.notifier).refresh(),
-                style: TextButton.styleFrom(minimumSize: const Size(0, 30)),
-                child: Text(l10n.engineRecheck, style: const TextStyle(fontSize: AppFont.px10_5)),
+              AppButton(
+                label: l10n.engineRecheck,
+                onTap: busy ? null : () => ref.read(enginePresenceProvider.notifier).refresh(),
+                clickable: !busy,
+                variant: AppButtonVariant.link,
+                fontSize: AppFont.px10_5,
               ),
               const SizedBox(width: 10),
               Expanded(child: _Verdict(inspection: inspection)),
@@ -111,16 +117,14 @@ class EnginePartsSection extends ConsumerWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  FilledButton.icon(
-                    onPressed: () => _redownload(context, ref, result),
-                    icon: const Icon(LucideIcons.download, size: 12),
-                    label: Text(l10n.engineRedownloadMissing, style: const TextStyle(fontSize: AppFont.px10_5)),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: palette.acc,
-                      foregroundColor: palette.onAcc,
-                      minimumSize: const Size(0, 30),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
+                  AppButton(
+                    label: l10n.engineRedownloadMissing,
+                    icon: LucideIcons.download,
+                    onTap: () => _redownload(context, ref, result),
+                    variant: AppButtonVariant.primary,
+                    height: 30,
+                    horizontalPadding: 12,
+                    fontSize: AppFont.px10_5,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

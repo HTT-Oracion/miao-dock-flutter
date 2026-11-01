@@ -16,6 +16,9 @@ class NavCollapsedNotifier extends Notifier<bool> {
   bool build() => false;
 
   void toggle() => state = !state;
+
+  /// 设置页「侧栏展开」开关也走这里 —— 与侧栏按钮同一状态。
+  void set(bool value) => state = value;
 }
 
 /// 当前模块的视图清单 —— 侧栏视图组的事实源（design.html §03 侧栏结构）。
