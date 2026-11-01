@@ -87,30 +87,36 @@ class _ToastHostState extends State<_ToastHost> with SingleTickerProviderStateMi
             opacity: _c.value,
             child: Transform.translate(offset: Offset(16 * (1 - _c.value), 0), child: child),
           ),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 420),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: palette.panel,
-              border: Border.all(color: palette.line2),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 18, offset: const Offset(0, 6)),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(widget.message, style: TextStyle(fontSize: 12, color: palette.ink2)),
-                ),
-              ],
+          // 🔴 必须有 Material 祖先：Overlay 里的裸 Text 找不到 Material，
+          // Flutter 会画「黄色双下划线」提示缺少文本样式（实测踩到）。
+          // 用 transparency，避免多出一层不透明底色盖掉自绘面板。
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: palette.panel,
+                border: Border.all(color: palette.line2),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 18, offset: const Offset(0, 6)),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(widget.message, style: TextStyle(fontSize: 12, color: palette.ink2)),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

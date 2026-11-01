@@ -1987,3 +1987,16 @@
   求按钮矩形；书架右键没有按钮，用鼠标位置作零宽矩形。
 - **验证**：`menu_position_test` 2 条（左对齐 + 正下方；贴底时向上翻转）；
   应用 142 通过；l10n 通过。
+
+## D-107 Toast 文本黄色双下划线（截图定位）
+
+- **状态**：完成（2026-11-01）
+- **现象**（用户截图）：Toast 文字下方有**黄色双下划线**。
+- **根因**：Toast 画在 `OverlayEntry` 里，`Text` **没有 Material 祖先** ——
+  Flutter 在缺少 Material 时会用「黄色双下划线」提示文本样式缺失（Debug 期的经典提示）。
+- **修法**：在自绘面板外包 `Material(type: MaterialType.transparency)`。
+  用 transparency 而不是默认 Material：后者会带一层不透明底色，盖掉自绘的 panel/描边/阴影。
+- **验证**：`toast_style_test`（断言 `decoration != underline` 且存在 Material 祖先）；
+  应用 143 通过；l10n 通过。
+- **备注**：前几轮在 `toast.dart`/ARB/主题里都搜不到 `TextDecoration` 是因为**来源不在代码里**，
+  而是框架的运行时提示 —— 有截图才定位到。
