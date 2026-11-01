@@ -511,7 +511,7 @@
   },
   "queueSelectedCount": "已选 {count} 项",
   "@queueSelectedCount": {
-    "description": "队列：已选数量",
+    "description": "队列批量操作",
     "placeholders": {
       "count": {
         "type": "int"
@@ -532,14 +532,6 @@
     }
   },
   "queueDeleteSelected": "删除选中（{count}）",
-  "@queueDeleteSelected": {
-    "description": "队列：删除选中",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "queueLoadFailed": "任务列表加载失败：{message}",
   "@queueLoadFailed": {
     "description": "队列：加载失败",
@@ -2086,6 +2078,14 @@
     "placeholders": {
       "name": {
         "type": "String"
+      }
+    }
+  },
+  "@queueDeleteSelected": {
+    "description": "队列批量删除按钮",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   }
