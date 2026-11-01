@@ -44,44 +44,41 @@ class AppDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final body = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            if (icon != null) ...[Icon(icon, size: 16, color: palette.acc), const SizedBox(width: 8)],
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.textPrimary),
+              ),
+            ),
+            if (onClose != null)
+              AppButton(icon: LucideIcons.x, width: 22, height: 22, variant: AppButtonVariant.ghost, onTap: onClose),
+          ],
+        ),
+        const SizedBox(height: 12),
+        child,
+        if (actions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Row(mainAxisAlignment: MainAxisAlignment.end, spacing: 8, children: actions),
+        ],
+      ],
+    );
+
+    // 🔴 宽度必须落到内容上：Container 不指定 width 时会**撑满可用宽度**
+    // （实测弹窗被拉成 1120 宽，内容只有 300 —— 看起来"弹窗太大"）。
+    // 因此 width 为空时用 IntrinsicWidth 让弹窗按内容收缩。
+    final content = width == null ? IntrinsicWidth(child: body) : SizedBox(width: width, child: body);
+
     return Dialog(
       backgroundColor: palette.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusModal)),
-      child: Container(
-        width: width,
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (icon != null) ...[Icon(icon, size: 16, color: palette.acc), const SizedBox(width: 8)],
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.textPrimary),
-                  ),
-                ),
-                if (onClose != null)
-                  AppButton(
-                    icon: LucideIcons.x,
-                    width: 22,
-                    height: 22,
-                    variant: AppButtonVariant.ghost,
-                    onTap: onClose,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            child,
-            if (actions.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Row(mainAxisAlignment: MainAxisAlignment.end, spacing: 8, children: actions),
-            ],
-          ],
-        ),
-      ),
+      child: Container(padding: const EdgeInsets.fromLTRB(20, 18, 20, 18), child: content),
     );
   }
 }

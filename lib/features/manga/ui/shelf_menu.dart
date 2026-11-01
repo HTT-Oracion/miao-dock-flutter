@@ -196,17 +196,18 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           onTap: () => Navigator.of(context).pop(_deleteFiles),
         ),
       ],
+      // 确认框收窄：内容只有一段正文 + 一个勾选项，340 宽显得空。
       child: SizedBox(
-        width: 340,
+        width: 300,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               l10n.shelfDeleteBody(book.chapterCount == 0 ? 1 : book.chapterCount, book.pageCount),
-              style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
+              style: TextStyle(fontSize: AppFont.px11_5, height: 1.5, color: palette.textSecondary),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Row(
               children: [
                 SizedBox(
@@ -228,10 +229,10 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               l10n.shelfDeleteKeepHint,
-              style: TextStyle(fontSize: AppFont.px10_5, color: palette.textSecondary),
+              style: TextStyle(fontSize: AppFont.px10_5, height: 1.4, color: palette.textSecondary),
             ),
           ],
         ),
