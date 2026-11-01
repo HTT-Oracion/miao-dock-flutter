@@ -2096,5 +2096,9 @@
   "libCoverNone": "无封面",
   "@libCoverNone": {
     "description": "封面占位"
+  },
+  "shelfBack": "返回书架",
+  "@shelfBack": {
+    "description": "返回书架按钮"
   }
 }

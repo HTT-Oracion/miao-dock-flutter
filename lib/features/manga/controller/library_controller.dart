@@ -136,6 +136,7 @@ List<LibBook> shelfBooks(WidgetRef ref) {
   // 失败时回落到上次成功的数据（设计稿 §07：不清空已成功的数据）。
   // 直接 `.value ?? []` 会让服务一挂书架整片变空，用户以为书没了。
   final books = state.value ?? ref.read(libraryProvider.notifier).lastGood;
+  // 左栏列**全部**：单本 + 未归并单话（用户定案）。
   final query = ref.watch(shelfQueryProvider).trim();
   if (query.isEmpty) return books;
   return books.where((b) => b.name.contains(query) || b.author.contains(query)).toList();

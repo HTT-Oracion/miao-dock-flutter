@@ -42,7 +42,14 @@ class LibraryDetail extends ConsumerWidget {
     if (books.isEmpty) {
       return Column(
         children: [
-          const LibraryHeaderActions(),
+          // 「返回书架」（ver1.0 `#bk`）：清掉选中即回到默认态。
+          Row(
+            children: [
+              _BackToShelf(onTap: () => ref.read(selectedBookProvider.notifier).select(null)),
+              const Spacer(),
+              const LibraryHeaderActions(),
+            ],
+          ),
           Expanded(
             child: Center(
               child: Text(
@@ -63,9 +70,16 @@ class LibraryDetail extends ConsumerWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       children: [
-        const LibraryHeaderActions(),
+        // 「返回书架」（ver1.0 `#bk`）：清掉选中即回到默认态。
+        Row(
+          children: [
+            _BackToShelf(onTap: () => ref.read(selectedBookProvider.notifier).select(null)),
+            const Spacer(),
+            const LibraryHeaderActions(),
+          ],
+        ),
         const SizedBox(height: 12),
         _Hero(book: book),
         if (!book.isBook) ...[
@@ -1164,6 +1178,52 @@ class _ViewSeg extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// 「返回书架」按钮（ver1.0 `.btn.ghost`）。
+class _BackToShelf extends StatefulWidget {
+  const _BackToShelf({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  State<_BackToShelf> createState() => _BackToShelfState();
+}
+
+class _BackToShelfState extends State<_BackToShelf> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: _hover ? AppTokens.card : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppTokens.divider),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(LucideIcons.chevronLeft, size: 11, color: AppTokens.textSecondary),
+              const SizedBox(width: 4),
+              Text(
+                AppLocalizations.of(context).shelfBack,
+                style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

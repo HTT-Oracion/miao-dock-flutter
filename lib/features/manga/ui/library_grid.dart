@@ -24,9 +24,11 @@ class LibraryGrid extends ConsumerWidget {
     final state = ref.watch(libraryProvider);
     final books = state.value ?? ref.read(libraryProvider.notifier).lastGood;
     final query = ref.watch(shelfQueryProvider).trim();
+    // 右侧网格**只显示单本**（未归并单话在左栏，不在这里出现）。
+    final onlyBooks = books.where((b) => b.isBook).toList();
     final shown = query.isEmpty
-        ? books
-        : books.where((b) => b.name.toLowerCase().contains(query.toLowerCase())).toList();
+        ? onlyBooks
+        : onlyBooks.where((b) => b.name.toLowerCase().contains(query.toLowerCase())).toList();
 
     if (books.isEmpty && state.hasError) {
       return ErrorState(error: state.error, onRetry: () => ref.read(libraryProvider.notifier).refresh());
@@ -37,6 +39,23 @@ class LibraryGrid extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 标题行（ver1.0 `.lib-main` 头）：本地漫画库 + 计数 + 刷新 / 新建漫画。
+          Row(
+            children: [
+              Text(
+                l10n.libLocalLibrary,
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTokens.textPrimary),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${onlyBooks.length} · ${onlyBooks.fold<int>(0, (a, b) => a + b.pageCount)}',
+                style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary),
+              ),
+              const Spacer(),
+              const LibraryHeaderActions(),
+            ],
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               // 搜索框（设计稿 `.shelf-search`）：本页只做本地过滤。
@@ -59,9 +78,6 @@ class LibraryGrid extends ConsumerWidget {
                   onChanged: (v) => ref.read(shelfQueryProvider.notifier).set(v),
                 ),
               ),
-              const Spacer(),
-              // 右侧操作（不贴边）：与详情页同一套按钮。
-              LibraryHeaderActions(),
             ],
           ),
           const SizedBox(height: 14),
