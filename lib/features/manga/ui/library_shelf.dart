@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/buttons.dart';
+import '../../../shared/widgets/skeleton.dart';
 import '../../../shared/widgets/toast.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../core/utils/format.dart';
@@ -45,7 +46,7 @@ class LibraryShelf extends ConsumerWidget {
           _ShelfSearch(query: query),
           Expanded(
             // 加载中显示**卡片骨架**（设计稿：书是卡片，不是表格行）。
-            child: shelfLoading(ref) ? const _ShelfCardSkeleton() : _ShelfBody(books: books, selected: selected),
+            child: shelfLoading(ref) ? const SkeletonCards() : _ShelfBody(books: books, selected: selected),
           ),
           _ShelfFoot(books: allBooks),
         ],
@@ -297,53 +298,6 @@ class _ShelfFoot extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// 卡片式骨架：每张卡 = 封面块 + 两行文字占位。
-class _ShelfCardSkeleton extends StatelessWidget {
-  const _ShelfCardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    Widget bar(double w, double h) => Container(
-      width: w,
-      height: h,
-      decoration: BoxDecoration(color: palette.hi, borderRadius: BorderRadius.circular(4)),
-    );
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      children: [
-        for (var i = 0; i < 6; i++)
-          Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: palette.panel,
-              border: Border.all(color: palette.line),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 46,
-                  decoration: BoxDecoration(color: palette.hi, borderRadius: BorderRadius.circular(4)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [bar(120, 10), const SizedBox(height: 8), bar(72, 8)],
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }

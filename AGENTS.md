@@ -114,7 +114,21 @@
 7. **未经确认不引入依赖。** 确需引入时，在提交信息和决策台账中说明包数、体积及是否属于运行时依赖。
 8. **注释只写核心信息。** 新增或修改的注释，只写跨文件契约、易踩坑、反直觉处；不写长篇大论，不复述代码。公开 API 用 `///` doc comment。
 9. **避免长链内联三元。** 多层条件表达式改为具名变量或早返回函数。
-10. **不重复造轮子。** 写新 Widget、新工具、新命令前先确认 `lib/shared/`、`lib/core/` 是否已有同类实现；能扩展既有实现的不另起一套。已有 Skeleton / Empty / ErrorState 三态、设计令牌主题等共享件。
+10. **不重复造轮子，且组件选型有明确优先级。** 写新 Widget、新工具、新命令前，按顺序取用：
+
+    1. **`lib/shared/` 的既有实现**（首选）—— 按钮 `AppButton`（`kButtonRadius`）、
+       下拉 `AppDropdownMenu`、三态 `SkeletonBox`/`SkeletonRows`/`SkeletonCards` +
+       `EmptyState` + `ErrorState`、`AppPager` / `AppCheckbox` / `AppSwitch` / `AppSelect` /
+       `AppTable` / `AppTitleBar` / `LogBox` / `Toast` / `NavRail` / `SettingRow`、
+       设计令牌 `AppTokens` / `AppPalette`；
+    2. **扩展既有实现**（次选）—— 缺变体就往共享件里加参数/枚举，不另起一套；
+    3. **Material 3 组件**（再次）—— 共享层确实没有同类能力时用 Flutter 官方 M3
+       （如 `MenuAnchor`），并按项目 token 覆写样式（圆角/配色/字号）；
+    4. **自绘**（最后手段）—— 前三级都满足不了才自己画，且必须写清为何不能用前三级。
+
+    **判定口径**：页面里出现 `class _XxxButton`、`class _XxxMenu`、`Container` 手搓按钮
+    这类"局部轮子"，视为违反本条。按钮圆角一律取 `shared/buttons.dart` 的 `kButtonRadius`，
+    如需不同圆角必须先改常量（不是在各调用点覆盖）。
 11. **遵循既有命名与分层。** 不恢复已退役实现，不绕过现有模块边界或检查入口。
 12. **拆屏判据。** `build()` 超过约 100 行或 Widget 嵌套超过 4 层时，必须拆成独立 Widget 类；拆分方向是横向（`Row` / `Column` 的区块各拆一个），返回 Widget 的私有方法视为拆分未完成。
 13. **取数判据。** 状态用 `ref.watch` 在 `build` 顶层取，不在 UI 树里包 Consumer / builder 取数；派生数据（过滤 / 分组 / 排序）在 controller 或 selector 算好，`build` 只画。

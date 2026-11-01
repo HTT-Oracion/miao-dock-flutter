@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/process/service_controller.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../shared/widgets/skeleton.dart';
 import '../controller/engine_controller.dart';
 import '../controller/engine_install_controller.dart';
 import '../controller/engine_ready_controller.dart';
@@ -66,9 +67,9 @@ class _GateSkeleton extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _Bar(width: 220, height: 20, color: palette.hi),
+              const SkeletonBox(width: 220, height: 20),
               const SizedBox(height: 12),
-              _Bar(width: 420, height: 12, color: palette.hi),
+              const SkeletonBox(width: 420, height: 12),
               const SizedBox(height: 24),
               Container(
                 height: 132,
@@ -86,23 +87,6 @@ class _GateSkeleton extends StatelessWidget {
   }
 }
 
-/// 占位条（加载态用）。
-class _Bar extends StatelessWidget {
-  const _Bar({required this.width, required this.height, required this.color});
-
-  final double width;
-  final double height;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: width,
-    height: height,
-    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-  );
-}
-
-/// 未就绪时的卡片：复用 [NotReadyScreen]（同一个 `.nr-card` 视觉）。
 class _GateCard extends ConsumerWidget {
   const _GateCard({required this.gate});
 

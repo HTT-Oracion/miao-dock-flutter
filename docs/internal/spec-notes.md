@@ -2119,3 +2119,22 @@
   ⇒ 触发器传 `onTap: null`，由 `AppDropdownMenu` 的 `Listener` 接管开合。
 - **验证**：`menu_position_test`（正下方 + 左对齐）、`queue_actions_test`（更多菜单可展开）；
   应用 148 通过；analyze 干净。
+
+## D-115 约束 10 改写 + 骨架屏收敛到 shared
+
+- **状态**：完成（2026-11-01）
+- **用户要求**：约束里增加「所有组件优先用 shared，其次 Material 3」。
+- **`AGENTS.md` 第 10 条改写**为四级优先级：
+  1. `lib/shared/` 既有实现（首选）；
+  2. 扩展既有实现（缺变体就加参数/枚举）；
+  3. Flutter 官方 **Material 3** 组件（共享层确实没有时），并按项目 token 覆写样式；
+  4. **自绘**（最后手段，且必须写明为何不能用前三级）。
+  判定口径：页面里出现 `class _XxxButton` / `class _XxxMenu` / 手搓按钮容器 = 违规；
+  按钮圆角一律取 `kButtonRadius`，要改先改常量。
+- **顺带发现文档与代码不符**：约束原文写着「已有 Skeleton」，但 `lib/shared/widgets/` 下
+  **并没有 skeleton.dart**，实际有 3 处各写各的（`QueueSkeleton`、`_ShelfCardSkeleton`、`_GateSkeleton`）。
+  已按约束收敛：
+  - 新增 `shared/widgets/skeleton.dart`：`SkeletonBox`（原子）、`SkeletonRows`（表格行）、
+    `SkeletonCards`（卡片行）；
+  - 书架改 `SkeletonCards`、门禁改 `SkeletonBox`、删除无人引用的 `queue_skeleton.dart`。
+- **验证**：应用 148 通过；analyze 干净；l10n 通过。
