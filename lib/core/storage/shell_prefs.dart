@@ -152,3 +152,10 @@ String? readRemoteToken() {
 }
 
 void persistRemoteToken(String token) => _writePref('miao.remote-token', token);
+
+/// 阅读器是否显示原图（false = 显示译文，默认）。
+///
+/// 用户要求：进阅读器**默认看译文**，点按钮才切原图；该偏好需持久化。
+bool readReaderShowOriginal() => _readPrefs()['miao.reader-show-original'] == 'true';
+
+void persistReaderShowOriginal(bool value) => _writePref('miao.reader-show-original', value ? 'true' : 'false');

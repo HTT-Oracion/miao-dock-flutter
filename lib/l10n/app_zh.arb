@@ -2149,5 +2149,13 @@
   "llmAppSecretHint": "应用密钥（appSecret）",
   "@llmAppSecretHint": {
     "description": "大模型翻译凭证输入提示"
+  },
+  "readerShowOriginal": "显示原图",
+  "@readerShowOriginal": {
+    "description": "阅读器原图/译文切换"
+  },
+  "readerShowTranslated": "显示翻译",
+  "@readerShowTranslated": {
+    "description": "阅读器原图/译文切换"
   }
 }

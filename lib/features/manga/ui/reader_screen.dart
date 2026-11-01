@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:protocol/protocol.dart' show jsNumStr;
 
+import '../../../core/storage/shell_prefs.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/buttons.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
 
@@ -26,6 +28,14 @@ class ReaderScreen extends ConsumerStatefulWidget {
 class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   final _controller = PageController();
   int _index = 0;
+
+  /// 是否显示原图。**默认 false = 看译文**；用户切换后持久化。
+  late bool _showOriginal = readReaderShowOriginal();
+
+  void _toggleOriginal() {
+    setState(() => _showOriginal = !_showOriginal);
+    persistReaderShowOriginal(_showOriginal);
+  }
 
   @override
   void dispose() {
@@ -87,6 +97,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 ? session.key
                 : '${session.key} · ${l10n.chapterTitle(jsNumStr(session.chapterNo!))}',
             pageText: l10n.readerPage(_index + 1, total),
+            // 按钮文案随状态切换：当前看译文 → 按钮写「显示原图」，反之亦然。
+            toggleLabel: _showOriginal ? l10n.readerShowTranslated : l10n.readerShowOriginal,
+            onToggle: _toggleOriginal,
             onClose: _close,
           ),
           Expanded(
@@ -96,7 +109,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   controller: _controller,
                   itemCount: total,
                   onPageChanged: (i) => setState(() => _index = i),
-                  itemBuilder: (context, i) => _ReaderPage(session: session, seq: i + 1),
+                  // key 里带上 showOriginal：切换模式时强制重建该页，确保重新取图。
+                  itemBuilder: (context, i) => _ReaderPage(
+                    key: ValueKey('p-$i-$_showOriginal'),
+                    session: session,
+                    seq: i + 1,
+                    showOriginal: _showOriginal,
+                  ),
                 ),
                 // 桌面端点击两侧翻页（移动端用滑动，不挡手势区）。
                 Positioned(
@@ -148,10 +167,18 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 }
 
 class _ReaderBar extends StatelessWidget {
-  const _ReaderBar({required this.title, required this.pageText, required this.onClose});
+  const _ReaderBar({
+    required this.title,
+    required this.pageText,
+    required this.toggleLabel,
+    required this.onToggle,
+    required this.onClose,
+  });
 
   final String title;
   final String pageText;
+  final String toggleLabel;
+  final VoidCallback onToggle;
   final VoidCallback onClose;
 
   @override
@@ -183,6 +210,16 @@ class _ReaderBar extends StatelessWidget {
               style: TextStyle(fontSize: 12.5, color: palette.textPrimary),
             ),
           ),
+          AppButton(
+            label: toggleLabel,
+            onTap: onToggle,
+            variant: AppButtonVariant.ghost,
+            border: true,
+            height: 24,
+            horizontalPadding: 9,
+            fontSize: 10.5,
+          ),
+          const SizedBox(width: 10),
           Text(pageText, style: TextStyle(fontSize: 11.5, color: palette.textSecondary)),
           const SizedBox(width: 10),
           GestureDetector(
@@ -197,10 +234,13 @@ class _ReaderBar extends StatelessWidget {
 
 /// 单页：先取译文（服务端缺译文自动回退原图），失败再直接取原图。
 class _ReaderPage extends ConsumerStatefulWidget {
-  const _ReaderPage({required this.session, required this.seq});
+  const _ReaderPage({super.key, required this.session, required this.seq, required this.showOriginal});
 
   final ReaderSession session;
   final int seq;
+
+  /// true = 取原图；false = 取译文（缺译文时服务端自动回退原图）。
+  final bool showOriginal;
 
   @override
   ConsumerState<_ReaderPage> createState() => _ReaderPageState();
@@ -215,13 +255,24 @@ class _ReaderPageState extends ConsumerState<_ReaderPage> {
     _future = _load();
   }
 
+  @override
+  void didUpdateWidget(covariant _ReaderPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 切换原图/译文后必须重新取图，否则画面不变。
+    if (oldWidget.showOriginal != widget.showOriginal) {
+      setState(() => _future = _load());
+    }
+  }
+
   Future<Uint8List?> _load() async {
     final client = ref.read(mangaSvcClientProvider);
     final s = widget.session;
+    // 🔴 显示原图时**不请求译文**；显示译文时按该页是否有译文取。
+    final wantTranslated = !widget.showOriginal && s.translated.contains(widget.seq);
     try {
       final bytes = s.chapterNo == null
-          ? await client.getBookFile(s.key, widget.seq, translated: s.translated.contains(widget.seq))
-          : await client.getChapterFile(s.key, s.chapterNo!, widget.seq, translated: s.translated.contains(widget.seq));
+          ? await client.getBookFile(s.key, widget.seq, translated: wantTranslated)
+          : await client.getChapterFile(s.key, s.chapterNo!, widget.seq, translated: wantTranslated);
       if (bytes.isEmpty) return null;
       return Uint8List.fromList(bytes);
     } catch (_) {

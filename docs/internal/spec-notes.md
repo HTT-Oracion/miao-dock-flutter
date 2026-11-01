@@ -2257,3 +2257,21 @@
 - **⑥ 移动/桌面默认来源**：`TranslateSourceNotifier.build()` 已有
   `supportsLocalEngine ? local : remote`，符合要求，本轮未改。
 - **验证**：应用 151 通过；analyze 与 l10n 通过。
+
+## D-122 阅读器「显示原图 / 显示翻译」切换（持久化）
+
+- **状态**：完成（2026-11-01）
+- **需求**：进阅读器**默认看译文**；点按钮切原图；按钮文案随状态显示
+  「显示原图」/「显示翻译」；状态**持久化**。
+- **实现**：
+  - `shell_prefs`：`readReaderShowOriginal()` / `persistReaderShowOriginal()`（键 `miao.reader-show-original`）；
+  - `ReaderScreen`：`_showOriginal` 初值读偏好，切换时 `setState` + 落盘；
+  - `_ReaderBar` 增加按钮（`AppButton` ghost + 描边，与顶栏其它控件同高 24）；
+  - `_ReaderPage` 接收 `showOriginal`：**显示原图时不请求译文**（`translated: false`）；
+  - `PageView` 的每页 key 带 `showOriginal`，切换时强制重建 ⇒ **一定重新取图**。
+- **踩坑（关键）**：第一次改 `_load()` 时替换锚点没匹配上，导致 `showOriginal` 只是摆设、
+  取图仍按旧逻辑走。**测试抓到**：切换后第二次请求仍是 `translated=true`。
+  教训：改完要**用测试验证行为**，不能只看 analyze 通过。
+- **测试**：`reader_toggle_test` —— 默认按钮是「显示原图」、默认请求译文、
+  点击后按钮变「显示翻译」、重新取图 `translated=false`、偏好落盘为 true。
+- **验证**：应用 152 通过；analyze 与 l10n 通过。
