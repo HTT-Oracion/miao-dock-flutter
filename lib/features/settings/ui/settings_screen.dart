@@ -779,16 +779,10 @@ class _PairingRows extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    final autoService = ref.watch(_autoStartServiceProvider);
     final autoEngine = ref.watch(_autoStartEngineProvider);
 
     return Column(
       children: [
-        SettingRow(
-          label: l10n.svcAutoStart,
-          why: l10n.svcAutoStartWhy,
-          control: AppSwitch(value: autoService, onChanged: (v) => ref.read(_autoStartServiceProvider.notifier).set(v)),
-        ),
         SettingRow(
           label: l10n.svcAutoStartEngine,
           why: l10n.svcAutoStartEngineWhy,
@@ -815,8 +809,6 @@ class _PairingRows extends ConsumerWidget {
     );
   }
 }
-
-final _autoStartServiceProvider = NotifierProvider<_AutoStartService, bool>(_AutoStartService.new);
 
 /// 配对令牌行：本机 mangasvc 的 `X-Box-Token`，其他端远程连接时随请求携带。
 ///
@@ -863,16 +855,6 @@ class _PairingTokenRow extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-class _AutoStartService extends Notifier<bool> {
-  @override
-  bool build() => readAutoStartService();
-
-  void set(bool v) {
-    state = v;
-    persistAutoStartService(v);
   }
 }
 

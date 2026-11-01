@@ -1118,14 +1118,6 @@
       }
     }
   },
-  "svcAutoStart": "随应用启动服务",
-  "@svcAutoStart": {
-    "description": "设置：自动启动"
-  },
-  "svcAutoStartWhy": "应用启动时拉起漫画服务；关闭后需手动启动。",
-  "@svcAutoStartWhy": {
-    "description": "设置：自动启动说明"
-  },
   "svcAutoStartEngine": "翻译时自动启动引擎",
   "@svcAutoStartEngine": {
     "description": "设置：引擎自动唤起"

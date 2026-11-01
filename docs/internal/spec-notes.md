@@ -2367,3 +2367,21 @@
 - **验证**：`flutter analyze` 干净；`cursor_policy_test` / `settings_ui_test` 全过；
   l10n 棘轮通过。视觉观感需人眼确认（自动化只能钉住结构）。
 - **关联**：D-040（AppSwitch 一比一）· D-118（颜色只从调色板取）。
+
+## D-127 移除「随应用启动服务」开关：服务恒随应用启动
+
+- **状态**：完成（2026-11-01）
+- **做了什么**：设置页「服务与配对」的「随应用启动服务」开关整行移除；
+  连带删除 `_autoStartServiceProvider` / `_AutoStartService`、
+  `shell_prefs` 的 `readAutoStartService` / `persistAutoStartService`
+  （键 `miao.auto-start-service`）与 ARB 词条 `svcAutoStart` / `svcAutoStartWhy`。
+- **为什么**：bootstrap 从启动接线起就是**无条件**拉起 mangasvc（D-023），
+  这个开关从未被消费——是个写了偏好却没人读的**假控件**；用户裁定服务
+  恒随应用启动、不可更改，去掉比留着一个不生效的开关诚实。
+  顺带消灭一个假象：看起来能关、实际关不掉。
+- **保留**：「翻译时自动启动引擎」（`svcAutoStartEngine*`，D-039）不受影响，
+  它是真消费的（D-039 落盘 + EngineAutoStart 读取）。
+- **验证**：`flutter analyze` 干净；l10n 棘轮通过；全量 **161 通过 + 8 跳过
+  全绿**（`pairing_token_test` 此前的折叠线抽风随按钮高度 26 带来的布局
+  变矮而消失；e2e 对着运行中的真实服务通过）。
+- **关联**：D-012（服务常驻）· D-023（无条件拉起）· D-039（引擎开关）· D-124（配对区）。
