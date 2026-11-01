@@ -2100,5 +2100,18 @@
   "shelfBack": "返回书架",
   "@shelfBack": {
     "description": "返回书架按钮"
+  },
+  "shelfGroupUnmerged": "未归并",
+  "@shelfGroupUnmerged": {
+    "description": "未归并分组标题"
+  },
+  "shelfGroupBook": "《{name}》",
+  "@shelfGroupBook": {
+    "description": "搜索分组标题",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }

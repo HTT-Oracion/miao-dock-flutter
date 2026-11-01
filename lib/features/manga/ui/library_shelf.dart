@@ -133,16 +133,35 @@ class _ShelfBody extends ConsumerWidget {
       );
     }
 
+    // 搜索态：按「每本书一组 + 未归并组」分组（miao-dock `groupSearchResults`）；
+    // 浏览态：平铺全部（单本 + 单话）。
+    final searching = ref.watch(shelfQueryProvider).trim().isNotEmpty;
+    final merged = books.where((b) => b.isBook).toList();
+    final unmerged = books.where((b) => !b.isBook).toList();
+
+    Widget rowFor(LibBook b) => _BookRow(
+      key: ValueKey('shelf-row-${b.key}'),
+      book: b,
+      active: b.key == selected,
+      onTap: () => ref.read(selectedBookProvider.notifier).select(b.key),
+    );
+
+    Widget groupTitle(String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppTokens.textSecondary),
+      ),
+    );
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       children: [
-        for (final b in books)
-          _BookRow(
-            key: ValueKey('shelf-row-${b.key}'),
-            book: b,
-            active: b.key == selected,
-            onTap: () => ref.read(selectedBookProvider.notifier).select(b.key),
-          ),
+        if (searching) ...[
+          for (final b in merged) ...[groupTitle(l10n.shelfGroupBook(b.name)), rowFor(b)],
+          if (unmerged.isNotEmpty) ...[groupTitle(l10n.shelfGroupUnmerged), for (final b in unmerged) rowFor(b)],
+        ] else
+          for (final b in books) rowFor(b),
         if (showHidden && hidden.isNotEmpty) ...[
           const SizedBox(height: 10),
           Text(

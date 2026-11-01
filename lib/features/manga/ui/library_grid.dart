@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
@@ -55,32 +54,6 @@ class LibraryGrid extends ConsumerWidget {
               const LibraryHeaderActions(),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              // 搜索框（设计稿 `.shelf-search`）：本页只做本地过滤。
-              SizedBox(
-                width: 220,
-                height: 30,
-                child: TextField(
-                  style: const TextStyle(fontSize: 11, color: AppTokens.textPrimary),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    filled: true,
-                    fillColor: AppTokens.card,
-                    hintText: l10n.shelfSearchHint,
-                    hintStyle: const TextStyle(fontSize: 10, color: AppTokens.textSecondary),
-                    prefixIcon: const Icon(LucideIcons.search, size: 12, color: AppTokens.textSecondary),
-                    prefixIconConstraints: const BoxConstraints(minWidth: 28),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                  ),
-                  onChanged: (v) => ref.read(shelfQueryProvider.notifier).set(v),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
           if (shown.isEmpty)
             Expanded(
               child: Center(
