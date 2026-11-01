@@ -18,6 +18,7 @@ import '../domain/lib_book.dart';
 import '../domain/manga_status.dart';
 import '../domain/manga_task.dart';
 import 'library_search_results.dart';
+import 'chapter_menu.dart';
 import 'shelf_menu.dart';
 
 /// 详情主区（设计稿 G Main）：
@@ -608,48 +609,62 @@ class _ChapterCard extends ConsumerWidget {
             );
         context.go('/manga/reader');
       },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(10)),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 64,
-              decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(6)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
-                    style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: SizedBox(
-                      height: 4,
-                      child: LinearProgressIndicator(
-                        value: chapter.ratio,
-                        backgroundColor: AppTokens.progressTrack,
-                        valueColor: AlwaysStoppedAnimation(color),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(10)),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 64,
+                  decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(6)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTokens.textPrimary,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 3),
+                      Text(
+                        AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
+                        style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: SizedBox(
+                          height: 4,
+                          child: LinearProgressIndicator(
+                            value: chapter.ratio,
+                            backgroundColor: AppTokens.progressTrack,
+                            valueColor: AlwaysStoppedAnimation(color),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          // 悬浮菜单：点它不能顺带打开阅读器（miao-dock：stopPropagation）。
+          Positioned(
+            right: 0,
+            top: 0,
+            child: ChapterMenuButton(book: book, chapter: chapter),
+          ),
+        ],
       ),
     );
   }

@@ -606,7 +606,20 @@ class Handlers {
 
   /// 打开目录（reveal）。
   Future<void> _revealBook(HttpRequest req, String name) async {
-    final dir = store.bookDir(name);
+    // name 可能是「书」或「书/话目录」：分段拼接并断言仍在库根内（防越界）。
+    final parts = name.split('/').where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) throw const ServiceError('NOT_FOUND', '目录不存在', status: 404);
+    var dir = store.bookDir(parts.first);
+    for (final seg in parts.skip(1)) {
+      if (seg == '.' || seg == '..' || seg.contains('\\')) {
+        throw const ServiceError('PERMISSION_DENIED', '路径越界', status: 403);
+      }
+      dir = Directory('${dir.path}${Platform.pathSeparator}$seg');
+    }
+    final rootPath = store.bookDir(parts.first).parent.path;
+    if (!dir.path.startsWith(rootPath)) {
+      throw const ServiceError('PERMISSION_DENIED', '路径越界', status: 403);
+    }
     if (!dir.existsSync()) throw const ServiceError('NOT_FOUND', '目录不存在', status: 404);
     if (Platform.isMacOS) {
       await Process.run('open', [dir.path]);

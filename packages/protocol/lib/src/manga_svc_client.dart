@@ -121,19 +121,19 @@ abstract class MangaSvcClient {
   Future<CreateTaskResponse> retranslateBook(String bookName);
 
   /// `GET /api/v1/library/{book}/chapters/{no}/resume` —— 单话补页计划。
-  Future<ResumePlan> getChapterResumePlan(String bookName, int chapterNo);
+  Future<ResumePlan> getChapterResumePlan(String bookName, double chapterNo);
 
   /// `POST /api/v1/library/{book}/chapters/{no}/resume` —— 单话补页。
-  Future<CreateTaskResponse> resumeChapter(String bookName, int chapterNo);
+  Future<CreateTaskResponse> resumeChapter(String bookName, double chapterNo);
 
   /// `GET /api/v1/library/{book}/chapters/{no}/retranslate` —— 单话返工计划。
-  Future<RetranslatePlan> getChapterRetranslatePlan(String bookName, int chapterNo);
+  Future<RetranslatePlan> getChapterRetranslatePlan(String bookName, double chapterNo);
 
   /// `POST /api/v1/library/{book}/chapters/{no}/retranslate` —— 单话返工。
-  Future<CreateTaskResponse> retranslateChapter(String bookName, int chapterNo);
+  Future<CreateTaskResponse> retranslateChapter(String bookName, double chapterNo);
 
   /// `POST /api/v1/library/{book}/chapters/{no}/renumber` —— 改话号。
-  Future<void> renumberChapter(String bookName, int chapterNo, {required int newNo});
+  Future<void> renumberChapter(String bookName, double chapterNo, {required double newNo});
 
   /// `GET /api/v1/library/{name}/files/{seq}` —— 取本内页面字节（`translated=true` 译文优先）。
   Future<List<int>> getBookFile(String bookName, int seq, {bool translated = false});

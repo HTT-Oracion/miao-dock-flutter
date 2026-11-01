@@ -250,28 +250,32 @@ class HttpMangaSvcClient implements MangaSvcClient {
       _createTaskOf(await _post('/library/${Uri.encodeComponent(bookName)}/retranslate'));
 
   @override
-  Future<ResumePlan> getChapterResumePlan(String bookName, int chapterNo) async => _resumePlanOf(
-    await _get('/library/${Uri.encodeComponent(bookName)}/chapters/$chapterNo/resume'),
+  Future<ResumePlan> getChapterResumePlan(String bookName, double chapterNo) async => _resumePlanOf(
+    await _get('/library/${Uri.encodeComponent(bookName)}/chapters/${jsNumStr(chapterNo)}/resume'),
     fallbackName: bookName,
   );
 
   @override
-  Future<CreateTaskResponse> resumeChapter(String bookName, int chapterNo) async =>
-      _createTaskOf(await _post('/library/${Uri.encodeComponent(bookName)}/chapters/$chapterNo/resume'));
+  Future<CreateTaskResponse> resumeChapter(String bookName, double chapterNo) async =>
+      _createTaskOf(await _post('/library/${Uri.encodeComponent(bookName)}/chapters/${jsNumStr(chapterNo)}/resume'));
 
   @override
-  Future<RetranslatePlan> getChapterRetranslatePlan(String bookName, int chapterNo) async => _planOf(
-    await _get('/library/${Uri.encodeComponent(bookName)}/chapters/$chapterNo/retranslate'),
+  Future<RetranslatePlan> getChapterRetranslatePlan(String bookName, double chapterNo) async => _planOf(
+    await _get('/library/${Uri.encodeComponent(bookName)}/chapters/${jsNumStr(chapterNo)}/retranslate'),
     fallbackName: bookName,
   );
 
   @override
-  Future<CreateTaskResponse> retranslateChapter(String bookName, int chapterNo) async =>
-      _createTaskOf(await _post('/library/${Uri.encodeComponent(bookName)}/chapters/$chapterNo/retranslate'));
+  Future<CreateTaskResponse> retranslateChapter(String bookName, double chapterNo) async => _createTaskOf(
+    await _post('/library/${Uri.encodeComponent(bookName)}/chapters/${jsNumStr(chapterNo)}/retranslate'),
+  );
 
   @override
-  Future<void> renumberChapter(String bookName, int chapterNo, {required int newNo}) =>
-      _post('/library/${Uri.encodeComponent(bookName)}/chapters/$chapterNo/renumber', body: {'newNo': newNo});
+  Future<void> renumberChapter(String bookName, double chapterNo, {required double newNo}) => _post(
+    '/library/${Uri.encodeComponent(bookName)}/chapters/${jsNumStr(chapterNo)}/renumber',
+    // 字段名与旧项目一致：`no`（服务端读 no）。
+    body: {'no': newNo},
+  );
 
   @override
   Future<List<int>> getBookFile(String bookName, int seq, {bool translated = false}) async {

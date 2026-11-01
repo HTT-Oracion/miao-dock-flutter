@@ -353,23 +353,23 @@ class FakeMangaSvcClient implements MangaSvcClient {
   Future<CreateTaskResponse> retranslateBook(String bookName) => _unimplemented('POST /library/{name}/retranslate');
 
   @override
-  Future<ResumePlan> getChapterResumePlan(String bookName, int chapterNo) =>
+  Future<ResumePlan> getChapterResumePlan(String bookName, double chapterNo) =>
       _unimplemented('GET /library/{book}/chapters/{no}/resume');
 
   @override
-  Future<CreateTaskResponse> resumeChapter(String bookName, int chapterNo) =>
+  Future<CreateTaskResponse> resumeChapter(String bookName, double chapterNo) =>
       _unimplemented('POST /library/{book}/chapters/{no}/resume');
 
   @override
-  Future<RetranslatePlan> getChapterRetranslatePlan(String bookName, int chapterNo) =>
+  Future<RetranslatePlan> getChapterRetranslatePlan(String bookName, double chapterNo) =>
       _unimplemented('GET /library/{book}/chapters/{no}/retranslate');
 
   @override
-  Future<CreateTaskResponse> retranslateChapter(String bookName, int chapterNo) =>
+  Future<CreateTaskResponse> retranslateChapter(String bookName, double chapterNo) =>
       _unimplemented('POST /library/{book}/chapters/{no}/retranslate');
 
   @override
-  Future<void> renumberChapter(String bookName, int chapterNo, {required int newNo}) =>
+  Future<void> renumberChapter(String bookName, double chapterNo, {required double newNo}) =>
       _unimplemented('POST /library/{book}/chapters/{no}/renumber');
 
   @override

@@ -2007,5 +2007,86 @@
         "type": "String"
       }
     }
+  },
+  "chapterMenuOpenDir": "打开目录",
+  "@chapterMenuOpenDir": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterMenuResume": "续做本话",
+  "@chapterMenuResume": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterMenuRetranslate": "重译本话",
+  "@chapterMenuRetranslate": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterMenuEditNo": "编辑话数",
+  "@chapterMenuEditNo": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterMenuDelete": "删除本话",
+  "@chapterMenuDelete": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterMenuResumeSub": "待续做 {count} 张",
+  "@chapterMenuResumeSub": {
+    "description": "章节菜单",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chapterMenuResumeNone": "没有待续做的页",
+  "@chapterMenuResumeNone": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterMenuNoNumber": "该目录没有话号，无从改起",
+  "@chapterMenuNoNumber": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterEditNoTitle": "编辑话数",
+  "@chapterEditNoTitle": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterEditNoHint": "新话号（如 1 或 1.5）",
+  "@chapterEditNoHint": {
+    "description": "章节菜单",
+    "placeholders": null
+  },
+  "chapterRenumberOk": "已改为第 {no} 话",
+  "@chapterRenumberOk": {
+    "description": "章节菜单",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "chapterResumeOk": "已提交「{name}」续做",
+  "@chapterResumeOk": {
+    "description": "章节菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chapterRetranslateOk": "已提交「{name}」重译",
+  "@chapterRetranslateOk": {
+    "description": "章节菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }
