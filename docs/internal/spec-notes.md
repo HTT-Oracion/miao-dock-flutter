@@ -2048,3 +2048,22 @@
   写测试时踩到两个坑并修正：① `InkWell` 内部自带 MouseRegion，必须取**最外层**；
   ② `AppSwitch` 的 MouseRegion 在**内部**而非祖先，需用 `descendant` 取。
 - **验证**：应用 148 通过；analyze 与 l10n 通过。
+
+## D-111 按钮圆角统一 / 菜单行宽与定位 / 设置页导航光标
+
+- **状态**：完成（2026-11-01）
+- **① 圆角统一到 6**（基准 = 「新建漫画」）：
+  漫画库内**按钮类**元素全部改 6 —— `_ViewSeg` 内部块（4→6）、`_CoverChoice`（8→6）、
+  `_DialogField` 输入框（8→6）、页面卡（8→6）。
+  **保留原值的是容器不是按钮**：`_MetaChip` 标签 5、胶囊态 999（设计稿固有形状）、
+  封面预览 8、弹窗外框 12。
+- **② 菜单**：
+  - **定位修正**：「更多」原来用**外层 Builder 的 context** 求 RenderBox，
+    取到的是表格容器而非按钮本身 ⇒ 锚点偏移。改用 `GlobalKey` 拿按钮自身 RenderBox
+    （拿不到时退化为点击点零宽矩形）。
+  - **行宽铺满**：行内容原来只有文字宽、hover 只亮一小块。现在面板宽度**固定**
+    （`max(按钮宽, minWidth)`），行 `Row` 左对齐并占满面板宽 ⇒ 整行都是 hover 热区。
+  - 踩坑：只给 `minWidth` 时父级无界，子 `Row` 会撑成**无限宽**直接崩
+    （`BoxConstraints forces an infinite width`）；改用 `BoxConstraints.tightFor(width:)`。
+- **③ 设置页导航**：`_NavItem` 补 `MouseRegion(cursor: click)`（原来 hover 会变色但不显示手型）。
+- **验证**：应用 148 通过；analyze 与 l10n 通过。

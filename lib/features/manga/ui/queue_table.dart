@@ -253,18 +253,26 @@ class _MoreButton extends ConsumerWidget {
 
   final ValueChanged<String> onSelected;
 
+  static final GlobalKey _chipKey = GlobalKey();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return Builder(
       builder: (context) => _HoverChip(
+        key: _chipKey,
         label: l10n.actionMore,
         onTapDown: (details) async {
-          final box = context.findRenderObject()! as RenderBox;
+          // 🔴 用**按钮自身的 RenderBox**（`_HoverChip` 内部传入的 context），
+          // 不能用外层 Builder 的 context —— 那取到的是表格容器，锚点会偏。
+          final box = _chipKey.currentContext?.findRenderObject() as RenderBox?;
+          final anchor = box != null
+              ? box.localToGlobal(Offset.zero) & box.size
+              // 兜底：拿不到 RenderBox 时用点击点的零宽矩形（至少方向对）。
+              : Rect.fromLTWH(details.globalPosition.dx, details.globalPosition.dy, 0, 0);
           final value = await showAppMenu(
             context,
-            // 正下方 + 左对齐：传按钮矩形，由菜单自己算位置。
-            anchor: box.localToGlobal(Offset.zero) & box.size,
+            anchor: anchor,
             minWidth: 160,
             items: [
               AppMenuItem(value: 'open', label: l10n.queueOpenDir, icon: LucideIcons.folderUp),
@@ -281,7 +289,7 @@ class _MoreButton extends ConsumerWidget {
 
 /// 带 hover 的小胶囊触发器（替代 AppTextAction 包裹，避免手势被内层吞掉）。
 class _HoverChip extends StatefulWidget {
-  const _HoverChip({required this.label, required this.onTapDown, this.primary = false});
+  const _HoverChip({super.key, required this.label, required this.onTapDown, this.primary = false});
 
   final String label;
   final void Function(TapDownDetails) onTapDown;

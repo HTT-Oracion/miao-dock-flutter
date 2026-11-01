@@ -12,16 +12,23 @@ import '../../core/theme/tokens.dart';
 ///
 /// 全项目菜单只走这一处，避免各页各写一套导致观感不一致。
 class AppMenu extends StatelessWidget {
-  const AppMenu({super.key, required this.items, required this.onSelected, this.minWidth = 180});
+  const AppMenu({super.key, required this.items, required this.onSelected, this.minWidth = 180, this.width});
 
   final List<AppMenuItem> items;
   final ValueChanged<String> onSelected;
   final double minWidth;
 
+  /// 面板固定宽度（`null` = 只保证最小宽度）。
+  /// 有值时行宽严格等于面板宽度，行内 hover 才会整行高亮。
+  final double? width;
+
   @override
   Widget build(BuildContext context) {
+    // 用 BoxConstraints 给**确定宽度**：只给 minWidth 时父级无界，子 Row 会撑成无限宽（实测崩）。
+    final w = width ?? minWidth;
     return Container(
-      constraints: BoxConstraints(minWidth: minWidth),
+      width: w,
+      constraints: BoxConstraints.tightFor(width: w),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTokens.card,
@@ -31,6 +38,7 @@ class AppMenu extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final it in items)
             it.isSeparator
@@ -118,7 +126,9 @@ class _MenuRowState extends State<_MenuRow> {
             color: enabled && _hover ? AppTokens.divider : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
+          // 行内**左对齐**；宽度由面板的固定 width 决定（整行都是 hover 热区）。
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               if (it.icon != null) ...[Icon(it.icon, size: 13, color: fg), const SizedBox(width: 8)],
               Text(it.label, style: TextStyle(fontSize: 11.5, color: fg)),

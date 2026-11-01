@@ -514,7 +514,7 @@ class _PageGrid extends ConsumerWidget {
           builder: (hover) => Container(
             decoration: BoxDecoration(
               color: hover ? AppTokens.navBg : AppTokens.card,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               border: Border.all(color: hover ? AppTokens.accent : Colors.transparent),
             ),
             alignment: Alignment.center,
@@ -1049,11 +1049,11 @@ class _DialogField extends StatelessWidget {
           fillColor: AppTokens.navBg,
           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             borderSide: const BorderSide(color: AppTokens.divider),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             borderSide: const BorderSide(color: AppTokens.accent),
           ),
         ),
@@ -1188,7 +1188,7 @@ class _ViewSeg extends StatelessWidget {
                   color: mode == m
                       ? AppTokens.card
                       : (hover ? AppTokens.card.withValues(alpha: 0.5) : Colors.transparent),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   m == 'card' ? l10n.libViewCard : l10n.libViewCapsule,

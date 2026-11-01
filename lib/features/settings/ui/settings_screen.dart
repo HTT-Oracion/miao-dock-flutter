@@ -151,35 +151,39 @@ class _NavItemState extends State<_NavItem> {
     final onTap = widget.onTap;
     // hover 与高亮**共用同一个 Container**：InkWell 放进内层，
     // 否则水波纹会覆盖到外边距，hover 区域比高亮大一圈（用户实测指出）。
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-      decoration: BoxDecoration(
-        color: active ? palette.accSoft : (_hover ? palette.card : Colors.transparent),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        onHover: (v) => setState(() => _hover = v),
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          child: Row(
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 12, color: active ? palette.acc : palette.mut),
-                const SizedBox(width: 7),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                  color: active ? palette.ink : palette.ink2,
+    return MouseRegion(
+      // 设置页导航也是可点项：hover 变手型（用户要求）。
+      cursor: SystemMouseCursors.click,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+        decoration: BoxDecoration(
+          color: active ? palette.accSoft : (_hover ? palette.card : Colors.transparent),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          onHover: (v) => setState(() => _hover = v),
+          borderRadius: BorderRadius.circular(6),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 12, color: active ? palette.acc : palette.mut),
+                  const SizedBox(width: 7),
+                ],
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                    color: active ? palette.ink : palette.ink2,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              if (count != null) Text('$count', style: TextStyle(fontSize: 8.5, color: palette.mut)),
-            ],
+                const Spacer(),
+                if (count != null) Text('$count', style: TextStyle(fontSize: 8.5, color: palette.mut)),
+              ],
+            ),
           ),
         ),
       ),
