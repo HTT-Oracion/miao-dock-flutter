@@ -25,6 +25,7 @@ class AppInput extends StatelessWidget {
     this.enabled = true,
     this.obscure = false,
     this.prefixIcon,
+    this.prefixIconSize = 14,
     this.suffix,
     this.height = 36,
     this.fontSize = 12,
@@ -44,6 +45,9 @@ class AppInput extends StatelessWidget {
   final bool enabled;
   final bool obscure;
   final IconData? prefixIcon;
+
+  /// 前缀图标尺寸（书架搜索框等小场景用 12；缺省 14）。
+  final double prefixIconSize;
   final Widget? suffix;
   final double height;
   final double fontSize;
@@ -112,7 +116,7 @@ class AppInput extends StatelessWidget {
         borderRadius: radius,
         borderSide: BorderSide(color: borderColor == palette.bad ? palette.bad : palette.accent),
       ),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 14, color: palette.textSecondary) : null,
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: prefixIconSize, color: palette.textSecondary) : null,
       prefixIconConstraints: const BoxConstraints(minWidth: 30, minHeight: 30),
       suffixIcon: suffix,
       suffixIconConstraints: const BoxConstraints(minWidth: 30, minHeight: 30),

@@ -83,32 +83,26 @@ class _ShelfSearch extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
-    return Container(
-      height: 30,
-      margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(8)),
-      child: Row(
-        children: [
-          Icon(LucideIcons.search, size: 12, color: palette.textSecondary),
-          const SizedBox(width: 6),
-          Expanded(
-            child: AppInput(
-              hint: AppLocalizations.of(context).shelfSearchHint,
-              height: 30,
-              fontSize: 10,
-              onChanged: (v) => ref.read(shelfQueryProvider.notifier).set(v),
-            ),
-          ),
-          if (query.isNotEmpty)
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
-                child: Icon(LucideIcons.x, size: 12, color: palette.textSecondary),
-              ),
-            ),
-        ],
+    return Padding(
+      // 单盒：AppInput 自己就是搜索框（此前外层容器再嵌一个带边框输入框，
+      // 盒中盒的内框贴外缘，视觉上是「位置偏移」）。
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+      child: AppInput(
+        hint: AppLocalizations.of(context).shelfSearchHint,
+        height: 30,
+        fontSize: 10,
+        prefixIcon: LucideIcons.search,
+        prefixIconSize: 12,
+        suffix: query.isNotEmpty
+            ? MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
+                  child: Icon(LucideIcons.x, size: 12, color: palette.textSecondary),
+                ),
+              )
+            : null,
+        onChanged: (v) => ref.read(shelfQueryProvider.notifier).set(v),
       ),
     );
   }

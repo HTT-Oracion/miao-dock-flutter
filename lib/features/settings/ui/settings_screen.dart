@@ -66,19 +66,8 @@ class SettingsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 18, 12, 12),
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.settings2, size: 13, color: palette.acc),
-                    const SizedBox(width: 7),
-                    Text(
-                      l10n.navSettings,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: palette.ink),
-                    ),
-                  ],
-                ),
-              ),
+              // 顶部「设置」标题已移除（用户要求）：左栏只剩导航项本身。
+              const SizedBox(height: 8),
               for (final (id, labelKey, count) in _sections)
                 _NavItem(
                   label: _labelOf(l10n, labelKey),
@@ -168,6 +157,9 @@ class _NavItemState extends State<_NavItem> {
           onTap: onTap,
           onHover: (v) => setState(() => _hover = v),
           borderRadius: BorderRadius.circular(6),
+          // 🔴 必须显式传：InkWell 内部 MouseRegion（桌面默认 basic）比外层
+          // MouseRegion 更内侧、优先生效，不传则手型永远出不来（D-119）。
+          mouseCursor: SystemMouseCursors.click,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             child: Row(
@@ -682,7 +674,7 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
             variant: AppButtonVariant.primary,
             // 字体规格 = 服务卡片「停止」按钮（_primaryStyle + 9.5 号字）；
             // 高度 = 同行输入框（D-055：同排控件同高）。
-            height: 36,
+            height: 26,
             horizontalPadding: 18,
             fontSize: 9.5,
             fontWeight: FontWeight.w600,

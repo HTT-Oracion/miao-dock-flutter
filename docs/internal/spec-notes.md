@@ -2326,3 +2326,30 @@
 - **验证**：`pairing_token_test` 2 条（无 supervisor 的降级文案 + 复制内容
   与吐司回执）；全量 161 通过 + 8 跳过；analyze 干净；l10n 棘轮通过。
 - **关联**：D-065（令牌获取）· D-045（远程配置）· D-013（回执）。
+
+## D-125 五处交互细节修复（按钮高度 / 搜索框单盒 / 分页器 hover / 页面卡闪烁 / 设置页导航）
+
+- **状态**：完成（2026-11-01）
+- **做了什么**：
+  1. **远程测试按钮高度 26**（用户在工作区手改后确认采纳）：放弃此前「与输入框同高 36」的裁定，
+     该行按钮回归全项目 26 基准。
+  2. **书架搜索框改单盒**：此前外层 `Container(card 底)` 里嵌了一个带边框的 `AppInput`，
+     内框贴外缘 = 视觉「偏移」。改为 `AppInput` 自身就是搜索框（`prefixIcon` 搜索镜 +
+     `suffix` 清除钮）；`AppInput` 新增 `prefixIconSize`（缺省 14 不影响他处，搜索框传 12）。
+  3. **分页器页码按钮收敛到 `AppButton`**：当前页 = primary（hover 提亮 `accHover`），
+     其余 = ghost（透明底 hover 变 card）。此前裸 `InkWell` 吃主题 `hoverColor: card`，
+     **当前页 hover 被盖成灰**（D-120 同型），与按钮体系不一致。
+  4. **单话页面卡 hover 闪烁（真 bug）**：`Image.memory(Uint8List.fromList(bytes))`
+     每次 build 新建字节拷贝 + 新 `MemoryImage`（identity 不等）→ hover `setState`
+     重建即重新解码。改为 `MemoryImage` 缓存在 state，同一实例喂 `Image`，
+     `didUpdateWidget` 判等不再重解析；顺带消除每帧整图拷贝。
+  5. **设置页导航手型 + 移除顶部「设置」标题**：`_NavItem` 的 InkWell 补显式
+     `mouseCursor: click`（D-119：内层 InkWell 鼠标区优先于外层 MouseRegion，
+     桌面默认 basic——D-111 只加了外层所以一直没生效）；左栏顶部
+     「设置」标题整块移除（用户要求），导航项直接从顶部开始。
+- **验证**：`flutter analyze` 干净；全量 157 通过 + 8 跳过，失败 4 条与改动前
+  基线完全一致（3 条 e2e 环境噪声 + `pairing_token_test` 折叠线 tap 问题，
+  均非本轮引入）；l10n 棘轮通过。
+- **遗留（基线既有）**：`pairing_token_test` 复制用例的按钮落在 900px 视口外，
+  测试未先 `ensureVisible` —— 待用户发话再修。
+- **关联**：D-119（光标）· D-120（hover 遮罩）· D-121（AppInput）· D-123（按钮规格）。

@@ -508,17 +508,26 @@ class _PageCard extends ConsumerStatefulWidget {
 
 class _PageCardState extends ConsumerState<_PageCard> {
   bool _hover = false;
-  Future<List<int>?>? _image;
+  MemoryImage? _cover;
 
   @override
   void initState() {
     super.initState();
     // 原图取封面（不带 variant），缺图时回退占位图标。
-    _image = ref
+    // 🔴 provider 必须缓存在 state：此前每次 build 都 Uint8List.fromList +
+    // 新 MemoryImage（identity 不等）→ hover setState 重建就重新解码 → 闪烁，
+    // 且每帧整图拷贝。同一实例喂给 Image 则 didUpdateWidget 判等、不重解析。
+    ref
         .read(mangaSvcClientProvider)
         .getBookFile(widget.book.key, widget.seq)
-        .then<List<int>?>((v) => v)
-        .catchError((_) => null);
+        .then((v) {
+          if (!mounted) return;
+          setState(() => _cover = v.isEmpty ? null : MemoryImage(Uint8List.fromList(v)));
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() => _cover = null);
+        });
   }
 
   @override
@@ -553,16 +562,10 @@ class _PageCardState extends ConsumerState<_PageCard> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    FutureBuilder<List<int>?>(
-                      future: _image,
-                      builder: (context, snap) {
-                        final bytes = snap.data;
-                        if (bytes == null || bytes.isEmpty) {
-                          return _NoImagePlaceholder(palette: palette);
-                        }
-                        return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
-                      },
-                    ),
+                    if (_cover != null)
+                      Image(image: _cover!, fit: BoxFit.cover)
+                    else
+                      _NoImagePlaceholder(palette: palette),
                     // 页码胶囊在**左上角**（与单本卡片的「N 话」同位）。
                     Positioned(
                       left: 8,

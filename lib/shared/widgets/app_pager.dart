@@ -158,35 +158,21 @@ class _PageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final enabled = onTap != null;
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 4),
-        child: Material(
-          color: active ? palette.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(6),
-            onTap: onTap,
-            child: Container(
-              width: 26,
-              height: 26,
-              alignment: Alignment.center,
-              child: icon != null
-                  ? Icon(icon, size: 13, color: enabled ? palette.textPrimary : palette.progressTrack)
-                  : Text(
-                      label ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                        color: active ? palette.pageBg : palette.textPrimary,
-                      ),
-                    ),
-            ),
-          ),
-        ),
+    // 统一走 AppButton：当前页 = primary（hover 提亮 accHover，与主按钮一致），
+    // 其余 = ghost（透明底，hover 变 card）。此前裸 InkWell 吃了主题 hoverColor，
+    // 当前页 hover 被盖成 card 灰（D-120 同型 bug），与按钮体系不一致。
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: AppButton(
+        label: icon == null ? (label ?? '') : '',
+        icon: icon,
+        onTap: onTap,
+        clickable: onTap != null,
+        variant: active ? AppButtonVariant.primary : AppButtonVariant.ghost,
+        width: 26,
+        height: 26,
+        fontSize: 12,
+        fontWeight: active ? FontWeight.w700 : null,
       ),
     );
   }
