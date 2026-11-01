@@ -60,11 +60,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.shelfEmpty, style: TextStyle(fontSize: 12.5, color: palette.textSecondary)),
+            Text(
+              l10n.shelfEmpty,
+              style: TextStyle(fontSize: AppFont.px12_5, color: palette.textSecondary),
+            ),
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => context.go('/manga/library'),
-              child: Text(l10n.readerClose, style: const TextStyle(fontSize: 12)),
+              child: Text(l10n.readerClose, style: const TextStyle(fontSize: AppFont.px12)),
             ),
           ],
         ),
@@ -207,7 +210,7 @@ class _ReaderBar extends StatelessWidget {
             child: Text(
               title,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12.5, color: palette.textPrimary),
+              style: TextStyle(fontSize: AppFont.px12_5, color: palette.textPrimary),
             ),
           ),
           AppButton(
@@ -217,10 +220,13 @@ class _ReaderBar extends StatelessWidget {
             border: true,
             height: 24,
             horizontalPadding: 9,
-            fontSize: 10.5,
+            fontSize: AppFont.px10_5,
           ),
           const SizedBox(width: 10),
-          Text(pageText, style: TextStyle(fontSize: 11.5, color: palette.textSecondary)),
+          Text(
+            pageText,
+            style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
+          ),
           const SizedBox(width: 10),
           GestureDetector(
             onTap: onClose,
@@ -300,7 +306,7 @@ class _ReaderPageState extends ConsumerState<_ReaderPage> {
           return Center(
             child: Text(
               AppLocalizations.of(context).shelfNoMatch,
-              style: TextStyle(fontSize: 12, color: palette.textSecondary),
+              style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
             ),
           );
         }

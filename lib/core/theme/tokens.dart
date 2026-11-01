@@ -285,6 +285,67 @@ abstract final class AppMetrics {
   static const double macTrafficLightBand = 28;
 }
 
+/// 字号阶梯（design.html 的固有 px 表，一比一保留）。
+///
+/// 🔴 全项目 `fontSize` 只从这里取（AGENTS §4 第 15 条），禁止字面量——
+/// 调整字号只改这一张表。命名按设计稿 px 值（`px10_5` = 10.5px）：
+/// 阶梯是稿子的固有度量，语义别名（body/label…）等真实角色沉淀后再加。
+abstract final class AppFont {
+  /// MiniPlayer 时间副标（最小字号）。
+  static const double px7_5 = 7.5;
+
+  /// `.def` 状态胶囊。
+  static const double px8 = 8;
+
+  /// `.why` 说明文字。
+  static const double px8_5 = 8.5;
+
+  /// 计数 / 路径 / 徽标小字。
+  static const double px9 = 9;
+
+  /// 日志 / 头部动作 / 计数行。
+  static const double px9_5 = 9.5;
+
+  /// 列表正文（小）。
+  static const double px10 = 10;
+
+  /// 导航项 / 按钮 / 主操作（使用最多）。
+  static const double px10_5 = 10.5;
+
+  /// 行标题（`.setrow b` 11）。
+  static const double px11 = 11;
+
+  /// 卡片标题。
+  static const double px11_5 = 11.5;
+
+  /// 正文 / 输入框。
+  static const double px12 = 12;
+
+  /// 输入框 / 正文（大一号）。
+  static const double px12_5 = 12.5;
+
+  /// 节标题 / 详情。
+  static const double px13 = 13;
+
+  /// 章节卡标题。
+  static const double px13_5 = 13.5;
+
+  /// 输入框默认 / 强调正文。
+  static const double px14 = 14;
+
+  /// 分组标题 / 空态标题。
+  static const double px15 = 15;
+
+  /// 搜索结果大标题。
+  static const double px17 = 17;
+
+  /// 详情 hero 标题。
+  static const double px18 = 18;
+
+  /// 引导卡大标题（最大字号）。
+  static const double px19 = 19;
+}
+
 /// 动效规范（design.html §06）。
 abstract final class AppMotion {
   /// 页面切换：opacity 0→1 + translateY(8→0)，300ms ease。

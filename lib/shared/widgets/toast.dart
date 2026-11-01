@@ -113,7 +113,10 @@ class _ToastHostState extends State<_ToastHost> with SingleTickerProviderStateMi
                   ),
                   const SizedBox(width: 8),
                   Flexible(
-                    child: Text(widget.message, style: TextStyle(fontSize: 12, color: palette.ink2)),
+                    child: Text(
+                      widget.message,
+                      style: TextStyle(fontSize: AppFont.px12, color: palette.ink2),
+                    ),
                   ),
                 ],
               ),

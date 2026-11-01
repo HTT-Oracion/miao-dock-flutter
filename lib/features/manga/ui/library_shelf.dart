@@ -69,7 +69,7 @@ class _ShelfHead extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
       child: Text(
         AppLocalizations.of(context).shelfCount(count),
-        style: TextStyle(fontSize: 9.5, color: palette.textSecondary),
+        style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
       ),
     );
   }
@@ -90,7 +90,7 @@ class _ShelfSearch extends ConsumerWidget {
       child: AppInput(
         hint: AppLocalizations.of(context).shelfSearchHint,
         height: 30,
-        fontSize: 10,
+        fontSize: AppFont.px10,
         prefixIcon: LucideIcons.search,
         prefixIconSize: 12,
         suffix: query.isNotEmpty
@@ -124,7 +124,10 @@ class _ShelfBody extends ConsumerWidget {
 
     if (books.isEmpty && (!showHidden || hidden.isEmpty)) {
       return Center(
-        child: Text(l10n.shelfNoMatch, style: TextStyle(fontSize: 12, color: palette.textSecondary)),
+        child: Text(
+          l10n.shelfNoMatch,
+          style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+        ),
       );
     }
 
@@ -145,7 +148,7 @@ class _ShelfBody extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
       child: Text(
         text,
-        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: palette.textSecondary),
+        style: TextStyle(fontSize: AppFont.px9_5, fontWeight: FontWeight.w700, color: palette.textSecondary),
       ),
     );
 
@@ -161,7 +164,7 @@ class _ShelfBody extends ConsumerWidget {
           const SizedBox(height: 10),
           Text(
             l10n.shelfHiddenSection,
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: palette.textSecondary),
+            style: TextStyle(fontSize: AppFont.px10, fontWeight: FontWeight.w700, color: palette.textSecondary),
           ),
           const SizedBox(height: 4),
           for (final name in hidden)
@@ -170,7 +173,10 @@ class _ShelfBody extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(name, style: TextStyle(fontSize: 11, color: palette.textSecondary)),
+                    child: Text(
+                      name,
+                      style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
+                    ),
                   ),
                   AppTextAction(
                     label: l10n.shelfRestore,
@@ -244,13 +250,16 @@ class _BookRowState extends ConsumerState<_BookRow> {
                       book.name,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: AppFont.px11,
                         fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                         color: active ? palette.textPrimary : palette.textMuted,
                       ),
                     ),
                   ),
-                  Text('${book.pageCount}', style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
+                  Text(
+                    '${book.pageCount}',
+                    style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
+                  ),
                 ],
               ),
             ),
@@ -277,7 +286,7 @@ class _ShelfFoot extends ConsumerWidget {
         children: [
           Text(
             AppLocalizations.of(context).shelfUsedBytes(formatBytes(bytes)),
-            style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+            style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
           ),
           const Spacer(),
           _TextLink(
@@ -322,7 +331,10 @@ class _TextLinkState extends State<_TextLink> {
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: Text(widget.label, style: TextStyle(fontSize: 11.5, color: _hover ? palette.textPrimary : widget.color)),
+        child: Text(
+          widget.label,
+          style: TextStyle(fontSize: AppFont.px11_5, color: _hover ? palette.textPrimary : widget.color),
+        ),
       ),
     );
   }

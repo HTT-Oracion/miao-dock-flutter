@@ -86,7 +86,7 @@ class AppSelect<T> extends StatelessWidget {
                   _label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10, color: enabled ? palette.ink : palette.mut),
+                  style: TextStyle(fontSize: AppFont.px10, color: enabled ? palette.ink : palette.mut),
                 ),
               ),
               const SizedBox(width: 6),
@@ -119,7 +119,7 @@ class _MenuRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: AppFont.px10,
                 color: selected ? palette.acc : palette.ink,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),

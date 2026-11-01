@@ -60,7 +60,10 @@ class _LogBoxState extends State<LogBox> {
           borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
           color: palette.card,
         ),
-        child: Text(l10n.logBoxEmpty, style: TextStyle(fontSize: 9.5, color: palette.mut)),
+        child: Text(
+          l10n.logBoxEmpty,
+          style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+        ),
       );
     }
 
@@ -85,9 +88,15 @@ class _LogBoxState extends State<LogBox> {
                   padding: const EdgeInsets.fromLTRB(12, 8, 76, 0),
                   child: Row(
                     children: [
-                      Text(widget.title ?? l10n.logBoxTitle, style: TextStyle(fontSize: 9.5, color: palette.mut)),
+                      Text(
+                        widget.title ?? l10n.logBoxTitle,
+                        style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                      ),
                       const Spacer(),
-                      Text(l10n.logBoxLines(lines.length), style: TextStyle(fontSize: 9.5, color: palette.mut)),
+                      Text(
+                        l10n.logBoxLines(lines.length),
+                        style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                      ),
                     ],
                   ),
                 ),
@@ -102,7 +111,7 @@ class _LogBoxState extends State<LogBox> {
                             TextSpan(
                               text: '$line\n',
                               style: TextStyle(
-                                fontSize: 9.5,
+                                fontSize: AppFont.px9_5,
                                 height: 1.7,
                                 fontFamily: 'monospace',
                                 // 错误行只染色不删行

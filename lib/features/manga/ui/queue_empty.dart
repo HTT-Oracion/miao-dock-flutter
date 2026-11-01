@@ -29,10 +29,13 @@ class QueueEmpty extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             l10n.queueEmptyTitle,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
+            style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const SizedBox(height: 6),
-          Text(l10n.queueEmptyDesc, style: TextStyle(fontSize: 12, color: palette.textSecondary)),
+          Text(
+            l10n.queueEmptyDesc,
+            style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+          ),
           const SizedBox(height: 18),
           Row(
             mainAxisSize: MainAxisSize.min,

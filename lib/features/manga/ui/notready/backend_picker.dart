@@ -60,7 +60,7 @@ class LlamaBackendPicker extends StatelessWidget {
                   Expanded(
                     child: Text(
                       l10n.enginePickBackendTitle,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: palette.ink),
+                      style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.ink),
                     ),
                   ),
                   IconButton(
@@ -71,7 +71,10 @@ class LlamaBackendPicker extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(l10n.enginePickBackendDesc, style: TextStyle(fontSize: 11, height: 1.6, color: palette.ink2)),
+              Text(
+                l10n.enginePickBackendDesc,
+                style: TextStyle(fontSize: AppFont.px11, height: 1.6, color: palette.ink2),
+              ),
               const SizedBox(height: 12),
               // 探测结论：让「自动」不是一个黑盒。
               Container(
@@ -87,7 +90,7 @@ class LlamaBackendPicker extends StatelessWidget {
                     Expanded(
                       child: Text(
                         backendReasonText(l10n, probe),
-                        style: TextStyle(fontSize: 10.5, color: palette.ink2),
+                        style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
                       ),
                     ),
                   ],
@@ -170,18 +173,24 @@ class _Option extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: palette.ink),
+                    style: TextStyle(fontSize: AppFont.px11_5, fontWeight: FontWeight.w600, color: palette.ink),
                   ),
                   if (note != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: Text(note!, style: TextStyle(fontSize: 9.5, color: palette.mut)),
+                      child: Text(
+                        note!,
+                        style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                      ),
                     ),
                 ],
               ),
             ),
             if (sizeMb != null && sizeMb! > 0)
-              Text(l10n.engineBackendSize(sizeMb!), style: TextStyle(fontSize: 10, color: palette.ink2)),
+              Text(
+                l10n.engineBackendSize(sizeMb!),
+                style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
+              ),
           ],
         ),
       ),

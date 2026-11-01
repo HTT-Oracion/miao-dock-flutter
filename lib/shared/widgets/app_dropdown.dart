@@ -177,12 +177,15 @@ class _MenuRowState extends State<_MenuRow> {
                 it.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11.5, color: fg),
+                style: TextStyle(fontSize: AppFont.px11_5, color: fg),
               ),
             ),
             if (it.sub != null) ...[
               const SizedBox(width: 6),
-              Text(it.sub!, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
+              Text(
+                it.sub!,
+                style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
+              ),
             ],
           ],
         ),

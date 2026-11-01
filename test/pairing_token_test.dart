@@ -56,6 +56,9 @@ void main() {
 
     await tester.pumpWidget(host(supervisor: supervisor));
     await openTranslateTab(tester);
+    // 令牌行可能落在视口折叠线以下（内容高度随实现微调），先滚进视口再点。
+    await tester.ensureVisible(find.text('复制'));
+    await tester.pumpAndSettle();
 
     // 令牌完整可见（monospace 行），且带复制按钮。
     expect(find.text(token), findsOneWidget);

@@ -94,13 +94,13 @@ class _NameCell extends StatelessWidget {
         Text(
           task.name,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
+          style: TextStyle(fontSize: AppFont.px13_5, fontWeight: FontWeight.w600, color: palette.textPrimary),
         ),
         const SizedBox(height: 2),
         Text(
           l10n.queueTaskSubtitle(task.donePages, task.pageCount, task.batchNo),
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: palette.textSecondary),
+          style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
         ),
       ],
     );
@@ -120,7 +120,10 @@ class _ProgressCell extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('${task.donePages} / ${task.pageCount}', style: TextStyle(fontSize: 12, color: palette.textSecondary)),
+        Text(
+          '${task.donePages} / ${task.pageCount}',
+          style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+        ),
         const SizedBox(height: 4),
         ClipRRect(
           borderRadius: BorderRadius.circular(2),
@@ -155,7 +158,10 @@ class _StatusCell extends StatelessWidget {
           decoration: BoxDecoration(color: task.status.color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(task.status.label(l10n), style: TextStyle(fontSize: 12.5, color: palette.textPrimary)),
+        Text(
+          task.status.label(l10n),
+          style: TextStyle(fontSize: AppFont.px12_5, color: palette.textPrimary),
+        ),
       ],
     );
   }

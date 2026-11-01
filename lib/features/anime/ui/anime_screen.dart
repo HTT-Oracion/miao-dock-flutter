@@ -13,7 +13,7 @@ class AnimeScreen extends StatelessWidget {
     return Center(
       child: Text(
         AppLocalizations.of(context).animePending,
-        style: TextStyle(fontSize: 13, color: palette.textSecondary),
+        style: TextStyle(fontSize: AppFont.px13, color: palette.textSecondary),
       ),
     );
   }

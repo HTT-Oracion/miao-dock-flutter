@@ -40,7 +40,7 @@ class _SummaryBar extends ConsumerWidget {
         children: [
           Text(
             AppLocalizations.of(context).queueTotalCount(tasks.length),
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.textPrimary),
+            style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const SizedBox(width: 14),
           for (final status in MangaTaskStatus.values)
@@ -56,7 +56,10 @@ class _SummaryBar extends ConsumerWidget {
                       decoration: BoxDecoration(color: status.color, shape: BoxShape.circle),
                     ),
                     const SizedBox(width: 5),
-                    Text(status.label(l10n), style: TextStyle(fontSize: 12, color: palette.textSecondary)),
+                    Text(
+                      status.label(l10n),
+                      style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+                    ),
                   ],
                 ),
               ),
@@ -100,7 +103,7 @@ class _SelectionBar extends ConsumerWidget {
         children: [
           Text(
             AppLocalizations.of(context).queueSelectedCount(enabled.ids.length),
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.textPrimary),
+            style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const SizedBox(width: 16),
           AppGhostButton(
@@ -115,7 +118,7 @@ class _SelectionBar extends ConsumerWidget {
                 onTap: () => ref.read(selectionProvider.notifier).selectAllPage(deletableIds),
                 child: Text(
                   AppLocalizations.of(context).queueSelectAll(deletableIds.length),
-                  style: TextStyle(fontSize: 12, color: palette.accent),
+                  style: TextStyle(fontSize: AppFont.px12, color: palette.accent),
                 ),
               ),
             ),
@@ -135,7 +138,7 @@ class _SelectionBar extends ConsumerWidget {
             child: Text(
               AppLocalizations.of(context).queueDeleteHint,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+              style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
             ),
           ),
         ],

@@ -257,14 +257,14 @@ class _Brand extends StatelessWidget {
                   children: [
                     Text(
                       l10n.brandName,
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink),
+                      style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w700, color: palette.ink),
                     ),
                     const SizedBox(height: 1),
                     Text(
                       l10n.brandTagline,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 9, color: palette.mut),
+                      style: TextStyle(fontSize: AppFont.px9, color: palette.mut),
                     ),
                   ],
                 ),
@@ -479,7 +479,7 @@ class _ModuleItemState extends State<_ModuleItem> {
                                     widget.label,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: AppFont.px12,
                                       fontWeight: widget.active ? FontWeight.w600 : FontWeight.w400,
                                       color: widget.active ? palette.ink : palette.ink2,
                                     ),
@@ -545,7 +545,10 @@ class _ViewGroup extends StatelessWidget {
           if (labels)
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 10, 10, 2),
-              child: Text(label, style: TextStyle(fontSize: 8, letterSpacing: 1, color: palette.mut)),
+              child: Text(
+                label,
+                style: TextStyle(fontSize: AppFont.px8, letterSpacing: 1, color: palette.mut),
+              ),
             ),
           for (final item in items)
             _ViewItem(
@@ -620,7 +623,7 @@ class _ViewItemState extends State<_ViewItem> {
                       widget.label,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: AppFont.px11,
                         fontWeight: widget.active ? FontWeight.w600 : FontWeight.w400,
                         color: fg,
                       ),
@@ -629,7 +632,7 @@ class _ViewItemState extends State<_ViewItem> {
                   if ((widget.count ?? 0) > 0)
                     Text(
                       '${widget.count}',
-                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: palette.acc),
+                      style: TextStyle(fontSize: AppFont.px9, fontWeight: FontWeight.w600, color: palette.acc),
                     ),
                 ],
               ],
@@ -708,7 +711,7 @@ class _NavFootState extends State<_NavFoot> {
                     child: Text(
                       AppLocalizations.of(context).navSettings,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: AppFont.px11,
                         color: widget.settingsActive ? palette.ink : palette.ink2,
                         fontWeight: widget.settingsActive ? FontWeight.w600 : FontWeight.w400,
                       ),

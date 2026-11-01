@@ -116,7 +116,10 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                 const SizedBox(height: 6),
                 _NameInput(value: state.name, onChanged: (v) => ref.read(dropController.notifier).setName(v)),
                 const SizedBox(height: 6),
-                Text(l10n.dropComicNameHint, style: TextStyle(fontSize: 9, height: 1.6, color: palette.mut)),
+                Text(
+                  l10n.dropComicNameHint,
+                  style: TextStyle(fontSize: AppFont.px9, height: 1.6, color: palette.mut),
+                ),
 
                 if (state.files.isNotEmpty) ...[
                   const SizedBox(height: 16),
@@ -136,10 +139,16 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                       border: Border.all(color: palette.line),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(l10n.dropLandingPreviewUnknown, style: TextStyle(fontSize: 10, color: palette.ink2)),
+                    child: Text(
+                      l10n.dropLandingPreviewUnknown,
+                      style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(l10n.dropLandingPreviewHint, style: TextStyle(fontSize: 9, height: 1.6, color: palette.mut)),
+                  Text(
+                    l10n.dropLandingPreviewHint,
+                    style: TextStyle(fontSize: AppFont.px9, height: 1.6, color: palette.mut),
+                  ),
                 ],
 
                 const SizedBox(height: 16),
@@ -153,7 +162,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                         minimumSize: const Size(0, 34),
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        textStyle: const TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600),
                       ),
                       child: Text(state.files.isEmpty ? l10n.dropSubmit : '${l10n.dropSubmit} ${state.files.length}'),
                     ),
@@ -166,7 +175,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         side: BorderSide(color: palette.line2),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-                        textStyle: const TextStyle(fontSize: 9.5),
+                        textStyle: const TextStyle(fontSize: AppFont.px9_5),
                       ),
                       child: Text(l10n.dropClear),
                     ),
@@ -223,7 +232,11 @@ class _DropZone extends StatelessWidget {
             const SizedBox(height: 7),
             Text(
               active ? l10n.dropDropHintActive : l10n.dropDropHint,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: active ? palette.acc : palette.ink),
+              style: TextStyle(
+                fontSize: AppFont.px12,
+                fontWeight: FontWeight.w700,
+                color: active ? palette.acc : palette.ink,
+              ),
             ),
             const SizedBox(height: 4),
             ConstrainedBox(
@@ -231,7 +244,7 @@ class _DropZone extends StatelessWidget {
               child: Text(
                 l10n.dropSpec,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 9.5, color: palette.mut),
+                style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
               ),
             ),
             const SizedBox(height: 7),
@@ -269,7 +282,7 @@ class _GhostButton extends StatelessWidget {
       border: true,
       height: 26,
       horizontalPadding: 10,
-      fontSize: 9.5,
+      fontSize: AppFont.px9_5,
     );
   }
 }
@@ -289,10 +302,18 @@ class _FieldLabel extends StatelessWidget {
       children: [
         Text(
           text,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: palette.ink),
+          style: TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600, color: palette.ink),
         ),
-        if (required_) Text(' *', style: TextStyle(fontSize: 11, color: palette.bad)),
-        if (suffix != null) Text(suffix!, style: TextStyle(fontSize: 10, color: palette.acc)),
+        if (required_)
+          Text(
+            ' *',
+            style: TextStyle(fontSize: AppFont.px11, color: palette.bad),
+          ),
+        if (suffix != null)
+          Text(
+            suffix!,
+            style: TextStyle(fontSize: AppFont.px10, color: palette.acc),
+          ),
       ],
     );
   }
@@ -333,7 +354,7 @@ class _NameInputState extends State<_NameInput> {
       controller: _c,
       hint: l10n.dropComicNamePlaceholder,
       height: 38,
-      fontSize: 10.5,
+      fontSize: AppFont.px10_5,
       onChanged: widget.onChanged,
     );
   }
@@ -372,7 +393,7 @@ class _FileList extends StatelessWidget {
                           state.files[i].split(RegExp(r'[/\\]')).last,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10, color: palette.ink2),
+                          style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
                         ),
                       ),
                       Container(
@@ -380,7 +401,7 @@ class _FileList extends StatelessWidget {
                         decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(5)),
                         child: Text(
                           l10n.dropBatchLabel(state.batchOf(i)),
-                          style: TextStyle(fontSize: 8.5, color: palette.mut),
+                          style: TextStyle(fontSize: AppFont.px8_5, color: palette.mut),
                         ),
                       ),
                     ],

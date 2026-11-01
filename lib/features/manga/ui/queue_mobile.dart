@@ -79,7 +79,11 @@ class _TaskCard extends ConsumerWidget {
                       child: Text(
                         task.name,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
+                        style: TextStyle(
+                          fontSize: AppFont.px13_5,
+                          fontWeight: FontWeight.w600,
+                          color: palette.textPrimary,
+                        ),
                       ),
                     ),
                     _StatusBadge(status: task.status),
@@ -94,7 +98,7 @@ class _TaskCard extends ConsumerWidget {
                     _sourceLabel(l10n, task.source),
                   ),
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+                  style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 ClipRRect(
@@ -116,7 +120,7 @@ class _TaskCard extends ConsumerWidget {
                           ? AppLocalizations.of(context).queueBatchWithin(task.batchNo)
                           : AppLocalizations.of(context)
                                 .queueFinishedAt(task.completedAt!.month, task.completedAt!.day),
-                      style: TextStyle(fontSize: 11, color: palette.textSecondary),
+                      style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
                     ),
                     const Spacer(),
                     QueueRowActions(task: task),
@@ -142,7 +146,10 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(color: status.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
-      child: Text(status.label(l10n), style: TextStyle(fontSize: 11, color: status.color)),
+      child: Text(
+        status.label(l10n),
+        style: TextStyle(fontSize: AppFont.px11, color: status.color),
+      ),
     );
   }
 }
@@ -166,7 +173,7 @@ class _MobileSelectionBar extends ConsumerWidget {
         children: [
           Text(
             AppLocalizations.of(context).queueSelectedCount(selection.ids.length),
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.textPrimary),
+            style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const Spacer(),
           AppGhostButton(

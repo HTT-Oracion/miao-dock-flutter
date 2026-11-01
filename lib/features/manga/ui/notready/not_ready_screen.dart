@@ -256,7 +256,7 @@ class _Header extends StatelessWidget {
                   Flexible(
                     child: Text(
                       title,
-                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: palette.ink),
+                      style: TextStyle(fontSize: AppFont.px19, fontWeight: FontWeight.w800, color: palette.ink),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -266,12 +266,18 @@ class _Header extends StatelessWidget {
                       color: tone.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
                     ),
-                    child: Text(chip, style: TextStyle(fontSize: 9.5, color: tone)),
+                    child: Text(
+                      chip,
+                      style: TextStyle(fontSize: AppFont.px9_5, color: tone),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text(desc, style: TextStyle(fontSize: 11.5, height: 1.65, color: palette.ink2)),
+              Text(
+                desc,
+                style: TextStyle(fontSize: AppFont.px11_5, height: 1.65, color: palette.ink2),
+              ),
             ],
           ),
         ),
@@ -330,15 +336,21 @@ class _LayerStrip extends StatelessWidget {
                     const SizedBox(width: 10),
                     SizedBox(
                       width: 96,
-                      child: Text(r.$2, style: TextStyle(fontSize: 10.5, color: palette.ink2)),
+                      child: Text(
+                        r.$2,
+                        style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
+                      ),
                     ),
                     Expanded(
                       child: Text(
                         r.$3,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: palette.ink),
+                        style: TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600, color: palette.ink),
                       ),
                     ),
-                    Text(r.$4, style: TextStyle(fontSize: 9.5, color: palette.mut)),
+                    Text(
+                      r.$4,
+                      style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                    ),
                   ],
                 ),
               ),
@@ -392,11 +404,14 @@ class _StepsRow extends StatelessWidget {
                   decoration: BoxDecoration(color: palette.accSoft, shape: BoxShape.circle),
                   child: Text(
                     '${i + 1}',
-                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: palette.acc),
+                    style: TextStyle(fontSize: AppFont.px9, fontWeight: FontWeight.w800, color: palette.acc),
                   ),
                 ),
                 const SizedBox(width: 7),
-                Text(s, style: TextStyle(fontSize: 10, color: palette.ink2)),
+                Text(
+                  s,
+                  style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
+                ),
               ],
             ),
         ],
@@ -428,7 +443,10 @@ class _DownloadSection extends StatelessWidget {
           color: palette.card,
         ),
         child: p == null
-            ? Text(l10n.nrDescDownloading, style: TextStyle(fontSize: 10.5, color: palette.mut))
+            ? Text(
+                l10n.nrDescDownloading,
+                style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
+              )
             : ClipRRect(
                 borderRadius: BorderRadius.circular(2),
                 child: LinearProgressIndicator(
@@ -509,10 +527,16 @@ class _DownloadRow extends StatelessWidget {
                   entry.id,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10.5, color: entry.state == 'waiting' ? palette.mut : palette.ink),
+                  style: TextStyle(
+                    fontSize: AppFont.px10_5,
+                    color: entry.state == 'waiting' ? palette.mut : palette.ink,
+                  ),
                 ),
               ),
-              Text('${entry.sizeMb.toStringAsFixed(0)} MB', style: TextStyle(fontSize: 9.5, color: palette.mut)),
+              Text(
+                '${entry.sizeMb.toStringAsFixed(0)} MB',
+                style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+              ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
@@ -527,7 +551,7 @@ class _DownloadRow extends StatelessWidget {
                 child: Text(
                   chipText,
                   style: TextStyle(
-                    fontSize: 8.5,
+                    fontSize: AppFont.px8_5,
                     color: done
                         ? palette.good
                         : running
@@ -607,7 +631,7 @@ class _Actions extends StatelessWidget {
             minimumSize: const Size(0, 34),
             padding: const EdgeInsets.symmetric(horizontal: 18),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-            textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            textStyle: const TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600),
           ),
           child: Text(primary),
         ),
@@ -617,7 +641,7 @@ class _Actions extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(0, 34),
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              textStyle: const TextStyle(fontSize: 9.5),
+              textStyle: const TextStyle(fontSize: AppFont.px9_5),
             ),
             child: Text(l10n.nrActionRedownload),
           ),
@@ -630,7 +654,7 @@ class _Actions extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(0, 34),
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              textStyle: const TextStyle(fontSize: 9.5),
+              textStyle: const TextStyle(fontSize: AppFont.px9_5),
             ),
           ),
         // 只读出口：不需要引擎，因此不会与「等引擎」形成死循环。
@@ -638,7 +662,7 @@ class _Actions extends StatelessWidget {
           TextButton(
             onPressed: onBrowseLibrary,
             style: TextButton.styleFrom(minimumSize: const Size(0, 34)),
-            child: Text(l10n.engineBrowseLibrary, style: const TextStyle(fontSize: 11)),
+            child: Text(l10n.engineBrowseLibrary, style: const TextStyle(fontSize: AppFont.px11)),
           ),
       ],
     );

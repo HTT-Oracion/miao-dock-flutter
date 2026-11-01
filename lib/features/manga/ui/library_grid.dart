@@ -45,12 +45,12 @@ class LibraryGrid extends ConsumerWidget {
             children: [
               Text(
                 l10n.libLocalLibrary,
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: palette.textPrimary),
+                style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.textPrimary),
               ),
               const SizedBox(width: 8),
               Text(
                 '${onlyBooks.length} · ${onlyBooks.fold<int>(0, (a, b) => a + b.pageCount)}',
-                style: TextStyle(fontSize: 9.5, color: palette.textSecondary),
+                style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
               ),
               const Spacer(),
               const LibraryHeaderActions(),
@@ -61,7 +61,7 @@ class LibraryGrid extends ConsumerWidget {
               child: Center(
                 child: Text(
                   books.isEmpty ? l10n.shelfEmpty : l10n.shelfNoMatch,
-                  style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
+                  style: TextStyle(fontSize: AppFont.px12_5, color: palette.textSecondary),
                 ),
               ),
             )
@@ -159,7 +159,7 @@ class _BookCardState extends ConsumerState<_BookCard> {
                           ),
                           child: Text(
                             b.isBook ? l10n.bookChapterCount(b.chapterCount) : l10n.libUnmerged,
-                            style: const TextStyle(fontSize: 9, color: Colors.white),
+                            style: const TextStyle(fontSize: AppFont.px9, color: Colors.white),
                           ),
                         ),
                       ),
@@ -172,14 +172,14 @@ class _BookCardState extends ConsumerState<_BookCard> {
                 b.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
+                style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.textPrimary),
               ),
               const SizedBox(height: 2),
               Text(
                 b.isBook ? '${b.hasAuthor ? b.author : l10n.bookUnnamedAuthor} · ${b.pageCount}' : '${b.pageCount}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 9, color: palette.textSecondary),
+                style: TextStyle(fontSize: AppFont.px9, color: palette.textSecondary),
               ),
             ],
           ),

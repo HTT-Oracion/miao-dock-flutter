@@ -122,7 +122,10 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
     final targets = books.where((b) => b.isBook).toList();
     return AlertDialog(
       backgroundColor: palette.card,
-      title: Text(l10n.libMergeTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      title: Text(
+        l10n.libMergeTitle,
+        style: const TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600),
+      ),
       content: SizedBox(
         width: 300,
         child: Column(
@@ -144,7 +147,7 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
+          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11_5)),
         ),
         FilledButton(
           onPressed: _target == null
@@ -154,7 +157,7 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
                   if (no == null) return;
                   Navigator.of(context).pop((_target!, no));
                 },
-          child: Text(l10n.libMerge, style: const TextStyle(fontSize: 11.5)),
+          child: Text(l10n.libMerge, style: const TextStyle(fontSize: AppFont.px11_5)),
         ),
       ],
     );
@@ -188,7 +191,10 @@ class _DeleteDialogState extends State<_DeleteDialog> {
     final book = widget.book;
     return AlertDialog(
       backgroundColor: palette.card,
-      title: Text(l10n.shelfDeleteTitle(book.name), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      title: Text(
+        l10n.shelfDeleteTitle(book.name),
+        style: const TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600),
+      ),
       content: SizedBox(
         width: 340,
         child: Column(
@@ -197,7 +203,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           children: [
             Text(
               l10n.shelfDeleteBody(book.chapterCount == 0 ? 1 : book.chapterCount, book.pageCount),
-              style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+              style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
             ),
             const SizedBox(height: 12),
             Row(
@@ -213,26 +219,32 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(l10n.shelfDeleteWithFiles, style: TextStyle(fontSize: 11.5, color: palette.textPrimary)),
+                  child: Text(
+                    l10n.shelfDeleteWithFiles,
+                    style: TextStyle(fontSize: AppFont.px11_5, color: palette.textPrimary),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            Text(l10n.shelfDeleteKeepHint, style: TextStyle(fontSize: 10.5, color: palette.textSecondary)),
+            Text(
+              l10n.shelfDeleteKeepHint,
+              style: TextStyle(fontSize: AppFont.px10_5, color: palette.textSecondary),
+            ),
           ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
+          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11_5)),
         ),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: palette.bad),
           onPressed: () => Navigator.of(context).pop(_deleteFiles),
           child: Text(
             l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),
-            style: const TextStyle(fontSize: 11.5),
+            style: const TextStyle(fontSize: AppFont.px11_5),
           ),
         ),
       ],

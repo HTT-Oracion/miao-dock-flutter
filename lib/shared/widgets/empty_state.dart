@@ -32,13 +32,13 @@ class EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: palette.textPrimary),
+              style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w600, color: palette.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, height: 1.6, color: palette.textSecondary),
+              style: TextStyle(fontSize: AppFont.px12_5, height: 1.6, color: palette.textSecondary),
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),

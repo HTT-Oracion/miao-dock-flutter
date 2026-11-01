@@ -96,7 +96,10 @@ class ChapterMenuButton extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: palette.card,
-        title: Text(l10n.chapterEditNoTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        title: Text(
+          l10n.chapterEditNoTitle,
+          style: const TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600),
+        ),
         content: SizedBox(
           width: 260,
           child: AppInput(
@@ -109,11 +112,11 @@ class ChapterMenuButton extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
+            child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11_5)),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(double.tryParse(ctrl.text.trim())),
-            child: Text(l10n.libEditInfoOk, style: const TextStyle(fontSize: 11.5)),
+            child: Text(l10n.libEditInfoOk, style: const TextStyle(fontSize: AppFont.px11_5)),
           ),
         ],
       ),
@@ -146,7 +149,7 @@ class _MenuTriggerState extends State<_MenuTrigger> {
         variant: AppButtonVariant.ghost,
         width: 22,
         height: 22,
-        fontSize: 13,
+        fontSize: AppFont.px13,
       ),
     );
   }

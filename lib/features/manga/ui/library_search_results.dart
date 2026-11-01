@@ -37,12 +37,12 @@ class LibrarySearchResults extends ConsumerWidget {
         children: [
           Text(
             AppLocalizations.of(context).searchQuery(query),
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: palette.textPrimary),
+            style: TextStyle(fontSize: AppFont.px17, fontWeight: FontWeight.w700, color: palette.textPrimary),
           ),
           const SizedBox(height: 4),
           Text(
             AppLocalizations.of(context).searchSummary(groups.length, hitCount),
-            style: TextStyle(fontSize: 12, color: palette.textSecondary),
+            style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
           ),
           const SizedBox(height: 14),
           for (final group in groups) ...[_GroupCard(group: group), const SizedBox(height: 12)],
@@ -52,12 +52,12 @@ class LibrarySearchResults extends ConsumerWidget {
               Expanded(
                 child: Text(
                   AppLocalizations.of(context).searchHint,
-                  style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+                  style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
                 ),
               ),
               Text(
                 AppLocalizations.of(context).searchEscHint,
-                style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+                style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
               ),
             ],
           ),
@@ -95,17 +95,20 @@ class _GroupCard extends StatelessWidget {
                   height: 26,
                   decoration: BoxDecoration(color: palette.cardCover, borderRadius: BorderRadius.circular(5)),
                   alignment: Alignment.center,
-                  child: Text(book.name.characters.first, style: TextStyle(fontSize: 12, color: palette.textPrimary)),
+                  child: Text(
+                    book.name.characters.first,
+                    style: TextStyle(fontSize: AppFont.px12, color: palette.textPrimary),
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Text(
                   '《${book.name}》',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.textPrimary),
+                  style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600, color: palette.textPrimary),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   AppLocalizations.of(context).searchChapterHits(group.chapters.length),
-                  style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+                  style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
                 ),
                 const Spacer(),
                 const _OpenShelfLink(),
@@ -131,7 +134,7 @@ class _OpenShelfLink extends ConsumerWidget {
         onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
         child: Text(
           AppLocalizations.of(context).searchOpenShelf,
-          style: TextStyle(fontSize: 12, color: palette.accent),
+          style: TextStyle(fontSize: AppFont.px12, color: palette.accent),
         ),
       ),
     );
@@ -166,7 +169,7 @@ class _HitRow extends StatelessWidget {
             child: Text(
               AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12.5, color: palette.textPrimary),
+              style: TextStyle(fontSize: AppFont.px12_5, color: palette.textPrimary),
             ),
           ),
           Container(
@@ -175,7 +178,10 @@ class _HitRow extends StatelessWidget {
               color: badgeColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(5),
             ),
-            child: Text(badge, style: TextStyle(fontSize: 11, color: badgeColor)),
+            child: Text(
+              badge,
+              style: TextStyle(fontSize: AppFont.px11, color: badgeColor),
+            ),
           ),
           const SizedBox(width: 10),
           SizedBox(
@@ -183,7 +189,7 @@ class _HitRow extends StatelessWidget {
             child: Text(
               AppLocalizations.of(context).chapterProgress(chapter.donePages, chapter.pageCount),
               textAlign: TextAlign.right,
-              style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+              style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
             ),
           ),
         ],

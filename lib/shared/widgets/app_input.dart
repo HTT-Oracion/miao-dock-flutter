@@ -28,7 +28,7 @@ class AppInput extends StatelessWidget {
     this.prefixIconSize = 14,
     this.suffix,
     this.height = 36,
-    this.fontSize = 12,
+    this.fontSize = AppFont.px12,
     this.keyboardType,
     this.inputFormatters,
     this.autofocus = false,
@@ -87,7 +87,10 @@ class AppInput extends StatelessWidget {
         if (errorText != null)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 2),
-            child: Text(errorText!, style: TextStyle(fontSize: 10, color: palette.bad)),
+            child: Text(
+              errorText!,
+              style: TextStyle(fontSize: AppFont.px10, color: palette.bad),
+            ),
           ),
       ],
     );

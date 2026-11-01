@@ -51,7 +51,7 @@ class _AppPagerState extends State<AppPager> {
               Text(
                 AppLocalizations.of(context)
                     .pagerTotal(widget.total, widget.totalLabel ?? AppLocalizations.of(context).pagerTotalTasks),
-                style: TextStyle(fontSize: 12, color: palette.textSecondary),
+                style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
               ),
               const Spacer(),
               _SizeSelector(
@@ -133,7 +133,7 @@ class _SizeSelector extends StatelessWidget {
                             ),
                             Text(
                               AppLocalizations.of(context).pagerPageSize(size),
-                              style: TextStyle(fontSize: 12, color: palette.textPrimary),
+                              style: TextStyle(fontSize: AppFont.px12, color: palette.textPrimary),
                             ),
                           ],
                         ),
@@ -171,7 +171,7 @@ class _PageButton extends StatelessWidget {
         variant: active ? AppButtonVariant.primary : AppButtonVariant.ghost,
         width: 26,
         height: 26,
-        fontSize: 12,
+        fontSize: AppFont.px12,
         fontWeight: active ? FontWeight.w700 : null,
       ),
     );

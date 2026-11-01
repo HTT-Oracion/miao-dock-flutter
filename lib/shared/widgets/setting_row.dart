@@ -64,7 +64,7 @@ class _SettingRowState extends State<SettingRow> {
                         child: Text(
                           widget.label,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: AppFont.px11,
                             fontWeight: FontWeight.w600,
                             color: dim ? palette.mut : palette.ink,
                           ),
@@ -75,14 +75,20 @@ class _SettingRowState extends State<SettingRow> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(4)),
-                          child: Text(widget.def!, style: TextStyle(fontSize: 8, color: palette.mut)),
+                          child: Text(
+                            widget.def!,
+                            style: TextStyle(fontSize: AppFont.px8, color: palette.mut),
+                          ),
                         ),
                       ],
                     ],
                   ),
                   if (widget.why != null) ...[
                     const SizedBox(height: 2),
-                    Text(widget.why!, style: TextStyle(fontSize: 8.5, color: palette.mut)),
+                    Text(
+                      widget.why!,
+                      style: TextStyle(fontSize: AppFont.px8_5, color: palette.mut),
+                    ),
                   ],
                 ],
               ),
@@ -108,7 +114,7 @@ class SettingSubTitle extends StatelessWidget {
       padding: const EdgeInsets.only(top: 14, bottom: 8),
       child: Text(
         text,
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: palette.mut, letterSpacing: 0.4),
+        style: TextStyle(fontSize: AppFont.px9, fontWeight: FontWeight.w700, color: palette.mut, letterSpacing: 0.4),
       ),
     );
   }

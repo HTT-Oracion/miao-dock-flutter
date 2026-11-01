@@ -47,24 +47,27 @@ class EnginePartsSection extends ConsumerWidget {
           Row(
             children: [
               const SizedBox(width: 8),
-              Text(l10n.engineDirLabel, style: TextStyle(fontSize: 10.5, color: palette.ink2)),
+              Text(
+                l10n.engineDirLabel,
+                style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   dir,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10, color: palette.mut, fontFamily: 'monospace'),
+                  style: TextStyle(fontSize: AppFont.px10, color: palette.mut, fontFamily: 'monospace'),
                 ),
               ),
               TextButton(
                 onPressed: busy ? null : () => _changeDir(context, ref),
-                child: Text(l10n.runtimePickChange, style: const TextStyle(fontSize: 10.5)),
+                child: Text(l10n.runtimePickChange, style: const TextStyle(fontSize: AppFont.px10_5)),
               ),
               TextButton.icon(
                 onPressed: busy ? null : () => _importDir(context, ref),
                 icon: const Icon(LucideIcons.folderInput, size: 12),
-                label: Text(l10n.runtimeImport, style: const TextStyle(fontSize: 10.5)),
+                label: Text(l10n.runtimeImport, style: const TextStyle(fontSize: AppFont.px10_5)),
               ),
             ],
           ),
@@ -77,7 +80,10 @@ class EnginePartsSection extends ConsumerWidget {
                 icon: busy
                     ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(LucideIcons.shieldCheck, size: 12),
-                label: Text(busy ? l10n.engineChecking : l10n.engineCheck, style: const TextStyle(fontSize: 10.5)),
+                label: Text(
+                  busy ? l10n.engineChecking : l10n.engineCheck,
+                  style: const TextStyle(fontSize: AppFont.px10_5),
+                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 30),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -88,7 +94,7 @@ class EnginePartsSection extends ConsumerWidget {
               TextButton(
                 onPressed: busy ? null : () => ref.read(enginePresenceProvider.notifier).refresh(),
                 style: TextButton.styleFrom(minimumSize: const Size(0, 30)),
-                child: Text(l10n.engineRecheck, style: const TextStyle(fontSize: 10.5)),
+                child: Text(l10n.engineRecheck, style: const TextStyle(fontSize: AppFont.px10_5)),
               ),
               const SizedBox(width: 10),
               Expanded(child: _Verdict(inspection: inspection)),
@@ -108,7 +114,7 @@ class EnginePartsSection extends ConsumerWidget {
                   FilledButton.icon(
                     onPressed: () => _redownload(context, ref, result),
                     icon: const Icon(LucideIcons.download, size: 12),
-                    label: Text(l10n.engineRedownloadMissing, style: const TextStyle(fontSize: 10.5)),
+                    label: Text(l10n.engineRedownloadMissing, style: const TextStyle(fontSize: AppFont.px10_5)),
                     style: FilledButton.styleFrom(
                       backgroundColor: palette.acc,
                       foregroundColor: palette.onAcc,
@@ -120,7 +126,7 @@ class EnginePartsSection extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       l10n.engineRedownloadHint(result.failedRequired.map((c) => c.part.id).join(', ')),
-                      style: TextStyle(fontSize: 9.5, height: 1.5, color: palette.mut),
+                      style: TextStyle(fontSize: AppFont.px9_5, height: 1.5, color: palette.mut),
                     ),
                   ),
                 ],
@@ -129,7 +135,10 @@ class EnginePartsSection extends ConsumerWidget {
           ],
           if (hasError) ...[
             const SizedBox(height: 8),
-            Text('${inspection.error}', style: TextStyle(fontSize: 10, color: palette.bad)),
+            Text(
+              '${inspection.error}',
+              style: TextStyle(fontSize: AppFont.px10, color: palette.bad),
+            ),
           ],
         ],
       ),
@@ -174,16 +183,22 @@ class _Verdict extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     if (inspection.isLoading) {
-      return Text(l10n.engineChecking, style: TextStyle(fontSize: 10.5, color: palette.mut));
+      return Text(
+        l10n.engineChecking,
+        style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
+      );
     }
     final r = inspection.value;
     if (r == null) {
       // 🔴 未校验不能画成绿：我们什么都没检查过。
-      return Text(l10n.engineNotChecked, style: TextStyle(fontSize: 10.5, color: palette.mut));
+      return Text(
+        l10n.engineNotChecked,
+        style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
+      );
     }
     return Text(
       r.ok ? l10n.engineCheckPassed : l10n.engineCheckFailed(r.failedRequired.length),
-      style: TextStyle(fontSize: 10.5, color: r.ok ? palette.good : palette.bad),
+      style: TextStyle(fontSize: AppFont.px10_5, color: r.ok ? palette.good : palette.bad),
     );
   }
 }
@@ -219,10 +234,16 @@ class _PartsGrid extends StatelessWidget {
                   color: c.ok ? palette.good : (c.part.required ? palette.bad : palette.mut),
                 ),
                 const SizedBox(width: 5),
-                Text(c.part.id, style: TextStyle(fontSize: 9.5, color: palette.ink2)),
+                Text(
+                  c.part.id,
+                  style: TextStyle(fontSize: AppFont.px9_5, color: palette.ink2),
+                ),
                 if (!c.part.required) ...[
                   const SizedBox(width: 4),
-                  Text(l10n.enginePartOptional, style: TextStyle(fontSize: 8.5, color: palette.mut)),
+                  Text(
+                    l10n.enginePartOptional,
+                    style: TextStyle(fontSize: AppFont.px8_5, color: palette.mut),
+                  ),
                 ],
               ],
             ),

@@ -65,11 +65,17 @@ class AppTable extends StatelessWidget {
                 for (final c in columns)
                   c.flex
                       ? Expanded(
-                          child: Text(c.header, style: TextStyle(fontSize: 12, color: palette.textSecondary)),
+                          child: Text(
+                            c.header,
+                            style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+                          ),
                         )
                       : SizedBox(
                           width: c.width,
-                          child: Text(c.header, style: TextStyle(fontSize: 12, color: palette.textSecondary)),
+                          child: Text(
+                            c.header,
+                            style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+                          ),
                         ),
               ],
             ),

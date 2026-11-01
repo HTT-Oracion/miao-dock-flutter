@@ -114,7 +114,7 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
                     Expanded(
                       child: Text(
                         _isImport ? l10n.runtimeImportTitle : l10n.runtimePickTitle,
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: palette.ink),
+                        style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.ink),
                       ),
                     ),
                     IconButton(
@@ -127,7 +127,7 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
                 const SizedBox(height: 6),
                 Text(
                   _isImport ? l10n.runtimeImportDesc : l10n.runtimePickDesc,
-                  style: TextStyle(fontSize: 11, height: 1.6, color: palette.ink2),
+                  style: TextStyle(fontSize: AppFont.px11, height: 1.6, color: palette.ink2),
                 ),
                 const SizedBox(height: 14),
                 _DirRow(
@@ -142,7 +142,7 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11)),
+                      child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11)),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
@@ -157,7 +157,7 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
                         foregroundColor: palette.onAcc,
                         minimumSize: const Size(0, 34),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        textStyle: const TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600),
                       ),
                       child: Text(_isImport ? l10n.runtimeImportOk : l10n.runtimePickConfirm),
                     ),
@@ -181,7 +181,10 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
             icon: _checking
                 ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(LucideIcons.shieldCheck, size: 13),
-            label: Text(_checking ? l10n.engineChecking : l10n.engineCheck, style: const TextStyle(fontSize: 11)),
+            label: Text(
+              _checking ? l10n.engineChecking : l10n.engineCheck,
+              style: const TextStyle(fontSize: AppFont.px11),
+            ),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(0, 32),
               padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -191,13 +194,16 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
           if (_inspection != null)
             Text(
               _inspection!.ok ? l10n.engineCheckPassed : l10n.engineCheckFailed(_inspection!.failedRequired.length),
-              style: TextStyle(fontSize: 11, color: _inspection!.ok ? palette.good : palette.bad),
+              style: TextStyle(fontSize: AppFont.px11, color: _inspection!.ok ? palette.good : palette.bad),
             ),
         ],
       ),
       if (_checkError != null) ...[
         const SizedBox(height: 8),
-        Text(_checkError!, style: TextStyle(fontSize: 10.5, color: palette.bad)),
+        Text(
+          _checkError!,
+          style: TextStyle(fontSize: AppFont.px10_5, color: palette.bad),
+        ),
       ],
       if (_inspection != null) ...[
         const SizedBox(height: 12),
@@ -245,19 +251,22 @@ class _DirRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(fontSize: 9, color: palette.mut)),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: AppFont.px9, color: palette.mut),
+                ),
                 const SizedBox(height: 2),
                 SelectableText(
                   dir,
                   maxLines: 2,
-                  style: TextStyle(fontSize: 10.5, color: palette.ink, fontFamily: 'monospace'),
+                  style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink, fontFamily: 'monospace'),
                 ),
               ],
             ),
           ),
           TextButton(
             onPressed: onChange,
-            child: Text(l10n.runtimePickChange, style: const TextStyle(fontSize: 11)),
+            child: Text(l10n.runtimePickChange, style: const TextStyle(fontSize: AppFont.px11)),
           ),
         ],
       ),
@@ -296,18 +305,24 @@ class _PartsList extends StatelessWidget {
                   const SizedBox(width: 8),
                   SizedBox(
                     width: 96,
-                    child: Text(c.part.id, style: TextStyle(fontSize: 10.5, color: palette.ink2)),
+                    child: Text(
+                      c.part.id,
+                      style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
+                    ),
                   ),
                   Expanded(
                     child: Text(
                       c.detail ?? (c.ok ? l10n.enginePartReady : l10n.enginePartMissing),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 10, color: c.ok ? palette.mut : palette.bad),
+                      style: TextStyle(fontSize: AppFont.px10, color: c.ok ? palette.mut : palette.bad),
                     ),
                   ),
                   if (!c.part.required && !c.ok)
-                    Text(l10n.enginePartOptional, style: TextStyle(fontSize: 9, color: palette.mut)),
+                    Text(
+                      l10n.enginePartOptional,
+                      style: TextStyle(fontSize: AppFont.px9, color: palette.mut),
+                    ),
                 ],
               ),
             ),
@@ -339,12 +354,15 @@ class _RedownloadHint extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.engineRedownloadHint(missing), style: TextStyle(fontSize: 10.5, height: 1.5, color: palette.ink2)),
+          Text(
+            l10n.engineRedownloadHint(missing),
+            style: TextStyle(fontSize: AppFont.px10_5, height: 1.5, color: palette.ink2),
+          ),
           const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: onRedownload,
             icon: const Icon(LucideIcons.download, size: 12),
-            label: Text(l10n.engineRedownloadMissing, style: const TextStyle(fontSize: 11)),
+            label: Text(l10n.engineRedownloadMissing, style: const TextStyle(fontSize: AppFont.px11)),
             style: FilledButton.styleFrom(
               backgroundColor: palette.acc,
               foregroundColor: palette.onAcc,

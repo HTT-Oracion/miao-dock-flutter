@@ -46,13 +46,13 @@ class SidebarMiniPlayer extends ConsumerWidget {
                       Text(
                         now.title,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: palette.ink),
+                        style: TextStyle(fontSize: AppFont.px9, fontWeight: FontWeight.w600, color: palette.ink),
                       ),
                       const SizedBox(height: 1),
                       Text(
                         now.artist,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 7.5, color: palette.mut),
+                        style: TextStyle(fontSize: AppFont.px7_5, color: palette.mut),
                       ),
                     ],
                   ),

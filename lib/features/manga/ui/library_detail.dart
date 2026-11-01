@@ -57,7 +57,7 @@ class LibraryDetail extends ConsumerWidget {
             child: Center(
               child: Text(
                 AppLocalizations.of(context).shelfEmpty,
-                style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
+                style: TextStyle(fontSize: AppFont.px12_5, color: palette.textSecondary),
               ),
             ),
           ),
@@ -101,7 +101,7 @@ class LibraryDetail extends ConsumerWidget {
               child: Center(
                 child: Text(
                   AppLocalizations.of(context).shelfEmpty,
-                  style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
+                  style: TextStyle(fontSize: AppFont.px12_5, color: palette.textSecondary),
                 ),
               ),
             )
@@ -175,7 +175,7 @@ class _HeaderAction extends StatelessWidget {
       border: !primary,
       height: 26,
       horizontalPadding: 10,
-      fontSize: 10.5,
+      fontSize: AppFont.px10_5,
     );
   }
 }
@@ -201,7 +201,7 @@ class _Hero extends ConsumerWidget {
             children: [
               Text(
                 book.name,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: palette.textPrimary),
+                style: TextStyle(fontSize: AppFont.px18, fontWeight: FontWeight.w700, color: palette.textPrimary),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -395,7 +395,7 @@ class _HeroButton extends StatelessWidget {
       border: !primary,
       height: 26,
       horizontalPadding: 10,
-      fontSize: 12.5,
+      fontSize: AppFont.px12_5,
     );
   }
 }
@@ -411,7 +411,10 @@ class _MetaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(color: palette.navBg, borderRadius: BorderRadius.circular(5)),
-      child: Text(text, style: TextStyle(fontSize: 11.5, color: palette.textSecondary)),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
+      ),
     );
   }
 }
@@ -429,11 +432,14 @@ class _PageSectionHeader extends ConsumerWidget {
       children: [
         Text(
           l10n.readerPagesTitle,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
+          style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w600, color: palette.textPrimary),
         ),
         const SizedBox(width: 10),
         if (mode == 'capsule')
-          Text(l10n.libCapsuleLegend, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
+          Text(
+            l10n.libCapsuleLegend,
+            style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
+          ),
         const Spacer(),
         _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
       ],
@@ -455,13 +461,19 @@ class _SectionHeader extends ConsumerWidget {
       children: [
         Text(
           l10n.bookChapters,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
+          style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w600, color: palette.textPrimary),
         ),
         const SizedBox(width: 8),
-        Text(l10n.bookChapterCount(book.chapterCount), style: TextStyle(fontSize: 12, color: palette.textSecondary)),
+        Text(
+          l10n.bookChapterCount(book.chapterCount),
+          style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+        ),
         const SizedBox(width: 10),
         if (mode == 'capsule')
-          Text(l10n.libCapsuleLegend, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
+          Text(
+            l10n.libCapsuleLegend,
+            style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
+          ),
         const Spacer(),
         _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
       ],
@@ -576,7 +588,10 @@ class _PageCardState extends ConsumerState<_PageCard> {
                           color: Colors.black.withValues(alpha: 0.4),
                           borderRadius: BorderRadius.circular(kPillRadius),
                         ),
-                        child: Text('$seq', style: const TextStyle(fontSize: 9, color: Colors.white)),
+                        child: Text(
+                          '$seq',
+                          style: const TextStyle(fontSize: AppFont.px9, color: Colors.white),
+                        ),
                       ),
                     ),
                   ],
@@ -588,7 +603,7 @@ class _PageCardState extends ConsumerState<_PageCard> {
               AppLocalizations.of(context).readerPage(seq, widget.total),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
+              style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.textPrimary),
             ),
             const SizedBox(height: 2),
             Row(
@@ -607,7 +622,7 @@ class _PageCardState extends ConsumerState<_PageCard> {
                   done
                       ? AppLocalizations.of(context).libChapterStatusDone
                       : AppLocalizations.of(context).libChapterStatusPending,
-                  style: TextStyle(fontSize: 9, color: palette.textSecondary),
+                  style: TextStyle(fontSize: AppFont.px9, color: palette.textSecondary),
                 ),
               ],
             ),
@@ -638,7 +653,10 @@ class _PageCapsules extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('$seq', style: TextStyle(fontSize: 11.5, color: palette.textPrimary)),
+                Text(
+                  '$seq',
+                  style: TextStyle(fontSize: AppFont.px11_5, color: palette.textPrimary),
+                ),
                 if (!book.directTranslated.contains(seq)) ...[
                   const SizedBox(width: 6),
                   Container(
@@ -739,12 +757,16 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
                       children: [
                         Text(
                           AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
-                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
+                          style: TextStyle(
+                            fontSize: AppFont.px13_5,
+                            fontWeight: FontWeight.w600,
+                            color: palette.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
-                          style: TextStyle(fontSize: 8.5, color: palette.textSecondary),
+                          style: TextStyle(fontSize: AppFont.px8_5, color: palette.textSecondary),
                         ),
                         const SizedBox(height: 8),
                         ClipRRect(
@@ -848,7 +870,10 @@ class _CapsuleState extends State<_Capsule> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(widget.label, style: TextStyle(fontSize: 11, color: palette.textMuted)),
+              Text(
+                widget.label,
+                style: TextStyle(fontSize: AppFont.px11, color: palette.textMuted),
+              ),
               if (widget.pending) ...[
                 const SizedBox(width: 6),
                 Container(
@@ -890,7 +915,10 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
     final l10n = AppLocalizations.of(context);
     return AlertDialog(
       backgroundColor: palette.card,
-      title: Text(l10n.libCreateBook, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      title: Text(
+        l10n.libCreateBook,
+        style: const TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600),
+      ),
       content: SizedBox(
         width: 300,
         child: AppInput(
@@ -903,11 +931,11 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
+          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: AppFont.px11_5)),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: Text(l10n.libCreateBook, style: const TextStyle(fontSize: 11.5)),
+          child: Text(l10n.libCreateBook, style: const TextStyle(fontSize: AppFont.px11_5)),
         ),
       ],
     );
@@ -984,7 +1012,7 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
           children: [
             Text(
               l10n.libEditInfoTitle,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: palette.textPrimary),
+              style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.textPrimary),
             ),
             const SizedBox(height: 14),
             // 封面区（ver1.0 `.cover-box`：预览 96×128 在左，操作竖排在右）
@@ -1036,7 +1064,7 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
                         const SizedBox(height: 8),
                         Text(
                           _fileName == null ? l10n.libCoverPickHint : l10n.libCoverPicked(_fileName!),
-                          style: TextStyle(fontSize: 10.5, color: palette.textSecondary),
+                          style: TextStyle(fontSize: AppFont.px10_5, color: palette.textSecondary),
                         ),
                       ],
                     ],
@@ -1046,11 +1074,17 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
             ),
             const SizedBox(height: 16),
             // 文字信息
-            Text(l10n.libCreateBookNameHint, style: TextStyle(fontSize: 11, color: palette.textSecondary)),
+            Text(
+              l10n.libCreateBookNameHint,
+              style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
+            ),
             const SizedBox(height: 5),
             AppInput(controller: _title, hint: l10n.libCreateBookNameHint),
             const SizedBox(height: 12),
-            Text(l10n.bookAuthorLabel(''), style: TextStyle(fontSize: 11, color: palette.textSecondary)),
+            Text(
+              l10n.bookAuthorLabel(''),
+              style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
+            ),
             const SizedBox(height: 5),
             AppInput(controller: _author, hint: l10n.bookAuthorLabel('')),
             const SizedBox(height: 18),
@@ -1089,7 +1123,10 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
     final palette = AppPalette.of(context);
     if (_cover == CoverIntent.remove) {
       return Center(
-        child: Text(l10n.libCoverNone, style: TextStyle(fontSize: 10.5, color: palette.textSecondary)),
+        child: Text(
+          l10n.libCoverNone,
+          style: TextStyle(fontSize: AppFont.px10_5, color: palette.textSecondary),
+        ),
       );
     }
     if (_bytes != null) {
@@ -1101,7 +1138,10 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
         final bytes = snap.data;
         if (bytes == null || bytes.isEmpty) {
           return Center(
-            child: Text(l10n.libCoverNone, style: TextStyle(fontSize: 10.5, color: palette.textSecondary)),
+            child: Text(
+              l10n.libCoverNone,
+              style: TextStyle(fontSize: AppFont.px10_5, color: palette.textSecondary),
+            ),
           );
         }
         return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
@@ -1128,7 +1168,7 @@ class _DialogButton extends StatelessWidget {
       border: !primary,
       height: 26,
       horizontalPadding: 12,
-      fontSize: 10.5,
+      fontSize: AppFont.px10_5,
     );
   }
 }
@@ -1159,7 +1199,7 @@ class _CoverChoice extends StatelessWidget {
       variant: active ? AppButtonVariant.primary : AppButtonVariant.secondary,
       height: 26,
       horizontalPadding: 8,
-      fontSize: 10.5,
+      fontSize: AppFont.px10_5,
     );
   }
 }
@@ -1190,7 +1230,10 @@ class _ViewSeg extends StatelessWidget {
                 ),
                 child: Text(
                   m == 'card' ? l10n.libViewCard : l10n.libViewCapsule,
-                  style: TextStyle(fontSize: 10.5, color: mode == m ? palette.textPrimary : palette.textSecondary),
+                  style: TextStyle(
+                    fontSize: AppFont.px10_5,
+                    color: mode == m ? palette.textPrimary : palette.textSecondary,
+                  ),
                 ),
               ),
             ),
@@ -1216,7 +1259,7 @@ class _BackToShelf extends StatelessWidget {
       border: true,
       height: 26,
       horizontalPadding: 10,
-      fontSize: 10.5,
+      fontSize: AppFont.px10_5,
     );
   }
 }
@@ -1261,7 +1304,10 @@ class _NoImagePlaceholder extends StatelessWidget {
         children: [
           Icon(LucideIcons.imageOff, size: 18, color: palette.textSecondary),
           const SizedBox(height: 4),
-          Text(AppLocalizations.of(context).pageNoImage, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
+          Text(
+            AppLocalizations.of(context).pageNoImage,
+            style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
+          ),
         ],
       ),
     );

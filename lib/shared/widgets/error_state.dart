@@ -89,15 +89,22 @@ class _ErrorBannerState extends State<ErrorBanner> {
                   children: [
                     Text(
                       text.title,
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: danger),
+                      style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w600, color: danger),
                     ),
                     const SizedBox(height: 2),
-                    Text(text.hint, style: TextStyle(fontSize: 11, height: 1.5, color: palette.textMuted)),
+                    Text(
+                      text.hint,
+                      style: TextStyle(fontSize: AppFont.px11, height: 1.5, color: palette.textMuted),
+                    ),
                     if (widget.showStaleHint) ...[
                       const SizedBox(height: 4),
                       Text(
                         l10n.errorStaleData,
-                        style: TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: palette.textMuted),
+                        style: TextStyle(
+                          fontSize: AppFont.px10_5,
+                          fontStyle: FontStyle.italic,
+                          color: palette.textMuted,
+                        ),
                       ),
                     ],
                   ],
@@ -113,7 +120,10 @@ class _ErrorBannerState extends State<ErrorBanner> {
                   minimumSize: const Size(0, 28),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text(l10n.errorRetry, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+                child: Text(
+                  l10n.errorRetry,
+                  style: const TextStyle(fontSize: AppFont.px11_5, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),
@@ -135,7 +145,7 @@ class _ErrorBannerState extends State<ErrorBanner> {
                     const SizedBox(width: 4),
                     Text(
                       _expanded ? l10n.errorHideDetail : l10n.errorShowDetail,
-                      style: TextStyle(fontSize: 10, color: palette.textMuted),
+                      style: TextStyle(fontSize: AppFont.px10, color: palette.textMuted),
                     ),
                   ],
                 ),
@@ -146,7 +156,12 @@ class _ErrorBannerState extends State<ErrorBanner> {
                 padding: const EdgeInsets.only(top: 4),
                 child: SelectableText(
                   '${widget.error}',
-                  style: TextStyle(fontSize: 10, height: 1.4, color: palette.textMuted, fontFamily: 'monospace'),
+                  style: TextStyle(
+                    fontSize: AppFont.px10,
+                    height: 1.4,
+                    color: palette.textMuted,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ),
           ],
@@ -189,13 +204,13 @@ class ErrorState extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               text.title,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
+              style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w600, color: palette.textPrimary),
             ),
             const SizedBox(height: 6),
             Text(
               text.hint,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, height: 1.6, color: palette.textSecondary),
+              style: TextStyle(fontSize: AppFont.px11_5, height: 1.6, color: palette.textSecondary),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -207,7 +222,7 @@ class ErrorState extends StatelessWidget {
                 foregroundColor: palette.pageBg,
                 minimumSize: const Size(0, 34),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                textStyle: const TextStyle(fontSize: AppFont.px12, fontWeight: FontWeight.w600),
               ),
             ),
           ],

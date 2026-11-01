@@ -171,13 +171,17 @@ class _NavItemState extends State<_NavItem> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: AppFont.px10_5,
                     fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                     color: active ? palette.ink : palette.ink2,
                   ),
                 ),
                 const Spacer(),
-                if (count != null) Text('$count', style: TextStyle(fontSize: 8.5, color: palette.mut)),
+                if (count != null)
+                  Text(
+                    '$count',
+                    style: TextStyle(fontSize: AppFont.px8_5, color: palette.mut),
+                  ),
               ],
             ),
           ),
@@ -202,10 +206,13 @@ class _Head extends StatelessWidget {
       children: [
         Text(
           title,
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: palette.ink),
+          style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w700, color: palette.ink),
         ),
         const SizedBox(height: 3),
-        Text(blurb, style: TextStyle(fontSize: 9.5, color: palette.mut)),
+        Text(
+          blurb,
+          style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+        ),
         const SizedBox(height: 14),
       ],
     );
@@ -257,7 +264,7 @@ class _GeneralSection extends ConsumerWidget {
             control: FilledButton(
               onPressed: null,
               style: _primaryStyle(AppPalette.of(context)),
-              child: Text(l10n.settingSpecCheckRun, style: const TextStyle(fontSize: 9.5)),
+              child: Text(l10n.settingSpecCheckRun, style: const TextStyle(fontSize: AppFont.px9_5)),
             ),
           ),
           SettingRow(
@@ -392,7 +399,7 @@ class _ServiceCard extends ConsumerWidget {
                   children: [
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: palette.ink),
+                      style: TextStyle(fontSize: AppFont.px11_5, fontWeight: FontWeight.w600, color: palette.ink),
                     ),
                     const SizedBox(width: 6),
                     // 状态圆点：放在文字右侧、尺寸收小（8px）。
@@ -411,7 +418,7 @@ class _ServiceCard extends ConsumerWidget {
                       ? '${l10n.svcStartFailed}：$startError'
                       : blockedReason ?? '${l10n.nrLayerEngine} · ${_sourceLabel(l10n, view.source)}',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: AppFont.px10,
                     color: startError != null ? palette.bad : (blockedReason == null ? palette.ink2 : palette.warn),
                   ),
                 ),
@@ -446,10 +453,10 @@ class _ServiceCard extends ConsumerWidget {
                         child: CircularProgressIndicator(strokeWidth: 1.6, color: palette.onAcc),
                       ),
                       const SizedBox(width: 6),
-                      Text(l10n.svcStart, style: const TextStyle(fontSize: 9.5)),
+                      Text(l10n.svcStart, style: const TextStyle(fontSize: AppFont.px9_5)),
                     ],
                   )
-                : Text(running ? l10n.svcStop : l10n.svcStart, style: const TextStyle(fontSize: 9.5)),
+                : Text(running ? l10n.svcStop : l10n.svcStart, style: const TextStyle(fontSize: AppFont.px9_5)),
           ),
         ],
       ),
@@ -558,7 +565,7 @@ class _LlmCredentialSectionState extends ConsumerState<_LlmCredentialSection> {
               showAppToast(context, l10n.llmCredSaved, tone: ToastTone.good);
             },
             style: _primaryStyle(palette),
-            child: Text(l10n.llmCredSave, style: const TextStyle(fontSize: 9.5)),
+            child: Text(l10n.llmCredSave, style: const TextStyle(fontSize: AppFont.px9_5)),
           ),
         ),
       ],
@@ -676,7 +683,7 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
             // 高度 = 同行输入框（D-055：同排控件同高）。
             height: 26,
             horizontalPadding: 18,
-            fontSize: 9.5,
+            fontSize: AppFont.px9_5,
             fontWeight: FontWeight.w600,
           ),
         ],
@@ -701,7 +708,10 @@ class _RemoteOnlyNote extends StatelessWidget {
           Icon(LucideIcons.info, size: 12, color: palette.acc),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(l10n.settingRemoteOnlyNote, style: TextStyle(fontSize: 9.5, color: palette.ink2)),
+            child: Text(
+              l10n.settingRemoteOnlyNote,
+              style: TextStyle(fontSize: AppFont.px9_5, color: palette.ink2),
+            ),
           ),
         ],
       ),
@@ -723,7 +733,10 @@ class _Pill extends StatelessWidget {
         color: palette.good.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
       ),
-      child: Text(text, style: TextStyle(fontSize: 8.5, color: palette.good)),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: AppFont.px8_5, color: palette.good),
+      ),
     );
   }
 }
@@ -735,7 +748,7 @@ ButtonStyle _primaryStyle(AppPalette palette) => FilledButton.styleFrom(
   minimumSize: const Size(0, 34),
   padding: const EdgeInsets.symmetric(horizontal: 18),
   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppMetrics.radiusButton)),
-  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+  textStyle: const TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600),
 );
 
 class _SourceRow extends ConsumerWidget {
@@ -801,7 +814,7 @@ class _PairingRows extends ConsumerWidget {
             ),
             child: Text(
               mangaLibraryDir(),
-              style: TextStyle(fontSize: 9, color: palette.ink2, fontFamily: 'monospace'),
+              style: TextStyle(fontSize: AppFont.px9, color: palette.ink2, fontFamily: 'monospace'),
             ),
           ),
         ),
@@ -834,7 +847,11 @@ class _PairingTokenRow extends ConsumerWidget {
               token ?? l10n.pairingTokenUnavailable,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 9, color: token == null ? palette.mut : palette.ink2, fontFamily: 'monospace'),
+              style: TextStyle(
+                fontSize: AppFont.px9,
+                color: token == null ? palette.mut : palette.ink2,
+                fontFamily: 'monospace',
+              ),
             ),
           ),
           if (token != null) ...[
@@ -844,7 +861,7 @@ class _PairingTokenRow extends ConsumerWidget {
               variant: AppButtonVariant.secondary,
               height: 24,
               horizontalPadding: 10,
-              fontSize: 9.5,
+              fontSize: AppFont.px9_5,
               onTap: () async {
                 await Clipboard.setData(ClipboardData(text: token));
                 if (!context.mounted) return;
@@ -956,7 +973,10 @@ class _PlaceholderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     return Center(
-      child: Text(label, style: TextStyle(fontSize: 13, color: palette.mut)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: AppFont.px13, color: palette.mut),
+      ),
     );
   }
 }

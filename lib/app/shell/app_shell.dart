@@ -262,11 +262,14 @@ class _Crumbs extends StatelessWidget {
               child: Text(
                 c,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink),
+                style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w700, color: palette.ink),
               ),
             )
           else
-            Text(c, style: TextStyle(fontSize: 10, color: palette.mut)),
+            Text(
+              c,
+              style: TextStyle(fontSize: AppFont.px10, color: palette.mut),
+            ),
         ],
       ],
     );
@@ -346,7 +349,7 @@ class _MobileTopBar extends StatelessWidget {
             child: Text(
               title,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink),
+              style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w700, color: palette.ink),
             ),
           ),
         ],
@@ -444,7 +447,7 @@ class _TranslateStatusChips extends ConsumerWidget {
                 const SizedBox(width: 5),
                 Text(
                   engineReady ? l10n.engineReady : l10n.engineNotStarted,
-                  style: TextStyle(fontSize: 10, color: engineReady ? palette.ink2 : palette.warn),
+                  style: TextStyle(fontSize: AppFont.px10, color: engineReady ? palette.ink2 : palette.warn),
                 ),
               ],
             ),
@@ -473,7 +476,10 @@ class _Chip extends StatelessWidget {
         border: Border.all(color: palette.line2),
         borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
       ),
-      child: Text(label, style: TextStyle(fontSize: 9, color: palette.ink2)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: AppFont.px9, color: palette.ink2),
+      ),
     );
   }
 }
