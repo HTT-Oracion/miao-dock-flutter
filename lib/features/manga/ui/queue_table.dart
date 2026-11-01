@@ -251,7 +251,7 @@ class QueueRowActions extends ConsumerWidget {
               child: Text(l10n.actionDelete, style: const TextStyle(fontSize: 10.5)),
             ),
           ],
-          child: AppTextAction(label: l10n.actionMore, onTap: () {}),
+          child: AppTextAction(label: l10n.actionMore, onTap: null),
         ),
       ],
     );

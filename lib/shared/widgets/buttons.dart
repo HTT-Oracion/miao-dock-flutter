@@ -35,7 +35,9 @@ class AppTextAction extends StatelessWidget {
   const AppTextAction({super.key, required this.label, required this.onTap, this.highlight = false});
 
   final String label;
-  final VoidCallback onTap;
+
+  /// 为 null 时**不吸收点击**（用于外层自带手势的场景，如包着 PopupMenuButton）。
+  final VoidCallback? onTap;
 
   /// 高亮 = 该行**语义主操作**（miao-dock 主按钮：重试 / 查看）。
   final bool highlight;
