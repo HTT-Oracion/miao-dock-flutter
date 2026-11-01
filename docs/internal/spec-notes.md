@@ -2233,3 +2233,27 @@
   - 状态圆点：完成 `success`、未完成 `textSecondary`（原来用 `accent`）。
 - **③ 单本卡片的封面渐变未动**（用户只要求改单页卡）。
 - **验证**：应用 151 通过；analyze 与 l10n 通过。
+
+## D-121 共享输入框 AppInput + 远程翻译一行式 + 归并下拉收敛
+
+- **状态**：完成（2026-11-01）
+- **① 新增 `shared/widgets/app_input.dart` 的 `AppInput`**（项目唯一输入框）：
+  - 高度默认 **36**（原设置页 34，用户反馈"太小"）；
+  - 圆角走 `kButtonRadius`；
+  - **`hint` 必填** —— 规范要求所有输入框必须有 placeholder；
+  - 支持 `errorText`（描边转 `bad`）、前后缀、`obscure`、`height`/`fontSize` 覆盖。
+- **② 全项目 `TextField` 收敛**：**7 处 → 0 处**，全部改用 `AppInput`
+  （设置页 LLM 凭证 / 远程连接、投放页漫画名、书架搜索、新建漫画、编辑信息、章节改号、归并话号）。
+- **③ 远程翻译（`_RemoteSection` 重做）**：
+  - **一行布局**：令牌 + 远程地址 + 测试按钮；
+  - **令牌必填**（非空校验）、**地址非必填**（留空 = 同域），填了必须是 `http(s)://` 合法 URL；
+  - 校验**实时**（`onChanged` 触发，首次交互后才显示错误，避免一进来就飘红）；
+  - 测试**成功/失败都吐司**（成功还区分"引擎未就绪"，用 warn 色）。
+- **④ 归并弹窗下拉**：`DropdownButtonFormField` → **`AppSelect`**（原来用的是 Material 原生组件，
+  未接 shared，样式与项目不符）。
+- **⑤ 复核结果**：`TextField` / `DropdownButton` 手搓实现已清零；
+  Checkbox / Switch / Table 均在用 shared（`AppCheckbox` / `AppSwitch` / `AppTable`）。
+  **仍存 33 处原生 `FilledButton`/`OutlinedButton`**（设置页为主），未在本轮处理。
+- **⑥ 移动/桌面默认来源**：`TranslateSourceNotifier.build()` 已有
+  `supportsLocalEngine ? local : remote`，符合要求，本轮未改。
+- **验证**：应用 151 通过；analyze 与 l10n 通过。

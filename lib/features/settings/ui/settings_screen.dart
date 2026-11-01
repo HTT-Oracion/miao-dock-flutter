@@ -8,7 +8,9 @@ import '../../../core/storage/shell_prefs.dart';
 import '../../../core/theme/theme_mode.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/app_select.dart';
+import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/app_switch.dart';
 import '../../../shared/widgets/log_box.dart';
 import '../../../shared/widgets/setting_row.dart';
@@ -536,11 +538,17 @@ class _LlmCredentialSectionState extends ConsumerState<_LlmCredentialSection> {
         ),
         SettingRow(
           label: l10n.llmAppKey,
-          control: SizedBox(width: 220, child: _Field(controller: _key)),
+          control: SizedBox(
+            width: 220,
+            child: AppInput(controller: _key, hint: l10n.llmAppKeyHint),
+          ),
         ),
         SettingRow(
           label: l10n.llmAppSecret,
-          control: SizedBox(width: 220, child: _Field(controller: _secret, obscure: true)),
+          control: SizedBox(
+            width: 220,
+            child: AppInput(controller: _secret, hint: l10n.llmAppSecretHint, obscure: true),
+          ),
         ),
         SettingRow(
           label: l10n.llmCredSave,
@@ -579,7 +587,7 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
   late final TextEditingController _url;
   late final TextEditingController _token;
   bool _testing = false;
-  RemoteProbe? _result;
+  bool _touched = false;
 
   @override
   void initState() {
@@ -596,112 +604,86 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
     super.dispose();
   }
 
+  /// 令牌必填；远程地址**非必填**，填了就必须是合法 http(s) URL。
+  String? _tokenError(AppLocalizations l10n) {
+    if (!_touched) return null;
+    return _token.text.trim().isEmpty ? l10n.remoteTokenRequired : null;
+  }
+
+  String? _urlError(AppLocalizations l10n) {
+    final raw = _url.text.trim();
+    if (raw.isEmpty) return null; // 留空 = 同域，合法
+    final uri = Uri.tryParse(raw);
+    final ok = uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && uri.host.isNotEmpty;
+    return ok ? null : l10n.remoteUrlInvalid;
+  }
+
+  bool _canTest(AppLocalizations l10n) => _token.text.trim().isNotEmpty && _urlError(l10n) == null;
+
   Future<void> _test() async {
+    final l10n = AppLocalizations.of(context);
+    setState(() => _touched = true);
+    if (!_canTest(l10n)) return;
     final cfg = RemoteConfig(baseUrl: _url.text.trim(), token: _token.text.trim());
     ref.read(remoteConfigProvider.notifier).save(baseUrl: _url.text, token: _token.text);
-    setState(() {
-      _testing = true;
-      _result = null;
-    });
+    setState(() => _testing = true);
     final probe = await ref.read(remotePingProvider)(cfg);
     if (!mounted) return;
-    setState(() {
-      _testing = false;
-      _result = probe;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SettingSubTitle(l10n.remoteTitle),
-        SettingRow(
-          label: l10n.remoteBaseUrl,
-          why: l10n.remoteTitleWhy,
-          control: SizedBox(
-            width: 220,
-            child: _Field(controller: _url, hint: l10n.remoteBaseUrlHint),
-          ),
-        ),
-        SettingRow(
-          label: l10n.remoteToken,
-          control: SizedBox(width: 220, child: _Field(controller: _token, obscure: true)),
-        ),
-        SettingRow(
-          label: l10n.remoteTest,
-          why: _result == null
-              ? null
-              : _result!.ok
-              ? (_result!.engineReady ? l10n.remoteOk : l10n.remoteOkNoEngine)
-              : '${l10n.remoteFail}：${_result!.message}',
-          control: FilledButton(
-            onPressed: _testing ? null : _test,
-            style: _primaryStyle(palette),
-            child: Text(_testing ? l10n.remoteTesting : l10n.remoteTest, style: const TextStyle(fontSize: 9.5)),
-          ),
-        ),
-        if (_result != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              _result!.ok
-                  ? (_result!.engineReady ? l10n.remoteOk : l10n.remoteOkNoEngine)
-                  : '${l10n.remoteFail}：${_result!.message}',
-              style: TextStyle(
-                fontSize: 9.5,
-                color: _result!.ok ? (_result!.engineReady ? palette.good : palette.warn) : palette.bad,
-              ),
-            ),
-          ),
-      ],
+    setState(() => _testing = false);
+    // 成功/失败都吐司（用户要求）。
+    showAppToast(
+      context,
+      probe.ok
+          ? (probe.engineReady ? l10n.remoteTestOkToast : '${l10n.remoteTestOkToast}（${l10n.remoteOkNoEngine}）')
+          : '${l10n.remoteTestFailToast}：${probe.message}',
+      tone: probe.ok ? (probe.engineReady ? ToastTone.good : ToastTone.warn) : ToastTone.bad,
     );
   }
-}
-
-/// 单行输入框（与 `.select` 同高，避免两种控件在同一列里参差不齐）。
-class _Field extends StatelessWidget {
-  const _Field({required this.controller, this.hint, this.obscure = false});
-
-  final TextEditingController controller;
-  final String? hint;
-  final bool obscure;
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return SizedBox(
-      height: 34,
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        style: TextStyle(fontSize: 10, color: palette.ink),
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: hint,
-          hintStyle: TextStyle(fontSize: 9.5, color: palette.mut),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          filled: true,
-          fillColor: palette.card,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
-            borderSide: BorderSide(color: palette.line2),
+    final l10n = AppLocalizations.of(context);
+    // **一行**：令牌 + 远程地址 + 测试按钮（用户要求）。
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: AppInput(
+              controller: _token,
+              hint: l10n.remoteTokenHint,
+              obscure: true,
+              errorText: _tokenError(l10n),
+              onChanged: (_) => setState(() {}),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
-            borderSide: BorderSide(color: palette.line2),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 240,
+            child: AppInput(
+              controller: _url,
+              hint: l10n.remoteBaseUrlHint2,
+              errorText: _urlError(l10n),
+              onChanged: (_) => setState(() {}),
+            ),
           ),
-        ),
+          const SizedBox(width: 8),
+          AppButton(
+            label: _testing ? l10n.remoteTesting : l10n.remoteTest,
+            onTap: _testing ? null : _test,
+            clickable: !_testing,
+            variant: AppButtonVariant.primary,
+            height: 36,
+            horizontalPadding: 14,
+          ),
+        ],
       ),
     );
   }
 }
 
-/// 非桌面端的说明条：讲清「为什么只有远程」。
 class _RemoteOnlyNote extends StatelessWidget {
   const _RemoteOnlyNote();
 

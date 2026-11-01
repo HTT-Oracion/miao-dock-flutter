@@ -10,6 +10,7 @@ import 'package:protocol/protocol.dart' show BookMeta, jsNumStr;
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/toast.dart';
 import '../../../core/utils/format.dart';
@@ -889,11 +890,10 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
       title: Text(l10n.libCreateBook, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       content: SizedBox(
         width: 300,
-        child: TextField(
+        child: AppInput(
           controller: _controller,
+          hint: l10n.libCreateBookNameHint,
           autofocus: true,
-          style: const TextStyle(fontSize: 12),
-          decoration: InputDecoration(hintText: l10n.libCreateBookNameHint, isDense: true),
           onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
         ),
       ),
@@ -1045,11 +1045,11 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
             // 文字信息
             Text(l10n.libCreateBookNameHint, style: TextStyle(fontSize: 11, color: palette.textSecondary)),
             const SizedBox(height: 5),
-            _DialogField(controller: _title),
+            AppInput(controller: _title, hint: l10n.libCreateBookNameHint),
             const SizedBox(height: 12),
             Text(l10n.bookAuthorLabel(''), style: TextStyle(fontSize: 11, color: palette.textSecondary)),
             const SizedBox(height: 5),
-            _DialogField(controller: _author),
+            AppInput(controller: _author, hint: l10n.bookAuthorLabel('')),
             const SizedBox(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -1107,40 +1107,6 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
   }
 }
 
-/// 弹窗内输入框（统一 8 圆角、深底、无下划线）。
-class _DialogField extends StatelessWidget {
-  const _DialogField({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return SizedBox(
-      height: 32,
-      child: TextField(
-        controller: controller,
-        style: TextStyle(fontSize: 12, color: palette.textPrimary),
-        decoration: InputDecoration(
-          isDense: true,
-          filled: true,
-          fillColor: palette.navBg,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: palette.divider),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: palette.accent),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 弹窗按钮：统一走 [AppButton]。
 class _DialogButton extends StatelessWidget {
   const _DialogButton({required this.label, required this.onTap, this.primary = false, this.enabled = true});
 

@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/skeleton.dart';
 import '../../../shared/widgets/toast.dart';
@@ -92,15 +93,11 @@ class _ShelfSearch extends ConsumerWidget {
           Icon(LucideIcons.search, size: 12, color: palette.textSecondary),
           const SizedBox(width: 6),
           Expanded(
-            child: TextField(
+            child: AppInput(
+              hint: AppLocalizations.of(context).shelfSearchHint,
+              height: 30,
+              fontSize: 10,
               onChanged: (v) => ref.read(shelfQueryProvider.notifier).set(v),
-              style: TextStyle(fontSize: 10, color: palette.textPrimary),
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context).shelfSearchHint,
-                hintStyle: TextStyle(fontSize: 10, color: palette.textSecondary),
-                border: InputBorder.none,
-                isDense: true,
-              ),
             ),
           ),
           if (query.isNotEmpty)

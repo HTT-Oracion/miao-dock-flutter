@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/toast.dart';
@@ -327,32 +328,13 @@ class _NameInputState extends State<_NameInput> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    return SizedBox(
+    return AppInput(
+      controller: _c,
+      hint: l10n.dropComicNamePlaceholder,
       height: 38,
-      child: TextField(
-        controller: _c,
-        focusNode: _focus,
-        onChanged: widget.onChanged,
-        style: TextStyle(fontSize: 10.5, color: palette.ink),
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: l10n.dropComicNamePlaceholder,
-          hintStyle: TextStyle(fontSize: 10.5, color: palette.mut),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          filled: true,
-          fillColor: palette.card,
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: palette.line2),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: palette.acc),
-          ),
-        ),
-      ),
+      fontSize: 10.5,
+      onChanged: widget.onChanged,
     );
   }
 }

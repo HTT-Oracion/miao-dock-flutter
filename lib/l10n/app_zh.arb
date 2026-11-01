@@ -2117,5 +2117,37 @@
   "pageNoImage": "无图",
   "@pageNoImage": {
     "description": "单页卡片缺原图时的占位"
+  },
+  "remoteTokenHint": "访问令牌",
+  "@remoteTokenHint": {
+    "description": "远程翻译校验与提示"
+  },
+  "remoteBaseUrlHint2": "远程地址（可留空，默认同域）",
+  "@remoteBaseUrlHint2": {
+    "description": "远程翻译校验与提示"
+  },
+  "remoteTokenRequired": "请先填写访问令牌",
+  "@remoteTokenRequired": {
+    "description": "远程翻译校验与提示"
+  },
+  "remoteUrlInvalid": "远程地址格式不正确（需以 http:// 或 https:// 开头）",
+  "@remoteUrlInvalid": {
+    "description": "远程翻译校验与提示"
+  },
+  "remoteTestOkToast": "远程连接成功",
+  "@remoteTestOkToast": {
+    "description": "远程翻译校验与提示"
+  },
+  "remoteTestFailToast": "远程连接失败",
+  "@remoteTestFailToast": {
+    "description": "远程翻译校验与提示"
+  },
+  "llmAppKeyHint": "应用 ID（appKey）",
+  "@llmAppKeyHint": {
+    "description": "大模型翻译凭证输入提示"
+  },
+  "llmAppSecretHint": "应用密钥（appSecret）",
+  "@llmAppSecretHint": {
+    "description": "大模型翻译凭证输入提示"
   }
 }

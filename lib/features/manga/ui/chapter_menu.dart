@@ -6,6 +6,7 @@ import 'package:protocol/protocol.dart' show jsNumStr;
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dropdown.dart';
+import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
@@ -98,11 +99,10 @@ class ChapterMenuButton extends ConsumerWidget {
         title: Text(l10n.chapterEditNoTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         content: SizedBox(
           width: 260,
-          child: TextField(
+          child: AppInput(
             controller: ctrl,
+            hint: l10n.chapterEditNoHint,
             autofocus: true,
-            style: const TextStyle(fontSize: 12),
-            decoration: InputDecoration(labelText: l10n.chapterEditNoHint, isDense: true),
             onSubmitted: (v) => Navigator.of(context).pop(double.tryParse(v.trim())),
           ),
         ),

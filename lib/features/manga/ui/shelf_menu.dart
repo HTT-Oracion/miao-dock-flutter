@@ -5,6 +5,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dropdown.dart';
+import '../../../shared/widgets/app_input.dart';
+import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -126,26 +128,16 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            DropdownButtonFormField<String>(
-              initialValue: _target,
-              isDense: true,
-              style: const TextStyle(fontSize: 12),
-              hint: Text(l10n.libMergeTargetHint, style: const TextStyle(fontSize: 12)),
-              items: [
-                for (final b in targets)
-                  DropdownMenuItem(
-                    value: b.key,
-                    child: Text(b.name, style: const TextStyle(fontSize: 12)),
-                  ),
-              ],
-              onChanged: (v) => setState(() => _target = v),
+            // 下拉走共享 AppSelect（原来用 Material 原生 DropdownButtonFormField，
+            // 样式与项目不符 —— 已按约束 10 收敛）。
+            AppSelect<String>(
+              value: _target ?? '',
+              width: 260,
+              items: [('', l10n.libMergeTargetHint), for (final b in targets) (b.key, b.name)],
+              onChanged: (v) => setState(() => _target = v.isEmpty ? null : v),
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: _noController,
-              style: const TextStyle(fontSize: 12),
-              decoration: InputDecoration(labelText: l10n.libMergeNoHint, isDense: true),
-            ),
+            AppInput(controller: _noController, hint: l10n.libMergeNoHint),
           ],
         ),
       ),
