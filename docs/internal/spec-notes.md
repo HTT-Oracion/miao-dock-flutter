@@ -1957,3 +1957,19 @@
 - **接入**：左栏 `shelfBooks` 与右侧网格过滤均改用 `fuzzyMatch`（名字 + 作者）。
 - **验证**：`fuzzy_match_test` 6 条（含「12学 命中 第12话·学园祭」且证明 `contains` 不命中、
   顺序颠倒不命中、空查询命中、下标正确）；服务端 177 通过；应用 140 通过；analyze 与 l10n 通过。
+
+## D-105 按钮规范统一（以「新建漫画」为基准）
+
+- **状态**：完成（2026-11-01）
+- **基准**（`_HeaderAction` 主按钮）：`borderRadius: 6`、padding 10×5、字号 10.5、
+  accent 底 + pageBg 字、**无边框**、hover 提亮 `#F0B96A`、cursor pointer。
+- **队列行主按钮**（`_HoverChip` 增加 `primary` 变体）：
+  - **主操作**（查看 / 重试）→ 与「新建漫画」**逐项一致**（accent 底、pageBg 字、
+    10.5 号、无边框、圆角 6）；
+  - **次级**（取消 / 继续）→ 与「更多」**逐项一致**（divider 底、12 号、hover 变 card、圆角 6）。
+- **圆角统一到 6**：`AppTextAction` / `AppMenu`（含菜单项，原 4）/ `ChapterMenuButton`（原 4）/
+  `_HoverChip`。卡片与封面等**非按钮**容器保持各自原值（10/8），不在此规范内。
+- **cursor 补齐**：队列批量「全选本页」链接加 `SystemMouseCursors.click`。
+  阅读器左右 56px 翻页热区**有意不加**（是区域不是按钮，ver1.0 亦无此规则）。
+  `AppSwitch` 只被设置页使用，按「不改设置页」的要求未动。
+- **验证**：应用 140 通过；服务端 177 通过；analyze 干净；l10n 通过。

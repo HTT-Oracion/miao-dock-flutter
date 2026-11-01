@@ -116,7 +116,7 @@ class _MenuRowState extends State<_MenuRow> {
             // 与 miao-dock `.ui-menu-item:hover` 的 `--md-line-soft` 同层级：
             // 比面板(card #1A2028)亮一档，但不像选中态那么强。
             color: enabled && _hover ? AppTokens.divider : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
             children: [

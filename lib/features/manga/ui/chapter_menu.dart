@@ -149,7 +149,7 @@ class _MenuTriggerState extends State<_MenuTrigger> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: _hover ? AppTokens.navBg : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(LucideIcons.ellipsis, size: 13, color: _hover ? AppTokens.textPrimary : AppTokens.textSecondary),
         ),

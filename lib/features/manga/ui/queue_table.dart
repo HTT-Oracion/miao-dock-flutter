@@ -6,7 +6,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/app_checkbox.dart';
 import '../../../../shared/widgets/app_table.dart';
-import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/app_menu.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
@@ -223,7 +222,8 @@ class QueueRowActions extends ConsumerWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppTextAction(label: label, onTap: action, highlight: highlighted),
+        // 主操作（查看/重试）= 「新建漫画」样式；其余（取消/继续）= 「更多」样式。
+        _HoverChip(label: label, primary: highlighted, onTapDown: (_) => action?.call()),
         const SizedBox(width: 6),
         _MoreButton(
           onSelected: (v) async {
@@ -281,10 +281,14 @@ class _MoreButton extends ConsumerWidget {
 
 /// 带 hover 的小胶囊触发器（替代 AppTextAction 包裹，避免手势被内层吞掉）。
 class _HoverChip extends StatefulWidget {
-  const _HoverChip({required this.label, required this.onTapDown});
+  const _HoverChip({required this.label, required this.onTapDown, this.primary = false});
 
   final String label;
   final void Function(TapDownDetails) onTapDown;
+
+  /// true = 主操作样式（与「新建漫画」完全一致：accent 底、pageBg 字、无边框、10.5 号）；
+  /// false = 次级样式（与「更多」完全一致：divider 底、12 号、hover 变 card）。
+  final bool primary;
 
   @override
   State<_HoverChip> createState() => _HoverChipState();
@@ -301,16 +305,28 @@ class _HoverChipState extends State<_HoverChip> {
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         onTapDown: widget.onTapDown,
-        child: Container(
-          height: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: _hover ? AppTokens.card : AppTokens.divider,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(widget.label, style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
-        ),
+        child: widget.primary
+            // 与「新建漫画」逐项对齐：padding 10×5、无边框、accent 底、pageBg 字、10.5 号。
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _hover ? const Color(0xFFF0B96A) : AppTokens.accent,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(widget.label, style: const TextStyle(fontSize: 10.5, color: AppTokens.pageBg)),
+              )
+            // 与「更多」逐项对齐：height 24、padding 9、divider 底、hover 变 card、12 号。
+            : Container(
+                height: 24,
+                padding: const EdgeInsets.symmetric(horizontal: 9),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _hover ? AppTokens.card : AppTokens.divider,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(widget.label, style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
+              ),
       ),
     );
   }

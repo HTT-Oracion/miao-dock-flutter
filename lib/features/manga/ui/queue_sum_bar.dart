@@ -107,11 +107,14 @@ class _SelectionBar extends ConsumerWidget {
           ),
           if (showSelectAll) ...[
             const SizedBox(width: 10),
-            GestureDetector(
-              onTap: () => ref.read(selectionProvider.notifier).selectAllPage(deletableIds),
-              child: Text(
-                AppLocalizations.of(context).queueSelectAll(deletableIds.length),
-                style: const TextStyle(fontSize: 12, color: AppTokens.accent),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => ref.read(selectionProvider.notifier).selectAllPage(deletableIds),
+                child: Text(
+                  AppLocalizations.of(context).queueSelectAll(deletableIds.length),
+                  style: const TextStyle(fontSize: 12, color: AppTokens.accent),
+                ),
               ),
             ),
           ],
