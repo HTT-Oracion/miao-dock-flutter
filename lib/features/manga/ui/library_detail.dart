@@ -61,6 +61,12 @@ class LibraryDetail extends ConsumerWidget {
         _LibHeader(count: books.length),
         const SizedBox(height: 12),
         _Hero(book: book),
+        if (!book.isBook) ...[
+          const SizedBox(height: 16),
+          const _PageSectionHeader(),
+          const SizedBox(height: 10),
+          ref.watch(libModeProvider) == 'capsule' ? _PageCapsules(book: book) : _PageGrid(book: book),
+        ],
         if (book.isBook) ...[
           const SizedBox(height: 16),
           _SectionHeader(book: book),
@@ -396,6 +402,30 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
+/// 单话的「页面」区头：标题 + 页数 + 图例 + 卡片/简易切换（与章节区同一套控件）。
+class _PageSectionHeader extends ConsumerWidget {
+  const _PageSectionHeader();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final mode = ref.watch(libModeProvider);
+    return Row(
+      children: [
+        Text(
+          l10n.readerPagesTitle,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+        ),
+        const SizedBox(width: 10),
+        if (mode == 'capsule')
+          Text(l10n.libCapsuleLegend, style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
+        const Spacer(),
+        _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
+      ],
+    );
+  }
+}
+
 class _SectionHeader extends ConsumerWidget {
   const _SectionHeader({required this.book});
 
@@ -420,33 +450,96 @@ class _SectionHeader extends ConsumerWidget {
         if (mode == 'capsule')
           Text(l10n.libCapsuleLegend, style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
         const Spacer(),
-        // ver1.0 `.view-seg`：卡片 / 简易。
-        Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(color: AppTokens.navBg, borderRadius: BorderRadius.circular(6)),
-          child: Row(
-            children: [
-              for (final m in const [('card', 'libViewCard'), ('capsule', 'libViewCapsule')])
-                GestureDetector(
-                  onTap: () => ref.read(libModeProvider.notifier).set(m.$1),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: mode == m.$1 ? AppTokens.card : Colors.transparent,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      m.$1 == 'card' ? l10n.libViewCard : l10n.libViewCapsule,
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: mode == m.$1 ? AppTokens.textPrimary : AppTokens.textSecondary,
-                      ),
-                    ),
-                  ),
+        _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
+      ],
+    );
+  }
+}
+
+/// 单话「页面」区（卡片态）：每页一格，点开阅读器定位到该页。
+class _PageGrid extends ConsumerWidget {
+  const _PageGrid({required this.book});
+
+  final LibBook book;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final total = book.directPages;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 6,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        mainAxisExtent: 96,
+      ),
+      itemCount: total,
+      itemBuilder: (context, i) {
+        final seq = i + 1;
+        final done = book.directTranslated.contains(seq);
+        return GestureDetector(
+          onTap: () {
+            ref
+                .read(readerSessionProvider.notifier)
+                .open(ReaderSession(key: book.key, pages: total, translated: book.directTranslated));
+            context.go('/manga/reader');
+          },
+          child: Container(
+            decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(8)),
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.fileImage, size: 16, color: AppTokens.textSecondary),
+                const SizedBox(height: 4),
+                Text('$seq', style: const TextStyle(fontSize: 10.5, color: AppTokens.textPrimary)),
+                const SizedBox(height: 2),
+                Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(color: done ? AppTokens.success : AppTokens.accent, shape: BoxShape.circle),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
+        );
+      },
+    );
+  }
+}
+
+/// 单话「页面」区（简易态）：页码胶囊 + 状态圆点。
+class _PageCapsules extends StatelessWidget {
+  const _PageCapsules({required this.book});
+
+  final LibBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (var seq = 1; seq <= book.directPages; seq++)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(999)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('$seq', style: const TextStyle(fontSize: 11.5, color: AppTokens.textPrimary)),
+                if (!book.directTranslated.contains(seq)) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(color: AppTokens.accent, shape: BoxShape.circle),
+                  ),
+                ],
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -706,6 +799,42 @@ class _EditBookDialogState extends State<_EditBookDialog> {
           child: Text(l10n.libEditInfoOk, style: const TextStyle(fontSize: 11.5)),
         ),
       ],
+    );
+  }
+}
+
+/// ver1.0 `.view-seg`：卡片 / 简易 切换（章节区与页面区共用）。
+class _ViewSeg extends StatelessWidget {
+  const _ViewSeg({required this.mode, required this.onSelect});
+
+  final String mode;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(color: AppTokens.navBg, borderRadius: BorderRadius.circular(6)),
+      child: Row(
+        children: [
+          for (final m in const ['card', 'capsule'])
+            GestureDetector(
+              onTap: () => onSelect(m),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: mode == m ? AppTokens.card : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  m == 'card' ? l10n.libViewCard : l10n.libViewCapsule,
+                  style: TextStyle(fontSize: 10.5, color: mode == m ? AppTokens.textPrimary : AppTokens.textSecondary),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

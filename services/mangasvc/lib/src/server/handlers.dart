@@ -149,6 +149,16 @@ class Handlers {
         await _unhideBook(req, p['name']!);
       case 'POST /api/v1/library/{name}/merge':
         await _mergeBook(req, p['name']!);
+      case 'POST /api/v1/library/{name}/reveal':
+        await _revealBook(req, p['name']!);
+      case 'POST /api/v1/library/{name}/resume':
+        await _launchFromDir(req, _bookOrChapterDir(p['name']!), p['name']!, resume: true);
+      case 'POST /api/v1/library/{name}/retranslate':
+        await _launchFromDir(req, _bookOrChapterDir(p['name']!), p['name']!, resume: false);
+      case 'POST /api/v1/library/{book}/chapters/{no}/resume':
+        await _launchFromDir(req, _chapterDirOf(p['book']!, p['no']!), '${p['book']}/${p['no']}', resume: true);
+      case 'POST /api/v1/library/{book}/chapters/{no}/retranslate':
+        await _launchFromDir(req, _chapterDirOf(p['book']!, p['no']!), '${p['book']}/${p['no']}', resume: false);
       case 'GET /api/v1/library/{name}/files/{seq}':
         await _getBookFile(req, p['name']!, int.tryParse(p['seq'] ?? '') ?? 0);
       case 'GET /api/v1/library/{book}/chapters/{no}/files/{seq}':
@@ -502,6 +512,76 @@ class Handlers {
 
   // ── 续做 / 返工计划（B7/B8）────────────────────────────────────────────
 
+  /// 打开目录（reveal）。
+  Future<void> _revealBook(HttpRequest req, String name) async {
+    final dir = store.bookDir(name);
+    if (!dir.existsSync()) throw const ServiceError('NOT_FOUND', '目录不存在', status: 404);
+    if (Platform.isMacOS) {
+      await Process.run('open', [dir.path]);
+    } else if (Platform.isWindows) {
+      await Process.run('explorer', [dir.path]);
+    } else {
+      await Process.run('xdg-open', [dir.path]);
+    }
+    await writeJson(req.response, 200, {'comicName': name, 'revealed': true});
+  }
+
+  /// 整本目录（`<root>/<name>`）。
+  Directory _bookOrChapterDir(String name) => store.bookDir(name);
+
+  /// 章节目录（`<root>/<book>/<NN_第N话>`），话号支持小数。
+  Directory _chapterDirOf(String book, String noRaw) {
+    final no = double.tryParse(noRaw);
+    if (no == null || !isValidChapterNo(no)) {
+      throw const ServiceError('INVALID_CHAPTER_NO', '话号必须是 1–999.9 的数（最多一位小数）');
+    }
+    final dir = Directory('${store.bookDir(book).path}${Platform.pathSeparator}${chapterDirName(no)}');
+    if (!dir.existsSync()) throw const ServiceError('TASK_NOT_FOUND', '这本漫画没有这一话', status: 404);
+    return dir;
+  }
+
+  /// 按目录（可选页子集）建任务：resume 只补缺译文的页；retranslate 重做全部页。
+  Future<void> _launchFromDir(HttpRequest req, Directory dir, String label, {required bool resume}) async {
+    final body = await readJsonBody(req);
+    final wanted = (body['seqs'] as List?)?.cast<num>().map((e) => e.toInt()).toSet();
+    // 目录可能是整本（多话）：逐个话目录扫；单话目录直接用。
+    final targets = <Directory>[];
+    if (chapterNoFromDirName(_dirName(dir.path)) != null) {
+      targets.add(dir);
+    } else {
+      for (final e in dir.listSync(followLinks: false)) {
+        if (e is! Directory) continue;
+        if (chapterNoFromDirName(_dirName(e.path)) == null) continue;
+        targets.add(e);
+      }
+    }
+    // 每个话目录单独建任务：任务落盘目录 = 该话目录（不能用整本书根，否则串层）。
+    Map<String, dynamic>? first;
+    var createdCount = 0;
+    for (final d in targets) {
+      final plan = resume ? buildResumePlan(_dirName(d.path), d) : buildRetranslatePlan(_dirName(d.path), d);
+      final items = (resume ? plan['pendings'] : plan['candidates']) as List;
+      final paths = <String>[
+        for (final raw in items)
+          if (wanted == null || wanted.contains((raw as Map<String, dynamic>)['seq'] as int))
+            '${d.path}${Platform.pathSeparator}${(raw as Map<String, dynamic>)['originalFile']}',
+      ];
+      if (paths.isEmpty) continue;
+      final created = await queue.createTask(
+        comicName: label.contains('/') ? label.split('/').first : label,
+        imagePaths: paths,
+        source: 'library',
+        targetDir: d.path,
+      );
+      first ??= created;
+      createdCount++;
+    }
+    if (first == null) {
+      throw const ServiceError('NO_PENDING_PAGES', '没有需要处理的页', status: 409);
+    }
+    await writeJson(req.response, 201, {...first, 'chapters': createdCount});
+  }
+
   /// 整本续做计划：本目录下所有话的待补页汇总。
   Future<void> _resumePlan(HttpRequest req, String name) async {
     final dir = store.bookDir(name);
@@ -535,7 +615,7 @@ class Handlers {
     if (newNo is! num) {
       throw const ServiceError('INVALID_CHAPTER_NO', '缺少目标话号（no）');
     }
-    await writeJson(req.response, 200, await store.renumberChapter(book, no, newNo.toInt()));
+    await writeJson(req.response, 200, await store.renumberChapter(book, no, newNo.toDouble()));
   }
 
   /// 整本计划：把每个话目录的计划合并成一个。
@@ -552,7 +632,7 @@ class Handlers {
     for (final e in bookDir.listSync(followLinks: false)) {
       if (e is! Directory) continue;
       final dirName = _dirName(e.path);
-      final no = int.tryParse(RegExp(r'^(\d+)').firstMatch(dirName)?.group(1) ?? '');
+      final no = chapterNoFromDirName(dirName);
       if (no == null) continue;
 
       if (resume) {
@@ -566,7 +646,8 @@ class Handlers {
           'chapterNo': no,
           'chapterDir': dirName,
           'pendings': [
-            for (final p in pendings.cast<Map<String, dynamic>>()) {...p, 'seq': no * 1000 + (p['seq'] as int)},
+            for (final p in pendings.cast<Map<String, dynamic>>())
+              {...p, 'seq': (no * 1000).round() + (p['seq'] as int)},
           ],
         });
       } else {
@@ -581,7 +662,8 @@ class Handlers {
           'chapterNo': no,
           'chapterDir': dirName,
           'candidates': [
-            for (final c in candidates.cast<Map<String, dynamic>>()) {...c, 'seq': no * 1000 + (c['seq'] as int)},
+            for (final c in candidates.cast<Map<String, dynamic>>())
+              {...c, 'seq': (no * 1000).round() + (c['seq'] as int)},
           ],
         });
       }

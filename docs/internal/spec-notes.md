@@ -1663,3 +1663,20 @@
   9. 隐藏 → 10. 书架不再出现、`hidden` 有记录；11. 恢复；12. 物理删除；13. `hidden-comics.json` 落盘正确。
 - **验证**：服务端 164 通过；应用 116 通过；analyze 干净。
 - **关联**：D-083（归并）· D-084（详情）· D-086（队列）。
+
+## D-088 补齐缺失的库 POST 端点 + 补页落盘串层（严重）
+
+- **状态**：完成（2026-11-01），实测通过
+- **发现方式**：端到端跑「继续翻译」时返回 `taskId: None` —— 一查发现**路由表声明了 6 个 POST，
+  但 handler 一个都没有**（整本 resume/retranslate、章节 resume/retranslate、renumber、reveal）。
+  这类「路由在、实现缺」只有真调接口才会暴露。
+- **已补齐**：`_revealBook`、`_launchFromDir`（resume/retranslate）、`_chapterDirOf`（话号支持小数）、
+  renumber 改 `double` 并在改号后**重派生 manifest.episodes**（原来改号后清单不同步）。
+- **严重 bug（实测抓到）**：补页任务按 `comicName` 落盘 ⇒ 译文写到**书根**而不是原话目录
+  （`某书/002_translated.png` 而不是 `某书/01_第1话/002_translated.png`），等于污染库结构。
+  - 修法：`QueueTask.targetDir`（落盘目录，缺省 `<root>/<comicName>`）；
+  - `_launchFromDir` **按话目录分别建任务**，每个任务带自己的 targetDir；
+  - 回归测试 `queue_target_dir_test`：译文进话目录、书根不出现散落文件。
+- **同时修**：`_aggregatePlan` 用 `^(\d+)` 解析话号 → 小数话被跳过；改 `chapterNoFromDirName`。
+- **验证**：服务端 165 通过；应用 116 通过；实测 `01_第1话/002_translated.png` 正确生成、书根干净。
+- **关联**：D-083（归并）· D-087（右键菜单）。

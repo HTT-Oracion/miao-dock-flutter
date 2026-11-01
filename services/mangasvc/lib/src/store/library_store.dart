@@ -640,16 +640,34 @@ extension ChapterOps on LibraryStore {
   /// 改话号：把 `01_第1话` 改成 `02_第2话`。
   ///
   /// 目标目录已存在时报冲突（**不覆盖**）。
-  Future<Map<String, dynamic>> renumberChapter(String book, String noRaw, int newNo) async {
+  Future<Map<String, dynamic>> renumberChapter(String book, String noRaw, double newNo) async {
+    if (!isValidChapterNo(newNo)) {
+      throw const ServiceError('INVALID_CHAPTER_NO', '话号必须是 1–999.9 的数（最多一位小数）');
+    }
     final dir = chapterDir(book, noRaw);
-    final from = dir.path.split(Platform.pathSeparator).last;
-    final to = chapterDirName(newNo.toDouble());
+    final from = _baseName(dir.path);
+    final to = chapterDirName(newNo);
     if (from == to) return {'from': from, 'to': to, 'renamed': false};
     final target = Directory(dir.parent.path + Platform.pathSeparator + to);
     if (target.existsSync()) {
       throw ServiceError('CHAPTER_TARGET_EXISTS', '目标话号已存在', details: {'from': from, 'to': to});
     }
     dir.renameSync(target.path);
+    // 改号后 episodes 必须跟着重派生（miao-dock 同：目录是唯一事实源）。
+    final bookDir = dir.parent;
+    final manifest = _typedManifestOf(bookDir);
+    if (manifest != null) {
+      _writeManifestAtomic(
+        bookDir,
+        LibraryManifest(
+          schema: manifest.schema,
+          title: manifest.title,
+          author: manifest.author,
+          cover: manifest.cover,
+          episodes: _episodesFromDirs(bookDir),
+        ),
+      );
+    }
     return {'from': from, 'to': to, 'renamed': true};
   }
 }

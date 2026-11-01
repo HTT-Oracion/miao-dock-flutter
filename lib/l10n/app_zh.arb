@@ -1969,5 +1969,9 @@
   "@kindChapter": {
     "description": "书架右键菜单",
     "placeholders": null
+  },
+  "readerPagesTitle": "页面",
+  "@readerPagesTitle": {
+    "description": "单话详情的页面区标题"
   }
 }

@@ -50,6 +50,7 @@ class TaskQueue {
           translator: '${raw['translator'] ?? 'sakura'}',
           clientTaskRef: raw['clientTaskRef'] as String?,
           idempotencyKey: raw['idempotencyKey'] as String?,
+          targetDir: raw['targetDir'] as String?,
         );
         t
           ..status = TaskStatus.values.firstWhere((x) => x.wire == '${raw['status']}', orElse: () => TaskStatus.queued)
@@ -145,6 +146,7 @@ class TaskQueue {
     String translator = 'sakura',
     String? clientTaskRef,
     String? idempotencyKey,
+    String? targetDir,
   }) async {
     if (imagePaths.isEmpty) {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
@@ -165,6 +167,7 @@ class TaskQueue {
       translator: translator,
       clientTaskRef: clientTaskRef,
       idempotencyKey: idempotencyKey,
+      targetDir: targetDir,
     );
     _tasks.insert(0, task);
     _scheduleDrain();
@@ -342,7 +345,7 @@ class TaskQueue {
     }
     t.status = TaskStatus.running;
     try {
-      final bookDir = Directory('$rootDir/${t.comicName}');
+      final bookDir = Directory(t.targetDir ?? '$rootDir/${t.comicName}');
       bookDir.createSync(recursive: true);
 
       for (var i = 0; i < t.batches.length; i++) {
@@ -450,7 +453,14 @@ class QueueTask {
     this.translator = 'sakura',
     this.clientTaskRef,
     this.idempotencyKey,
+    this.targetDir,
   });
+
+  /// 落盘目录（绝对路径）。缺省 = `<rootDir>/<comicName>`（投放新建的平铺单话）。
+  ///
+  /// resume/retranslate 这类「在既有目录上补页」的任务必须带上真实目录，
+  /// 否则会按 comicName 另建一层，把译文写到**错误的地方**（D-088 实测踩到）。
+  final String? targetDir;
 
   /// `dir_name`（miao-dock 同名字段）：任务落盘目录名 = 规范化漫画名。
   String get dirName => normalizedComicName;
@@ -515,6 +525,7 @@ class QueueTask {
     'translator': translator,
     'clientTaskRef': clientTaskRef,
     'idempotencyKey': idempotencyKey,
+    'targetDir': targetDir,
     'status': status.wire,
     'queuePosition': 0,
     'progress': {'total': total, 'done': done, 'failed': failed, 'current': current},
@@ -542,6 +553,7 @@ class QueueTask {
     'translator': translator,
     'clientTaskRef': clientTaskRef,
     'idempotencyKey': idempotencyKey,
+    'targetDir': targetDir,
     'status': status.wire,
     'total': total,
     'done': done,
