@@ -616,12 +616,8 @@
   },
   "queueDeletedToast": "已删除 {count} 条任务记录",
   "@queueDeletedToast": {
-    "description": "队列：删除吐司",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
+    "description": "队列操作文案",
+    "placeholders": null
   },
   "queueCancelMulti": "取消多选",
   "@queueCancelMulti": {
@@ -1806,6 +1802,38 @@
   "libViewComic": "查看漫画",
   "@libViewComic": {
     "description": "阅读器文案",
+    "placeholders": null
+  },
+  "queueViewMissing": "漫画库里还没有「{name}」的成品（可能尚未落盘或已被删除）",
+  "@queueViewMissing": {
+    "description": "队列操作文案",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "queueRetryFailed": "重试失败：{reason}",
+  "@queueRetryFailed": {
+    "description": "队列操作文案",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "queueRetryOk": "「{name}」已重新加入队列",
+  "@queueRetryOk": {
+    "description": "队列操作文案",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "queueOpenDir": "打开目录",
+  "@queueOpenDir": {
+    "description": "队列操作文案",
     "placeholders": null
   }
 }

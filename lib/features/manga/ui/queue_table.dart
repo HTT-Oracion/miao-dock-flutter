@@ -69,7 +69,7 @@ class QueueTable extends ConsumerWidget {
         _NameCell(task: rows[i]),
         _ProgressCell(task: rows[i]),
         _StatusCell(task: rows[i]),
-        _ActionCell(task: rows[i]),
+        QueueRowActions(task: rows[i]),
       ],
     );
   }
@@ -158,8 +158,9 @@ class _StatusCell extends StatelessWidget {
   }
 }
 
-class _ActionCell extends ConsumerWidget {
-  const _ActionCell({required this.task});
+/// 队列行动作（桌面与移动共用，避免两处各写一套导致行为漂移）。
+class QueueRowActions extends ConsumerWidget {
+  const QueueRowActions({super.key, required this.task});
 
   final MangaTask task;
 
@@ -168,17 +169,31 @@ class _ActionCell extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final st = task.status;
 
+    // 重试（miao-dock：同一个 taskId 重跑；失败弹红色吐司 —— 漫画被删也走这条）。
     Future<void> retry() async {
-      await ref.read(queueProvider.notifier).retry(task.id);
-      if (context.mounted) {
-        showAppToast(context, l10n.queueRetryToast, tone: ToastTone.info);
+      try {
+        await ref.read(queueProvider.notifier).retry(task.id);
+        if (context.mounted) showAppToast(context, l10n.queueRetryOk(task.name), tone: ToastTone.good);
+      } catch (e) {
+        if (context.mounted) showAppToast(context, l10n.queueRetryFailed('$e'), tone: ToastTone.bad);
       }
     }
 
-    // 行首主操作（miao-dock 规则：进行/排队 → 取消；失败 → 重试；
-    // 取消 → 继续；终态 → 查看，跳漫画库定位到对应漫画）。
+    /// 查看：先判漫画库有没有这本，没有就只提示、不跳（miao-dock `viewComic`）。
+    void view() {
+      final books = ref.read(libraryProvider).value ?? ref.read(libraryProvider.notifier).lastGood;
+      final hit = books.where((b) => b.key == task.name || b.name == task.name).firstOrNull;
+      if (hit == null) {
+        showAppToast(context, l10n.queueViewMissing(task.name), tone: ToastTone.bad);
+        return;
+      }
+      ref.read(selectedBookProvider.notifier).select(hit.key);
+      context.go('/manga/library');
+    }
+
     String label;
     VoidCallback? action;
+    var highlighted = false;
     switch (st) {
       case MangaTaskStatus.translating:
       case MangaTaskStatus.queued:
@@ -193,31 +208,43 @@ class _ActionCell extends ConsumerWidget {
       case MangaTaskStatus.partialFailed:
         label = l10n.actionRetry;
         action = retry;
+        highlighted = true; // 「重试」是主操作，高亮
       case MangaTaskStatus.cancelled:
         label = l10n.actionContinue;
         action = retry;
       case MangaTaskStatus.done:
         label = l10n.actionView;
-        action = () {
-          // 「查看」= 跳漫画库并定位到对应漫画（无任务详情页）。
-          ref.read(selectedBookProvider.notifier).select(task.name);
-          context.go('/manga/library');
-        };
+        action = view;
+        highlighted = true; // 「查看」高亮
     }
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppTextAction(label: label, onTap: action),
+        AppTextAction(label: label, onTap: action, highlight: highlighted),
         const SizedBox(width: 6),
         PopupMenuButton<String>(
           tooltip: '',
-          onSelected: (v) {
-            if (v == 'delete') {
-              ref.read(queueProvider.notifier).deleteTasks({task.id});
+          onSelected: (v) async {
+            switch (v) {
+              case 'open':
+                try {
+                  await ref.read(mangaSvcClientProvider).revealBook(task.name);
+                } catch (e) {
+                  if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                }
+              case 'delete':
+                await ref.read(queueProvider.notifier).deleteTasks({task.id});
+                if (context.mounted) showAppToast(context, l10n.queueDeletedToast(task.name), tone: ToastTone.info);
             }
           },
           itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'open',
+              height: 30,
+              child: Text(l10n.queueOpenDir, style: const TextStyle(fontSize: 10.5)),
+            ),
+            const PopupMenuDivider(),
             PopupMenuItem(
               value: 'delete',
               height: 30,

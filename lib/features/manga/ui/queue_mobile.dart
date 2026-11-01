@@ -6,6 +6,7 @@ import '../../../../shared/widgets/app_checkbox.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/queue_controller.dart';
+import 'queue_table.dart';
 import '../domain/manga_status.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/manga_task.dart';
@@ -121,31 +122,7 @@ class _TaskCard extends ConsumerWidget {
                       style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary),
                     ),
                     const Spacer(),
-                    if (!task.deletable)
-                      AppTextAction(
-                        label: AppLocalizations.of(context).actionCancel,
-                        onTap: () async {
-                          final kept = await ref.read(queueProvider.notifier).cancelTask(task.id);
-                          if (context.mounted) {
-                            showAppToast(context, AppLocalizations.of(context).queueCancelledToast(task.name, kept));
-                          }
-                        },
-                      ),
-                    if (task.deletable) ...[
-                      AppTextAction(
-                        label: AppLocalizations.of(context).actionOpen,
-                        onTap: () {
-                          /* TODO: 随落盘目录端点落地 */
-                        },
-                      ),
-                      const SizedBox(width: 6),
-                      AppTextAction(
-                        label: AppLocalizations.of(context).actionMore,
-                        onTap: () {
-                          /* TODO: 随详情菜单落地 */
-                        },
-                      ),
-                    ],
+                    QueueRowActions(task: task),
                   ],
                 ),
               ],

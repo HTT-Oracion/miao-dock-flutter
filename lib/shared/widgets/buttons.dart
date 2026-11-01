@@ -32,15 +32,18 @@ class AppGhostButton extends StatelessWidget {
 
 /// 行内小动作钮（24 高，divider 底）：表格行「取消 / 打开 / 更多」等。
 class AppTextAction extends StatelessWidget {
-  const AppTextAction({super.key, required this.label, required this.onTap});
+  const AppTextAction({super.key, required this.label, required this.onTap, this.highlight = false});
 
   final String label;
   final VoidCallback onTap;
 
+  /// 高亮 = 该行**语义主操作**（miao-dock 主按钮：重试 / 查看）。
+  final bool highlight;
+
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppTokens.divider,
+      color: highlight ? AppTokens.accent : AppTokens.divider,
       borderRadius: BorderRadius.circular(6),
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
@@ -49,7 +52,10 @@ class AppTextAction extends StatelessWidget {
           height: 24,
           padding: const EdgeInsets.symmetric(horizontal: 9),
           alignment: Alignment.center,
-          child: Text(label, style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 12, color: highlight ? AppTokens.pageBg : AppTokens.textPrimary),
+          ),
         ),
       ),
     );
