@@ -78,9 +78,10 @@ void main() {
   testWidgets('更多菜单含打开目录与删除', (tester) async {
     await tester.pumpWidget(harness(make(MangaTaskStatus.done)));
     await tester.pumpAndSettle();
-    // 「更多」现在是自绘 Overlay 菜单（AppMenu），点触发器后断言菜单项。
+    // 「更多」用 M3 MenuAnchor：点开后菜单在 Overlay 里，需多 pump 一帧。
     await tester.tap(find.text('更多'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('打开目录'), findsOneWidget);
     expect(find.text('删除'), findsOneWidget);
   });

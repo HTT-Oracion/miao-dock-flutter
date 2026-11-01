@@ -200,6 +200,7 @@ class _AppButtonState extends State<AppButton> {
         borderRadius: BorderRadius.circular(kButtonRadius),
         child: InkWell(
           borderRadius: BorderRadius.circular(kButtonRadius),
+          // onTap 为 null 时 InkWell 不吸收手势，交给外层（如 MenuAnchor 的触发器）。
           onTap: widget.onTap,
           child: Container(
             width: widget.width,

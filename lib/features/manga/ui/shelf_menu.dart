@@ -4,7 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/app_menu.dart';
+import '../../../shared/widgets/app_dropdown.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -18,20 +18,20 @@ import '../domain/lib_book.dart';
 class ShelfContextMenu {
   static Future<void> show(BuildContext context, WidgetRef ref, LibBook book, Offset globalPosition) async {
     final l10n = AppLocalizations.of(context);
-    final selected = await showAppMenu(
+    final selected = await showAppMenuAt(
       context,
-      anchor: Rect.fromLTWH(globalPosition.dx, globalPosition.dy, 0, 0),
+      position: globalPosition,
       minWidth: 180,
       items: [
-        AppMenuItem(value: 'open', label: l10n.shelfMenuOpenDir, icon: LucideIcons.folderUp),
-        const AppMenuItem.separator(),
-        AppMenuItem(value: 'resume', label: l10n.shelfMenuContinue, icon: LucideIcons.play),
-        AppMenuItem(value: 'retranslate', label: l10n.shelfMenuRetranslate, icon: LucideIcons.rotateCcw),
+        AppDropdownItem(value: 'open', label: l10n.shelfMenuOpenDir, icon: LucideIcons.folderUp),
+        const AppDropdownItem.divider(),
+        AppDropdownItem(value: 'resume', label: l10n.shelfMenuContinue, icon: LucideIcons.play),
+        AppDropdownItem(value: 'retranslate', label: l10n.shelfMenuRetranslate, icon: LucideIcons.rotateCcw),
         if (book.isBook)
-          AppMenuItem(value: 'edit', label: l10n.shelfMenuEdit, icon: LucideIcons.pencil)
+          AppDropdownItem(value: 'edit', label: l10n.shelfMenuEdit, icon: LucideIcons.pencil)
         else
-          AppMenuItem(value: 'merge', label: l10n.shelfMenuMerge, icon: LucideIcons.gitMerge),
-        AppMenuItem(
+          AppDropdownItem(value: 'merge', label: l10n.shelfMenuMerge, icon: LucideIcons.gitMerge),
+        AppDropdownItem(
           value: 'delete',
           label: l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),
           icon: LucideIcons.trash2,

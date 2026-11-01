@@ -6,7 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/app_checkbox.dart';
 import '../../../../shared/widgets/app_table.dart';
-import '../../../../shared/widgets/app_menu.dart';
+import '../../../../shared/widgets/app_dropdown.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
@@ -254,35 +254,26 @@ class _MoreButton extends ConsumerWidget {
 
   final ValueChanged<String> onSelected;
 
-  static final GlobalKey _chipKey = GlobalKey();
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Builder(
-      builder: (context) => _HoverChip(
-        key: _chipKey,
+    // 位置交给 Material 3 的 MenuAnchor（AppDropdownMenu）：
+    // 它用**触发按钮的实际矩形**定位，正下方 + 左对齐，越界自动翻转。
+    return AppDropdownMenu(
+      minWidth: 160,
+      onSelected: onSelected,
+      items: [
+        AppDropdownItem(value: 'open', label: l10n.queueOpenDir, icon: LucideIcons.folderUp),
+        const AppDropdownItem.divider(),
+        AppDropdownItem(value: 'delete', label: l10n.actionDelete, icon: LucideIcons.trash2, danger: true),
+      ],
+      child: AppButton(
         label: l10n.actionMore,
-        onTapDown: (details) async {
-          // 🔴 用**按钮自身的 RenderBox**（`_HoverChip` 内部传入的 context），
-          // 不能用外层 Builder 的 context —— 那取到的是表格容器，锚点会偏。
-          final box = _chipKey.currentContext?.findRenderObject() as RenderBox?;
-          final anchor = box != null
-              ? box.localToGlobal(Offset.zero) & box.size
-              // 兜底：拿不到 RenderBox 时用点击点的零宽矩形（至少方向对）。
-              : Rect.fromLTWH(details.globalPosition.dx, details.globalPosition.dy, 0, 0);
-          final value = await showAppMenu(
-            context,
-            anchor: anchor,
-            minWidth: 160,
-            items: [
-              AppMenuItem(value: 'open', label: l10n.queueOpenDir, icon: LucideIcons.folderUp),
-              const AppMenuItem.separator(),
-              AppMenuItem(value: 'delete', label: l10n.actionDelete, icon: LucideIcons.trash2, danger: true),
-            ],
-          );
-          if (value != null) onSelected(value);
-        },
+        // null = 不吸收点击，由 AppDropdownMenu 的触发器打开菜单。
+        onTap: null,
+        variant: AppButtonVariant.secondary,
+        height: 24,
+        horizontalPadding: 9,
       ),
     );
   }
@@ -291,7 +282,7 @@ class _MoreButton extends ConsumerWidget {
 /// 队列行按钮：统一走 [AppButton]。
 /// `primary` = 主操作（查看/重试）用 primary 变体；其余用 secondary（与「更多」一致）。
 class _HoverChip extends StatelessWidget {
-  const _HoverChip({super.key, required this.label, required this.onTapDown, this.primary = false});
+  const _HoverChip({required this.label, required this.onTapDown, this.primary = false});
 
   final String label;
   final void Function(TapDownDetails) onTapDown;

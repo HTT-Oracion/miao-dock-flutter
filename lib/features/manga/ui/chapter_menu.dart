@@ -5,7 +5,7 @@ import 'package:protocol/protocol.dart' show jsNumStr;
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/app_menu.dart';
+import '../../../shared/widgets/app_dropdown.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
@@ -29,23 +29,23 @@ class ChapterMenuButton extends ConsumerWidget {
     return _MenuTrigger(
       onSelected: (v) => _run(context, ref, v),
       items: [
-        AppMenuItem(value: 'open', label: l10n.chapterMenuOpenDir, icon: LucideIcons.folderUp),
-        AppMenuItem(
+        AppDropdownItem(value: 'open', label: l10n.chapterMenuOpenDir, icon: LucideIcons.folderUp),
+        AppDropdownItem(
           value: 'resume',
           label: l10n.chapterMenuResume,
           icon: LucideIcons.play,
           sub: pending > 0 ? l10n.chapterMenuResumeSub(pending) : l10n.chapterMenuResumeNone,
           enabled: pending > 0,
         ),
-        AppMenuItem(
+        AppDropdownItem(
           value: 'retranslate',
           label: l10n.chapterMenuRetranslate,
           icon: LucideIcons.rotateCcw,
           enabled: chapter.pageCount > 0,
         ),
-        AppMenuItem(value: 'renumber', label: l10n.chapterMenuEditNo, icon: LucideIcons.pencil),
+        AppDropdownItem(value: 'renumber', label: l10n.chapterMenuEditNo, icon: LucideIcons.pencil),
         // 恒置灰：归并后的章节不能单独删。
-        AppMenuItem(
+        AppDropdownItem(
           value: 'delete',
           label: l10n.chapterMenuDelete,
           icon: LucideIcons.trash2,
@@ -123,7 +123,7 @@ class ChapterMenuButton extends ConsumerWidget {
 class _MenuTrigger extends StatefulWidget {
   const _MenuTrigger({required this.items, required this.onSelected});
 
-  final List<AppMenuItem> items;
+  final List<AppDropdownItem> items;
   final ValueChanged<String> onSelected;
 
   @override
@@ -131,30 +131,22 @@ class _MenuTrigger extends StatefulWidget {
 }
 
 class _MenuTriggerState extends State<_MenuTrigger> {
-  final _key = GlobalKey();
-
-  Future<void> _open() async {
-    final box = _key.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final value = await showAppMenu(
-      context,
-      anchor: box.localToGlobal(Offset.zero) & box.size,
-      minWidth: 170,
-      items: widget.items,
-    );
-    if (value != null) widget.onSelected(value);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return AppButton(
-      key: _key,
-      icon: LucideIcons.ellipsis,
-      onTap: _open,
-      variant: AppButtonVariant.ghost,
-      width: 22,
-      height: 22,
-      fontSize: 13,
+    // M3 MenuAnchor：位置由框架按按钮矩形算（正下方 + 左对齐，越界翻转）。
+    return AppDropdownMenu(
+      minWidth: 170,
+      onSelected: widget.onSelected,
+      items: widget.items,
+      child: AppButton(
+        icon: LucideIcons.ellipsis,
+        // null = 不吸收点击，由 AppDropdownMenu 的触发器打开菜单。
+        onTap: null,
+        variant: AppButtonVariant.ghost,
+        width: 22,
+        height: 22,
+        fontSize: 13,
+      ),
     );
   }
 }

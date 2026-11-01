@@ -2100,3 +2100,22 @@
   - 上述 12 个自定义按钮**全部替换为 `AppButton`**，各文件不再有自己的按钮实现。
 - **踩坑**：`throw StateError('link 变体…')` 的中文字面量被 l10n 棘轮判为 UI 硬编码 —— 运行期字符串也要用英文。
 - **验证**：应用 149 通过；analyze 干净；l10n 棘轮通过。
+
+## D-114 下拉菜单改用 Material 3 `MenuAnchor`
+
+- **状态**：完成（2026-11-01）
+- **为什么换**：之前是**自绘 Overlay**，锚点要用 `RenderBox` 手算矩形，
+  多次出现「位置不准」（外层 context 取错、宽度无约束崩、坐标基准不一致）。
+- **新方案**：`shared/widgets/app_dropdown.dart`
+  - **`AppDropdownMenu`**：基于 M3 `MenuAnchor`，触发按钮作为 `child`，
+    **位置由框架按按钮实际布局矩形计算**（正下方 + 左边缘对齐，越界自动翻转），不再手算；
+  - **`AppDropdownItem`**：统一菜单项模型（value/label/icon/sub/enabled/danger/divider）；
+  - 行内**左对齐、整行铺满**（hover 整行高亮），危险项 hover 才转色，禁用项灰且禁止光标；
+  - 面板样式：`card` 底、6 圆角（与 `kButtonRadius` 一致）、1px 描边、padding 4。
+- **右键菜单**：没有触发按钮，用 `showAppMenuAt(position:)` —— 临时插入 1×1 锚点再展开，
+  样式/行为与 `AppDropdownMenu` 完全一致。
+- **删除了 `app_menu.dart`**（自绘实现），避免两套下拉并存。
+- **踩坑**：触发按钮若自带 `onTap`（哪怕是空实现），`InkWell` 会吞掉手势导致菜单打不开
+  ⇒ 触发器传 `onTap: null`，由 `AppDropdownMenu` 的 `Listener` 接管开合。
+- **验证**：`menu_position_test`（正下方 + 左对齐）、`queue_actions_test`（更多菜单可展开）；
+  应用 148 通过；analyze 干净。
