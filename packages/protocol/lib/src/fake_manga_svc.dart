@@ -297,7 +297,8 @@ class FakeMangaSvcClient implements MangaSvcClient {
       _unimplemented('POST /tasks/{id}/batches');
 
   @override
-  Future<CreateTaskResponse> retryTask(String taskId) => _unimplemented('POST /tasks/{id}/retry');
+  @override
+  Future<CreateTaskResponse> retryTask(String taskId, {String? failReason}) => _unimplemented('POST /tasks/{id}/retry');
 
   @override
   Stream<TaskEvent> watchTaskEvents(String taskId) => _unimplemented('GET /tasks/{id}/events');

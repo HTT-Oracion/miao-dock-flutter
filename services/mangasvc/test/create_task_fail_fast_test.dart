@@ -37,6 +37,30 @@ void main() {
     expect(task.failedReasons.join(), contains('远程翻译配置不生效'));
   });
 
+  test('重试带 failReason → 直接回 failed 且不调用引擎', () async {
+    var engineCalls = 0;
+    final queue = TaskQueue(
+      rootDir: '${root.path}/lib',
+      stateDir: '${root.path}/state',
+      engineMode: 'real',
+      translateImage: (bytes, onStage) async {
+        engineCalls++;
+        return bytes;
+      },
+    );
+    final f = File('${root.path}/src/001.png')
+      ..createSync(recursive: true)
+      ..writeAsBytesSync([1]);
+    // 先建一条失败的假想任务（fail-fast）。
+    final created = await queue.createTask(comicName: '某书', imagePaths: [f.path], failReason: '远程翻译配置不生效');
+    // 破坏点：重试不接 failReason → 会重新排队跑引擎。
+    await queue.retryTask(created['taskId'] as String, failReason: '远程翻译配置不生效');
+    final task = queue.getTask(created['taskId'] as String)!;
+    expect(task.status, TaskStatus.failed);
+    expect(engineCalls, 0);
+    expect(task.failedReasons.join(), contains('远程翻译配置不生效'));
+  });
+
   test('failReason 为空 → 正常进队列', () async {
     final queue = TaskQueue(rootDir: '${root.path}/lib', stateDir: '${root.path}/state', engineMode: 'mock');
     final f = File('${root.path}/src/001.png')

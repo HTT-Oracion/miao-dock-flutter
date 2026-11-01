@@ -112,8 +112,8 @@ class HttpMangaSvcClient implements MangaSvcClient {
   }
 
   @override
-  Future<CreateTaskResponse> retryTask(String taskId) async {
-    final json = await _post('/tasks/$taskId/retry');
+  Future<CreateTaskResponse> retryTask(String taskId, {String? failReason}) async {
+    final json = await _post('/tasks/$taskId/retry', body: {'failReason': ?failReason});
     return _createTaskOf(json);
   }
 

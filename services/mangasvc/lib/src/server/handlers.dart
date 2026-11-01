@@ -462,7 +462,9 @@ class Handlers {
   }
 
   Future<void> _retryTask(HttpRequest req, String id) async {
-    await writeJson(req.response, 200, await queue.retryTask(id));
+    final body = await readJsonBody(req);
+    // failReason 非空 = 客户端前置校验失败（远程翻译不可用）：直接置 failed，不排队。
+    await writeJson(req.response, 200, await queue.retryTask(id, failReason: body['failReason'] as String?));
   }
 
   Future<void> _appendBatch(HttpRequest req, String id) async {

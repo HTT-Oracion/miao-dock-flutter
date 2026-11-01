@@ -8,12 +8,17 @@ import 'package:protocol/protocol.dart';
 
 /// D-129：选了远程翻译但配置无效时，提交要**建任务直接失败**，不进流水线。
 void main() {
+  /// 可控的探测结果：模拟设置页【测试连接】。
+  RemoteProbe probeOk = const RemoteProbe(ok: true, message: 'ok');
+  Future<RemoteProbe> pingProbe(RemoteConfig cfg) async => probeOk;
+
   ProviderContainer containerWith({required String baseUrl, required String token}) {
     final c = ProviderContainer(
       overrides: [
         translateSourceProvider.overrideWith(_RemoteSource.new),
         remoteConfigProvider.overrideWith(() => _Cfg(RemoteConfig(baseUrl: baseUrl, token: token))),
         mangaSvcClientProvider.overrideWithValue(_Client()),
+        remotePingProvider.overrideWithValue(pingProbe),
       ],
     );
     addTearDown(c.dispose);
@@ -22,7 +27,7 @@ void main() {
 
   test('token 为空 → 拦下并带上原因', () async {
     final c = containerWith(baseUrl: 'http://127.0.0.1:5180', token: '');
-    expect(c.read(queueProvider.notifier).remoteBlocked, isTrue);
+    expect(await c.read(queueProvider.notifier).remoteUsable(), isFalse);
     final out = await c
         .read(queueProvider.notifier)
         .submit(comicName: '某书', imagePaths: const ['/a.png'], blockedReason: '远程翻译配置不生效，请到设置页进行配置');
@@ -34,12 +39,12 @@ void main() {
 
   test('地址非法（无 scheme）→ 拦下', () async {
     final c = containerWith(baseUrl: '随便什么', token: 'tk');
-    expect(c.read(queueProvider.notifier).remoteBlocked, isTrue);
+    expect(await c.read(queueProvider.notifier).remoteUsable(), isFalse);
   });
 
   test('配置有效 → 不拦', () async {
     final c = containerWith(baseUrl: 'http://127.0.0.1:5180', token: 'tk');
-    expect(c.read(queueProvider.notifier).remoteBlocked, isFalse);
+    expect(await c.read(queueProvider.notifier).remoteUsable(), isTrue);
     final out = await c
         .read(queueProvider.notifier)
         .submit(comicName: '某书', imagePaths: const ['/a.png'], blockedReason: '不该用到');

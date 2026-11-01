@@ -63,7 +63,7 @@ abstract class MangaSvcClient {
   Future<Map<String, dynamic>> getTranslateLog();
 
   /// `POST /api/v1/tasks/{taskId}/retry` —— 重试失败任务。
-  Future<CreateTaskResponse> retryTask(String taskId);
+  Future<CreateTaskResponse> retryTask(String taskId, {String? failReason});
 
   /// `GET /api/v1/tasks/{taskId}/events` —— SSE 进度流；`isTerminal` 时关闭。
   Stream<TaskEvent> watchTaskEvents(String taskId);

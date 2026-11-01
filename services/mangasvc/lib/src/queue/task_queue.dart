@@ -262,15 +262,19 @@ class TaskQueue {
   }
 
   /// 重试：复用原任务，重置进度。
-  Future<Map<String, dynamic>> retryTask(String taskId) async {
+  /// [failReason] 非空 = **前置校验失败**（如远程翻译不可用）：
+  /// 任务直接置 failed、写原因，**不重新排队**，不跑流水线。
+  Future<Map<String, dynamic>> retryTask(String taskId, {String? failReason}) async {
     final t = _find(taskId);
     if (t == null) throw const ServiceError('NOT_FOUND', '任务不存在', status: 404);
     if (t.status == TaskStatus.running || t.status == TaskStatus.queued) {
       throw const ServiceError('ALREADY_ACTIVE', '任务已在队列中', status: 409);
     }
-    _logLine('重试任务 ${t.comicName}（此前 ${t.status.wire}，${t.done}/${t.total}）');
+    final blocked = failReason != null && failReason.trim().isNotEmpty;
+    _logLine(
+      blocked ? '重试被拦下 ${t.comicName}：$failReason' : '重试任务 ${t.comicName}（此前 ${t.status.wire}，${t.done}/${t.total}）',
+    );
     t
-      ..status = TaskStatus.queued
       ..done = 0
       ..failed = 0
       ..current = 0
@@ -278,7 +282,16 @@ class TaskQueue {
       ..finishedAt = null
       ..cancelRequested = false;
     t.failedReasons.clear();
-    _scheduleDrain();
+    if (blocked) {
+      t
+        ..status = TaskStatus.failed
+        ..lastError = failReason
+        ..finishedAt = DateTime.now().toUtc();
+      t.failedReasons.add(failReason);
+    } else {
+      t.status = TaskStatus.queued;
+      _scheduleDrain();
+    }
     await _persist();
     return t.toCreateResponse();
   }

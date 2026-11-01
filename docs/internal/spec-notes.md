@@ -2572,3 +2572,19 @@
   - 客户端 `submit_remote_guard_test` 三条：token 为空 / 地址非法都拦下、配置有效不拦。
   - **有效性验证**：临时把 `blocked` 写死 false，客户端用例立刻红，证明测试咬得住。
 - **验证**：应用 159 通过；服务 184 通过；analyze 与 l10n 通过。
+
+## D-130 校验逻辑与【测试连接】统一 + 重试同样拦截
+
+- **状态**：完成（2026-11-02）
+- **① 校验逻辑统一（用户指出）**：`RemoteConfig.valid` 只做**本地格式校验**，
+  证明不了「服务在、令牌对」。提交前的探测改为与设置页【测试连接】**同一个**
+  `remotePingProvider`（`GET /api/v1/ping`，带令牌）：
+  `QueueNotifier.remoteUsable()` —— 来源非 remote 直接放行；
+  格式先本地校验（省一次必然失败的请求），再真连一次。
+- **② 重试同样拦截**：`POST /tasks/{id}/retry` 接受 `failReason`
+  → 服务端 `retryTask(failReason:)`：**不重新排队**、任务置回 `failed`、写原因；
+  `QueueNotifier.retry()` 先 `remoteUsable()`，返回 `blocked` 标志；
+  队列行按标志弹红/绿吐司（红 = 去设置页，绿 = 重试已排队）。
+- **验证方式**：服务端用例断言重试后 `engineCalls == 0` 且状态回 `failed`；
+  客户端用例用可注入的 `remotePingProvider` 模拟【测试连接】结果。
+- **验证**：应用 159 通过；服务 185 通过；analyze 与 l10n 通过。

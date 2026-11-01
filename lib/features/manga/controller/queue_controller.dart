@@ -120,20 +120,29 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
   }
 
   /// 重试/继续任务（D-075）：失败 → 重跑；取消 → 续跑。
-  Future<void> retry(String taskId) async {
-    await ref.read(mangaSvcClientProvider).retryTask(taskId);
+  ///
+  /// 远程翻译时与提交一样**先探测**（同一套 `remotePingProvider`）：
+  /// 不可用则把任务置回 failed 并带上原因，不重新排队。
+  Future<bool> retry(String taskId, {String? blockedReason}) async {
+    final blocked = !(await remoteUsable());
+    await ref.read(mangaSvcClientProvider).retryTask(taskId, failReason: blocked ? blockedReason : null);
     await refresh();
+    return blocked;
   }
 
   /// 投放，返回提交结果（吐司用）。
   /// 投放，返回提交结果（吐司用）。
-  /// 远程翻译配置是否**阻止提交**。
+  /// 远程翻译是否**真的可用**（提交前的硬校验）。
   ///
-  /// 选了远程但 token / 地址无效时返回 true —— 调用方据此提前提示，
-  /// 而不是等 HTTP 失败再让任务跑进流水线。
-  bool get remoteBlocked {
-    if (ref.read(translateSourceProvider) != TranslateSource.remote) return false;
-    return !ref.read(remoteConfigProvider).valid;
+  /// 与设置页【测试连接】**同一个探测逻辑**（`remotePingProvider` → `GET /api/v1/ping`）：
+  /// 只看配置格式证明不了「服务在、令牌对」，必须真连一次。
+  /// 本地格式校验先跑，省掉一次必然失败的请求。
+  Future<bool> remoteUsable() async {
+    if (ref.read(translateSourceProvider) != TranslateSource.remote) return true;
+    final cfg = ref.read(remoteConfigProvider);
+    if (!cfg.valid) return false;
+    final probe = await ref.read(remotePingProvider)(cfg);
+    return probe.ok;
   }
 
   Future<SubmitOutcome> submit({
@@ -143,8 +152,9 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
     /// 被拦下时写进任务失败原因的**本地化文案**（由 UI 层传入，controller 不碰 ARB）。
     String? blockedReason,
   }) async {
-    // 远程翻译前置校验：配置无效时**建任务但直接置失败**，不进翻译流水线。
-    final blocked = remoteBlocked;
+    // 远程翻译前置校验：**真连一次**（与设置页测试连接同逻辑），
+    // 不可用则**建任务但直接置失败**，不进翻译流水线。
+    final blocked = !await remoteUsable();
     final reason = blocked ? blockedReason : null;
     final res = await ref
         .read(mangaSvcClientProvider)

@@ -181,8 +181,14 @@ class QueueRowActions extends ConsumerWidget {
     // 重试（miao-dock：同一个 taskId 重跑；失败弹红色吐司 —— 漫画被删也走这条）。
     Future<void> retry() async {
       try {
-        await ref.read(queueProvider.notifier).retry(task.id);
-        if (context.mounted) showAppToast(context, l10n.queueRetryOk(task.name), tone: ToastTone.good);
+        final blocked = await ref.read(queueProvider.notifier).retry(task.id, blockedReason: l10n.remoteConfigInvalid);
+        if (!context.mounted) return;
+        // 被远程校验拦下 ⇒ 任务回到 failed、不进流水线：红色提示让用户去设置页。
+        showAppToast(
+          context,
+          blocked ? l10n.remoteConfigInvalid : l10n.queueRetryOk(task.name),
+          tone: blocked ? ToastTone.bad : ToastTone.good,
+        );
       } catch (e) {
         if (context.mounted) showAppToast(context, l10n.queueRetryFailed('$e'), tone: ToastTone.bad);
       }
