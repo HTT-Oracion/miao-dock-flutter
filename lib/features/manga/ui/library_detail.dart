@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:protocol/protocol.dart' show BookMeta, jsNumStr;
 
@@ -174,17 +177,7 @@ class _Hero extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 96,
-            height: 112,
-            decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(8)),
-            alignment: Alignment.center,
-            child: Icon(
-              book.isBook ? LucideIcons.bookOpen : LucideIcons.folder,
-              size: 24,
-              color: AppTokens.textSecondary,
-            ),
-          ),
+          _Cover(book: book),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -251,7 +244,24 @@ class _Hero extends ConsumerWidget {
                           }
                         },
                       ),
-                    ] else
+                    ] else ...[
+                      _HeroButton(
+                        icon: LucideIcons.bookOpen,
+                        label: l10n.libViewComic,
+                        onTap: () {
+                          ref
+                              .read(readerSessionProvider.notifier)
+                              .open(
+                                ReaderSession(
+                                  key: book.key,
+                                  pages: book.directPages,
+                                  translated: book.directTranslated,
+                                ),
+                              );
+                          context.go('/manga/reader');
+                        },
+                      ),
+                      const SizedBox(width: 8),
                       _HeroButton(
                         icon: LucideIcons.gitMerge,
                         label: l10n.libMerge,
@@ -270,6 +280,7 @@ class _Hero extends ConsumerWidget {
                           }
                         },
                       ),
+                    ],
                     const SizedBox(width: 8),
                     _HeroButton(
                       icon: LucideIcons.folderOpen,
@@ -285,6 +296,53 @@ class _Hero extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 封面：走 `/library/{name}/cover`；单话默认第一页（服务端回退）。
+class _Cover extends ConsumerStatefulWidget {
+  const _Cover({required this.book});
+
+  final LibBook book;
+
+  @override
+  ConsumerState<_Cover> createState() => _CoverState();
+}
+
+class _CoverState extends ConsumerState<_Cover> {
+  Future<List<int>?>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    final client = ref.read(mangaSvcClientProvider);
+    _future = client.getBookCover(widget.book.key).then<List<int>?>((v) => v).catchError((_) => null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final book = widget.book;
+    return Container(
+      width: 96,
+      height: 112,
+      decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(8)),
+      clipBehavior: Clip.antiAlias,
+      alignment: Alignment.center,
+      child: FutureBuilder<List<int>?>(
+        future: _future,
+        builder: (context, snap) {
+          final bytes = snap.data;
+          if (bytes == null || bytes.isEmpty) {
+            return Icon(
+              book.isBook ? LucideIcons.bookOpen : LucideIcons.folder,
+              size: 24,
+              color: AppTokens.textSecondary,
+            );
+          }
+          return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover, width: 96, height: 112);
+        },
       ),
     );
   }
@@ -410,60 +468,77 @@ class _ChapterGrid extends StatelessWidget {
         mainAxisExtent: 100,
       ),
       itemCount: book.chapters.length,
-      itemBuilder: (context, i) => _ChapterCard(chapter: book.chapters[i]),
+      itemBuilder: (context, i) => _ChapterCard(book: book, chapter: book.chapters[i]),
     );
   }
 }
 
-class _ChapterCard extends StatelessWidget {
-  const _ChapterCard({required this.chapter});
+class _ChapterCard extends ConsumerWidget {
+  const _ChapterCard({required this.book, required this.chapter});
 
+  final LibBook book;
   final LibChapter chapter;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = chapter.done ? MangaTaskStatus.done.color : MangaTaskStatus.translating.color;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(10)),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 64,
-            decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(6)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
-                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
-                  style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: SizedBox(
-                    height: 4,
-                    child: LinearProgressIndicator(
-                      value: chapter.ratio,
-                      backgroundColor: AppTokens.progressTrack,
-                      valueColor: AlwaysStoppedAnimation(color),
+    return GestureDetector(
+      onTap: () {
+        // 查看逻辑同 miao-dock：**未翻译完也能点进**（缺译文的页回退原图）。
+        ref
+            .read(readerSessionProvider.notifier)
+            .open(
+              ReaderSession(
+                key: book.key,
+                chapterNo: chapter.no,
+                pages: chapter.pageCount,
+                translated: chapter.translatedSeqs,
+              ),
+            );
+        context.go('/manga/reader');
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(10)),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 64,
+              decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(6)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
+                    style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: SizedBox(
+                      height: 4,
+                      child: LinearProgressIndicator(
+                        value: chapter.ratio,
+                        backgroundColor: AppTokens.progressTrack,
+                        valueColor: AlwaysStoppedAnimation(color),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

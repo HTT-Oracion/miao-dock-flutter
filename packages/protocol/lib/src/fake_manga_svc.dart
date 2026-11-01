@@ -370,10 +370,11 @@ class FakeMangaSvcClient implements MangaSvcClient {
       _unimplemented('POST /library/{book}/chapters/{no}/renumber');
 
   @override
-  Future<List<int>> getBookFile(String bookName, int seq) => _unimplemented('GET /library/{name}/files/{seq}');
+  Future<List<int>> getBookFile(String bookName, int seq, {bool translated = false}) =>
+      _unimplemented('GET /library/{name}/files/{seq}');
 
   @override
-  Future<List<int>> getChapterFile(String bookName, int chapterNo, int seq) =>
+  Future<List<int>> getChapterFile(String bookName, double chapterNo, int seq, {bool translated = false}) =>
       _unimplemented('GET /library/{book}/chapters/{no}/files/{seq}');
 
   @override

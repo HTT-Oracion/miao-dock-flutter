@@ -132,11 +132,11 @@ abstract class MangaSvcClient {
   /// `POST /api/v1/library/{book}/chapters/{no}/renumber` —— 改话号。
   Future<void> renumberChapter(String bookName, int chapterNo, {required int newNo});
 
-  /// `GET /api/v1/library/{name}/files/{seq}` —— 取本内原图字节。
-  Future<List<int>> getBookFile(String bookName, int seq);
+  /// `GET /api/v1/library/{name}/files/{seq}` —— 取本内页面字节（`translated=true` 译文优先）。
+  Future<List<int>> getBookFile(String bookName, int seq, {bool translated = false});
 
-  /// `GET /api/v1/library/{book}/chapters/{no}/files/{seq}` —— 取话内原图字节。
-  Future<List<int>> getChapterFile(String bookName, int chapterNo, int seq);
+  /// `GET /api/v1/library/{book}/chapters/{no}/files/{seq}` —— 话内页面字节；话号支持小数。
+  Future<List<int>> getChapterFile(String bookName, double chapterNo, int seq, {bool translated = false});
 
   // ── translate ────────────────────────────────────────────────────────────
 

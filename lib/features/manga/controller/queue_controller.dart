@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'library_controller.dart';
+
 import 'package:protocol/protocol.dart';
 
 import '../data/contract_map.dart';
@@ -41,8 +44,19 @@ class TranslateLogNotifier extends AsyncNotifier<List<String>> {
 }
 
 final queuePollerProvider = Provider<void>((ref) {
-  final timer = Timer.periodic(const Duration(seconds: 1), (_) {
-    ref.read(queueProvider.notifier).refresh();
+  var lastSignature = '';
+  final timer = Timer.periodic(const Duration(seconds: 1), (_) async {
+    await ref.read(queueProvider.notifier).refresh();
+    final tasks = ref.read(queueProvider).value ?? const <MangaTask>[];
+    // 状态签名：任一条状态/进度变化都算（B.8 任务完成 → 漫画库状态同步）。
+    final signature = [for (final t in tasks) '${t.id}:${t.status.name}:${t.donePages}'].join('|');
+    if (signature == lastSignature) return;
+    final hadTerminalChange = lastSignature.isNotEmpty && signature != lastSignature;
+    lastSignature = signature;
+    if (hadTerminalChange) {
+      // 队列变化时刷新书架：任务落盘后漫画库状态（页数/已译）必须跟着更新。
+      await ref.read(libraryProvider.notifier).refresh();
+    }
   });
   ref.onDispose(timer.cancel);
 });

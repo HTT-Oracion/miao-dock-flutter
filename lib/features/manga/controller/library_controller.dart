@@ -74,6 +74,33 @@ class HiddenComicsNotifier extends Notifier<List<String>> {
   void set(List<String> v) => state = v;
 }
 
+/// 阅读器会话（打开哪本书/哪一话）。
+class ReaderSession {
+  const ReaderSession({required this.key, this.chapterNo, required this.pages, required this.translated});
+
+  /// 书/单话的目录键。
+  final String key;
+
+  /// null = 单话直读；非 null = 书里的第几话（小数话号）。
+  final double? chapterNo;
+
+  final int pages;
+
+  /// 已译页码（有译文的页显示译文，否则原图）。
+  final Set<int> translated;
+}
+
+final readerSessionProvider = NotifierProvider<ReaderSessionNotifier, ReaderSession?>(ReaderSessionNotifier.new);
+
+class ReaderSessionNotifier extends Notifier<ReaderSession?> {
+  @override
+  ReaderSession? build() => null;
+
+  void open(ReaderSession session) => state = session;
+
+  void close() => state = null;
+}
+
 /// 详情视图模式：`card`（卡片）/ `capsule`（简易，ver1.0 `.view-seg`）。
 final libModeProvider = NotifierProvider<LibModeNotifier, String>(LibModeNotifier.new);
 

@@ -75,4 +75,6 @@ LibBook toLibBookFromChapter(ChapterEntry c) => LibBook(
   hasCover: false,
   modifiedAt: c.modifiedAt,
   isBook: false,
+  directPages: c.seqMax,
+  directTranslated: c.translatedSeqs.toSet(),
 );

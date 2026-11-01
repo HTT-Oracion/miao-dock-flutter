@@ -1785,5 +1785,27 @@
   "@libChapterStatusMissing": {
     "description": "漫画库文案",
     "placeholders": null
+  },
+  "readerClose": "关闭",
+  "@readerClose": {
+    "description": "阅读器文案",
+    "placeholders": null
+  },
+  "readerPage": "{cur} / {total}",
+  "@readerPage": {
+    "description": "阅读器文案",
+    "placeholders": {
+      "cur": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "libViewComic": "查看漫画",
+  "@libViewComic": {
+    "description": "阅读器文案",
+    "placeholders": null
   }
 }

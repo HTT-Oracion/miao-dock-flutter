@@ -168,17 +168,14 @@ class LibraryStore {
       if (no == null) continue;
       chapters.add(_chapterEntry(e, no: no, dirName: name));
     }
-    chapters.sort((a, b) => (a['no'] as int).compareTo(b['no'] as int));
+    chapters.sort((a, b) => ((a['no'] as num?) ?? 0).compareTo(((b['no'] as num?) ?? 0)));
     return chapters;
   }
 
-  /// 从 `01_第1话` 这类目录名取话号；取不到返回 null。
-  int? _chapterNoOf(String dirName) {
-    final m = RegExp(r'^(\d+)').firstMatch(dirName);
-    return m == null ? null : int.tryParse(m.group(1)!);
-  }
+  /// 从 `01_第1话` / `1.5_第1.5话` 取话号；取不到返回 null（与旧项目同一套正则）。
+  double? _chapterNoOf(String dirName) => chapterNoFromDirName(dirName);
 
-  Map<String, dynamic> _chapterEntry(Directory dir, {int? no, String? dirName}) {
+  Map<String, dynamic> _chapterEntry(Directory dir, {double? no, String? dirName}) {
     final files = dir.listSync(followLinks: false).whereType<File>().where((f) => _isImage(f.path)).toList()
       ..sort((a, b) => a.path.compareTo(b.path));
     final seqs = <int>[];
@@ -295,9 +292,39 @@ class LibraryStore {
 
   Future<List<int>?> readCover(String name) async {
     final dir = Directory('$rootDir/$name');
+    if (!dir.existsSync()) return null;
     final cover = _findCoverName(dir);
-    if (cover == null) return null;
-    return File('${dir.path}/$cover').readAsBytes();
+    if (cover != null) return File('${dir.path}/$cover').readAsBytes();
+    // 单话（无 manifest）：**默认封面 = 第一页图片**（B.7）。
+    // 单本保持旧项目语义：只有 cover.* 才算封面，不拿章节首图冒充。
+    if (_manifestOf(dir) == null) {
+      final first = _firstPageOf(dir);
+      if (first != null) return first.readAsBytes();
+    }
+    return null;
+  }
+
+  /// 目录内第一页：优先最小页号的**译文**，其次原图（旧项目 `pick_first_chapter_image` 同）。
+  File? _firstPageOf(Directory dir) {
+    if (!dir.existsSync()) return null;
+    File? translated;
+    File? original;
+    var bestT = 1 << 30;
+    var bestO = 1 << 30;
+    for (final e in dir.listSync(followLinks: false)) {
+      if (e is! File || !_isImage(e.path)) continue;
+      final seq = _seqOf(e.path);
+      if (seq == null) continue;
+      final isTranslated = _baseName(e.path).contains('_translated');
+      if (isTranslated && seq < bestT) {
+        bestT = seq;
+        translated = e;
+      } else if (!isTranslated && seq < bestO) {
+        bestO = seq;
+        original = e;
+      }
+    }
+    return translated ?? original;
   }
 
   Future<void> writeCover(String name, String base64Data) async {
@@ -507,29 +534,40 @@ class LibraryStore {
 
   // ── 文件 ────────────────────────────────────────────────────────────────
 
-  /// 本内第 [seq] 页的原图。
-  Future<File?> fileOf(String name, int seq) async => _findSeqFile(Directory('$rootDir/$name'), seq);
+  /// 本内第 [seq] 页（`translated=true` 取译文，缺译文回退原图 —— 阅读器语义）。
+  Future<File?> fileOf(String name, int seq, {bool translated = false}) async =>
+      _findSeqFile(Directory('$rootDir/$name'), seq, translated: translated);
 
-  /// 话内第 [seq] 页的原图。
-  Future<File?> chapterFileOf(String book, int no, int seq) async {
+  /// 话内第 [seq] 页；话号支持小数（`1.5_第1.5话`）。
+  Future<File?> chapterFileOf(String book, double no, int seq, {bool translated = false}) async {
     final bookDir = Directory('$rootDir/$book');
     if (!bookDir.existsSync()) return null;
     for (final e in bookDir.listSync(followLinks: false)) {
       if (e is! Directory) continue;
       if (_chapterNoOf(_baseName(e.path)) != no) continue;
-      return _findSeqFile(e, seq);
+      return _findSeqFile(e, seq, translated: translated);
     }
     return null;
   }
 
-  File? _findSeqFile(Directory dir, int seq) {
+  /// 译文优先、缺译文回退原图（miao-dock 阅读器同：未翻译的页显示原图）。
+  File? _findSeqFile(Directory dir, int seq, {bool translated = false}) {
     if (!dir.existsSync()) return null;
     for (final e in dir.listSync(followLinks: false)) {
       if (e is! File || !_isImage(e.path)) continue;
-      if (_baseName(e.path).contains('_translated')) continue;
-      if (_seqOf(e.path) == seq) return e;
+      final base = _baseName(e.path);
+      if (_seqOf(e.path) != seq) continue;
+      final isTranslated = base.contains('_translated');
+      if (translated) {
+        if (isTranslated) return e; // 有译文用译文
+        continue; // 继续找译文；找不到落到下面的回退
+      } else if (!isTranslated) {
+        return e;
+      }
     }
-    return null;
+    if (!translated) return null;
+    // 回退：没有译文 → 原图（未翻译完也能看）。
+    return _findSeqFile(dir, seq, translated: false);
   }
 
   // ── 工具 ────────────────────────────────────────────────────────────────

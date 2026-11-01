@@ -270,16 +270,18 @@ class HttpMangaSvcClient implements MangaSvcClient {
       _post('/library/${Uri.encodeComponent(bookName)}/chapters/$chapterNo/renumber', body: {'newNo': newNo});
 
   @override
-  Future<List<int>> getBookFile(String bookName, int seq) async {
+  Future<List<int>> getBookFile(String bookName, int seq, {bool translated = false}) async {
     final client = await _locator.client();
-    return await client.getBytes('/library/${Uri.encodeComponent(bookName)}/files/$seq') ?? const [];
+    final q = translated ? '?variant=translated' : '';
+    return await client.getBytes('/library/${Uri.encodeComponent(bookName)}/files/$seq$q') ?? const [];
   }
 
   @override
-  Future<List<int>> getChapterFile(String bookName, int chapterNo, int seq) async {
+  Future<List<int>> getChapterFile(String bookName, double chapterNo, int seq, {bool translated = false}) async {
     final client = await _locator.client();
-    return await client.getBytes('/library/${Uri.encodeComponent(bookName)}/chapters/$chapterNo/files/$seq') ??
-        const [];
+    final q = translated ? '?variant=translated' : '';
+    final noText = jsNumStr(chapterNo);
+    return await client.getBytes('/library/${Uri.encodeComponent(bookName)}/chapters/$noText/files/$seq$q') ?? const [];
   }
 
   // ── translate ────────────────────────────────────────────────────────────

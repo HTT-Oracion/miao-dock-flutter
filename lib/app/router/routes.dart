@@ -6,6 +6,7 @@ import '../../features/manga/ui/drop_screen.dart';
 import '../../features/manga/ui/library_screen.dart';
 import '../../features/manga/ui/notready/not_ready_route_screen.dart';
 import '../../features/manga/ui/queue_screen.dart';
+import '../../features/manga/ui/reader_screen.dart';
 import '../../features/music/ui/music_playlist_screen.dart';
 import '../../features/music/ui/music_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
@@ -38,6 +39,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: 'drop', builder: (_, _) => const DropScreen()),
                   GoRoute(path: 'queue', builder: (_, _) => const QueueScreen()),
                   GoRoute(path: 'library', builder: (_, _) => const LibraryScreen()),
+                  GoRoute(path: 'reader', builder: (_, _) => const ReaderScreen()),
                   // 启动引导（D-012）：住在主体区，侧栏保留。归属「投放」高亮。
                   GoRoute(path: 'notready', builder: (_, _) => const NotReadyRouteScreen()),
                   GoRoute(path: 'degraded', builder: (_, _) => const NotReadyRouteScreen()),

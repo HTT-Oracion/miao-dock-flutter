@@ -9,6 +9,8 @@ class LibBook {
     this.hasCover = false,
     this.modifiedAt,
     this.isBook = true,
+    this.directPages = 0,
+    this.directTranslated = const {},
   });
 
   /// 归并键（= 服务端 `dirName`）。
@@ -31,8 +33,16 @@ class LibBook {
   /// 是否单本（true）/未归并单话（false）。单话没有 manifest，话数恒 0。
   final bool isBook;
 
+  /// 单话直读页数（无话层时阅读器用）。
+  final int directPages;
+
+  /// 单话直读已译页码。
+  final Set<int> directTranslated;
+
   int get chapterCount => chapters.length;
-  int get pageCount => chapters.fold(0, (sum, c) => sum + c.pageCount);
+
+  /// 总页数：单本按话汇总；单话用直读页数。
+  int get pageCount => isBook ? chapters.fold(0, (sum, c) => sum + c.pageCount) : directPages;
 
   /// 未署名时 UI 显示「未署名」。
   bool get hasAuthor => author.isNotEmpty;

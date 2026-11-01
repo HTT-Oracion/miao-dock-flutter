@@ -152,7 +152,7 @@ class Handlers {
       case 'GET /api/v1/library/{name}/files/{seq}':
         await _getBookFile(req, p['name']!, int.tryParse(p['seq'] ?? '') ?? 0);
       case 'GET /api/v1/library/{book}/chapters/{no}/files/{seq}':
-        await _getChapterFile(req, p['book']!, int.tryParse(p['no'] ?? '') ?? 0, int.tryParse(p['seq'] ?? '') ?? 0);
+        await _getChapterFile(req, p['book']!, double.tryParse(p['no'] ?? '') ?? 0, int.tryParse(p['seq'] ?? '') ?? 0);
       case 'GET /api/v1/library/{name}/resume':
         await _resumePlan(req, p['name']!);
       case 'GET /api/v1/library/{name}/retranslate':
@@ -487,13 +487,15 @@ class Handlers {
   }
 
   Future<void> _getBookFile(HttpRequest req, String name, int seq) async {
-    final file = await store.fileOf(name, seq);
+    final variant = req.uri.queryParameters['variant'];
+    final file = await store.fileOf(name, seq, translated: variant == 'translated');
     if (file == null) throw const ServiceError('NOT_FOUND', '文件不存在', status: 404);
     await _sendFile(req.response, file);
   }
 
-  Future<void> _getChapterFile(HttpRequest req, String book, int no, int seq) async {
-    final file = await store.chapterFileOf(book, no, seq);
+  Future<void> _getChapterFile(HttpRequest req, String book, double no, int seq) async {
+    final variant = req.uri.queryParameters['variant'];
+    final file = await store.chapterFileOf(book, no, seq, translated: variant == 'translated');
     if (file == null) throw const ServiceError('NOT_FOUND', '文件不存在', status: 404);
     await _sendFile(req.response, file);
   }
