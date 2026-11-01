@@ -61,8 +61,9 @@ class _AppTextActionState extends State<AppTextAction> {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final highlight = widget.highlight;
-    // ver1.0：主按钮 hover 提亮；ghost hover 底色变 card（设计稿 `.btn.ghost:hover`）。
-    final bg = highlight ? (_hover ? palette.accHover : palette.accent) : (_hover ? palette.card : palette.divider);
+    // hover 一律**提亮**：主按钮提亮主色，次级由 divider 提亮到 line2。
+    // 不用 card —— 弹窗底色就是 card，变 card 会与背景融合。
+    final bg = highlight ? (_hover ? palette.accHover : palette.accent) : (_hover ? palette.line2 : palette.divider);
     return MouseRegion(
       cursor: widget.onTap == null ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
@@ -109,7 +110,12 @@ enum AppButtonVariant {
   /// 幽灵：无底色，hover 变 card（返回书架 / 弹窗取消）。
   ghost,
 
-  /// 危险主操作（删除确认等）：`bad` 底 + pageBg 字，hover 提亮 `badHover`。
+  /// **危险确认**：仅用于「不可逆操作」弹窗的确认按钮（删除整本 / 删除本话）。
+  /// `bad` 底 + pageBg 字，hover 提亮 `badHover`。
+  ///
+  /// 判定口径：操作会**造成数据不可恢复的丢失**才用它。
+  /// 只是观感上严重（取消翻译 / 停止服务 / 重新下载）用 primary 或 secondary。
+  /// 右键菜单 / 下拉里的删除项不走这个变体 —— 那里用 `AppDropdownItem(danger: true)`。
   danger,
 
   /// 文字链接：无底无内边距，hover 提亮（去投放 / 显示已隐藏）。
@@ -199,8 +205,9 @@ class _AppButtonState extends State<AppButton> {
             style: TextStyle(
               fontSize: widget.fontSize,
               fontWeight: widget.fontWeight,
-              // hover 提亮到 ink，与原 _TextLink 行为一致。
-              color: _hover ? palette.textPrimary : base,
+              // hover 用主色提亮（与 primary 的 hover 背景同色）；
+              // 不用 textPrimary —— 它在浅色主题下接近黑色，看起来像变黑。
+              color: _hover ? palette.accHover : base,
             ),
           ),
         ),
@@ -217,10 +224,13 @@ class _AppButtonState extends State<AppButton> {
         bg = showEnabled ? (_hover && enabled ? palette.badHover : palette.bad) : palette.divider;
         fg = showEnabled ? palette.pageBg : palette.textSecondary;
       case AppButtonVariant.secondary:
-        bg = showEnabled && _hover && enabled ? palette.card : palette.divider;
+        // hover 提亮到 line2（不是 card）：弹窗底色就是 card，
+        // 变 card 会与背景融合，按钮看起来消失。
+        bg = showEnabled && _hover && enabled ? palette.line2 : palette.divider;
         fg = showEnabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
       case AppButtonVariant.ghost:
-        bg = showEnabled && _hover && enabled ? palette.card : Colors.transparent;
+        // 同上：提亮到 hi，避免在 card 底的弹窗里 hover 后看不见。
+        bg = showEnabled && _hover && enabled ? palette.hi : Colors.transparent;
         fg = showEnabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
       case AppButtonVariant.link:
         throw StateError('link variant must be handled above');

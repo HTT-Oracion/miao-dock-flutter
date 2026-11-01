@@ -139,7 +139,7 @@ class _RuntimePickerDialogState extends ConsumerState<RuntimePickerDialog> {
             icon: LucideIcons.shieldCheck,
             onTap: _checking ? null : _runCheck,
             clickable: !_checking,
-            variant: AppButtonVariant.secondary,
+            variant: AppButtonVariant.primary,
             height: 32,
             horizontalPadding: 14,
             fontSize: AppFont.px11,

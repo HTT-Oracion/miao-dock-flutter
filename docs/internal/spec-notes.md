@@ -2431,3 +2431,31 @@
   校验按钮 `secondary` → **`primary`**；`AppButtonVariant.link` 的 hover 字色改为
   `palette.accHover`（与 primary 的 hover 背景同色）。
 - **验证**：应用 154 通过（`settings_ui_test` 文案同步）；analyze 干净；l10n 通过。
+
+## D-124 按钮 hover 一律提亮 + danger 使用口径
+
+- **状态**：完成（2026-11-02）
+- **① hover 变暗 → 统一提亮**（用户实测：弹窗取消按钮 hover 后与背景融为一体）：
+  根因是弹窗底色 = `card`，而 `secondary` / `ghost` 的 hover 恰好也是 `card` ⇒ 完全看不见。
+  改为：
+  | 变体 | 常态 | hover |
+  |---|---|---|
+  | `primary` | `acc` | `accHover`（主色提亮 8%） |
+  | `secondary` | `divider` | **`line2`**（提亮一档） |
+  | `ghost` | 透明 | **`hi`**（提亮一档） |
+  | `link` | `acc` | **`accHover`** |
+  | `danger` | `bad` | `badHover` |
+  同一规则同步到旧组件 `AppTextAction`。
+- **② link hover 是黑色**：上一轮把 `textPrimary` 改成 `accHover` 的**替换没匹配上**（锚点因新增
+  `fontWeight` 而失配），代码里仍是 `textPrimary` —— 浅色主题下 `ink` 接近黑，所以看起来"变黑"。
+  这次核对源码确认已生效（`grep` 验证）。
+- **③ 弹窗校验按钮**：`runtime_picker` 的校验仍是 `secondary`（上轮只改了 `engine_parts_view`），
+  已改为 `primary`。
+- **④ `danger` 使用口径**（写进枚举注释）：
+  **仅用于「不可逆操作」弹窗的确认按钮**（删除整本 / 删除本话）；
+  观感严重但可恢复的（取消翻译 / 停止服务 / 重新下载）用 `primary` 或 `secondary`；
+  下拉/右键菜单里的删除项走 `AppDropdownItem(danger: true)`，不是按钮变体。
+  当前全项目仅 **1 处**使用（删除确认）。
+- **踩坑**：本轮两次 Python 替换脚本因**字符串内嵌英文双引号**报 `SyntaxError`，
+  导致改动静默失效；改用三引号后正常。**改完必须 grep 验证落地**，不能只看脚本输出。
+- **验证**：应用 154 通过；analyze 干净；l10n 通过。
