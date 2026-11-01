@@ -45,49 +45,54 @@ class AppSelect<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
 
-    return PopupMenuButton<T>(
-      enabled: enabled && onChanged != null,
-      tooltip: '',
-      offset: const Offset(0, 30),
-      color: palette.panel,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
-        side: BorderSide(color: palette.line2),
-      ),
-      onSelected: onChanged,
-      itemBuilder: (context) => [
-        for (final (v, label) in items)
-          PopupMenuItem<T>(
-            value: v,
-            height: 30,
-            padding: EdgeInsets.zero,
-            child: _MenuRow(label: label, selected: v == value),
-          ),
-      ],
-      child: Container(
-        height: 28,
-        width: width,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: palette.card,
-          border: Border.all(color: palette.line2),
+    final active = enabled && onChanged != null;
+    return MouseRegion(
+      // 启用 = 手型；禁用 = 禁止光标。
+      cursor: active ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+      child: PopupMenuButton<T>(
+        enabled: active,
+        tooltip: '',
+        offset: const Offset(0, 30),
+        color: palette.panel,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
+          side: BorderSide(color: palette.line2),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                _label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10, color: enabled ? palette.ink : palette.mut),
-              ),
+        onSelected: onChanged,
+        itemBuilder: (context) => [
+          for (final (v, label) in items)
+            PopupMenuItem<T>(
+              value: v,
+              height: 30,
+              padding: EdgeInsets.zero,
+              child: _MenuRow(label: label, selected: v == value),
             ),
-            const SizedBox(width: 6),
-            Icon(LucideIcons.chevronDown, size: 10, color: palette.mut),
-          ],
+        ],
+        child: Container(
+          height: 28,
+          width: width,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: palette.card,
+            border: Border.all(color: palette.line2),
+            borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  _label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10, color: enabled ? palette.ink : palette.mut),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(LucideIcons.chevronDown, size: 10, color: palette.mut),
+            ],
+          ),
         ),
       ),
     );

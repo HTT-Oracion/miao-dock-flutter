@@ -103,7 +103,7 @@ class _MenuRowState extends State<_MenuRow> {
       fg = AppTokens.textPrimary;
     }
     return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
       onEnter: (_) => enabled ? setState(() => _hover = true) : null,
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(

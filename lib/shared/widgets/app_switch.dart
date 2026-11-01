@@ -30,30 +30,34 @@ class AppSwitch extends StatelessWidget {
     final track = value ? palette.acc : palette.hi;
     final knob = value ? palette.onAcc : palette.ink2;
 
+    final active = enabled && onChanged != null;
     return Semantics(
       toggled: value,
       enabled: enabled,
-      child: GestureDetector(
-        onTap: enabled && onChanged != null ? () => onChanged!(!value) : null,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            color: enabled ? track : track.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
-          ),
-          child: AnimatedAlign(
+      child: MouseRegion(
+        cursor: active ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+        child: GestureDetector(
+          onTap: enabled && onChanged != null ? () => onChanged!(!value) : null,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            curve: const Cubic(0.22, 0.61, 0.36, 1), // --ease
-            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Container(
-                width: thumb,
-                height: thumb,
-                decoration: BoxDecoration(color: knob, shape: BoxShape.circle),
+            width: width,
+            height: height,
+            decoration: BoxDecoration(
+              color: enabled ? track : track.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+            ),
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 200),
+              curve: const Cubic(0.22, 0.61, 0.36, 1), // --ease
+              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Container(
+                  width: thumb,
+                  height: thumb,
+                  decoration: BoxDecoration(color: knob, shape: BoxShape.circle),
+                ),
               ),
             ),
           ),

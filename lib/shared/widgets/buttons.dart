@@ -11,18 +11,22 @@ class AppGhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: onTap == null ? 0.5 : 1,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            height: 26,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            alignment: Alignment.center,
-            child: Text(label, style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
+    return MouseRegion(
+      // 启用 = 可点（手型）；禁用 = 禁止光标（不是普通箭头，否则用户以为可点）。
+      cursor: onTap == null ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+      child: Opacity(
+        opacity: onTap == null ? 0.5 : 1,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              height: 26,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              alignment: Alignment.center,
+              child: Text(label, style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
+            ),
           ),
         ),
       ),
@@ -57,7 +61,7 @@ class _AppTextActionState extends State<AppTextAction> {
         ? (_hover ? const Color(0xFFF0B96A) : AppTokens.accent)
         : (_hover ? AppTokens.card : AppTokens.divider);
     return MouseRegion(
-      cursor: widget.onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      cursor: widget.onTap == null ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: Material(

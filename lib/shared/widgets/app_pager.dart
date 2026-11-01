@@ -157,28 +157,31 @@ class _PageButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Material(
-        color: active ? AppTokens.accent : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Material(
+          color: active ? AppTokens.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
-          onTap: onTap,
-          child: Container(
-            width: 26,
-            height: 26,
-            alignment: Alignment.center,
-            child: icon != null
-                ? Icon(icon, size: 13, color: enabled ? AppTokens.textPrimary : AppTokens.progressTrack)
-                : Text(
-                    label ?? '',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                      color: active ? AppTokens.pageBg : AppTokens.textPrimary,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: onTap,
+            child: Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              child: icon != null
+                  ? Icon(icon, size: 13, color: enabled ? AppTokens.textPrimary : AppTokens.progressTrack)
+                  : Text(
+                      label ?? '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                        color: active ? AppTokens.pageBg : AppTokens.textPrimary,
+                      ),
                     ),
-                  ),
+            ),
           ),
         ),
       ),

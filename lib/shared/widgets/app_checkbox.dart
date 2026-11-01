@@ -14,13 +14,18 @@ class AppCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Checkbox(
-      value: value,
-      tristate: true,
-      activeColor: AppTokens.accent,
-      checkColor: AppTokens.pageBg,
-      side: BorderSide(color: enabled ? AppTokens.textSecondary : AppTokens.progressTrack),
-      onChanged: enabled ? onChanged : null,
+    final active = enabled && onChanged != null;
+    return MouseRegion(
+      // 启用 = 手型；禁用 = 禁止光标。
+      cursor: active ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+      child: Checkbox(
+        value: value,
+        tristate: true,
+        activeColor: AppTokens.accent,
+        checkColor: AppTokens.pageBg,
+        side: BorderSide(color: enabled ? AppTokens.textSecondary : AppTokens.progressTrack),
+        onChanged: active ? onChanged : null,
+      ),
     );
   }
 }

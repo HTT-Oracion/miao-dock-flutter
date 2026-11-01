@@ -2025,3 +2025,26 @@
 - **本轮未改任何功能代码**（只加测试），避免误伤已对齐的样式。
 - **验证**：应用 145 通过；analyze 干净。
 - **仍无法自动验证**：像素级观感（颜色深浅、悬停手感、间距），需人眼。
+
+## D-110 可交互组件 cursor 规范（启用 / 禁用两态）
+
+- **状态**：完成（2026-11-01）
+- **规范**：
+  - **启用** → `SystemMouseCursors.click`（手型，表示可点）；
+  - **禁用** → `SystemMouseCursors.forbidden`（禁止符号，**不是普通箭头** ——
+    普通箭头会让用户以为这里没东西可点，而禁止符号明确表达「有，但现在不能点」）。
+  - 之前多处用的是 `basic`（普通箭头），已统一替换为 `forbidden`。
+- **本轮覆盖**：
+  | 组件 | 改动 |
+  |---|---|
+  | `AppGhostButton` | 补 MouseRegion（原来完全没有） |
+  | `AppTextAction` | `basic` → `forbidden` |
+  | `AppCheckbox` | 补 MouseRegion（原来没有） |
+  | `AppSwitch` | 补 MouseRegion（原来没有） |
+  | `AppSelect` | 补 MouseRegion（原来没有） |
+  | `_PageButton`（分页） | 补 MouseRegion |
+  | `_MenuRow`、`_CoverChoice`、`_DialogButton` | `basic` → `forbidden` |
+- **测试**：`cursor_policy_test` 3 条（按钮 / 复选框 / 开关的启用与禁用两态）。
+  写测试时踩到两个坑并修正：① `InkWell` 内部自带 MouseRegion，必须取**最外层**；
+  ② `AppSwitch` 的 MouseRegion 在**内部**而非祖先，需用 `descendant` 取。
+- **验证**：应用 148 通过；analyze 与 l10n 通过。

@@ -1096,7 +1096,7 @@ class _DialogButtonState extends State<_DialogButton> {
         ? AppTokens.pageBg
         : AppTokens.textPrimary;
     return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
       onEnter: (_) => enabled ? setState(() => _hover = true) : null,
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
