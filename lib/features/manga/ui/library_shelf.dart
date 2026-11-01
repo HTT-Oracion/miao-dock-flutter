@@ -12,6 +12,7 @@ import '../../../core/utils/format.dart';
 import '../controller/queue_controller.dart';
 import '../controller/library_controller.dart';
 import '../domain/lib_book.dart';
+import 'shelf_menu.dart';
 
 /// 书架左栏（设计稿 G Shelf，260 宽）：书架头 + 搜索 + 书架行 + 容量脚。
 class LibraryShelf extends ConsumerWidget {
@@ -183,7 +184,7 @@ class _ShelfBody extends ConsumerWidget {
   }
 }
 
-class _BookRow extends StatelessWidget {
+class _BookRow extends ConsumerWidget {
   const _BookRow({required this.book, required this.active, required this.onTap});
 
   final LibBook book;
@@ -191,47 +192,54 @@ class _BookRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final index = book.key.hashCode;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Material(
-        color: active ? AppTokens.navActive : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
+    return GestureDetector(
+      onSecondaryTapDown: (d) => ShelfContextMenu.show(context, ref, book, d.globalPosition),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Material(
+          color: active ? AppTokens.navActive : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(6),
-            child: Row(
-              children: [
-                _CoverThumb(seed: index),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        book.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        AppLocalizations.of(context).shelfBookMeta(
-                          book.hasAuthor ? book.author : AppLocalizations.of(context).bookUnnamedAuthor,
-                          book.chapterCount,
-                          book.pageCount,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Row(
+                children: [
+                  _CoverThumb(seed: index),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          book.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTokens.textPrimary,
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          AppLocalizations.of(context).shelfBookMeta(
+                            book.hasAuthor ? book.author : AppLocalizations.of(context).bookUnnamedAuthor,
+                            book.chapterCount,
+                            book.pageCount,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Icon(LucideIcons.chevronRight, size: 13, color: active ? AppTokens.accent : AppTokens.textSecondary),
-              ],
+                  Icon(LucideIcons.chevronRight, size: 13, color: active ? AppTokens.accent : AppTokens.textSecondary),
+                ],
+              ),
             ),
           ),
         ),

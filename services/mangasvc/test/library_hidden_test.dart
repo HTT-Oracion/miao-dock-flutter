@@ -45,6 +45,17 @@ void main() {
     expect(store.hiddenList, isEmpty);
   });
 
+  test('已隐藏的书**不再出现在书架扫描结果**里（只在 hidden 清单）', () async {
+    final dir = Directory('${root.path}/某书')..createSync();
+    File('${dir.path}/manifest.json')
+        .writeAsStringSync('{"schema":1,"title":"某书","author":"","cover":null,"episodes":[]}');
+    await store.deleteBook('某书', deleteFiles: false);
+    final view = await store.scan();
+    // 破坏点：不过滤 → 隐藏了还在书架上，用户以为没隐藏成功。
+    expect((view['books'] as List), isEmpty);
+    expect((view['hidden'] as List), contains('某书'));
+  });
+
   test('重复隐藏不重复入列', () async {
     await store.deleteBook('某漫画', deleteFiles: false);
     await store.deleteBook('某漫画', deleteFiles: false);

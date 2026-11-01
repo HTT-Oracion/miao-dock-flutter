@@ -309,4 +309,7 @@ abstract final class AppTokens {
 
   /// 成功 / 已完成（`--good`）。
   static const Color success = Color(0xFF7FB58A);
+
+  /// 危险/失败（与 [AppPalette.bad] 深色值一致；浅色主题下用 palette 版）。
+  static const Color bad = Color(0xFFD98C84);
 }

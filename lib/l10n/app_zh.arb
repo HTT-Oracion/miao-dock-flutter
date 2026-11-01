@@ -1835,5 +1835,139 @@
   "@queueOpenDir": {
     "description": "队列操作文案",
     "placeholders": null
+  },
+  "shelfMenuOpenDir": "打开目录",
+  "@shelfMenuOpenDir": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "shelfMenuContinue": "继续翻译",
+  "@shelfMenuContinue": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "shelfMenuRetranslate": "重新翻译整本",
+  "@shelfMenuRetranslate": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "shelfMenuMerge": "归并到…",
+  "@shelfMenuMerge": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "shelfMenuEdit": "编辑信息",
+  "@shelfMenuEdit": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "shelfMenuDelete": "删除{kind}",
+  "@shelfMenuDelete": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfDeleteTitle": "删除《{name}》？",
+  "@shelfDeleteTitle": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfDeleteBody": "会从书架移除 {chapters} 话、{pages} 页的记录。这个动作无法撤销。",
+  "@shelfDeleteBody": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "chapters": {
+        "type": "int"
+      },
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "shelfDeleteWithFiles": "同时删除本地图片与译文文件",
+  "@shelfDeleteWithFiles": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "shelfDeleteKeepHint": "不勾选＝只从书架移除，文件保留，可在「已隐藏」里恢复",
+  "@shelfDeleteKeepHint": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "shelfDeleteDone": "已删除「{name}」",
+  "@shelfDeleteDone": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfHiddenDone": "已隐藏「{name}」",
+  "@shelfHiddenDone": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfDeletedFilesDone": "已删除「{name}」及其本地文件",
+  "@shelfDeletedFilesDone": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfRetranslateOk": "已提交「{name}」重新翻译",
+  "@shelfRetranslateOk": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfMergeDone": "已归并「{name}」",
+  "@shelfMergeDone": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfContinueOk": "已提交「{name}」继续翻译",
+  "@shelfContinueOk": {
+    "description": "书架右键菜单",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfAllTranslated": "这本漫画已全部翻译完成",
+  "@shelfAllTranslated": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "kindBook": "整本",
+  "@kindBook": {
+    "description": "书架右键菜单",
+    "placeholders": null
+  },
+  "kindChapter": "本话",
+  "@kindChapter": {
+    "description": "书架右键菜单",
+    "placeholders": null
   }
 }

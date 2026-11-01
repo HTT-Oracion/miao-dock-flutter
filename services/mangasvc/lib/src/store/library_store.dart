@@ -96,6 +96,8 @@ class LibraryStore {
       if (name.startsWith('.')) continue; // 跳过隐藏目录
       // 服务自己的状态目录（token / hidden-comics.json）不是漫画，必须排除。
       if (name == 'state') continue;
+      // 已隐藏：**不出现在书架里**，只在 `hidden` 清单中（用户在「已隐藏」区恢复）。
+      if (_hidden.contains(name)) continue;
 
       final chapters = _chaptersOf(entity);
       final hasManifest = _manifestOf(entity) != null;

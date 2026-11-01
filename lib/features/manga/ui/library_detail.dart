@@ -17,6 +17,7 @@ import '../domain/lib_book.dart';
 import '../domain/manga_status.dart';
 import '../domain/manga_task.dart';
 import 'library_search_results.dart';
+import 'shelf_menu.dart';
 
 /// 详情主区（设计稿 G Main）：
 /// 头部（本地漫画库 + 刷新 + 新建）→ Hero（封面 + 标题 + 元信息 + 动作）→
@@ -267,7 +268,7 @@ class _Hero extends ConsumerWidget {
                         label: l10n.libMerge,
                         primary: true,
                         onTap: () async {
-                          final result = await _MergeDialog.show(context, src: book.key);
+                          final result = await showMergeDialog(context, src: book.key);
                           if (result == null || !context.mounted) return;
                           try {
                             await ref
@@ -705,90 +706,6 @@ class _EditBookDialogState extends State<_EditBookDialog> {
           child: Text(l10n.libEditInfoOk, style: const TextStyle(fontSize: 11.5)),
         ),
       ],
-    );
-  }
-}
-
-class _MergeDialog extends StatefulWidget {
-  const _MergeDialog({required this.src});
-
-  final String src;
-
-  static Future<(String, double)?> show(BuildContext context, {required String src}) => showDialog<(String, double)>(
-    context: context,
-    builder: (_) => _MergeDialog(src: src),
-  );
-
-  @override
-  State<_MergeDialog> createState() => _MergeDialogState();
-}
-
-class _MergeDialogState extends State<_MergeDialog> {
-  final _noController = TextEditingController();
-  String? _target;
-
-  @override
-  void dispose() {
-    _noController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Consumer(
-      builder: (context, ref, _) {
-        final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
-        final targets = books.where((b) => b.isBook).toList();
-        return AlertDialog(
-          backgroundColor: AppTokens.card,
-          title: Text(l10n.libMergeTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          content: SizedBox(
-            width: 300,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: _target,
-                  isDense: true,
-                  style: const TextStyle(fontSize: 12),
-                  hint: Text(l10n.libMergeTargetHint, style: const TextStyle(fontSize: 12)),
-                  items: [
-                    for (final b in targets)
-                      DropdownMenuItem(
-                        value: b.key,
-                        child: Text(b.name, style: const TextStyle(fontSize: 12)),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => _target = v),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _noController,
-                  style: const TextStyle(fontSize: 12),
-                  decoration: InputDecoration(labelText: l10n.libMergeNoHint, isDense: true),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
-            ),
-            FilledButton(
-              onPressed: _target == null
-                  ? null
-                  : () {
-                      final no = double.tryParse(_noController.text.trim());
-                      if (no == null) return;
-                      Navigator.of(context).pop((_target!, no));
-                    },
-              child: Text(l10n.libMerge, style: const TextStyle(fontSize: 11.5)),
-            ),
-          ],
-        );
-      },
     );
   }
 }
