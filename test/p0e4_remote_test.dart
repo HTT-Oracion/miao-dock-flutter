@@ -15,9 +15,11 @@ import 'package:miao_dock_flutter/features/manga/data/http_manga_svc_client.dart
 ///   · 必须带 `X-Box-Token`（跨设备是暴露面）。
 ///
 /// 前置：服务需以令牌模式启动并已知令牌，通过 `MIAO_E2E_TOKEN` 传入。
+/// 🔴 必须用 `--dart-define`：`String.fromEnvironment` 只读编译期常量，
+/// shell 环境变量传不进去（传了也等于没传，表现为对令牌模式服务 403）。
 /// ```
 /// dart run services/mangasvc/bin/mangasvc.dart --root /tmp/e4 --print-token
-/// MIAO_E2E_TOKEN=<token> flutter test --tags e2e test/p0e4_remote_test.dart
+/// flutter test --dart-define=MIAO_E2E_TOKEN=<token> --tags e2e test/p0e4_remote_test.dart
 /// ```
 void main() {
   const token = String.fromEnvironment('MIAO_E2E_TOKEN');

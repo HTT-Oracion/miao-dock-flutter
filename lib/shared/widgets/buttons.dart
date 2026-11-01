@@ -124,6 +124,7 @@ class AppButton extends StatefulWidget {
     this.height = 26,
     this.horizontalPadding = 10,
     this.fontSize = 12,
+    this.fontWeight,
     this.color,
     this.border = false,
     this.width,
@@ -138,6 +139,9 @@ class AppButton extends StatefulWidget {
   final double height;
   final double horizontalPadding;
   final double fontSize;
+
+  /// 字重；缺省跟随平台默认。设置页按钮用 w600（对齐 `_primaryStyle`）。
+  final FontWeight? fontWeight;
 
   /// 覆盖文字色（如 danger 项）。
   final Color? color;
@@ -181,6 +185,7 @@ class _AppButtonState extends State<AppButton> {
             widget.label,
             style: TextStyle(
               fontSize: widget.fontSize,
+              fontWeight: widget.fontWeight,
               // hover 提亮到 ink，与原 _TextLink 行为一致。
               color: _hover ? palette.textPrimary : base,
             ),
@@ -245,7 +250,7 @@ class _AppButtonState extends State<AppButton> {
                 if (widget.label.isNotEmpty)
                   Text(
                     widget.label,
-                    style: TextStyle(fontSize: widget.fontSize, color: fg),
+                    style: TextStyle(fontSize: widget.fontSize, fontWeight: widget.fontWeight, color: fg),
                   ),
               ],
             ),

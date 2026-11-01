@@ -2275,3 +2275,31 @@
 - **测试**：`reader_toggle_test` —— 默认按钮是「显示原图」、默认请求译文、
   点击后按钮变「显示翻译」、重新取图 `translated=false`、偏好落盘为 true。
 - **验证**：应用 152 通过；analyze 与 l10n 通过。
+
+## D-123 远程一行式规格重排 + 校验提示不压输入框
+
+- **状态**：完成（2026-11-01）
+- **做了什么**：
+  - `_RemoteSection` 一行式重排：令牌输入定宽 **200**（64 hex 遮蔽显示足够），
+    远程地址改 `Expanded` 吃剩余宽度，测试按钮自然**贴行最右**。
+  - 测试按钮规格：内距 18 / 字 9.5 / w600（= 服务卡片「停止」按钮），
+    高度 **36** 与同行输入框同高（D-055 原则；34 与 36 的取舍用户裁定为同高）。
+  - **`AppInput` 错误文案移出 `InputDecoration`**：`errorText` 会让装饰器从
+    输入行抢高度把 36 的框压矮；改为独立 `Text`（10 号 / `bad`）画在输入框
+    正下方，框恒定高度。描边变红仍由 `borderColor` 驱动，冗余的
+    `errorBorder` / `focusedErrorBorder` 移除。
+  - **`AppButton` 扩展 `fontWeight`**（D-115 路径：扩展既有实现），
+    默认 null 不影响现有调用点。
+  - **修正 `p0e4_remote_test` 的误导注释**：`String.fromEnvironment` 只读
+    `--dart-define`，shell 环境变量传不进去；原文档写的
+    `MIAO_E2E_TOKEN=<t> flutter test` 用法是错的（表现为对令牌服务 403）。
+- **为什么**：用户实测反馈该行与设置页语言不匹配——按钮过重、不贴右、
+  输入框宽度分配不合理；校验一触发输入框还被压矮，观感像布局跳变。
+- **踩坑（环境假红，第三次同型）**：全量测试 `p0e4_remote_test` 403，
+  排查为用户开着的 macOS App 保活了令牌模式服务（D-036 / D-038 同型）；
+  用 `~/Pictures/MiaoDock Mangas/.miao-state/token`（服务 CLI 缺省状态目录
+  是 `<库根>/.miao-state`，不是 appData 的 `manga/state`）+ `--dart-define`
+  重跑后转绿，证实非代码回归。
+- **验证**：`flutter analyze` 干净；全量 159 通过 + 8 跳过
+  （含对**正在运行的真实服务**的 e2e 用例）；l10n 无新增文案。
+- **关联**：D-055（同排同高）· D-115（约束 10）· D-121（一行式首版）· D-036（假红）。

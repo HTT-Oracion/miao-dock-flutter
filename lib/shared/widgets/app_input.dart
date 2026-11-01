@@ -10,7 +10,8 @@ import 'buttons.dart' show kButtonRadius;
 /// - 高度默认 36（比 26 的按钮更高，便于点击与阅读，可传 [height] 覆盖）；
 /// - 圆角恒为 [kButtonRadius]；
 /// - **必须有 placeholder**（[hint] 必填）—— 空输入框没有提示会让用户不知道填什么；
-/// - 错误态用 [errorText]，描边转 `bad`；
+/// - 错误态用 [errorText]，描边转 `bad`；文案画在输入框**下方**，
+///   不参与 InputDecoration（塞进去会让装饰器从输入行抢高度，输入框被压矮）；
 /// - 前后缀图标可选。
 class AppInput extends StatelessWidget {
   const AppInput({
@@ -57,23 +58,34 @@ class AppInput extends StatelessWidget {
     final borderColor = errorText != null ? palette.bad : palette.divider;
     final radius = BorderRadius.circular(kButtonRadius);
 
-    return SizedBox(
-      height: maxLines > 1 ? null : height,
-      child: TextField(
-        controller: controller,
-        // initialValue 与 controller 不能同时给（TextField 的限制）。
-        decoration: _decoration(palette, borderColor, radius),
-        enabled: enabled,
-        obscureText: obscure,
-        onChanged: onChanged,
-        onSubmitted: onSubmitted,
-        autofocus: autofocus,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        maxLines: maxLines,
-        style: TextStyle(fontSize: fontSize, color: palette.textPrimary),
-        cursorColor: palette.accent,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: maxLines > 1 ? null : height,
+          child: TextField(
+            controller: controller,
+            // initialValue 与 controller 不能同时给（TextField 的限制）。
+            decoration: _decoration(palette, borderColor, radius),
+            enabled: enabled,
+            obscureText: obscure,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted,
+            autofocus: autofocus,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            maxLines: maxLines,
+            style: TextStyle(fontSize: fontSize, color: palette.textPrimary),
+            cursorColor: palette.accent,
+          ),
+        ),
+        if (errorText != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 2),
+            child: Text(errorText!, style: TextStyle(fontSize: 10, color: palette.bad)),
+          ),
+      ],
     );
   }
 
@@ -82,14 +94,14 @@ class AppInput extends StatelessWidget {
       borderRadius: radius,
       borderSide: BorderSide(color: borderColor),
     );
+    // 错误文案**不在**这里（errorText 会挤压输入行高度）；描边转红由
+    // borderColor 统一驱动：未聚焦走 enabledBorder，聚焦走 focusedBorder。
     return InputDecoration(
       isDense: true,
       filled: true,
       fillColor: palette.navBg,
       hintText: hint,
       hintStyle: TextStyle(fontSize: fontSize, color: palette.textSecondary),
-      errorText: errorText,
-      errorStyle: TextStyle(fontSize: 10, color: palette.bad),
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       enabledBorder: border,
       disabledBorder: OutlineInputBorder(
@@ -99,14 +111,6 @@ class AppInput extends StatelessWidget {
       focusedBorder: OutlineInputBorder(
         borderRadius: radius,
         borderSide: BorderSide(color: borderColor == palette.bad ? palette.bad : palette.accent),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: radius,
-        borderSide: BorderSide(color: palette.bad),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: radius,
-        borderSide: BorderSide(color: palette.bad),
       ),
       prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 14, color: palette.textSecondary) : null,
       prefixIconConstraints: const BoxConstraints(minWidth: 30, minHeight: 30),

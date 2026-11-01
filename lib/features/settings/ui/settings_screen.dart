@@ -644,13 +644,17 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     // **一行**：令牌 + 远程地址 + 测试按钮（用户要求）。
+    // 令牌定宽（64 hex 遮蔽显示，200 足够容纳提示与可见段）；地址用 Expanded
+    // 吃掉剩余宽度（URL 长度不定，宽输入更合理），按钮因此自然**贴行最右**。
+    // 按钮规格对齐设置页 `_primaryStyle`（内距 18 / 字 11 / w600），
+    // 高度取 36 与同行输入框同高（D-055：同排控件同高更稳）。
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 150,
+            width: 200,
             child: AppInput(
               controller: _token,
               hint: l10n.remoteTokenHint,
@@ -660,8 +664,7 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
             ),
           ),
           const SizedBox(width: 8),
-          SizedBox(
-            width: 240,
+          Expanded(
             child: AppInput(
               controller: _url,
               hint: l10n.remoteBaseUrlHint2,
@@ -675,8 +678,12 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
             onTap: _testing ? null : _test,
             clickable: !_testing,
             variant: AppButtonVariant.primary,
+            // 字体规格 = 服务卡片「停止」按钮（_primaryStyle + 9.5 号字）；
+            // 高度 = 同行输入框（D-055：同排控件同高）。
             height: 36,
-            horizontalPadding: 14,
+            horizontalPadding: 18,
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
           ),
         ],
       ),
