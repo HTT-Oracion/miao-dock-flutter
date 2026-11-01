@@ -27,7 +27,10 @@ class AppSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final track = value ? palette.acc : palette.hi;
+    // 关闭态轨道用 line2 而不是稿子的 --hi：浅色主题 hi 映射为纯白，
+    // 与 .setrow 的白底融为一体（用户实测反馈）；line2 在深浅两档都是
+    // 「比面板亮/深一档」的既有层级，白底上清晰可辨。
+    final track = value ? palette.acc : palette.line2;
     final knob = value ? palette.onAcc : palette.ink2;
 
     final active = enabled && onChanged != null;
