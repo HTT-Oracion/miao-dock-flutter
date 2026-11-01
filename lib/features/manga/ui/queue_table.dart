@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/app_checkbox.dart';
 import '../../../../shared/widgets/app_table.dart';
 import '../../../../shared/widgets/buttons.dart';
+import '../../../../shared/widgets/app_menu.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -223,8 +225,7 @@ class QueueRowActions extends ConsumerWidget {
       children: [
         AppTextAction(label: label, onTap: action, highlight: highlighted),
         const SizedBox(width: 6),
-        PopupMenuButton<String>(
-          tooltip: '',
+        _MoreButton(
           onSelected: (v) async {
             switch (v) {
               case 'open':
@@ -235,25 +236,82 @@ class QueueRowActions extends ConsumerWidget {
                 }
               case 'delete':
                 await ref.read(queueProvider.notifier).deleteTasks({task.id});
-                if (context.mounted) showAppToast(context, l10n.queueDeletedToast(task.name), tone: ToastTone.info);
+                if (context.mounted) {
+                  showAppToast(context, l10n.queueDeletedToast(task.name), tone: ToastTone.info);
+                }
             }
           },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'open',
-              height: 30,
-              child: Text(l10n.queueOpenDir, style: const TextStyle(fontSize: 10.5)),
-            ),
-            const PopupMenuDivider(),
-            PopupMenuItem(
-              value: 'delete',
-              height: 30,
-              child: Text(l10n.actionDelete, style: const TextStyle(fontSize: 10.5)),
-            ),
-          ],
-          child: AppTextAction(label: l10n.actionMore, onTap: null),
         ),
       ],
+    );
+  }
+}
+
+/// 「更多」触发器：点开后用统一样式的下拉（AppMenu），并提供 hover 反馈。
+class _MoreButton extends ConsumerWidget {
+  const _MoreButton({required this.onSelected});
+
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Builder(
+      builder: (context) => _HoverChip(
+        label: l10n.actionMore,
+        onTapDown: (details) async {
+          final box = context.findRenderObject()! as RenderBox;
+          final origin = box.localToGlobal(Offset.zero);
+          final value = await showAppMenu(
+            context,
+            position: Offset(origin.dx, origin.dy + box.size.height + 4),
+            minWidth: 160,
+            items: [
+              AppMenuItem(value: 'open', label: l10n.queueOpenDir, icon: LucideIcons.folderUp),
+              const AppMenuItem.separator(),
+              AppMenuItem(value: 'delete', label: l10n.actionDelete, icon: LucideIcons.trash2, danger: true),
+            ],
+          );
+          if (value != null) onSelected(value);
+        },
+      ),
+    );
+  }
+}
+
+/// 带 hover 的小胶囊触发器（替代 AppTextAction 包裹，避免手势被内层吞掉）。
+class _HoverChip extends StatefulWidget {
+  const _HoverChip({required this.label, required this.onTapDown});
+
+  final String label;
+  final void Function(TapDownDetails) onTapDown;
+
+  @override
+  State<_HoverChip> createState() => _HoverChipState();
+}
+
+class _HoverChipState extends State<_HoverChip> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTapDown: widget.onTapDown,
+        child: Container(
+          height: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 9),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _hover ? AppTokens.card : AppTokens.divider,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(widget.label, style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
+        ),
+      ),
     );
   }
 }

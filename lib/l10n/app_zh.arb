@@ -2088,5 +2088,13 @@
         "type": "int"
       }
     }
+  },
+  "actionOpenDir": "打开目录",
+  "@actionOpenDir": {
+    "description": "在文件管理器中打开目录"
+  },
+  "libCoverNone": "无封面",
+  "@libCoverNone": {
+    "description": "封面占位"
   }
 }

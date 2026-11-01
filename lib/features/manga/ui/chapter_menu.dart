@@ -5,6 +5,7 @@ import 'package:protocol/protocol.dart' show jsNumStr;
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_menu.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -24,46 +25,31 @@ class ChapterMenuButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final pending = chapter.pageCount - chapter.donePages;
-    return PopupMenuButton<String>(
-      tooltip: '',
-      padding: EdgeInsets.zero,
-      iconSize: 14,
-      icon: const Icon(LucideIcons.ellipsis, size: 14, color: AppTokens.textSecondary),
+    return _MenuTrigger(
       onSelected: (v) => _run(context, ref, v),
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'open',
-          height: 32,
-          child: _Item(icon: LucideIcons.folderUp, label: l10n.chapterMenuOpenDir),
-        ),
-        PopupMenuItem(
+      items: [
+        AppMenuItem(value: 'open', label: l10n.chapterMenuOpenDir, icon: LucideIcons.folderUp),
+        AppMenuItem(
           value: 'resume',
-          height: 32,
+          label: l10n.chapterMenuResume,
+          icon: LucideIcons.play,
+          sub: pending > 0 ? l10n.chapterMenuResumeSub(pending) : l10n.chapterMenuResumeNone,
           enabled: pending > 0,
-          child: _Item(
-            icon: LucideIcons.play,
-            label: l10n.chapterMenuResume,
-            sub: pending > 0 ? l10n.chapterMenuResumeSub(pending) : l10n.chapterMenuResumeNone,
-            enabled: pending > 0,
-          ),
         ),
-        PopupMenuItem(
+        AppMenuItem(
           value: 'retranslate',
-          height: 32,
+          label: l10n.chapterMenuRetranslate,
+          icon: LucideIcons.rotateCcw,
           enabled: chapter.pageCount > 0,
-          child: _Item(icon: LucideIcons.rotateCcw, label: l10n.chapterMenuRetranslate, enabled: chapter.pageCount > 0),
         ),
-        PopupMenuItem(
-          value: 'renumber',
-          height: 32,
-          child: _Item(icon: LucideIcons.pencil, label: l10n.chapterMenuEditNo),
-        ),
-        // 恒置灰：归并后的章节不能单独删（miao-dock `CHAPTER_DELETE_BLOCKED_TITLE` 同）。
-        PopupMenuItem(
+        AppMenuItem(value: 'renumber', label: l10n.chapterMenuEditNo, icon: LucideIcons.pencil),
+        // 恒置灰：归并后的章节不能单独删。
+        AppMenuItem(
           value: 'delete',
-          height: 32,
+          label: l10n.chapterMenuDelete,
+          icon: LucideIcons.trash2,
           enabled: false,
-          child: _Item(icon: LucideIcons.trash2, label: l10n.chapterMenuDelete, enabled: false, danger: true),
+          danger: true,
         ),
       ],
     );
@@ -133,28 +119,41 @@ class ChapterMenuButton extends ConsumerWidget {
   }
 }
 
-class _Item extends StatelessWidget {
-  const _Item({required this.icon, required this.label, this.sub, this.enabled = true, this.danger = false});
+class _MenuTrigger extends StatefulWidget {
+  const _MenuTrigger({required this.items, required this.onSelected});
 
-  final IconData icon;
-  final String label;
-  final String? sub;
-  final bool enabled;
-  final bool danger;
+  final List<AppMenuItem> items;
+  final ValueChanged<String> onSelected;
+
+  @override
+  State<_MenuTrigger> createState() => _MenuTriggerState();
+}
+
+class _MenuTriggerState extends State<_MenuTrigger> {
+  bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
-    final color = !enabled ? AppTokens.textSecondary : (danger ? AppTokens.bad : AppTokens.textPrimary);
-    return Row(
-      children: [
-        Icon(icon, size: 12, color: color),
-        const SizedBox(width: 7),
-        Text(label, style: TextStyle(fontSize: 11.5, color: color)),
-        if (sub != null) ...[
-          const SizedBox(width: 6),
-          Text(sub!, style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
-        ],
-      ],
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTapDown: (d) async {
+          final value = await showAppMenu(context, position: d.globalPosition, minWidth: 170, items: widget.items);
+          if (value != null) widget.onSelected(value);
+        },
+        child: Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _hover ? AppTokens.navBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Icon(LucideIcons.ellipsis, size: 13, color: _hover ? AppTokens.textPrimary : AppTokens.textSecondary),
+        ),
+      ),
     );
   }
 }

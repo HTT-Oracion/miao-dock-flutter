@@ -31,7 +31,7 @@ class AppGhostButton extends StatelessWidget {
 }
 
 /// 行内小动作钮（24 高，divider 底）：表格行「取消 / 打开 / 更多」等。
-class AppTextAction extends StatelessWidget {
+class AppTextAction extends StatefulWidget {
   const AppTextAction({super.key, required this.label, required this.onTap, this.highlight = false});
 
   final String label;
@@ -43,20 +43,37 @@ class AppTextAction extends StatelessWidget {
   final bool highlight;
 
   @override
+  State<AppTextAction> createState() => _AppTextActionState();
+}
+
+class _AppTextActionState extends State<AppTextAction> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: highlight ? AppTokens.accent : AppTokens.divider,
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
+    final highlight = widget.highlight;
+    // ver1.0：主按钮 hover 提亮；ghost hover 底色变 card（设计稿 `.btn.ghost:hover`）。
+    final bg = highlight
+        ? (_hover ? const Color(0xFFF0B96A) : AppTokens.accent)
+        : (_hover ? AppTokens.card : AppTokens.divider);
+    return MouseRegion(
+      cursor: widget.onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Material(
+        color: bg,
         borderRadius: BorderRadius.circular(6),
-        onTap: onTap,
-        child: Container(
-          height: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(fontSize: 12, color: highlight ? AppTokens.pageBg : AppTokens.textPrimary),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: widget.onTap,
+          child: Container(
+            height: 24,
+            padding: const EdgeInsets.symmetric(horizontal: 9),
+            alignment: Alignment.center,
+            child: Text(
+              widget.label,
+              style: TextStyle(fontSize: 12, color: highlight ? AppTokens.pageBg : AppTokens.textPrimary),
+            ),
           ),
         ),
       ),

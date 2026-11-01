@@ -184,7 +184,7 @@ class _ShelfBody extends ConsumerWidget {
   }
 }
 
-class _BookRow extends ConsumerWidget {
+class _BookRow extends ConsumerStatefulWidget {
   const _BookRow({required this.book, required this.active, required this.onTap});
 
   final LibBook book;
@@ -192,75 +192,63 @@ class _BookRow extends ConsumerWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final index = book.key.hashCode;
-    return GestureDetector(
-      onSecondaryTapDown: (d) => ShelfContextMenu.show(context, ref, book, d.globalPosition),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Material(
-          color: active ? AppTokens.navActive : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(6),
+  ConsumerState<_BookRow> createState() => _BookRowState();
+}
+
+class _BookRowState extends ConsumerState<_BookRow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final book = widget.book;
+    final active = widget.active;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onSecondaryTapDown: (d) => ShelfContextMenu.show(context, ref, book, d.globalPosition),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          // ver1.0 `.nav-item`：34 高、8 圆角；hover 变 card 底；
+          // 选中 = card 底 + 1px 描边 + 主色图标。
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: (active || _hover) ? AppTokens.card : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: active ? AppTokens.divider : Colors.transparent),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: widget.onTap,
               child: Row(
                 children: [
-                  _CoverThumb(seed: index),
-                  const SizedBox(width: 10),
+                  Icon(
+                    book.isBook ? LucideIcons.bookText : LucideIcons.fileText,
+                    size: 13,
+                    color: active ? AppTokens.accent : AppTokens.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          book.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTokens.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          AppLocalizations.of(context).shelfBookMeta(
-                            book.hasAuthor ? book.author : AppLocalizations.of(context).bookUnnamedAuthor,
-                            book.chapterCount,
-                            book.pageCount,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
-                        ),
-                      ],
+                    child: Text(
+                      book.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                        color: active ? AppTokens.textPrimary : AppTokens.textMuted,
+                      ),
                     ),
                   ),
-                  Icon(LucideIcons.chevronRight, size: 13, color: active ? AppTokens.accent : AppTokens.textSecondary),
+                  Text('${book.pageCount}', style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
                 ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-/// 封面占位（封面图随服务端点落地；以 key 稳定取色）。
-class _CoverThumb extends StatelessWidget {
-  const _CoverThumb({required this.seed});
-
-  final int seed;
-
-  @override
-  Widget build(BuildContext context) {
-    const palette = [Color(0xFF3E4956), Color(0xFF4A4438), Color(0xFF3B4A42), Color(0xFF463B4A)];
-    return Container(
-      width: 40,
-      height: 44,
-      decoration: BoxDecoration(color: palette[seed.abs() % palette.length], borderRadius: BorderRadius.circular(6)),
     );
   }
 }

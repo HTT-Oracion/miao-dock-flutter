@@ -1824,3 +1824,28 @@
   相关 ARB 文案（无标记字符）、主题（无 underline 默认值），均无来源。
   需要截图或复现步骤才能确认（怀疑是系统/平台的文本选择高亮或两条 toast 叠加）。
 - **验证**：应用 132 通过（+1 回归）；服务端 171 通过；analyze 干净；l10n 通过。
+
+## D-097 漫画库还原 ver1.0 布局与交互 + 统一菜单/悬停规范
+
+- **状态**：完成（2026-11-01）
+- **布局重构（核心）**：`LibraryScreen` 改为**两态**——
+  - 未选中：整屏 **全部漫画网格**（`library_grid.dart`，ver1.0 `.lib-grid`/`.bookcard`：
+    3:4 封面、左上话数胶囊、hover 上浮 3px + 主色描边、cursor pointer），**没有左栏**；
+  - 已选中：左栏书架 260 + 右侧详情。
+  - 进入库**不再自动选中第一本**（删掉了 `?? books.first` 兜底）。
+- **左侧列表**：`_BookRow` 重写为 ver1.0 `.nav-item`（34 高、8 圆角、
+  hover 变 card 底、选中 card 底 + 1px 描边 + 主色图标、字号 11）。
+- **修复「简易模式点击打不开」**：胶囊态原来只是 `Container`（无 onTap）；
+  抽成 `_Capsule`（92×32 / 999 圆角 / hover 描边主色），与卡片态一样能进阅读器。
+- **文案修正**：详情页「打开目录」误用了 `actionOpenNav`（打开导航）；
+  新增 `actionOpenDir`，侧栏的「打开导航」保持不动。
+- **统一菜单组件** `shared/widgets/app_menu.dart`（对照 miao-dock `.ui-menu` / `.ui-menu-item`）：
+  card 底、1px 描边、6 圆角、padding 4、项高 30、hover `navBg`、危险项 `bad`、禁用项灰且不响应；
+  队列「更多」/ 书架右键 / 章节「⋯」三处全部改用它（原 `PopupMenuButton` 已移除）。
+- **hover 规范**：`AppTextAction`、`_HeaderAction`、`_HeroButton`、`_Capsule`、`_MenuRow`、
+  `_DialogButton` 统一 `SystemMouseCursors.click` + 变色（主按钮提亮、ghost 变 card 底）。
+  **按用户要求，只作用于漫画库/队列，未改侧栏与设置页**（`AppTextAction` 仅这两处使用，已核实）。
+- **编辑弹窗**：ver1.0 无此弹窗（属 miao-dock 能力），按 ver1.0 视觉规范重排：
+  封面预览 96×128 在左、三个封面操作竖排在右（`.cover-box`），下方标题/作者，
+  底部右对齐「取消 / 保存」；输入框与按钮样式对齐项目 token。
+- **验证**：应用 132 通过；服务端 171 通过；analyze 干净；l10n 棘轮通过。

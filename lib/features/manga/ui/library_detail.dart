@@ -42,7 +42,7 @@ class LibraryDetail extends ConsumerWidget {
     if (books.isEmpty) {
       return Column(
         children: [
-          _LibHeader(count: 0),
+          const LibraryHeaderActions(),
           Expanded(
             child: Center(
               child: Text(
@@ -55,12 +55,17 @@ class LibraryDetail extends ConsumerWidget {
       );
     }
     final selected = ref.watch(selectedBookProvider);
-    final book = books.where((b) => b.key == selected).firstOrNull ?? books.first;
+    // 🔴 不兜底 `books.first`：进库未选中时应停在网格（由 LibraryScreen 决定），
+    // 这里只在**确实选中**时渲染详情。
+    final book = books.where((b) => b.key == selected).firstOrNull;
+    if (book == null) {
+      return const SizedBox.shrink();
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       children: [
-        _LibHeader(count: books.length),
+        const LibraryHeaderActions(),
         const SizedBox(height: 12),
         _Hero(book: book),
         if (!book.isBook) ...[
@@ -92,10 +97,8 @@ class LibraryDetail extends ConsumerWidget {
 }
 
 /// 主区头部（ver1.0 `.lib-main` 头）：本地漫画库 + 计数 + 刷新 + 新建漫画。
-class _LibHeader extends ConsumerWidget {
-  const _LibHeader({required this.count});
-
-  final int count;
+class LibraryHeaderActions extends ConsumerWidget {
+  const LibraryHeaderActions({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -305,7 +308,7 @@ class _Hero extends ConsumerWidget {
                     const SizedBox(width: 8),
                     _HeroButton(
                       icon: LucideIcons.folderOpen,
-                      label: l10n.actionOpenNav,
+                      label: l10n.actionOpenDir,
                       onTap: () async {
                         await ref.read(mangaSvcClientProvider).revealBook(book.key);
                         if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
@@ -667,51 +670,91 @@ class _ChapterCard extends ConsumerWidget {
 }
 
 /// 简易（胶囊）态：名字 + 状态圆点（待译 蓝 · 缺页 黄 · 已译完不显示）。
-class _ChapterCapsules extends StatelessWidget {
+class _ChapterCapsules extends ConsumerWidget {
   const _ChapterCapsules({required this.book});
 
   final LibBook book;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         for (final c in book.chapters)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(999)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.chapterTitle(jsNumStr(c.no)),
-                  style: const TextStyle(fontSize: 11.5, color: AppTokens.textPrimary),
-                ),
-                if (!c.done) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: c.translatedSeqs.isEmpty
-                          ? MangaTaskStatus.translating.color
-                          : MangaTaskStatus.partialFailed.color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+          _Capsule(
+            label: l10n.chapterTitle(jsNumStr(c.no)),
+            pending: !c.done,
+            pendingColor: c.translatedSeqs.isEmpty
+                ? MangaTaskStatus.translating.color
+                : MangaTaskStatus.partialFailed.color,
+            onTap: () {
+              // 简易态与卡片态**同样能点开阅读器**（此前胶囊不可点，是缺陷）。
+              ref
+                  .read(readerSessionProvider.notifier)
+                  .open(
+                    ReaderSession(key: book.key, chapterNo: c.no, pages: c.pageCount, translated: c.translatedSeqs),
+                  );
+              context.go('/manga/reader');
+            },
           ),
       ],
     );
   }
 }
 
-// ── 对话框 ────────────────────────────────────────────────────────────────
+/// 单个胶囊（ver1.0 `.chapcap`：92×32、999 圆角、panel 底、hover 描边变主色）。
+class _Capsule extends StatefulWidget {
+  const _Capsule({required this.label, required this.onTap, this.pending = false, this.pendingColor});
+
+  final String label;
+  final VoidCallback onTap;
+  final bool pending;
+  final Color? pendingColor;
+
+  @override
+  State<_Capsule> createState() => _CapsuleState();
+}
+
+class _CapsuleState extends State<_Capsule> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppTokens.navBg,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _hover ? AppTokens.accent : AppTokens.divider),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(widget.label, style: const TextStyle(fontSize: 11, color: AppTokens.textMuted)),
+              if (widget.pending) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(color: widget.pendingColor, shape: BoxShape.circle),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _CreateBookDialog extends StatefulWidget {
   const _CreateBookDialog();
@@ -762,7 +805,7 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
   }
 }
 
-class _EditBookDialog extends StatefulWidget {
+class _EditBookDialog extends ConsumerStatefulWidget {
   const _EditBookDialog({required this.book});
 
   final LibBook book;
@@ -773,7 +816,7 @@ class _EditBookDialog extends StatefulWidget {
   );
 
   @override
-  State<_EditBookDialog> createState() => _EditBookDialogState();
+  ConsumerState<_EditBookDialog> createState() => _EditBookDialogState();
 }
 
 /// 封面意图（miao-dock `CoverSource`）：保留 / 本地图片 / 第 1 话首图 / 移除。
@@ -789,7 +832,7 @@ class EditBookResult {
   final String? coverFileName;
 }
 
-class _EditBookDialogState extends State<_EditBookDialog> {
+class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
   late final TextEditingController _title = TextEditingController(text: widget.book.name);
   late final TextEditingController _author = TextEditingController(text: widget.book.author);
   CoverIntent _cover = CoverIntent.keep;
@@ -819,91 +862,229 @@ class _EditBookDialogState extends State<_EditBookDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final hasCover = widget.book.hasCover;
-    return AlertDialog(
+    return Dialog(
       backgroundColor: AppTokens.card,
-      title: Text(l10n.libEditInfoTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-      content: SizedBox(
-        width: 340,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: 420,
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _title,
-              style: const TextStyle(fontSize: 12),
-              decoration: InputDecoration(labelText: l10n.libCreateBookNameHint, isDense: true),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _author,
-              style: const TextStyle(fontSize: 12),
-              decoration: InputDecoration(labelText: l10n.bookAuthorLabel(''), isDense: true),
+            Text(
+              l10n.libEditInfoTitle,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTokens.textPrimary),
             ),
             const SizedBox(height: 14),
-            Text(l10n.libCoverLabel, style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
-            const SizedBox(height: 6),
+            // 封面区（ver1.0 `.cover-box`：预览 96×128 在左，操作竖排在右）
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _CoverChoice(
-                  icon: LucideIcons.imagePlus,
-                  label: l10n.libCoverPickLocal,
-                  active: _cover == CoverIntent.local,
-                  onTap: _pickLocal,
+                Container(
+                  width: 96,
+                  height: 128,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: AppTokens.cardCover,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTokens.divider),
+                  ),
+                  child: _preview(),
                 ),
-                const SizedBox(width: 6),
-                _CoverChoice(
-                  icon: LucideIcons.fileImage,
-                  label: l10n.libCoverFromFirst,
-                  active: _cover == CoverIntent.first,
-                  // 没有任何话/页时取不到首图（miao-dock 同：置灰而不是点了报错）。
-                  enabled: widget.book.isBook ? widget.book.chapters.isNotEmpty : widget.book.directPages > 0,
-                  onTap: () => setState(() => _cover = CoverIntent.first),
-                ),
-                const SizedBox(width: 6),
-                _CoverChoice(
-                  icon: LucideIcons.trash2,
-                  label: l10n.libCoverRemove,
-                  active: _cover == CoverIntent.remove,
-                  enabled: hasCover || _cover == CoverIntent.local || _cover == CoverIntent.first,
-                  onTap: () => setState(() {
-                    _cover = CoverIntent.remove;
-                    _bytes = null;
-                  }),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _CoverChoice(
+                        icon: LucideIcons.imagePlus,
+                        label: l10n.libCoverPickLocal,
+                        active: _cover == CoverIntent.local,
+                        onTap: _pickLocal,
+                      ),
+                      const SizedBox(height: 6),
+                      _CoverChoice(
+                        icon: LucideIcons.fileImage,
+                        label: l10n.libCoverFromFirst,
+                        active: _cover == CoverIntent.first,
+                        enabled: widget.book.isBook ? widget.book.chapters.isNotEmpty : widget.book.directPages > 0,
+                        onTap: () => setState(() => _cover = CoverIntent.first),
+                      ),
+                      const SizedBox(height: 6),
+                      _CoverChoice(
+                        icon: LucideIcons.trash2,
+                        label: l10n.libCoverRemove,
+                        active: _cover == CoverIntent.remove,
+                        enabled: hasCover || _cover == CoverIntent.local || _cover == CoverIntent.first,
+                        onTap: () => setState(() {
+                          _cover = CoverIntent.remove;
+                          _bytes = null;
+                        }),
+                      ),
+                      if (_cover == CoverIntent.local) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _fileName == null ? l10n.libCoverPickHint : l10n.libCoverPicked(_fileName!),
+                          style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
-            if (_cover == CoverIntent.local) ...[
-              const SizedBox(height: 6),
-              Text(
-                _fileName == null ? l10n.libCoverPickHint : l10n.libCoverPicked(_fileName!),
-                style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary),
-              ),
-            ],
+            const SizedBox(height: 16),
+            // 文字信息
+            Text(l10n.libCreateBookNameHint, style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+            const SizedBox(height: 5),
+            _DialogField(controller: _title),
+            const SizedBox(height: 12),
+            Text(l10n.bookAuthorLabel(''), style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+            const SizedBox(height: 5),
+            _DialogField(controller: _author),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _DialogButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
+                const SizedBox(width: 8),
+                _DialogButton(
+                  label: l10n.libEditInfoOk,
+                  primary: true,
+                  enabled: !(_cover == CoverIntent.local && _bytes == null),
+                  onTap: () => Navigator.of(context).pop(
+                    EditBookResult(
+                      meta: BookMeta(
+                        title: _title.text.trim().isEmpty ? widget.book.name : _title.text.trim(),
+                        author: _author.text.trim(),
+                      ),
+                      cover: _cover,
+                      coverBytes: _bytes,
+                      coverFileName: _fileName,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
+    );
+  }
+
+  /// 封面预览（ver1.0 `.cover-preview`）：本地图即时预览；无封面显示占位。
+  Widget _preview() {
+    final l10n = AppLocalizations.of(context);
+    if (_cover == CoverIntent.remove) {
+      return Center(
+        child: Text(l10n.libCoverNone, style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary)),
+      );
+    }
+    if (_bytes != null) {
+      return Image.memory(_bytes!, fit: BoxFit.cover);
+    }
+    return FutureBuilder<List<int>?>(
+      future: ref.read(mangaSvcClientProvider).getBookCover(widget.book.key),
+      builder: (context, snap) {
+        final bytes = snap.data;
+        if (bytes == null || bytes.isEmpty) {
+          return Center(
+            child: Text(l10n.libCoverNone, style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary)),
+          );
+        }
+        return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
+      },
+    );
+  }
+}
+
+/// 弹窗内输入框（统一 8 圆角、深底、无下划线）。
+class _DialogField extends StatelessWidget {
+  const _DialogField({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 32,
+      child: TextField(
+        controller: controller,
+        style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary),
+        decoration: InputDecoration(
+          isDense: true,
+          filled: true,
+          fillColor: AppTokens.navBg,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppTokens.divider),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppTokens.accent),
+          ),
         ),
-        FilledButton(
-          onPressed: (_cover == CoverIntent.local && _bytes == null)
-              ? null
-              : () => Navigator.of(context).pop(
-                  EditBookResult(
-                    meta: BookMeta(
-                      title: _title.text.trim().isEmpty ? widget.book.name : _title.text.trim(),
-                      author: _author.text.trim(),
-                    ),
-                    cover: _cover,
-                    coverBytes: _bytes,
-                    coverFileName: _fileName,
-                  ),
-                ),
-          child: Text(l10n.libEditInfoOk, style: const TextStyle(fontSize: 11.5)),
+      ),
+    );
+  }
+}
+
+/// 弹窗按钮（ver1.0 `.btn`：26 高、6 圆角；主按钮 hover 提亮）。
+class _DialogButton extends StatefulWidget {
+  const _DialogButton({required this.label, required this.onTap, this.primary = false, this.enabled = true});
+
+  final String label;
+  final VoidCallback onTap;
+  final bool primary;
+  final bool enabled;
+
+  @override
+  State<_DialogButton> createState() => _DialogButtonState();
+}
+
+class _DialogButtonState extends State<_DialogButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = widget.primary;
+    final enabled = widget.enabled;
+    final Color bg;
+    if (!enabled) {
+      bg = AppTokens.divider;
+    } else if (primary) {
+      bg = _hover ? const Color(0xFFF0B96A) : AppTokens.accent;
+    } else {
+      bg = _hover ? AppTokens.navBg : Colors.transparent;
+    }
+    final fg = !enabled
+        ? AppTokens.textSecondary
+        : primary
+        ? AppTokens.pageBg
+        : AppTokens.textPrimary;
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: (_) => enabled ? setState(() => _hover = true) : null,
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: enabled ? widget.onTap : null,
+        child: Container(
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(6),
+            border: primary ? null : Border.all(color: AppTokens.divider),
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(fontSize: 10.5, color: fg, fontWeight: primary ? FontWeight.w600 : FontWeight.w400),
+          ),
         ),
-      ],
+      ),
     );
   }
 }

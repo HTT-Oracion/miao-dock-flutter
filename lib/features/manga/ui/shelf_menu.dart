@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_menu.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -17,48 +18,24 @@ import '../domain/lib_book.dart';
 class ShelfContextMenu {
   static Future<void> show(BuildContext context, WidgetRef ref, LibBook book, Offset globalPosition) async {
     final l10n = AppLocalizations.of(context);
-    final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
-    final selected = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromRect(globalPosition & const Size(1, 1), Offset.zero & overlay.size),
-      color: AppTokens.card,
+    final selected = await showAppMenu(
+      context,
+      position: globalPosition,
+      minWidth: 180,
       items: [
-        PopupMenuItem(
-          value: 'open',
-          height: 32,
-          child: _Item(icon: LucideIcons.folderUp, label: l10n.shelfMenuOpenDir),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: 'resume',
-          height: 32,
-          child: _Item(icon: LucideIcons.play, label: l10n.shelfMenuContinue),
-        ),
-        PopupMenuItem(
-          value: 'retranslate',
-          height: 32,
-          child: _Item(icon: LucideIcons.rotateCcw, label: l10n.shelfMenuRetranslate),
-        ),
+        AppMenuItem(value: 'open', label: l10n.shelfMenuOpenDir, icon: LucideIcons.folderUp),
+        const AppMenuItem.separator(),
+        AppMenuItem(value: 'resume', label: l10n.shelfMenuContinue, icon: LucideIcons.play),
+        AppMenuItem(value: 'retranslate', label: l10n.shelfMenuRetranslate, icon: LucideIcons.rotateCcw),
         if (book.isBook)
-          PopupMenuItem(
-            value: 'edit',
-            height: 32,
-            child: _Item(icon: LucideIcons.pencil, label: l10n.shelfMenuEdit),
-          )
+          AppMenuItem(value: 'edit', label: l10n.shelfMenuEdit, icon: LucideIcons.pencil)
         else
-          PopupMenuItem(
-            value: 'merge',
-            height: 32,
-            child: _Item(icon: LucideIcons.gitMerge, label: l10n.shelfMenuMerge),
-          ),
-        PopupMenuItem(
+          AppMenuItem(value: 'merge', label: l10n.shelfMenuMerge, icon: LucideIcons.gitMerge),
+        AppMenuItem(
           value: 'delete',
-          height: 32,
-          child: _Item(
-            icon: LucideIcons.trash2,
-            label: l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),
-            danger: true,
-          ),
+          label: l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),
+          icon: LucideIcons.trash2,
+          danger: true,
         ),
       ],
     );
@@ -110,33 +87,11 @@ class ShelfContextMenu {
   }
 }
 
-class _Item extends StatelessWidget {
-  const _Item({required this.icon, required this.label, this.danger = false});
-
-  final IconData icon;
-  final String label;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = danger ? AppTokens.bad : AppTokens.textPrimary;
-    return Row(
-      children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: 8),
-        Text(label, style: TextStyle(fontSize: 11.5, color: color)),
-      ],
-    );
-  }
-}
-
 /// 归并对话框（书架菜单与详情页共用）。
-Future<(String, double)?> showMergeDialog(BuildContext context, {required String src}) {
-  return showDialog<(String, double)>(
-    context: context,
-    builder: (_) => _MergeDialog(src: src),
-  );
-}
+Future<(String, double)?> showMergeDialog(BuildContext context, {required String src}) => showDialog<(String, double)>(
+  context: context,
+  builder: (_) => _MergeDialog(src: src),
+);
 
 class _MergeDialog extends ConsumerStatefulWidget {
   const _MergeDialog({required this.src});

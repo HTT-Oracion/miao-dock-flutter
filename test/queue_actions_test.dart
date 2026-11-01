@@ -69,8 +69,8 @@ void main() {
   testWidgets('更多菜单含打开目录与删除', (tester) async {
     await tester.pumpWidget(harness(make(MangaTaskStatus.done)));
     await tester.pumpAndSettle();
-    // 点 PopupMenuButton 本体（文本在 child 内，直接点文本可能不触发）。
-    await tester.tap(find.byType(PopupMenuButton<String>));
+    // 「更多」现在是自绘 Overlay 菜单（AppMenu），点触发器后断言菜单项。
+    await tester.tap(find.text('更多'));
     await tester.pumpAndSettle();
     expect(find.text('打开目录'), findsOneWidget);
     expect(find.text('删除'), findsOneWidget);
