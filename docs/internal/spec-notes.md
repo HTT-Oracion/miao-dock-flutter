@@ -1942,3 +1942,18 @@
     （旧项目叫「其它」，按用户要求改为「未归并」）。
 - **验证**：`shelf_search_group_test` 2 条（浏览态无分组标题 / 搜索态有分组且未归并组在书组之后）；
   应用 140 通过；服务端 171 通过；analyze 与 l10n 通过。
+
+## D-104 搜索改为模糊（子序列）匹配
+
+- **状态**：完成（2026-11-01）
+- **对照**：`miao-dock src/tools/index.ts matchIndices / fuzzyMatch`。
+- **为什么不是 `contains`**：漫画名常是「第12话 · 学园祭」，用户只记得「12学」也该命中；
+  子序列匹配天然覆盖「连续子串」，所以不必再补一次 `includes`。
+- **实现**：`packages/protocol/lib/src/fuzzy_match.dart`
+  - `matchIndices(text, query)` → 命中字符在**原文**的下标（可直接用于高亮），未命中 null；
+  - `fuzzyMatch` = `matchIndices != null`；
+  - 大小写折叠用 `toLowerCase()`（**不用** `toLocaleLowerCase`：土耳其语 locale 会把 I 折成 ı，
+    导致同代码不同机器结果不同）。
+- **接入**：左栏 `shelfBooks` 与右侧网格过滤均改用 `fuzzyMatch`（名字 + 作者）。
+- **验证**：`fuzzy_match_test` 6 条（含「12学 命中 第12话·学园祭」且证明 `contains` 不命中、
+  顺序颠倒不命中、空查询命中、下标正确）；服务端 177 通过；应用 140 通过；analyze 与 l10n 通过。

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:protocol/protocol.dart' show fuzzyMatch;
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
@@ -27,7 +28,7 @@ class LibraryGrid extends ConsumerWidget {
     final onlyBooks = books.where((b) => b.isBook).toList();
     final shown = query.isEmpty
         ? onlyBooks
-        : onlyBooks.where((b) => b.name.toLowerCase().contains(query.toLowerCase())).toList();
+        : onlyBooks.where((b) => fuzzyMatch(b.name, query) || fuzzyMatch(b.author, query)).toList();
 
     if (books.isEmpty && state.hasError) {
       return ErrorState(error: state.error, onRetry: () => ref.read(libraryProvider.notifier).refresh());

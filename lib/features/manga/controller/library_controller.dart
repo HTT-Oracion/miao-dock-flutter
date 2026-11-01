@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:protocol/protocol.dart' show fuzzyMatch;
 
 import '../data/contract_map.dart';
 import '../domain/lib_book.dart';
@@ -139,7 +140,9 @@ List<LibBook> shelfBooks(WidgetRef ref) {
   // 左栏列**全部**：单本 + 未归并单话（用户定案）。
   final query = ref.watch(shelfQueryProvider).trim();
   if (query.isEmpty) return books;
-  return books.where((b) => b.name.contains(query) || b.author.contains(query)).toList();
+  // 模糊（子序列）匹配，与 miao-dock `fuzzyMatch` 同口径：
+  // 「12学」能命中「第12话 · 学园祭」，纯 `contains` 不行。
+  return books.where((b) => fuzzyMatch(b.name, query) || fuzzyMatch(b.author, query)).toList();
 }
 
 /// 书架当前是否处于「失败但有旧数据」状态（UI 据此显示横幅）。
