@@ -133,6 +133,45 @@
 12. **拆屏判据。** `build()` 超过约 100 行或 Widget 嵌套超过 4 层时，必须拆成独立 Widget 类；拆分方向是横向（`Row` / `Column` 的区块各拆一个），返回 Widget 的私有方法视为拆分未完成。
 13. **取数判据。** 状态用 `ref.watch` 在 `build` 顶层取，不在 UI 树里包 Consumer / builder 取数；派生数据（过滤 / 分组 / 排序）在 controller 或 selector 算好，`build` 只画。
 
+14. **颜色只从主题调色板取，禁止硬编码。**
+
+    **取色唯一入口**：`AppPalette.of(context)`（`lib/core/theme/tokens.dart`）。
+    它是 `ThemeExtension`，**同时定义深色 `AppPalette.dark` 与浅色 `AppPalette.light`**，
+    跟随 `themeMode` 自动切换。
+
+    ```dart
+    final palette = AppPalette.of(context);   // build 顶部取一次
+    Container(color: palette.card)
+    ```
+
+    **禁止**：
+    - `Color(0xFF...)` 字面量（除领域层状态色，见下）；
+    - `Colors.red` / `Colors.black26` 这类 Material 具名色（阴影除外，用 `palette.shadow`）；
+    - `AppTokens.xxx` —— 它是**已退役**的静态色值别名，只剩深色档，浅色下不会变。
+
+    **语义字段（深/浅各一套，勿跨层混用）**：
+
+    | 组 | 字段 | 用法 |
+    |---|---|---|
+    | 层级 | `bg` → `panel` → `card` → `hi` | 页面底 / 侧栏浮层 / 卡片 / hover 与骨架块，**逐层更亮（深色）或更灰（浅色）** |
+    | 描边 | `line` / `line2` | 常规分割线 / 浮层边框 |
+    | 文字 | `ink` → `ink2` → `mut` | 标题正文 / 说明 / 占位与禁用 |
+    | 主色 | `acc` / `accHover` / `onAcc` / `accSoft` | 强调 / hover（主色提亮 8%）/ 主色上的文字 / 选中态底 |
+    | 状态 | `good` / `bad` / `warn` / `blue` | 完成 / 失败危险 / 缺页警告 / 待译信息 |
+    | 其他 | `shadow` / `coverEnd` / `coverEndDeep` | 浮层投影 / 播放器封面渐变尾色 / 书籍卡片封面渐变尾色 |
+
+    **hover 一律用「提亮」而非另写色值**：主色用 `accHover`；
+    其余用层级升降（如 `divider` → `card`），与 ver1.0 `filter: brightness(1.08)` 同义。
+
+    **色相纪律**（design.html §02）：状态色**只用于圆点 / 徽标 / 进度条**，
+    正文与标题一律用 `ink` 系，不用彩色文字表达状态。
+
+    **领域层例外**：`lib/features/**/domain/` 不得依赖 `BuildContext`，
+    状态色以深色档常量形式定义，并注明「跟随浅色由 UI 层映射」。
+
+    **新增颜色**：先看现有字段能否表达；确需新语义时**加进 `AppPalette` 深浅两套**，
+    不在调用点直接写色值。
+
 ## 5. 常用检查命令
 
 工程骨架建立后（`flutter create` 按 §3 分层初始化），以下为日常入口：

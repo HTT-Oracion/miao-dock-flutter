@@ -106,7 +106,7 @@ class _LogBoxState extends State<LogBox> {
                                 height: 1.7,
                                 fontFamily: 'monospace',
                                 // 错误行只染色不删行
-                                color: _isErrorLine(line) ? const Color(0xFFD98C84) : palette.ink2,
+                                color: _isErrorLine(line) ? palette.bad : palette.ink2,
                               ),
                             ),
                         ],

@@ -2172,3 +2172,22 @@
   （`hsl.lightness + 0.08`），自动适配深浅主题与任意主色；两处硬编码全部改为 `palette.accHover`。
 - **字体色**：primary 的 `fg` 只由 `enabled` 决定，**hover 不改变文字颜色**（用户要求，已核实）。
 - **验证**：应用 150 通过；analyze 干净；`#F0B96A` 已无引用。
+
+## D-118 颜色使用规范写入 AGENTS + 清除残留硬编码
+
+- **状态**：完成（2026-11-01）
+- **`AGENTS.md` 新增第 14 条「颜色只从主题调色板取，禁止硬编码」**：
+  - 唯一入口 `AppPalette.of(context)`；**明确 `AppTokens` 已退役**；
+  - 禁止 `Color(0xFF…)` 字面量与 `Colors.red` 之类具名色（阴影除外）；
+  - 语义分组表：层级 `bg→panel→card→hi`、描边 `line/line2`、文字 `ink→ink2→mut`、
+    主色 `acc/accHover/onAcc/accSoft`、状态 `good/bad/warn/blue`、其他 `shadow/coverEnd/coverEndDeep`；
+  - **hover 一律提亮**（主色用 `accHover`，其余用层级升降），与 ver1.0 `brightness(1.08)` 同义；
+  - **色相纪律**：状态色只用于圆点/徽标/进度条，正文标题只用 `ink` 系；
+  - **领域层例外**：domain 不依赖 BuildContext，状态色用深色常量并注明由 UI 层映射；
+  - 新增颜色必须先加进 `AppPalette` 深浅两套。
+- **顺带清掉 5 处残留硬编码**（规范写了就要做到，否则规范没公信力）：
+  - 书籍卡片封面渐变尾色 `#3A2C14` → **新增 `coverEndDeep`**（原 `coverEnd` 是播放器的 `#6B4423`，
+    设计稿里这两种渐变尾色都存在，不能混用）；
+  - `error_state` / `log_box` 的 `#D98C84` → `palette.bad`。
+- **剩余硬编码仅 6 处**：全部在 `domain/manga_status.dart`，属规范允许的领域层例外。
+- **验证**：应用 150 通过；analyze 干净。

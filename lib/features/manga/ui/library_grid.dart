@@ -134,7 +134,7 @@ class _BookCardState extends ConsumerState<_BookCard> {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [palette.accent, Color(0xFF3A2C14)],
+                      colors: [palette.accent, palette.coverEndDeep],
                     ),
                   ),
                   child: Stack(

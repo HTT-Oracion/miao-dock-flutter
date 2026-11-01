@@ -30,6 +30,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.blue,
     required this.shadow,
     required this.coverEnd,
+    required this.coverEndDeep,
   });
 
   /// 画布底。
@@ -86,6 +87,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// 封面渐变终点（app.css `.mp-cov`：`linear-gradient(140deg, acc, #6B4423)`）。
   final Color coverEnd;
 
+  /// 书籍卡片封面渐变的尾色（设计稿 `#3A2C14`，比播放器封面的 [coverEnd] 更深）。
+  final Color coverEndDeep;
+
   /// 深色主题（默认）。
   static const dark = AppPalette(
     bg: Color(0xFF0C0F12),
@@ -106,6 +110,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     blue: Color(0xFF7BA7CE),
     shadow: Color(0x73000000),
     coverEnd: Color(0xFF6B4423),
+    coverEndDeep: Color(0xFF3A2C14),
   );
 
   /// 浅色主题。
@@ -128,6 +133,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     blue: Color(0xFF5B8DB8),
     shadow: Color(0x2E504015),
     coverEnd: Color(0xFF8A5A2E),
+    coverEndDeep: Color(0xFF5C4420),
   );
 
   // ── 语义别名（与 AppTokens 同名，便于迁移时 1:1 替换）──────────────
@@ -174,6 +180,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? blue,
     Color? shadow,
     Color? coverEnd,
+    Color? coverEndDeep,
   }) {
     return AppPalette(
       bg: bg ?? this.bg,
@@ -194,6 +201,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       blue: blue ?? this.blue,
       shadow: shadow ?? this.shadow,
       coverEnd: coverEnd ?? this.coverEnd,
+      coverEndDeep: coverEndDeep ?? this.coverEndDeep,
     );
   }
 
@@ -219,6 +227,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       blue: Color.lerp(blue, other.blue, t)!,
       shadow: Color.lerp(shadow, other.shadow, t)!,
       coverEnd: Color.lerp(coverEnd, other.coverEnd, t)!,
+      coverEndDeep: Color.lerp(coverEndDeep, other.coverEndDeep, t)!,
     );
   }
 }

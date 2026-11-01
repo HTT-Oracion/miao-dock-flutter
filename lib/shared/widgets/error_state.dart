@@ -65,7 +65,7 @@ class _ErrorBannerState extends State<ErrorBanner> {
     final l10n = AppLocalizations.of(context);
     final kind = ErrorKind.of(widget.error);
     final text = _textOf(l10n, kind);
-    const danger = Color(0xFFD98C84);
+    final danger = palette.bad;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -81,7 +81,7 @@ class _ErrorBannerState extends State<ErrorBanner> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(LucideIcons.circleAlert, size: 15, color: danger),
+              Icon(LucideIcons.circleAlert, size: 15, color: danger),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -89,7 +89,7 @@ class _ErrorBannerState extends State<ErrorBanner> {
                   children: [
                     Text(
                       text.title,
-                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: danger),
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: danger),
                     ),
                     const SizedBox(height: 2),
                     Text(text.hint, style: TextStyle(fontSize: 11, height: 1.5, color: palette.textMuted)),
@@ -169,7 +169,7 @@ class ErrorState extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final kind = ErrorKind.of(error);
     final text = _textOf(l10n, kind);
-    const danger = Color(0xFFD98C84);
+    final danger = palette.bad;
 
     return Center(
       child: ConstrainedBox(
@@ -184,7 +184,7 @@ class ErrorState extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: danger.withValues(alpha: 0.45), width: 1.5),
               ),
-              child: const Icon(LucideIcons.cloudOff, size: 26, color: danger),
+              child: Icon(LucideIcons.cloudOff, size: 26, color: danger),
             ),
             const SizedBox(height: 14),
             Text(
