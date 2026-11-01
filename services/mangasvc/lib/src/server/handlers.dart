@@ -535,12 +535,18 @@ class Handlers {
 
   Future<void> _setCover(HttpRequest req, String name) async {
     final body = await readJsonBody(req);
+    // 两种来源（miao-dock `coverFromFirstChapter` / 直接上传）：
+    if (body['fromFirstChapter'] == true) {
+      await store.writeCoverFromFirstChapter(name);
+      await writeJson(req.response, 200, {'ok': true, 'source': 'firstChapter'});
+      return;
+    }
     final data = body['bytes'];
     if (data is! String || data.isEmpty) {
       throw const ServiceError('INVALID_IMAGE', '缺少封面数据');
     }
-    await store.writeCover(name, data);
-    await writeJson(req.response, 200, {'ok': true});
+    await store.writeCover(name, base64Decode(data));
+    await writeJson(req.response, 200, {'ok': true, 'source': 'inline'});
   }
 
   Future<void> _deleteCover(HttpRequest req, String name) async {

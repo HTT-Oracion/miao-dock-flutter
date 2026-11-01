@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:protocol/protocol.dart'
     show
@@ -11,6 +12,7 @@ import 'package:protocol/protocol.dart'
         jsNumStr,
         maxChapterNo;
 
+import '../engine/engine_client.dart' show sniffImageType;
 import '../server/http.dart';
 import 'plans.dart';
 
@@ -329,15 +331,62 @@ class LibraryStore {
     return translated ?? original;
   }
 
-  Future<void> writeCover(String name, String base64Data) async {
+  /// 封面字节上限（miao-dock `cover_max_bytes` = 10 MiB）。
+  static const int coverMaxBytes = 10 * 1024 * 1024;
+
+  /// 写封面（D-093）：**扩展名按字节嗅探**、删旧封面、tmp + rename 原子落盘。
+  Future<void> writeCover(String name, Uint8List bytes) async {
     final dir = Directory('$rootDir/$name');
     if (!dir.existsSync()) throw const ServiceError('NOT_FOUND', '该本不存在', status: 404);
-    final bytes = base64Decode(base64Data);
-    final file = File('${dir.path}/cover.png')..writeAsBytesSync(bytes);
-    final meta = _manifestOf(dir) ?? <String, dynamic>{};
-    meta['cover'] = 'cover.png';
-    File('${dir.path}/manifest.json').writeAsStringSync(jsonEncode(meta));
-    file.existsSync();
+    if (bytes.isEmpty) throw const ServiceError('INVALID_IMAGE', '封面数据为空');
+    if (bytes.length > coverMaxBytes) {
+      throw const ServiceError('COVER_TOO_LARGE', '图片不能超过 10 MB', details: {'limitBytes': coverMaxBytes});
+    }
+    final ext = sniffImageType(bytes);
+    if (ext == null) throw const ServiceError('INVALID_IMAGE', '不是可识别的图片（png/jpg/webp）');
+    final coverName = 'cover.$ext';
+    // 删掉其它扩展名的旧封面（否则扫描会认到旧的那张）
+    for (final e in dir.listSync()) {
+      if (e is! File) continue;
+      final n = _baseName(e.path);
+      if (n != coverName && RegExp(r'^cover\.(png|jpg|jpeg|webp)$').hasMatch(n)) {
+        try {
+          e.deleteSync();
+        } catch (_) {}
+      }
+    }
+    final tmp = File('${dir.path}${Platform.pathSeparator}$coverName.tmp');
+    tmp.writeAsBytesSync(bytes, flush: true);
+    tmp.renameSync('${dir.path}${Platform.pathSeparator}$coverName');
+    // manifest 必须带 cover 声明，且保持全字段。
+    final manifest = _typedManifestOf(dir) ?? LibraryManifest(title: name);
+    _writeManifestAtomic(
+      dir,
+      LibraryManifest(
+        schema: manifest.schema,
+        title: manifest.title,
+        author: manifest.author,
+        cover: coverName,
+        episodes: manifest.episodes,
+      ),
+    );
+  }
+
+  /// `coverFromFirstChapter`：用最小话目录里最小页号的图做封面（译文优先）。
+  Future<void> writeCoverFromFirstChapter(String name) async {
+    final dir = Directory('$rootDir/$name');
+    if (!dir.existsSync()) throw const ServiceError('NOT_FOUND', '该本不存在', status: 404);
+    File? first;
+    final chapters = _chapterDirsOf(dir);
+    if (chapters.isNotEmpty) {
+      first = _firstPageOf(Directory('${dir.path}${Platform.pathSeparator}${chapters.first.dirName}'));
+    }
+    // 单话（无话层）直接用自己目录的首图。
+    first ??= _firstPageOf(dir);
+    if (first == null) {
+      throw const ServiceError('TASK_NOT_FOUND', '这本漫画还没有任何图片，取不到首图', status: 404);
+    }
+    await writeCover(name, first.readAsBytesSync());
   }
 
   Future<void> deleteCover(String name) async {

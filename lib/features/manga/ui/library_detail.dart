@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -240,10 +241,26 @@ class _Hero extends ConsumerWidget {
                         icon: LucideIcons.pencil,
                         label: l10n.libEditInfo,
                         onTap: () async {
-                          final meta = await _EditBookDialog.show(context, book: book);
-                          if (meta == null || !context.mounted) return;
+                          final r = await _EditBookDialog.show(context, book: book);
+                          if (r == null || !context.mounted) return;
+                          final client = ref.read(mangaSvcClientProvider);
                           try {
-                            await ref.read(mangaSvcClientProvider).setBookMeta(book.key, meta);
+                            // 封面与文字**同一次保存**（miao-dock：拆开会有半落盘状态）。
+                            switch (r.cover) {
+                              case CoverIntent.keep:
+                                break;
+                              case CoverIntent.first:
+                                await client.setBookCoverFromFirstChapter(book.key);
+                              case CoverIntent.remove:
+                                await client.deleteBookCover(book.key);
+                              case CoverIntent.local:
+                                await client.setBookCover(
+                                  book.key,
+                                  bytes: r.coverBytes!,
+                                  filename: r.coverFileName ?? 'cover.png',
+                                );
+                            }
+                            await client.setBookMeta(book.key, r.meta);
                             await ref.read(libraryProvider.notifier).refresh();
                             if (context.mounted) showAppToast(context, l10n.libEditInfoOk, tone: ToastTone.good);
                           } catch (e) {
@@ -739,7 +756,7 @@ class _EditBookDialog extends StatefulWidget {
 
   final LibBook book;
 
-  static Future<BookMeta?> show(BuildContext context, {required LibBook book}) => showDialog<BookMeta>(
+  static Future<EditBookResult?> show(BuildContext context, {required LibBook book}) => showDialog<EditBookResult>(
     context: context,
     builder: (_) => _EditBookDialog(book: book),
   );
@@ -748,9 +765,25 @@ class _EditBookDialog extends StatefulWidget {
   State<_EditBookDialog> createState() => _EditBookDialogState();
 }
 
+/// 封面意图（miao-dock `CoverSource`）：保留 / 本地图片 / 第 1 话首图 / 移除。
+enum CoverIntent { keep, local, first, remove }
+
+/// 编辑结果：文字与封面**一次提交**。
+class EditBookResult {
+  const EditBookResult({required this.meta, required this.cover, this.coverBytes, this.coverFileName});
+
+  final BookMeta meta;
+  final CoverIntent cover;
+  final Uint8List? coverBytes;
+  final String? coverFileName;
+}
+
 class _EditBookDialogState extends State<_EditBookDialog> {
   late final TextEditingController _title = TextEditingController(text: widget.book.name);
   late final TextEditingController _author = TextEditingController(text: widget.book.author);
+  CoverIntent _cover = CoverIntent.keep;
+  Uint8List? _bytes;
+  String? _fileName;
 
   @override
   void dispose() {
@@ -759,16 +792,30 @@ class _EditBookDialogState extends State<_EditBookDialog> {
     super.dispose();
   }
 
+  Future<void> _pickLocal() async {
+    const typeGroup = XTypeGroup(label: 'image', extensions: ['png', 'jpg', 'jpeg', 'webp']);
+    final file = await openFile(acceptedTypeGroups: const [typeGroup]);
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    setState(() {
+      _bytes = bytes;
+      _fileName = file.name;
+      _cover = CoverIntent.local;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final hasCover = widget.book.hasCover;
     return AlertDialog(
       backgroundColor: AppTokens.card,
       title: Text(l10n.libEditInfoTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       content: SizedBox(
-        width: 300,
+        width: 340,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
               controller: _title,
@@ -781,6 +828,46 @@ class _EditBookDialogState extends State<_EditBookDialog> {
               style: const TextStyle(fontSize: 12),
               decoration: InputDecoration(labelText: l10n.bookAuthorLabel(''), isDense: true),
             ),
+            const SizedBox(height: 14),
+            Text(l10n.libCoverLabel, style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _CoverChoice(
+                  icon: LucideIcons.imagePlus,
+                  label: l10n.libCoverPickLocal,
+                  active: _cover == CoverIntent.local,
+                  onTap: _pickLocal,
+                ),
+                const SizedBox(width: 6),
+                _CoverChoice(
+                  icon: LucideIcons.fileImage,
+                  label: l10n.libCoverFromFirst,
+                  active: _cover == CoverIntent.first,
+                  // 没有任何话/页时取不到首图（miao-dock 同：置灰而不是点了报错）。
+                  enabled: widget.book.isBook ? widget.book.chapters.isNotEmpty : widget.book.directPages > 0,
+                  onTap: () => setState(() => _cover = CoverIntent.first),
+                ),
+                const SizedBox(width: 6),
+                _CoverChoice(
+                  icon: LucideIcons.trash2,
+                  label: l10n.libCoverRemove,
+                  active: _cover == CoverIntent.remove,
+                  enabled: hasCover || _cover == CoverIntent.local || _cover == CoverIntent.first,
+                  onTap: () => setState(() {
+                    _cover = CoverIntent.remove;
+                    _bytes = null;
+                  }),
+                ),
+              ],
+            ),
+            if (_cover == CoverIntent.local) ...[
+              const SizedBox(height: 6),
+              Text(
+                _fileName == null ? l10n.libCoverPickHint : l10n.libCoverPicked(_fileName!),
+                style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary),
+              ),
+            ],
           ],
         ),
       ),
@@ -790,15 +877,66 @@ class _EditBookDialogState extends State<_EditBookDialog> {
           child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(
-            BookMeta(
-              title: _title.text.trim().isEmpty ? widget.book.name : _title.text.trim(),
-              author: _author.text.trim(),
-            ),
-          ),
+          onPressed: (_cover == CoverIntent.local && _bytes == null)
+              ? null
+              : () => Navigator.of(context).pop(
+                  EditBookResult(
+                    meta: BookMeta(
+                      title: _title.text.trim().isEmpty ? widget.book.name : _title.text.trim(),
+                      author: _author.text.trim(),
+                    ),
+                    cover: _cover,
+                    coverBytes: _bytes,
+                    coverFileName: _fileName,
+                  ),
+                ),
           child: Text(l10n.libEditInfoOk, style: const TextStyle(fontSize: 11.5)),
         ),
       ],
+    );
+  }
+}
+
+class _CoverChoice extends StatelessWidget {
+  const _CoverChoice({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = !enabled
+        ? AppTokens.textSecondary
+        : active
+        ? AppTokens.pageBg
+        : AppTokens.textPrimary;
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? AppTokens.accent : AppTokens.navBg,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppTokens.divider),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 11, color: color),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 10.5, color: color)),
+          ],
+        ),
+      ),
     );
   }
 }

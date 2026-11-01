@@ -1973,5 +1973,39 @@
   "readerPagesTitle": "页面",
   "@readerPagesTitle": {
     "description": "单话详情的页面区标题"
+  },
+  "libCoverLabel": "封面",
+  "@libCoverLabel": {
+    "description": "封面管理",
+    "placeholders": null
+  },
+  "libCoverPickLocal": "选择本地图片",
+  "@libCoverPickLocal": {
+    "description": "封面管理",
+    "placeholders": null
+  },
+  "libCoverFromFirst": "取第 1 话首图",
+  "@libCoverFromFirst": {
+    "description": "封面管理",
+    "placeholders": null
+  },
+  "libCoverRemove": "移除",
+  "@libCoverRemove": {
+    "description": "封面管理",
+    "placeholders": null
+  },
+  "libCoverPickHint": "选择一张图片作为封面",
+  "@libCoverPickHint": {
+    "description": "封面管理",
+    "placeholders": null
+  },
+  "libCoverPicked": "已选：{name} · 保存后生效",
+  "@libCoverPicked": {
+    "description": "封面管理",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }

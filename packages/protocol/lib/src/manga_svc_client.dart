@@ -92,6 +92,9 @@ abstract class MangaSvcClient {
   /// `DELETE /api/v1/library/{name}/cover` —— 删除封面。
   Future<void> deleteBookCover(String bookName);
 
+  /// `POST /library/{name}/cover {fromFirstChapter:true}` —— 用第 1 话首图做封面。
+  Future<void> setBookCoverFromFirstChapter(String bookName);
+
   /// `POST /api/v1/library/{name}/merge` —— 把若干单话归并进本。
   /// `POST /library/{name}/merge`（miao-dock 语义：把「未归并单话」并进目标书第 no 话）。
   Future<Map<String, dynamic>> mergeChapter(String srcName, {required String targetBook, required double no});
