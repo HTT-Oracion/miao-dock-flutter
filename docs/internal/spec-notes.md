@@ -2067,3 +2067,19 @@
     （`BoxConstraints forces an infinite width`）；改用 `BoxConstraints.tightFor(width:)`。
 - **③ 设置页导航**：`_NavItem` 补 `MouseRegion(cursor: click)`（原来 hover 会变色但不显示手型）。
 - **验证**：应用 148 通过；analyze 与 l10n 通过。
+
+## D-112 单话页面卡：原图封面 + 与单本卡同尺寸 + 页码左上角
+
+- **状态**：完成（2026-11-01）
+- **① 原图作封面**：页面卡原来只有「图标 + 数字」，现改为通过 `getBookFile(key, seq)`
+  取**该页原图**铺满 3:4 封面；取不到时回退占位图标。
+- **② 尺寸对齐单本卡**：网格从「6 列 / mainAxisExtent 96」改为与
+  `library_grid.dart` **同一套参数**：`maxCrossAxisExtent: 170`、`mainAxisSpacing/CrossAxisSpacing: 16`、
+  `childAspectRatio: 0.62`；卡片结构也照抄（封面 3:4 + 标题 + 副标一行）。
+- **③ 页码位置**：从卡片中心移为**左上角胶囊**（与单本卡的「N 话」同位），
+  字号 9、黑底 40% 透明、999 圆角。
+- **④ 顺带核对了单本卡封面链路**：`_BookCard` 走 `getBookCover`，
+  服务端 `readCover` 优先 `cover.*`（用户设了封面就用它），
+  单话无 manifest 时才回退第一页 ⇒ **设过封面的书会显示对应封面，符合预期**。
+- **验证**：`page_card_test`（断言页面卡真的调 `getBookFile` 取原图）；
+  应用 149 通过；analyze 与 l10n 通过。

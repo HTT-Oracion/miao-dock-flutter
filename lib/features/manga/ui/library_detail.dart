@@ -483,58 +483,147 @@ class _SectionHeader extends ConsumerWidget {
 }
 
 /// 单话「页面」区（卡片态）：每页一格，点开阅读器定位到该页。
-class _PageGrid extends ConsumerWidget {
+class _PageGrid extends StatelessWidget {
   const _PageGrid({required this.book});
 
   final LibBook book;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final total = book.directPages;
+    // 与「漫画库右侧的单本卡片」同一套网格参数（maxExtent 170 / 比例 0.62）。
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 6,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        mainAxisExtent: 96,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 170,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 0.62,
       ),
       itemCount: total,
-      itemBuilder: (context, i) {
-        final seq = i + 1;
-        final done = book.directTranslated.contains(seq);
-        return _HoverTap(
-          onTap: () {
-            ref
-                .read(readerSessionProvider.notifier)
-                .open(ReaderSession(key: book.key, pages: total, translated: book.directTranslated));
-            context.go('/manga/reader');
-          },
-          builder: (hover) => Container(
-            decoration: BoxDecoration(
-              color: hover ? AppTokens.navBg : AppTokens.card,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: hover ? AppTokens.accent : Colors.transparent),
+      itemBuilder: (context, i) => _PageCard(book: book, seq: i + 1, total: total),
+    );
+  }
+}
+
+/// 单页卡片：**以该页原图作封面**，左上角页码胶囊（与单本卡片的「N 话」同位）。
+class _PageCard extends ConsumerStatefulWidget {
+  const _PageCard({required this.book, required this.seq, required this.total});
+
+  final LibBook book;
+  final int seq;
+  final int total;
+
+  @override
+  ConsumerState<_PageCard> createState() => _PageCardState();
+}
+
+class _PageCardState extends ConsumerState<_PageCard> {
+  bool _hover = false;
+  Future<List<int>?>? _image;
+
+  @override
+  void initState() {
+    super.initState();
+    // 原图取封面（不带 variant），缺图时回退占位图标。
+    _image = ref
+        .read(mangaSvcClientProvider)
+        .getBookFile(widget.book.key, widget.seq)
+        .then<List<int>?>((v) => v)
+        .catchError((_) => null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final seq = widget.seq;
+    final done = widget.book.directTranslated.contains(seq);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: () {
+          ref
+              .read(readerSessionProvider.notifier)
+              .open(ReaderSession(key: widget.book.key, pages: widget.total, translated: widget.book.directTranslated));
+          context.go('/manga/reader');
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 3 / 4,
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _hover ? AppTokens.accent : Colors.transparent),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppTokens.accent, Color(0xFF3A2C14)],
+                  ),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    FutureBuilder<List<int>?>(
+                      future: _image,
+                      builder: (context, snap) {
+                        final bytes = snap.data;
+                        if (bytes == null || bytes.isEmpty) {
+                          return const Center(
+                            child: Icon(LucideIcons.fileImage, size: 18, color: AppTokens.textSecondary),
+                          );
+                        }
+                        return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
+                      },
+                    ),
+                    // 页码胶囊在**左上角**（与单本卡片的「N 话」同位）。
+                    Positioned(
+                      left: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text('$seq', style: const TextStyle(fontSize: 9, color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            const SizedBox(height: 7),
+            Text(
+              AppLocalizations.of(context).readerPage(seq, widget.total),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+            ),
+            const SizedBox(height: 2),
+            Row(
               children: [
-                Icon(LucideIcons.fileImage, size: 16, color: AppTokens.textSecondary),
-                const SizedBox(height: 4),
-                Text('$seq', style: const TextStyle(fontSize: 10.5, color: AppTokens.textPrimary)),
-                const SizedBox(height: 2),
                 Container(
-                  width: 5,
-                  height: 5,
+                  width: 6,
+                  height: 6,
                   decoration: BoxDecoration(color: done ? AppTokens.success : AppTokens.accent, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  done
+                      ? AppLocalizations.of(context).libChapterStatusDone
+                      : AppLocalizations.of(context).libChapterStatusPending,
+                  style: const TextStyle(fontSize: 9, color: AppTokens.textSecondary),
                 ),
               ],
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }
