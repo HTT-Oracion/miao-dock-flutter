@@ -2476,3 +2476,22 @@
     （10 / 4），避免收窄后文字过挤。
 - **实测**：删除弹窗 **1120×191 → 340×191**。
 - **验证**：应用 154 通过；analyze 与 l10n 通过。
+
+## D-126 下拉统一到 M3 MenuAnchor + 可搜索选择器
+
+- **状态**：完成（2026-11-02）
+- **① `AppSelect` 换实现**：原来用 `PopupMenuButton`，弹层位置靠硬编码
+  `offset: Offset(0, 30)`，按钮移动就错位；且与操作菜单（更多 / 章节）是两套外观。
+  改为 **M3 `MenuAnchor`**（与 `AppDropdownMenu` 同源），位置由框架按按钮矩形算。
+  影响 9 处调用（设置页翻译链路 / 在线翻译平台 / 推理引擎 / 语言对等）。
+- **② 归并弹窗两行不对齐**：`Column` 未指定 `crossAxisAlignment`（默认 center），
+  而 `AppSelect(width: 260)` 与 `AppInput`（撑满 300）宽度不同 ⇒ 视觉错位。
+  改为 `CrossAxisAlignment.start` + 两者同宽 300。
+- **③ 目标漫画搜索**：**没有**在 `MenuAnchor` 里塞 `TextField` ——
+  实测菜单项 `hitTestable == 0`（M3 菜单面板与 `TextField` 的 tap region 冲突，点不中），
+  `autofocus` 也不是原因。改用 **`shared/widgets/app_picker.dart` 的 `showAppPicker`**：
+  `AppDialog` + `AppInput`（搜索）+ 列表，复用共享件，搜索与选择都稳定。
+  归并弹窗的入口按钮仍保持下拉外观（secondary + 32 高）。
+- **测试**：`select_picker_test` 两条 —— AppSelect 菜单在按钮下方且选择生效；
+  picker 搜索「香」后只剩香蕉、选中回传 `'b'`。
+- **验证**：应用 156 通过；analyze 与 l10n 通过。

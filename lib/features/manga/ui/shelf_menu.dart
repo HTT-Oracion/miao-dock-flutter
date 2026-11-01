@@ -8,8 +8,8 @@ import '../../../shared/widgets/app_checkbox.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_dropdown.dart';
+import '../../../shared/widgets/app_picker.dart';
 import '../../../shared/widgets/app_input.dart';
-import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -143,14 +143,30 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
         width: 300,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          // 必须显式左对齐：Column 默认 center，而下面两行宽度不同会错位。
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 下拉走共享 AppSelect（原来用 Material 原生 DropdownButtonFormField，
-            // 样式与项目不符 —— 已按约束 10 收敛）。
-            AppSelect<String>(
-              value: _target ?? '',
-              width: 260,
-              items: [('', l10n.libMergeTargetHint), for (final b in targets) (b.key, b.name)],
-              onChanged: (v) => setState(() => _target = v.isEmpty ? null : v),
+            // 目标漫画可能很多 → 用**可搜索选择器**（下拉里塞搜索框在 M3 下点不中）。
+            SizedBox(
+              width: 300,
+              child: AppButton(
+                label: _target == null ? l10n.libMergeTargetHint : targets.firstWhere((b) => b.key == _target).name,
+                onTap: () async {
+                  final picked = await showAppPicker<String>(
+                    context: context,
+                    title: l10n.libMergeTitle,
+                    searchHint: l10n.libMergeSearchHint,
+                    emptyText: l10n.libMergeNoResult,
+                    current: _target,
+                    items: [for (final b in targets) (b.key, b.name)],
+                  );
+                  if (picked != null && mounted) setState(() => _target = picked);
+                },
+                variant: AppButtonVariant.secondary,
+                height: 32,
+                horizontalPadding: 10,
+                fontSize: AppFont.px10,
+              ),
             ),
             const SizedBox(height: 10),
             AppInput(controller: _noController, hint: l10n.libMergeNoHint),

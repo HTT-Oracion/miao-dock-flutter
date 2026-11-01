@@ -2177,5 +2177,13 @@
   "settingSidebarExpanded": "已展开",
   "@settingSidebarExpanded": {
     "description": "侧栏展开状态值"
+  },
+  "libMergeSearchHint": "搜索目标漫画",
+  "@libMergeSearchHint": {
+    "description": "归并弹窗目标下拉的搜索占位"
+  },
+  "libMergeNoResult": "没有匹配的漫画",
+  "@libMergeNoResult": {
+    "description": "归并选择器无匹配结果"
   }
 }
