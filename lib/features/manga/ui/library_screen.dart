@@ -18,6 +18,7 @@ class LibraryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final selected = ref.watch(selectedBookProvider);
     final books = ref.watch(libraryProvider).value ?? ref.read(libraryProvider.notifier).lastGood;
     final hasSelection = selected != null && books.any((b) => b.key == selected);
@@ -31,7 +32,7 @@ class LibraryScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const LibraryShelf(),
-        const VerticalDivider(width: 1, color: AppTokens.divider),
+        VerticalDivider(width: 1, color: palette.divider),
         const Expanded(child: LibraryGrid()),
       ],
     );

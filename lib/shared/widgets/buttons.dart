@@ -11,6 +11,7 @@ class AppGhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return MouseRegion(
       // 启用 = 可点（手型）；禁用 = 禁止光标（不是普通箭头，否则用户以为可点）。
       cursor: onTap == null ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
@@ -25,7 +26,7 @@ class AppGhostButton extends StatelessWidget {
               height: 26,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               alignment: Alignment.center,
-              child: Text(label, style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
+              child: Text(label, style: TextStyle(fontSize: 12, color: palette.textPrimary)),
             ),
           ),
         ),
@@ -55,11 +56,10 @@ class _AppTextActionState extends State<AppTextAction> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final highlight = widget.highlight;
     // ver1.0：主按钮 hover 提亮；ghost hover 底色变 card（设计稿 `.btn.ghost:hover`）。
-    final bg = highlight
-        ? (_hover ? const Color(0xFFF0B96A) : AppTokens.accent)
-        : (_hover ? AppTokens.card : AppTokens.divider);
+    final bg = highlight ? (_hover ? Color(0xFFF0B96A) : palette.accent) : (_hover ? palette.card : palette.divider);
     return MouseRegion(
       cursor: widget.onTap == null ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
@@ -76,7 +76,7 @@ class _AppTextActionState extends State<AppTextAction> {
             alignment: Alignment.center,
             child: Text(
               widget.label,
-              style: TextStyle(fontSize: 12, color: highlight ? AppTokens.pageBg : AppTokens.textPrimary),
+              style: TextStyle(fontSize: 12, color: highlight ? palette.pageBg : palette.textPrimary),
             ),
           ),
         ),
@@ -123,6 +123,7 @@ class AppButton extends StatefulWidget {
     this.color,
     this.border = false,
     this.width,
+    this.clickable = true,
   });
 
   /// 文案；**留空 = 纯图标按钮**（此时必须给 [icon]）。
@@ -143,6 +144,14 @@ class AppButton extends StatefulWidget {
   /// 固定宽度（纯图标按钮用，如章节卡「⋯」22×22）。
   final double? width;
 
+  /// 是否「可点」。
+  ///
+  /// 🔴 与 `onTap == null` **不是一回事**：
+  /// - `onTap == null && clickable == true` → 点击交给外层（如 `MenuAnchor` 触发器），
+  ///   光标仍是**手型**、颜色仍按启用态；
+  /// - `clickable == false` → 真禁用：光标 `forbidden`、文字变灰。
+  final bool clickable;
+
   @override
   State<AppButton> createState() => _AppButtonState();
 }
@@ -152,11 +161,12 @@ class _AppButtonState extends State<AppButton> {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = widget.onTap != null;
+    final palette = AppPalette.of(context);
+    final enabled = widget.clickable;
     final v = widget.variant;
 
     if (v == AppButtonVariant.link) {
-      final base = widget.color ?? AppTokens.accent;
+      final base = widget.color ?? palette.accent;
       return MouseRegion(
         cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
         onEnter: (_) => setState(() => _hover = true),
@@ -168,7 +178,7 @@ class _AppButtonState extends State<AppButton> {
             style: TextStyle(
               fontSize: widget.fontSize,
               // hover 提亮到 ink，与原 _TextLink 行为一致。
-              color: _hover ? AppTokens.textPrimary : base,
+              color: _hover ? palette.textPrimary : base,
             ),
           ),
         ),
@@ -179,14 +189,14 @@ class _AppButtonState extends State<AppButton> {
     final Color fg;
     switch (v) {
       case AppButtonVariant.primary:
-        bg = enabled ? (_hover ? const Color(0xFFF0B96A) : AppTokens.accent) : AppTokens.divider;
-        fg = enabled ? AppTokens.pageBg : AppTokens.textSecondary;
+        bg = enabled ? (_hover ? Color(0xFFF0B96A) : palette.accent) : palette.divider;
+        fg = enabled ? palette.pageBg : palette.textSecondary;
       case AppButtonVariant.secondary:
-        bg = enabled && _hover ? AppTokens.card : AppTokens.divider;
-        fg = enabled ? (widget.color ?? AppTokens.textPrimary) : AppTokens.textSecondary;
+        bg = enabled && _hover ? palette.card : palette.divider;
+        fg = enabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
       case AppButtonVariant.ghost:
-        bg = enabled && _hover ? AppTokens.card : Colors.transparent;
-        fg = enabled ? (widget.color ?? AppTokens.textPrimary) : AppTokens.textSecondary;
+        bg = enabled && _hover ? palette.card : Colors.transparent;
+        fg = enabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
       case AppButtonVariant.link:
         throw StateError('link variant must be handled above');
     }
@@ -210,7 +220,7 @@ class _AppButtonState extends State<AppButton> {
             decoration: widget.border
                 ? BoxDecoration(
                     borderRadius: BorderRadius.circular(kButtonRadius),
-                    border: Border.all(color: AppTokens.divider),
+                    border: Border.all(color: palette.divider),
                   )
                 : null,
             child: Row(

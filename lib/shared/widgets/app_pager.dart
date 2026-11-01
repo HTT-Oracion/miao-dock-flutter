@@ -39,6 +39,7 @@ class _AppPagerState extends State<AppPager> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final pages = (widget.total / widget.pageSize).ceil();
     return SizedBox(
       height: 34,
@@ -50,7 +51,7 @@ class _AppPagerState extends State<AppPager> {
               Text(
                 AppLocalizations.of(context)
                     .pagerTotal(widget.total, widget.totalLabel ?? AppLocalizations.of(context).pagerTotalTasks),
-                style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
+                style: TextStyle(fontSize: 12, color: palette.textSecondary),
               ),
               const Spacer(),
               _SizeSelector(
@@ -99,6 +100,7 @@ class _SizeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -108,7 +110,7 @@ class _SizeSelector extends StatelessWidget {
             bottom: 30,
             right: 0,
             child: Material(
-              color: AppTokens.card,
+              color: palette.card,
               borderRadius: BorderRadius.circular(8),
               elevation: 6,
               shadowColor: Colors.black54,
@@ -131,7 +133,7 @@ class _SizeSelector extends StatelessWidget {
                             ),
                             Text(
                               AppLocalizations.of(context).pagerPageSize(size),
-                              style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary),
+                              style: TextStyle(fontSize: 12, color: palette.textPrimary),
                             ),
                           ],
                         ),
@@ -156,13 +158,14 @@ class _PageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final enabled = onTap != null;
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
       child: Padding(
         padding: const EdgeInsets.only(left: 4),
         child: Material(
-          color: active ? AppTokens.accent : Colors.transparent,
+          color: active ? palette.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           child: InkWell(
             borderRadius: BorderRadius.circular(6),
@@ -172,13 +175,13 @@ class _PageButton extends StatelessWidget {
               height: 26,
               alignment: Alignment.center,
               child: icon != null
-                  ? Icon(icon, size: 13, color: enabled ? AppTokens.textPrimary : AppTokens.progressTrack)
+                  ? Icon(icon, size: 13, color: enabled ? palette.textPrimary : palette.progressTrack)
                   : Text(
                       label ?? '',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                        color: active ? AppTokens.pageBg : AppTokens.textPrimary,
+                        color: active ? palette.pageBg : palette.textPrimary,
                       ),
                     ),
             ),

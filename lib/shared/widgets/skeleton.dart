@@ -32,8 +32,9 @@ class SkeletonRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Container(
-      decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(10)),
       child: Column(
         children: [
           const SizedBox(height: 40),
@@ -41,8 +42,8 @@ class SkeletonRows extends StatelessWidget {
             Container(
               height: rowHeight,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppTokens.divider)),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: palette.divider)),
               ),
               child: Row(
                 children: [

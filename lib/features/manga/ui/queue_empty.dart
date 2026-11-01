@@ -11,6 +11,7 @@ class QueueEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
@@ -21,31 +22,31 @@ class QueueEmpty extends StatelessWidget {
             height: 96,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppTokens.progressTrack, width: 2),
+              border: Border.all(color: palette.progressTrack, width: 2),
             ),
-            child: const Icon(LucideIcons.inbox, size: 28, color: AppTokens.textSecondary),
+            child: Icon(LucideIcons.inbox, size: 28, color: palette.textSecondary),
           ),
           const SizedBox(height: 14),
           Text(
             l10n.queueEmptyTitle,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const SizedBox(height: 6),
-          Text(l10n.queueEmptyDesc, style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+          Text(l10n.queueEmptyDesc, style: TextStyle(fontSize: 12, color: palette.textSecondary)),
           const SizedBox(height: 18),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppTokens.accent, foregroundColor: AppTokens.pageBg),
+                style: FilledButton.styleFrom(backgroundColor: palette.accent, foregroundColor: palette.pageBg),
                 onPressed: () => context.go('/settings'),
                 child: Text(l10n.queueGoSettings),
               ),
               const SizedBox(width: 10),
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTokens.textPrimary,
-                  side: const BorderSide(color: AppTokens.progressTrack),
+                  foregroundColor: palette.textPrimary,
+                  side: BorderSide(color: palette.progressTrack),
                 ),
                 onPressed: () => context.go('/manga/drop'),
                 child: Text(l10n.queueSourceLocal),

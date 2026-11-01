@@ -62,12 +62,13 @@ class _ShelfHead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     // ver1.0 左栏只有一行 9.5 号计数文字（没有大标题）。
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
       child: Text(
         AppLocalizations.of(context).shelfCount(count),
-        style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary),
+        style: TextStyle(fontSize: 9.5, color: palette.textSecondary),
       ),
     );
   }
@@ -80,22 +81,23 @@ class _ShelfSearch extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     return Container(
       height: 30,
       margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(8)),
       child: Row(
         children: [
-          const Icon(LucideIcons.search, size: 12, color: AppTokens.textSecondary),
+          Icon(LucideIcons.search, size: 12, color: palette.textSecondary),
           const SizedBox(width: 6),
           Expanded(
             child: TextField(
               onChanged: (v) => ref.read(shelfQueryProvider.notifier).set(v),
-              style: const TextStyle(fontSize: 10, color: AppTokens.textPrimary),
+              style: TextStyle(fontSize: 10, color: palette.textPrimary),
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context).shelfSearchHint,
-                hintStyle: const TextStyle(fontSize: 10, color: AppTokens.textSecondary),
+                hintStyle: TextStyle(fontSize: 10, color: palette.textSecondary),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -106,7 +108,7 @@ class _ShelfSearch extends ConsumerWidget {
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
                 onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
-                child: const Icon(LucideIcons.x, size: 12, color: AppTokens.textSecondary),
+                child: Icon(LucideIcons.x, size: 12, color: palette.textSecondary),
               ),
             ),
         ],
@@ -124,13 +126,14 @@ class _ShelfBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final showHidden = ref.watch(showHiddenProvider);
     final hidden = ref.watch(hiddenComicsProvider);
     final l10n = AppLocalizations.of(context);
 
     if (books.isEmpty && (!showHidden || hidden.isEmpty)) {
       return Center(
-        child: Text(l10n.shelfNoMatch, style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+        child: Text(l10n.shelfNoMatch, style: TextStyle(fontSize: 12, color: palette.textSecondary)),
       );
     }
 
@@ -151,7 +154,7 @@ class _ShelfBody extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppTokens.textSecondary),
+        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: palette.textSecondary),
       ),
     );
 
@@ -167,7 +170,7 @@ class _ShelfBody extends ConsumerWidget {
           const SizedBox(height: 10),
           Text(
             l10n.shelfHiddenSection,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTokens.textSecondary),
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: palette.textSecondary),
           ),
           const SizedBox(height: 4),
           for (final name in hidden)
@@ -176,7 +179,7 @@ class _ShelfBody extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(name, style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+                    child: Text(name, style: TextStyle(fontSize: 11, color: palette.textSecondary)),
                   ),
                   AppTextAction(
                     label: l10n.shelfRestore,
@@ -213,6 +216,7 @@ class _BookRowState extends ConsumerState<_BookRow> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final book = widget.book;
     final active = widget.active;
     return MouseRegion(
@@ -229,9 +233,9 @@ class _BookRowState extends ConsumerState<_BookRow> {
             height: 34,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: (active || _hover) ? AppTokens.card : Colors.transparent,
+              color: (active || _hover) ? palette.card : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: active ? AppTokens.divider : Colors.transparent),
+              border: Border.all(color: active ? palette.divider : Colors.transparent),
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(8),
@@ -241,7 +245,7 @@ class _BookRowState extends ConsumerState<_BookRow> {
                   Icon(
                     book.isBook ? LucideIcons.bookText : LucideIcons.fileText,
                     size: 13,
-                    color: active ? AppTokens.accent : AppTokens.textSecondary,
+                    color: active ? palette.accent : palette.textSecondary,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -251,11 +255,11 @@ class _BookRowState extends ConsumerState<_BookRow> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                        color: active ? AppTokens.textPrimary : AppTokens.textMuted,
+                        color: active ? palette.textPrimary : palette.textMuted,
                       ),
                     ),
                   ),
-                  Text('${book.pageCount}', style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
+                  Text('${book.pageCount}', style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
                 ],
               ),
             ),
@@ -273,6 +277,7 @@ class _ShelfFoot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final bytes = books.fold(0, (s, b) => s + b.totalBytes);
     return Container(
       height: 44,
@@ -281,19 +286,19 @@ class _ShelfFoot extends ConsumerWidget {
         children: [
           Text(
             AppLocalizations.of(context).shelfUsedBytes(formatBytes(bytes)),
-            style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+            style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
           ),
           const Spacer(),
           _TextLink(
             label: AppLocalizations.of(context).shelfGoDrop,
-            color: AppTokens.accent,
+            color: palette.accent,
             onTap: () => context.go('/manga/drop'),
           ),
           const SizedBox(width: 10),
           // 「显示已隐藏」开关（miao-dock：隐藏清单在服务端，这里只做开关）。
           _TextLink(
             label: AppLocalizations.of(context).shelfShowHidden,
-            color: ref.watch(showHiddenProvider) ? AppTokens.accent : AppTokens.textSecondary,
+            color: ref.watch(showHiddenProvider) ? palette.accent : palette.textSecondary,
             onTap: () => ref.read(showHiddenProvider.notifier).toggle(),
           ),
         ],
@@ -319,16 +324,14 @@ class _TextLinkState extends State<_TextLink> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: Text(
-          widget.label,
-          style: TextStyle(fontSize: 11.5, color: _hover ? AppTokens.textPrimary : widget.color),
-        ),
+        child: Text(widget.label, style: TextStyle(fontSize: 11.5, color: _hover ? palette.textPrimary : widget.color)),
       ),
     );
   }

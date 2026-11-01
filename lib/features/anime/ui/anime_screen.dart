@@ -9,10 +9,11 @@ class AnimeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Center(
       child: Text(
         AppLocalizations.of(context).animePending,
-        style: const TextStyle(fontSize: 13, color: AppTokens.textSecondary),
+        style: TextStyle(fontSize: 13, color: palette.textSecondary),
       ),
     );
   }

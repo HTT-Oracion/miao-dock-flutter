@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import 'manga_task.dart';
 
@@ -19,13 +18,16 @@ extension MangaTaskStatusX on MangaTaskStatus {
   };
 
   /// 状态色 —— 色相只由圆点 / 徽标承载，文字保持中性（design.html §02 色相纪律）。
+  ///
+  /// 🔴 领域层不依赖 BuildContext：这里给的是**深色档**色相。
+  /// 需要跟随浅色主题时，调用方用 `MangaTaskStatusColor.of(context, status)`（见 ui 层）。
   Color get color => switch (this) {
     MangaTaskStatus.translating => const Color(0xFF7BA7CE),
-    MangaTaskStatus.queued => AppTokens.textSecondary,
-    MangaTaskStatus.done => AppTokens.success,
+    MangaTaskStatus.queued => const Color(0xFFA3B0BC),
+    MangaTaskStatus.done => const Color(0xFF7FB58A),
     MangaTaskStatus.partialFailed => const Color(0xFFD9A441),
     MangaTaskStatus.failed => const Color(0xFFD98C84),
-    MangaTaskStatus.cancelled => AppTokens.textSecondary,
+    MangaTaskStatus.cancelled => const Color(0xFFA3B0BC),
   };
 }
 

@@ -2138,3 +2138,24 @@
     `SkeletonCards`（卡片行）；
   - 书架改 `SkeletonCards`、门禁改 `SkeletonBox`、删除无人引用的 `queue_skeleton.dart`。
 - **验证**：应用 148 通过；analyze 干净；l10n 通过。
+
+## D-116 全项目取色迁到 AppPalette.of + 按钮手型修复
+
+- **状态**：完成（2026-11-01）
+- **① 取色统一（用户选定「全项目迁移」）**：
+  - `AppPalette` 增加**语义别名 getter**（`textPrimary/textSecondary/textMuted/navBg/navActive/
+    cardCover/progressTrack/divider/accent/success/pageBg`），与旧 `AppTokens` 同名，
+    迁移时 1:1 替换 `AppTokens.x → palette.x`，降低心智负担；
+  - **21 个文件**完成迁移，`AppTokens` 引用**清零**；
+  - 迁移中批量去 `const`（`palette` 是运行期值），并用「按错误行号定位、向上找最近 const」的方式修正了
+    30+ 处残留 `const`；
+  - **领域层例外**：`manga_status.dart` 不依赖 `BuildContext`，状态色保留**深色档常量**并注明
+    「需要跟随浅色时由 UI 层映射」，不把 UI 依赖带进 domain。
+  - `AppTable` 表头样式原本是顶层 `const`，改为按 context 取 `palette.textSecondary`。
+- **② 按钮 hover 无手型（真 bug）**：菜单触发器为了让 `MenuAnchor` 接管点击，传了 `onTap: null`，
+  而 `AppButton` 用 `onTap == null` 判定禁用 ⇒ 光标变成 `forbidden`。
+  新增 **`clickable`** 参数区分两件事：
+  - `onTap == null && clickable` → 点击交给外层，**光标仍是手型**、颜色按启用态；
+  - `clickable: false` → 真禁用（`forbidden` + 灰字）。
+  `_CoverChoice` / `_DialogButton` 的禁用态显式传 `clickable: false`。
+- **验证**：应用 148 通过（新增光标用例 2 条）；analyze 干净；l10n 通过。

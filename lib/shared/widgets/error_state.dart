@@ -61,6 +61,7 @@ class _ErrorBannerState extends State<ErrorBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final kind = ErrorKind.of(widget.error);
     final text = _textOf(l10n, kind);
@@ -91,12 +92,12 @@ class _ErrorBannerState extends State<ErrorBanner> {
                       style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: danger),
                     ),
                     const SizedBox(height: 2),
-                    Text(text.hint, style: TextStyle(fontSize: 11, height: 1.5, color: AppTokens.textMuted)),
+                    Text(text.hint, style: TextStyle(fontSize: 11, height: 1.5, color: palette.textMuted)),
                     if (widget.showStaleHint) ...[
                       const SizedBox(height: 4),
                       Text(
                         l10n.errorStaleData,
-                        style: const TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: AppTokens.textMuted),
+                        style: TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: palette.textMuted),
                       ),
                     ],
                   ],
@@ -129,12 +130,12 @@ class _ErrorBannerState extends State<ErrorBanner> {
                     Icon(
                       _expanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
                       size: 11,
-                      color: AppTokens.textMuted,
+                      color: palette.textMuted,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       _expanded ? l10n.errorHideDetail : l10n.errorShowDetail,
-                      style: const TextStyle(fontSize: 10, color: AppTokens.textMuted),
+                      style: TextStyle(fontSize: 10, color: palette.textMuted),
                     ),
                   ],
                 ),
@@ -145,12 +146,7 @@ class _ErrorBannerState extends State<ErrorBanner> {
                 padding: const EdgeInsets.only(top: 4),
                 child: SelectableText(
                   '${widget.error}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    height: 1.4,
-                    color: AppTokens.textMuted,
-                    fontFamily: 'monospace',
-                  ),
+                  style: TextStyle(fontSize: 10, height: 1.4, color: palette.textMuted, fontFamily: 'monospace'),
                 ),
               ),
           ],
@@ -169,6 +165,7 @@ class ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final kind = ErrorKind.of(error);
     final text = _textOf(l10n, kind);
@@ -192,13 +189,13 @@ class ErrorState extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               text.title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
             ),
             const SizedBox(height: 6),
             Text(
               text.hint,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11.5, height: 1.6, color: AppTokens.textSecondary),
+              style: TextStyle(fontSize: 11.5, height: 1.6, color: palette.textSecondary),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -206,8 +203,8 @@ class ErrorState extends StatelessWidget {
               icon: const Icon(LucideIcons.refreshCw, size: 13),
               label: Text(l10n.errorRetry),
               style: FilledButton.styleFrom(
-                backgroundColor: AppTokens.accent,
-                foregroundColor: AppTokens.pageBg,
+                backgroundColor: palette.accent,
+                foregroundColor: palette.pageBg,
                 minimumSize: const Size(0, 34),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),

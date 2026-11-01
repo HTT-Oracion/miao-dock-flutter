@@ -14,6 +14,7 @@ class AppCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final active = enabled && onChanged != null;
     return MouseRegion(
       // 启用 = 手型；禁用 = 禁止光标。
@@ -21,9 +22,9 @@ class AppCheckbox extends StatelessWidget {
       child: Checkbox(
         value: value,
         tristate: true,
-        activeColor: AppTokens.accent,
-        checkColor: AppTokens.pageBg,
-        side: BorderSide(color: enabled ? AppTokens.textSecondary : AppTokens.progressTrack),
+        activeColor: palette.accent,
+        checkColor: palette.pageBg,
+        side: BorderSide(color: enabled ? palette.textSecondary : palette.progressTrack),
         onChanged: active ? onChanged : null,
       ),
     );

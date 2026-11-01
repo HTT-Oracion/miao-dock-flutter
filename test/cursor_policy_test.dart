@@ -40,6 +40,17 @@ void main() {
     expect(cursorOf(tester, find.byType(Checkbox)), SystemMouseCursors.forbidden);
   });
 
+  testWidgets('菜单触发器：onTap 为 null 但 clickable=true → 手型（不是禁止符）', (tester) async {
+    await tester.pumpWidget(wrap(const AppButton(label: 'more', onTap: null)));
+    // 破坏点：把「点击交给外层」误判成禁用 → 光标变 forbidden，用户以为不能点。
+    expect(cursorOf(tester, find.text('more')), SystemMouseCursors.click);
+  });
+
+  testWidgets('真禁用：clickable=false → 禁止符', (tester) async {
+    await tester.pumpWidget(wrap(const AppButton(label: 'off', onTap: null, clickable: false)));
+    expect(cursorOf(tester, find.text('off')), SystemMouseCursors.forbidden);
+  });
+
   testWidgets('AppSwitch：启用手型 / 禁用禁止', (tester) async {
     // AppSwitch 的 MouseRegion 在组件**内部**（不是祖先），直接取内部第一个。
     MouseCursor inner() => tester

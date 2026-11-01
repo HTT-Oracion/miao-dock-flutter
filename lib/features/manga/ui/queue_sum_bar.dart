@@ -31,6 +31,7 @@ class _SummaryBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final counts = {for (final s in MangaTaskStatus.values) s: tasks.where((t) => t.status == s).length};
     return SizedBox(
@@ -39,7 +40,7 @@ class _SummaryBar extends ConsumerWidget {
         children: [
           Text(
             AppLocalizations.of(context).queueTotalCount(tasks.length),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const SizedBox(width: 14),
           for (final status in MangaTaskStatus.values)
@@ -55,7 +56,7 @@ class _SummaryBar extends ConsumerWidget {
                       decoration: BoxDecoration(color: status.color, shape: BoxShape.circle),
                     ),
                     const SizedBox(width: 5),
-                    Text(status.label(l10n), style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+                    Text(status.label(l10n), style: TextStyle(fontSize: 12, color: palette.textSecondary)),
                   ],
                 ),
               ),
@@ -78,6 +79,7 @@ class _SelectionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final deletableIds = {
       for (final t in tasks)
         if (t.deletable) t.id,
@@ -92,13 +94,13 @@ class _SelectionBar extends ConsumerWidget {
     final showSelectAll = allPageSelected && deletableIds.length > pageDeletableIds.length;
     return Container(
       height: 36,
-      decoration: BoxDecoration(color: AppTokens.navActive, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: palette.navActive, borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
           Text(
             AppLocalizations.of(context).queueSelectedCount(enabled.ids.length),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const SizedBox(width: 16),
           AppGhostButton(
@@ -113,7 +115,7 @@ class _SelectionBar extends ConsumerWidget {
                 onTap: () => ref.read(selectionProvider.notifier).selectAllPage(deletableIds),
                 child: Text(
                   AppLocalizations.of(context).queueSelectAll(deletableIds.length),
-                  style: const TextStyle(fontSize: 12, color: AppTokens.accent),
+                  style: TextStyle(fontSize: 12, color: palette.accent),
                 ),
               ),
             ),
@@ -133,7 +135,7 @@ class _SelectionBar extends ConsumerWidget {
             child: Text(
               AppLocalizations.of(context).queueDeleteHint,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+              style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
             ),
           ),
         ],

@@ -97,9 +97,9 @@ class _AppDropdownMenuState extends State<AppDropdownMenu> {
       menuChildren: [
         for (final it in widget.items)
           it.isDivider
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  child: Divider(height: 1, thickness: 1, color: AppTokens.divider),
+                  child: Divider(height: 1, thickness: 1, color: palette.divider),
                 )
               : _MenuRow(
                   item: it,
@@ -134,16 +134,17 @@ class _MenuRowState extends State<_MenuRow> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final it = widget.item;
     final enabled = it.enabled;
     final Color fg;
     if (!enabled) {
-      fg = AppTokens.textSecondary;
+      fg = palette.textSecondary;
     } else if (it.danger) {
       // 危险项：平时正常色，hover 才转危险色。
-      fg = _hover ? AppTokens.bad : AppTokens.textPrimary;
+      fg = _hover ? palette.bad : palette.textPrimary;
     } else {
-      fg = AppTokens.textPrimary;
+      fg = palette.textPrimary;
     }
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
@@ -158,7 +159,7 @@ class _MenuRowState extends State<_MenuRow> {
           padding: const EdgeInsets.symmetric(horizontal: 9),
           alignment: Alignment.centerLeft,
           decoration: BoxDecoration(
-            color: enabled && _hover ? AppTokens.divider : Colors.transparent,
+            color: enabled && _hover ? palette.divider : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Row(
@@ -176,7 +177,7 @@ class _MenuRowState extends State<_MenuRow> {
               ),
               if (it.sub != null) ...[
                 const SizedBox(width: 6),
-                Text(it.sub!, style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
+                Text(it.sub!, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
               ],
             ],
           ),
@@ -249,9 +250,9 @@ class _PositionedMenuProbeState extends State<_PositionedMenuProbe> {
             menuChildren: [
               for (final it in widget.items)
                 it.isDivider
-                    ? const Padding(
+                    ? Padding(
                         padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                        child: Divider(height: 1, thickness: 1, color: AppTokens.divider),
+                        child: Divider(height: 1, thickness: 1, color: palette.divider),
                       )
                     : _MenuRow(
                         item: it,

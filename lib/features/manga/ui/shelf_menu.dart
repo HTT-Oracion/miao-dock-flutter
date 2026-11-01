@@ -114,11 +114,12 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
     final targets = books.where((b) => b.isBook).toList();
     return AlertDialog(
-      backgroundColor: AppTokens.card,
+      backgroundColor: palette.card,
       title: Text(l10n.libMergeTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       content: SizedBox(
         width: 300,
@@ -190,10 +191,11 @@ class _DeleteDialogState extends State<_DeleteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final book = widget.book;
     return AlertDialog(
-      backgroundColor: AppTokens.card,
+      backgroundColor: palette.card,
       title: Text(l10n.shelfDeleteTitle(book.name), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       content: SizedBox(
         width: 340,
@@ -203,7 +205,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           children: [
             Text(
               l10n.shelfDeleteBody(book.chapterCount == 0 ? 1 : book.chapterCount, book.pageCount),
-              style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+              style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
             ),
             const SizedBox(height: 12),
             Row(
@@ -219,15 +221,12 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    l10n.shelfDeleteWithFiles,
-                    style: const TextStyle(fontSize: 11.5, color: AppTokens.textPrimary),
-                  ),
+                  child: Text(l10n.shelfDeleteWithFiles, style: TextStyle(fontSize: 11.5, color: palette.textPrimary)),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            Text(l10n.shelfDeleteKeepHint, style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary)),
+            Text(l10n.shelfDeleteKeepHint, style: TextStyle(fontSize: 10.5, color: palette.textSecondary)),
           ],
         ),
       ),
@@ -237,7 +236,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           child: Text(l10n.actionCancel, style: const TextStyle(fontSize: 11.5)),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: AppTokens.bad),
+          style: FilledButton.styleFrom(backgroundColor: palette.bad),
           onPressed: () => Navigator.of(context).pop(_deleteFiles),
           child: Text(
             l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),

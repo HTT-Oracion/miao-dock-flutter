@@ -30,6 +30,7 @@ class LibraryDetail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final query = ref.watch(shelfQueryProvider).trim();
     if (query.isNotEmpty) {
       return LibrarySearchResults(query: query);
@@ -55,7 +56,7 @@ class LibraryDetail extends ConsumerWidget {
             child: Center(
               child: Text(
                 AppLocalizations.of(context).shelfEmpty,
-                style: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary),
+                style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
               ),
             ),
           ),
@@ -99,7 +100,7 @@ class LibraryDetail extends ConsumerWidget {
               child: Center(
                 child: Text(
                   AppLocalizations.of(context).shelfEmpty,
-                  style: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary),
+                  style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
                 ),
               ),
             )
@@ -185,6 +186,7 @@ class _Hero extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     // ver1.0 `.detail-hero`：纯排版（无卡片底），封面 96×126。
     return Row(
@@ -198,7 +200,7 @@ class _Hero extends ConsumerWidget {
             children: [
               Text(
                 book.name,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTokens.textPrimary),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: palette.textPrimary),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -347,11 +349,12 @@ class _CoverState extends ConsumerState<_Cover> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final book = widget.book;
     return Container(
       width: 96,
       height: 112,
-      decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: palette.cardCover, borderRadius: BorderRadius.circular(8)),
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
       child: FutureBuilder<List<int>?>(
@@ -362,7 +365,7 @@ class _CoverState extends ConsumerState<_Cover> {
             return Icon(
               book.isBook ? LucideIcons.bookOpen : LucideIcons.folder,
               size: 24,
-              color: AppTokens.textSecondary,
+              color: palette.textSecondary,
             );
           }
           return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover, width: 96, height: 112);
@@ -403,10 +406,11 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: AppTokens.navBg, borderRadius: BorderRadius.circular(5)),
-      child: Text(text, style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary)),
+      decoration: BoxDecoration(color: palette.navBg, borderRadius: BorderRadius.circular(5)),
+      child: Text(text, style: TextStyle(fontSize: 11.5, color: palette.textSecondary)),
     );
   }
 }
@@ -417,17 +421,18 @@ class _PageSectionHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final mode = ref.watch(libModeProvider);
     return Row(
       children: [
         Text(
           l10n.readerPagesTitle,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
         ),
         const SizedBox(width: 10),
         if (mode == 'capsule')
-          Text(l10n.libCapsuleLegend, style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
+          Text(l10n.libCapsuleLegend, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
         const Spacer(),
         _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
       ],
@@ -442,22 +447,20 @@ class _SectionHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final mode = ref.watch(libModeProvider);
     return Row(
       children: [
         Text(
           l10n.bookChapters,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.textPrimary),
         ),
         const SizedBox(width: 8),
-        Text(
-          l10n.bookChapterCount(book.chapterCount),
-          style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
-        ),
+        Text(l10n.bookChapterCount(book.chapterCount), style: TextStyle(fontSize: 12, color: palette.textSecondary)),
         const SizedBox(width: 10),
         if (mode == 'capsule')
-          Text(l10n.libCapsuleLegend, style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary)),
+          Text(l10n.libCapsuleLegend, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
         const Spacer(),
         _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
       ],
@@ -519,6 +522,7 @@ class _PageCardState extends ConsumerState<_PageCard> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final seq = widget.seq;
     final done = widget.book.directTranslated.contains(seq);
     return MouseRegion(
@@ -541,11 +545,11 @@ class _PageCardState extends ConsumerState<_PageCard> {
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _hover ? AppTokens.accent : Colors.transparent),
-                  gradient: const LinearGradient(
+                  border: Border.all(color: _hover ? palette.accent : Colors.transparent),
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppTokens.accent, Color(0xFF3A2C14)],
+                    colors: [palette.accent, Color(0xFF3A2C14)],
                   ),
                 ),
                 child: Stack(
@@ -556,9 +560,7 @@ class _PageCardState extends ConsumerState<_PageCard> {
                       builder: (context, snap) {
                         final bytes = snap.data;
                         if (bytes == null || bytes.isEmpty) {
-                          return const Center(
-                            child: Icon(LucideIcons.fileImage, size: 18, color: AppTokens.textSecondary),
-                          );
+                          return Center(child: Icon(LucideIcons.fileImage, size: 18, color: palette.textSecondary));
                         }
                         return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
                       },
@@ -585,7 +587,7 @@ class _PageCardState extends ConsumerState<_PageCard> {
               AppLocalizations.of(context).readerPage(seq, widget.total),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
             ),
             const SizedBox(height: 2),
             Row(
@@ -593,14 +595,14 @@ class _PageCardState extends ConsumerState<_PageCard> {
                 Container(
                   width: 6,
                   height: 6,
-                  decoration: BoxDecoration(color: done ? AppTokens.success : AppTokens.accent, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: done ? palette.success : palette.accent, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   done
                       ? AppLocalizations.of(context).libChapterStatusDone
                       : AppLocalizations.of(context).libChapterStatusPending,
-                  style: const TextStyle(fontSize: 9, color: AppTokens.textSecondary),
+                  style: TextStyle(fontSize: 9, color: palette.textSecondary),
                 ),
               ],
             ),
@@ -619,6 +621,7 @@ class _PageCapsules extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -626,17 +629,17 @@ class _PageCapsules extends StatelessWidget {
         for (var seq = 1; seq <= book.directPages; seq++)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(999)),
+            decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(999)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('$seq', style: const TextStyle(fontSize: 11.5, color: AppTokens.textPrimary)),
+                Text('$seq', style: TextStyle(fontSize: 11.5, color: palette.textPrimary)),
                 if (!book.directTranslated.contains(seq)) ...[
                   const SizedBox(width: 6),
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: BoxDecoration(color: AppTokens.accent, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: palette.accent, shape: BoxShape.circle),
                   ),
                 ],
               ],
@@ -684,6 +687,7 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final book = widget.book;
     final chapter = widget.chapter;
     final color = chapter.done ? MangaTaskStatus.done.color : MangaTaskStatus.translating.color;
@@ -711,16 +715,16 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTokens.card,
+                color: palette.card,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _hover ? AppTokens.accent : Colors.transparent),
+                border: Border.all(color: _hover ? palette.accent : Colors.transparent),
               ),
               child: Row(
                 children: [
                   Container(
                     width: 48,
                     height: 64,
-                    decoration: BoxDecoration(color: AppTokens.cardCover, borderRadius: BorderRadius.circular(6)),
+                    decoration: BoxDecoration(color: palette.cardCover, borderRadius: BorderRadius.circular(6)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -730,16 +734,12 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
                       children: [
                         Text(
                           AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppTokens.textPrimary,
-                          ),
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
-                          style: const TextStyle(fontSize: 8.5, color: AppTokens.textSecondary),
+                          style: TextStyle(fontSize: 8.5, color: palette.textSecondary),
                         ),
                         const SizedBox(height: 8),
                         ClipRRect(
@@ -748,7 +748,7 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
                             height: 4,
                             child: LinearProgressIndicator(
                               value: chapter.ratio,
-                              backgroundColor: AppTokens.progressTrack,
+                              backgroundColor: palette.progressTrack,
                               valueColor: AlwaysStoppedAnimation(color),
                             ),
                           ),
@@ -825,6 +825,7 @@ class _CapsuleState extends State<_Capsule> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
@@ -835,14 +836,14 @@ class _CapsuleState extends State<_Capsule> {
           height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: AppTokens.navBg,
+            color: palette.navBg,
             borderRadius: BorderRadius.circular(kPillRadius),
-            border: Border.all(color: _hover ? AppTokens.accent : AppTokens.divider),
+            border: Border.all(color: _hover ? palette.accent : palette.divider),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(widget.label, style: const TextStyle(fontSize: 11, color: AppTokens.textMuted)),
+              Text(widget.label, style: TextStyle(fontSize: 11, color: palette.textMuted)),
               if (widget.pending) ...[
                 const SizedBox(width: 6),
                 Container(
@@ -880,9 +881,10 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      backgroundColor: AppTokens.card,
+      backgroundColor: palette.card,
       title: Text(l10n.libCreateBook, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       content: SizedBox(
         width: 300,
@@ -963,10 +965,11 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final hasCover = widget.book.hasCover;
     return Dialog(
-      backgroundColor: AppTokens.card,
+      backgroundColor: palette.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: 420,
@@ -977,7 +980,7 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
           children: [
             Text(
               l10n.libEditInfoTitle,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTokens.textPrimary),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: palette.textPrimary),
             ),
             const SizedBox(height: 14),
             // 封面区（ver1.0 `.cover-box`：预览 96×128 在左，操作竖排在右）
@@ -989,9 +992,9 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
                   height: 128,
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: AppTokens.cardCover,
+                    color: palette.cardCover,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTokens.divider),
+                    border: Border.all(color: palette.divider),
                   ),
                   child: _preview(),
                 ),
@@ -1029,7 +1032,7 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
                         const SizedBox(height: 8),
                         Text(
                           _fileName == null ? l10n.libCoverPickHint : l10n.libCoverPicked(_fileName!),
-                          style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary),
+                          style: TextStyle(fontSize: 10.5, color: palette.textSecondary),
                         ),
                       ],
                     ],
@@ -1039,11 +1042,11 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
             ),
             const SizedBox(height: 16),
             // 文字信息
-            Text(l10n.libCreateBookNameHint, style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+            Text(l10n.libCreateBookNameHint, style: TextStyle(fontSize: 11, color: palette.textSecondary)),
             const SizedBox(height: 5),
             _DialogField(controller: _title),
             const SizedBox(height: 12),
-            Text(l10n.bookAuthorLabel(''), style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
+            Text(l10n.bookAuthorLabel(''), style: TextStyle(fontSize: 11, color: palette.textSecondary)),
             const SizedBox(height: 5),
             _DialogField(controller: _author),
             const SizedBox(height: 18),
@@ -1079,9 +1082,10 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
   /// 封面预览（ver1.0 `.cover-preview`）：本地图即时预览；无封面显示占位。
   Widget _preview() {
     final l10n = AppLocalizations.of(context);
+    final palette = AppPalette.of(context);
     if (_cover == CoverIntent.remove) {
       return Center(
-        child: Text(l10n.libCoverNone, style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary)),
+        child: Text(l10n.libCoverNone, style: TextStyle(fontSize: 10.5, color: palette.textSecondary)),
       );
     }
     if (_bytes != null) {
@@ -1093,7 +1097,7 @@ class _EditBookDialogState extends ConsumerState<_EditBookDialog> {
         final bytes = snap.data;
         if (bytes == null || bytes.isEmpty) {
           return Center(
-            child: Text(l10n.libCoverNone, style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary)),
+            child: Text(l10n.libCoverNone, style: TextStyle(fontSize: 10.5, color: palette.textSecondary)),
           );
         }
         return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
@@ -1110,23 +1114,24 @@ class _DialogField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return SizedBox(
       height: 32,
       child: TextField(
         controller: controller,
-        style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary),
+        style: TextStyle(fontSize: 12, color: palette.textPrimary),
         decoration: InputDecoration(
           isDense: true,
           filled: true,
-          fillColor: AppTokens.navBg,
+          fillColor: palette.navBg,
           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: AppTokens.divider),
+            borderSide: BorderSide(color: palette.divider),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: AppTokens.accent),
+            borderSide: BorderSide(color: palette.accent),
           ),
         ),
       ),
@@ -1148,6 +1153,7 @@ class _DialogButton extends StatelessWidget {
     return AppButton(
       label: label,
       onTap: enabled ? onTap : null,
+      clickable: enabled,
       variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
       border: !primary,
       height: 26,
@@ -1179,6 +1185,7 @@ class _CoverChoice extends StatelessWidget {
       label: label,
       icon: icon,
       onTap: enabled ? onTap : null,
+      clickable: enabled,
       variant: active ? AppButtonVariant.primary : AppButtonVariant.secondary,
       height: 26,
       horizontalPadding: 8,
@@ -1195,10 +1202,11 @@ class _ViewSeg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(color: AppTokens.navBg, borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: palette.navBg, borderRadius: BorderRadius.circular(6)),
       child: Row(
         children: [
           for (final m in const ['card', 'capsule'])
@@ -1207,14 +1215,12 @@ class _ViewSeg extends StatelessWidget {
               builder: (hover) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: mode == m
-                      ? AppTokens.card
-                      : (hover ? AppTokens.card.withValues(alpha: 0.5) : Colors.transparent),
+                  color: mode == m ? palette.card : (hover ? palette.card.withValues(alpha: 0.5) : Colors.transparent),
                   borderRadius: BorderRadius.circular(kButtonRadius),
                 ),
                 child: Text(
                   m == 'card' ? l10n.libViewCard : l10n.libViewCapsule,
-                  style: TextStyle(fontSize: 10.5, color: mode == m ? AppTokens.textPrimary : AppTokens.textSecondary),
+                  style: TextStyle(fontSize: 10.5, color: mode == m ? palette.textPrimary : palette.textSecondary),
                 ),
               ),
             ),

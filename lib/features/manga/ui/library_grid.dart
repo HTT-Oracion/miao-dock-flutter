@@ -20,6 +20,7 @@ class LibraryGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(libraryProvider);
     final books = state.value ?? ref.read(libraryProvider.notifier).lastGood;
@@ -44,12 +45,12 @@ class LibraryGrid extends ConsumerWidget {
             children: [
               Text(
                 l10n.libLocalLibrary,
-                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTokens.textPrimary),
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: palette.textPrimary),
               ),
               const SizedBox(width: 8),
               Text(
                 '${onlyBooks.length} · ${onlyBooks.fold<int>(0, (a, b) => a + b.pageCount)}',
-                style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary),
+                style: TextStyle(fontSize: 9.5, color: palette.textSecondary),
               ),
               const Spacer(),
               const LibraryHeaderActions(),
@@ -60,7 +61,7 @@ class LibraryGrid extends ConsumerWidget {
               child: Center(
                 child: Text(
                   books.isEmpty ? l10n.shelfEmpty : l10n.shelfNoMatch,
-                  style: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary),
+                  style: TextStyle(fontSize: 12.5, color: palette.textSecondary),
                 ),
               ),
             )
@@ -108,6 +109,7 @@ class _BookCardState extends ConsumerState<_BookCard> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final b = widget.book;
     return MouseRegion(
@@ -128,11 +130,11 @@ class _BookCardState extends ConsumerState<_BookCard> {
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _hover ? AppTokens.accent : Colors.transparent),
-                    gradient: const LinearGradient(
+                    border: Border.all(color: _hover ? palette.accent : Colors.transparent),
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [AppTokens.accent, Color(0xFF3A2C14)],
+                      colors: [palette.accent, Color(0xFF3A2C14)],
                     ),
                   ),
                   child: Stack(
@@ -170,14 +172,14 @@ class _BookCardState extends ConsumerState<_BookCard> {
                 b.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
               ),
               const SizedBox(height: 2),
               Text(
                 b.isBook ? '${b.hasAuthor ? b.author : l10n.bookUnnamedAuthor} · ${b.pageCount}' : '${b.pageCount}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 9, color: AppTokens.textSecondary),
+                style: TextStyle(fontSize: 9, color: palette.textSecondary),
               ),
             ],
           ),

@@ -21,28 +21,29 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 320),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: AppTokens.textSecondary),
+            Icon(icon, size: 40, color: palette.textSecondary),
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: palette.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12.5, height: 1.6, color: AppTokens.textSecondary),
+              style: TextStyle(fontSize: 12.5, height: 1.6, color: palette.textSecondary),
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppTokens.accent, foregroundColor: AppTokens.pageBg),
+                style: FilledButton.styleFrom(backgroundColor: palette.accent, foregroundColor: palette.pageBg),
                 onPressed: onAction,
                 child: Text(actionLabel!),
               ),

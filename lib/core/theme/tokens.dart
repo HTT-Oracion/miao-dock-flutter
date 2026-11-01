@@ -130,6 +130,19 @@ class AppPalette extends ThemeExtension<AppPalette> {
     coverEnd: Color(0xFF8A5A2E),
   );
 
+  // ── 语义别名（与 AppTokens 同名，便于迁移时 1:1 替换）──────────────
+  Color get pageBg => bg;
+  Color get textPrimary => ink;
+  Color get textSecondary => mut;
+  Color get textMuted => ink2;
+  Color get navBg => panel;
+  Color get navActive => accSoft;
+  Color get cardCover => hi;
+  Color get progressTrack => hi;
+  Color get divider => line;
+  Color get accent => acc;
+  Color get success => good;
+
   /// 取当前主题调色板；未挂载扩展时回落深色（设计稿默认档）。
   static AppPalette of(BuildContext context) => Theme.of(context).extension<AppPalette>() ?? dark;
 

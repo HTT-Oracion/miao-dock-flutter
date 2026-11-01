@@ -25,6 +25,7 @@ class QueueTable extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final pager = ref.watch(pagerProvider);
     final selection = ref.watch(selectionProvider);
     final start = (pager.page - 1) * pager.pageSize;
@@ -65,8 +66,8 @@ class QueueTable extends ConsumerWidget {
               }
             }
           : null,
-      rowColor: (_, i) => selection.ids.contains(rows[i].id) ? AppTokens.navActive : null,
-      rowAccentColor: (_, i) => selection.ids.contains(rows[i].id) ? AppTokens.accent : null,
+      rowColor: (_, i) => selection.ids.contains(rows[i].id) ? palette.navActive : null,
+      rowAccentColor: (_, i) => selection.ids.contains(rows[i].id) ? palette.accent : null,
       rowBuilder: (context, i) => [
         _NameCell(task: rows[i]),
         _ProgressCell(task: rows[i]),
@@ -84,6 +85,7 @@ class _NameCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -92,13 +94,13 @@ class _NameCell extends StatelessWidget {
         Text(
           task.name,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
         ),
         const SizedBox(height: 2),
         Text(
           l10n.queueTaskSubtitle(task.donePages, task.pageCount, task.batchNo),
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
+          style: TextStyle(fontSize: 12, color: palette.textSecondary),
         ),
       ],
     );
@@ -112,15 +114,13 @@ class _ProgressCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final ratio = task.pageCount == 0 ? 0.0 : task.donePages / task.pageCount;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${task.donePages} / ${task.pageCount}',
-          style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
-        ),
+        Text('${task.donePages} / ${task.pageCount}', style: TextStyle(fontSize: 12, color: palette.textSecondary)),
         const SizedBox(height: 4),
         ClipRRect(
           borderRadius: BorderRadius.circular(2),
@@ -128,7 +128,7 @@ class _ProgressCell extends StatelessWidget {
             height: 4,
             child: LinearProgressIndicator(
               value: ratio == 0 ? null : ratio,
-              backgroundColor: AppTokens.progressTrack,
+              backgroundColor: palette.progressTrack,
               valueColor: AlwaysStoppedAnimation(task.status.color),
             ),
           ),
@@ -145,6 +145,7 @@ class _StatusCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     return Row(
       children: [
@@ -154,7 +155,7 @@ class _StatusCell extends StatelessWidget {
           decoration: BoxDecoration(color: task.status.color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(task.status.label(l10n), style: const TextStyle(fontSize: 12.5, color: AppTokens.textPrimary)),
+        Text(task.status.label(l10n), style: TextStyle(fontSize: 12.5, color: palette.textPrimary)),
       ],
     );
   }

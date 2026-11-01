@@ -90,10 +90,11 @@ class ChapterMenuButton extends ConsumerWidget {
   Future<double?> _askNewNo(BuildContext context) async {
     final ctrl = TextEditingController(text: jsNumStr(chapter.no));
     final l10n = AppLocalizations.of(context);
+    final palette = AppPalette.of(context);
     return showDialog<double>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTokens.card,
+        backgroundColor: palette.card,
         title: Text(l10n.chapterEditNoTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         content: SizedBox(
           width: 260,

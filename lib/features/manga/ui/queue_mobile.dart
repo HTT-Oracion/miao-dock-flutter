@@ -46,15 +46,16 @@ class _TaskCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final selected = selection.ids.contains(task.id);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTokens.card,
+        color: palette.card,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: selected ? AppTokens.accent : Colors.transparent),
+        border: Border.all(color: selected ? palette.accent : Colors.transparent),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,11 +79,7 @@ class _TaskCard extends ConsumerWidget {
                       child: Text(
                         task.name,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppTokens.textPrimary,
-                        ),
+                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
                       ),
                     ),
                     _StatusBadge(status: task.status),
@@ -97,7 +94,7 @@ class _TaskCard extends ConsumerWidget {
                     _sourceLabel(l10n, task.source),
                   ),
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+                  style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 ClipRRect(
@@ -106,7 +103,7 @@ class _TaskCard extends ConsumerWidget {
                     height: 4,
                     child: LinearProgressIndicator(
                       value: task.pageCount == 0 ? null : task.donePages / task.pageCount,
-                      backgroundColor: AppTokens.progressTrack,
+                      backgroundColor: palette.progressTrack,
                       valueColor: AlwaysStoppedAnimation(task.status.color),
                     ),
                   ),
@@ -119,7 +116,7 @@ class _TaskCard extends ConsumerWidget {
                           ? AppLocalizations.of(context).queueBatchWithin(task.batchNo)
                           : AppLocalizations.of(context)
                                 .queueFinishedAt(task.completedAt!.month, task.completedAt!.day),
-                      style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary),
+                      style: TextStyle(fontSize: 11, color: palette.textSecondary),
                     ),
                     const Spacer(),
                     QueueRowActions(task: task),
@@ -157,18 +154,19 @@ class _MobileSelectionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final selection = ref.watch(selectionProvider);
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
-        color: AppTokens.navBg,
-        border: const Border(top: BorderSide(color: AppTokens.divider)),
+        color: palette.navBg,
+        border: Border(top: BorderSide(color: palette.divider)),
       ),
       child: Row(
         children: [
           Text(
             AppLocalizations.of(context).queueSelectedCount(selection.ids.length),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const Spacer(),
           AppGhostButton(

@@ -41,6 +41,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final session = ref.watch(readerSessionProvider);
 
@@ -49,7 +50,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.shelfEmpty, style: const TextStyle(fontSize: 12.5, color: AppTokens.textSecondary)),
+            Text(l10n.shelfEmpty, style: TextStyle(fontSize: 12.5, color: palette.textSecondary)),
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => context.go('/manga/library'),
@@ -106,11 +107,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onTap: () => _go(-1, total),
-                    child: const Align(
+                    child: Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
                         padding: EdgeInsets.only(left: 12),
-                        child: Icon(LucideIcons.chevronLeft, size: 20, color: AppTokens.textSecondary),
+                        child: Icon(LucideIcons.chevronLeft, size: 20, color: palette.textSecondary),
                       ),
                     ),
                   ),
@@ -123,11 +124,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onTap: () => _go(1, total),
-                    child: const Align(
+                    child: Align(
                       alignment: Alignment.centerRight,
                       child: Padding(
                         padding: EdgeInsets.only(right: 12),
-                        child: Icon(LucideIcons.chevronRight, size: 20, color: AppTokens.textSecondary),
+                        child: Icon(LucideIcons.chevronRight, size: 20, color: palette.textSecondary),
                       ),
                     ),
                   ),
@@ -155,20 +156,21 @@ class _ReaderBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Container(
       height: 42,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        color: AppTokens.navBg,
-        border: Border(bottom: BorderSide(color: AppTokens.divider)),
+      decoration: BoxDecoration(
+        color: palette.navBg,
+        border: Border(bottom: BorderSide(color: palette.divider)),
       ),
       child: Row(
         children: [
           GestureDetector(
             onTap: onClose,
-            child: const Row(
+            child: Row(
               children: [
-                Icon(LucideIcons.chevronLeft, size: 14, color: AppTokens.textSecondary),
+                Icon(LucideIcons.chevronLeft, size: 14, color: palette.textSecondary),
                 SizedBox(width: 2),
               ],
             ),
@@ -178,14 +180,14 @@ class _ReaderBar extends StatelessWidget {
             child: Text(
               title,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12.5, color: AppTokens.textPrimary),
+              style: TextStyle(fontSize: 12.5, color: palette.textPrimary),
             ),
           ),
-          Text(pageText, style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary)),
+          Text(pageText, style: TextStyle(fontSize: 11.5, color: palette.textSecondary)),
           const SizedBox(width: 10),
           GestureDetector(
             onTap: onClose,
-            child: const Icon(LucideIcons.x, size: 15, color: AppTokens.textSecondary),
+            child: Icon(LucideIcons.x, size: 15, color: palette.textSecondary),
           ),
         ],
       ),
@@ -229,15 +231,16 @@ class _ReaderPageState extends ConsumerState<_ReaderPage> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return FutureBuilder<Uint8List?>(
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
-          return const Center(
+          return Center(
             child: SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 1.6, color: AppTokens.textSecondary),
+              child: CircularProgressIndicator(strokeWidth: 1.6, color: palette.textSecondary),
             ),
           );
         }
@@ -246,7 +249,7 @@ class _ReaderPageState extends ConsumerState<_ReaderPage> {
           return Center(
             child: Text(
               AppLocalizations.of(context).shelfNoMatch,
-              style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
+              style: TextStyle(fontSize: 12, color: palette.textSecondary),
             ),
           );
         }

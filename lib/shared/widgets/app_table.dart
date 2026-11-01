@@ -46,8 +46,9 @@ class AppTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Container(
-      decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(10)),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -55,18 +56,20 @@ class AppTable extends StatelessWidget {
           Container(
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppTokens.divider)),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: palette.divider)),
             ),
             child: Row(
               children: [
                 if (headerLeading != null) SizedBox(width: 36, child: headerLeading!),
                 for (final c in columns)
                   c.flex
-                      ? Expanded(child: Text(c.header, style: _headerStyle))
+                      ? Expanded(
+                          child: Text(c.header, style: TextStyle(fontSize: 12, color: palette.textSecondary)),
+                        )
                       : SizedBox(
                           width: c.width,
-                          child: Text(c.header, style: _headerStyle),
+                          child: Text(c.header, style: TextStyle(fontSize: 12, color: palette.textSecondary)),
                         ),
               ],
             ),
@@ -86,7 +89,7 @@ class AppTable extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: color,
                     border: Border(
-                      bottom: const BorderSide(color: AppTokens.divider),
+                      bottom: BorderSide(color: palette.divider),
                       left: accent != null ? BorderSide(color: accent, width: 3) : BorderSide.none,
                     ),
                   ),
@@ -108,5 +111,3 @@ class AppTable extends StatelessWidget {
     );
   }
 }
-
-const _headerStyle = TextStyle(fontSize: 12, color: AppTokens.textSecondary);
