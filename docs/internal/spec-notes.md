@@ -1804,3 +1804,23 @@
 - **现状确认**：队列批量操作（多选 / 全选本页 / 批量删除 / 取消）**完整可用**。
 - **验证**：应用 131 通过；服务端 171 通过；analyze 干净；l10n 棘轮通过。
 - **关联**：D-086（队列行操作）。
+
+## D-096 修复「翻译完成但漫画库没有」（refresh 丢单话）+ 三处 UI 调整
+
+- **状态**：完成（2026-11-01），已定位真实数据
+- **① 翻译完成但库里没有（严重）**：
+  - 现场：`~/Pictures/MiaoDock Mangas/test-01/` 里 `001.jpg/001_translated.png/002.jpg/002_translated.png`
+    **都在**，服务端 `GET /library` 也正确返回 `others:[('test-01',2)]`。
+  - 根因在客户端：`LibraryNotifier.refresh()` 算出 `all = [...books, ...others]`、
+    也赋给了 `_lastGood`，却 **`return books`** —— 只返回「书」，未归并单话被丢掉。
+    而任务完成会触发 `libraryProvider.refresh()`（D-085 的状态联动）⇒
+    **刚翻完的漫画在刷新那一刻从书架蒸发**；「查看」也查不到 → 弹「未落盘或已被删除」。
+  - 修法：`return all`。加回归测试 `library_refresh_keeps_unmerged_test`（books 1 + others 1 = 2 条）。
+- **② 头部精简**：「本地漫画库 N」整块去掉，只保留右侧「刷新 / 新建漫画」，
+  并加右侧内边距（`EdgeInsets.only(right: 4)`），按钮不再贴边。
+- **③ 下拉框风格**：合并对话框的目标书下拉原用 `DropdownButtonFormField`（Material 默认下划线/填充外观），
+  改为 `DropdownButtonHideUnderline` + 自绘容器（6 圆角、1px 描边、`navBg` 底），与项目输入框统一。
+- **④ Toast 双下划线**：**未定位到**。检查了 `toast.dart`（无 `TextDecoration`）、
+  相关 ARB 文案（无标记字符）、主题（无 underline 默认值），均无来源。
+  需要截图或复现步骤才能确认（怀疑是系统/平台的文本选择高亮或两条 toast 叠加）。
+- **验证**：应用 132 通过（+1 回归）；服务端 171 通过；analyze 干净；l10n 通过。

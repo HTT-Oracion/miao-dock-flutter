@@ -46,7 +46,9 @@ class LibraryNotifier extends AsyncNotifier<List<LibBook>> {
       final others = response.others?.map(toLibBookFromChapter).toList() ?? const <LibBook>[];
       final all = [...books, ...others];
       _lastGood = all;
-      return books;
+      // 🔴 必须返回 all：只返回 books 会让「未归并单话」在**刷新后消失**
+      // （任务完成会触发 refresh，于是刚翻完的漫画从书架蒸发）。
+      return all;
     });
   }
 }

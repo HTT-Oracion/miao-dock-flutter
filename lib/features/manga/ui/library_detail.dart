@@ -100,42 +100,38 @@ class _LibHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Row(
-      children: [
-        const Icon(LucideIcons.libraryBig, size: 15, color: AppTokens.textSecondary),
-        const SizedBox(width: 8),
-        Text(
-          l10n.libLocalLibrary,
-          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
-        ),
-        const SizedBox(width: 8),
-        Text('$count', style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary)),
-        const Spacer(),
-        _HeaderAction(
-          icon: LucideIcons.refreshCw,
-          label: l10n.libRefresh,
-          onTap: () async {
-            await ref.read(libraryProvider.notifier).refresh();
-          },
-        ),
-        const SizedBox(width: 8),
-        _HeaderAction(
-          icon: LucideIcons.folderPlus,
-          label: l10n.libCreateBook,
-          primary: true,
-          onTap: () async {
-            final name = await _CreateBookDialog.show(context);
-            if (name == null || !context.mounted) return;
-            try {
-              await ref.read(mangaSvcClientProvider).createBook(name);
+    return Padding(
+      // 右侧留出边距：按钮不贴窗口边缘。
+      padding: const EdgeInsets.only(right: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          _HeaderAction(
+            icon: LucideIcons.refreshCw,
+            label: l10n.libRefresh,
+            onTap: () async {
               await ref.read(libraryProvider.notifier).refresh();
-              if (context.mounted) showAppToast(context, l10n.libCreateBookOk(name), tone: ToastTone.good);
-            } catch (e) {
-              if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
-            }
-          },
-        ),
-      ],
+            },
+          ),
+          const SizedBox(width: 8),
+          _HeaderAction(
+            icon: LucideIcons.folderPlus,
+            label: l10n.libCreateBook,
+            primary: true,
+            onTap: () async {
+              final name = await _CreateBookDialog.show(context);
+              if (name == null || !context.mounted) return;
+              try {
+                await ref.read(mangaSvcClientProvider).createBook(name);
+                await ref.read(libraryProvider.notifier).refresh();
+                if (context.mounted) showAppToast(context, l10n.libCreateBookOk(name), tone: ToastTone.good);
+              } catch (e) {
+                if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 }
