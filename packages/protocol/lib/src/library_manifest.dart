@@ -9,6 +9,9 @@ library;
 /// 最大话号（miao-dock `MAX_CHAPTER_NO = 999`）。
 const int maxChapterNo = 999;
 
+/// JS 语义的数值：整数 → int（序列化成 `1`），小数 → double（`1.5`）。
+num jsNumValue(double n) => n == n.roundToDouble() ? n.toInt() : n;
+
 /// JS `String(number)`：整数不带小数点，`14.9` 原样。
 String jsNumStr(double n) => n == n.roundToDouble() ? n.toInt().toString() : n.toString();
 
@@ -43,7 +46,8 @@ class LibraryEpisode {
   final double no;
   final String dir;
 
-  Map<String, dynamic> toJson() => {'no': no, 'dir': dir};
+  /// 话号序列化：整数输出 `1`（不是 `1.0`），与旧项目 JS `String(number)` 的落盘字节一致。
+  Map<String, dynamic> toJson() => {'no': jsNumValue(no), 'dir': dir};
 
   static LibraryEpisode? fromJson(Object? raw) {
     if (raw is! Map) return null;

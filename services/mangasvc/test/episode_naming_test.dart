@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:protocol/protocol.dart';
 import 'package:test/test.dart';
 
@@ -36,6 +38,17 @@ void main() {
   test('jsNumStr：整数不带小数点', () {
     expect(jsNumStr(1.0), '1');
     expect(jsNumStr(14.9), '14.9');
+  });
+
+  test('话号落盘：整数写 1 不是 1.0（旧项目 JS 语义）', () {
+    final m = LibraryManifest(
+      title: '书',
+      episodes: const [LibraryEpisode(no: 1, dir: '01_第1话')],
+    );
+    final encoded = jsonEncode(m.toJson());
+    // 破坏点：double 序列化 → "no":1.0，字节与旧项目不一致。
+    expect(encoded, contains('"no":1,'));
+    expect(encoded, isNot(contains('"no":1.0')));
   });
 
   test('manifest 键序与字段完整', () {
