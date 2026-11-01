@@ -121,6 +121,7 @@ class FakeMangaSvcClient implements MangaSvcClient {
     required String comicName,
     required List<String> imagePaths,
     String client = 'app',
+    String? failReason,
   }) async {
     final now = DateTime.now();
     final position = _tasks.where((t) => t.status.occupiesQueue).length + 1;

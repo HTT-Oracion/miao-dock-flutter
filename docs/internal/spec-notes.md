@@ -2549,3 +2549,26 @@
 - **测试**：`translate_log_detail_test` 三条 —— 失败原因必须出现、任务结束要有汇总、
   引擎阶段输出要进日志。
 - **验证**：服务 182 通过；应用 156 通过；analyze 与 l10n 通过。
+
+## D-129 远程翻译提交前置校验
+
+- **状态**：完成（2026-11-02）
+- **需求**：选远程翻译时，提交前校验 token + 远程地址；无效则提示
+  「远程翻译配置不生效，请到设置页进行配置」，**任务直接 failed，不进翻译流水线**。
+- **为什么不能只靠 HTTP 失败**：原实现会先建任务、排进队列、等引擎/HTTP 超时，
+  最后只留一条语焉不详的失败 —— 用户既不知道是配置问题，也白等一轮。
+- **实现（贯穿四层）**：
+  1. `RemoteConfig.valid`：token 非空 **且** 地址是合法 `http(s)` + 有 host
+     （`configured` 只判非空，`随便什么` 这种地址也会被放行）；
+  2. 客户端 `createTask(..., failReason)` → `POST /tasks` body 带 `failReason`；
+  3. 服务端 `createTask(failReason:)`：**建任务、置 `failed`、记 `failedReasons`、不 `_scheduleDrain()`**，
+     日志记「任务 X 未执行：<原因>」；
+  4. UI（投放页）：`submit` 返回 `blocked` 时弹 **bad** 吐司并跳队列，
+     让用户看到那条失败任务与原因。
+- **文案归属**：`controller` 不碰 ARB（`Ref` 上没有 `context`），
+  本地化文案由 UI 层传入 `blockedReason`，controller 只透传给服务端。
+- **测试**：
+  - 服务端 `create_task_fail_fast_test`：`failReason` 非空 → `failed` 且**引擎调用次数为 0**；
+  - 客户端 `submit_remote_guard_test` 三条：token 为空 / 地址非法都拦下、配置有效不拦。
+  - **有效性验证**：临时把 `blocked` 写死 false，客户端用例立刻红，证明测试咬得住。
+- **验证**：应用 159 通过；服务 184 通过；analyze 与 l10n 通过。

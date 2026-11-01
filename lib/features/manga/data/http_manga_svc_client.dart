@@ -65,6 +65,7 @@ class HttpMangaSvcClient implements MangaSvcClient {
     required String comicName,
     required List<String> imagePaths,
     String client = 'app',
+    String? failReason,
   }) async {
     final json = await _post(
       '/tasks',
@@ -73,6 +74,7 @@ class HttpMangaSvcClient implements MangaSvcClient {
         'imagePaths': imagePaths,
         // 来源归因（D-046）：服务端据此做来源隔离，插件与手机端互不可见。
         'client': client,
+        'failReason': ?failReason,
       },
     );
     return _createTaskOf(json);

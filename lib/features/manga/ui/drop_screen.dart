@@ -66,15 +66,25 @@ class _DropScreenState extends ConsumerState<DropScreen> {
   Future<void> _submit() async {
     final state = ref.read(dropController);
     if (state.name.isEmpty || state.files.isEmpty) return;
+    final l10n = AppLocalizations.of(context);
     try {
-      final result = await ref.read(queueProvider.notifier).submit(comicName: state.name, imagePaths: state.files);
+      final result = await ref
+          .read(queueProvider.notifier)
+          .submit(
+            comicName: state.name,
+            imagePaths: state.files,
+            // 远程配置无效时把文案交给任务失败原因（controller 不碰 ARB）。
+            blockedReason: l10n.remoteConfigInvalid,
+          );
       ref.read(dropController.notifier).clear();
       if (!mounted) return;
-      showAppToast(
-        context,
-        AppLocalizations.of(context).dropSubmittedToast(result.submitted, result.position),
-        tone: ToastTone.good,
-      );
+      if (result.blocked) {
+        // 配置问题 ⇒ 任务已建成 failed，不进流水线：直接弹提示并跳到队列让用户看到那条任务。
+        showAppToast(context, result.blockedReason!, tone: ToastTone.bad);
+        context.go('/manga/queue');
+        return;
+      }
+      showAppToast(context, l10n.dropSubmittedToast(result.submitted, result.position), tone: ToastTone.good);
       context.go('/manga/queue');
     } catch (e) {
       // 提交失败必须给反馈：以前是静默抛异常，用户完全不知道发生了什么。

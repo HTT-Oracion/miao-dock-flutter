@@ -16,6 +16,21 @@ class RemoteConfig {
 
   bool get configured => baseUrl.trim().isNotEmpty && token.trim().isNotEmpty;
 
+  /// 配置是否**有效**（提交任务前的硬校验）。
+  ///
+  /// 与 [configured] 的区别：这里还校验地址形态 ——
+  /// 只有 token、地址写成 `随便什么` 的配置连不上，应当提前拦下，
+  /// 而不是等 HTTP 失败再让任务跑进流水线。
+  bool get valid {
+    if (token.trim().isEmpty) return false;
+    final raw = baseUrl.trim();
+    if (raw.isEmpty) return false;
+    final uri = Uri.tryParse(raw);
+    if (uri == null) return false;
+    final schemeOk = uri.scheme == 'http' || uri.scheme == 'https';
+    return schemeOk && uri.host.isNotEmpty;
+  }
+
   RemoteConfig copyWith({String? baseUrl, String? token}) =>
       RemoteConfig(baseUrl: baseUrl ?? this.baseUrl, token: token ?? this.token);
 }

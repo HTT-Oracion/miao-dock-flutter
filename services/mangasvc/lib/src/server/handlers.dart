@@ -438,6 +438,8 @@ class Handlers {
       translator: '${body['translator'] ?? 'sakura'}',
       clientTaskRef: body['clientTaskRef'] as String?,
       idempotencyKey: body['idempotencyKey'] as String?,
+      // 客户端前置校验失败时传原因（如远程翻译未配置）：建任务但直接失败。
+      failReason: body['failReason'] as String?,
     );
     await writeJson(req.response, 200, created);
   }

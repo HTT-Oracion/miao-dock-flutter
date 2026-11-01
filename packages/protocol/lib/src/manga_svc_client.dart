@@ -41,6 +41,10 @@ abstract class MangaSvcClient {
 
     /// 提交方身份（D-046）：`app` / `plugin` / `desktop`。缺省视为本机应用。
     String client = 'app',
+
+    /// 前置校验失败原因（如远程翻译未配置）。
+    /// 非空时服务端**建任务但直接置 failed**，不进翻译流水线。
+    String? failReason,
   });
 
   /// `POST /api/v1/tasks/{taskId}/batches` —— 向已有任务追加批次（补页）。

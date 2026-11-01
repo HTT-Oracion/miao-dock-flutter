@@ -2,6 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/not_ready_state.dart';
+import 'engine_controller.dart';
+import 'remote_controller.dart';
+
 import 'library_controller.dart';
 
 import 'package:protocol/protocol.dart';
@@ -123,10 +127,30 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
 
   /// 投放，返回提交结果（吐司用）。
   /// 投放，返回提交结果（吐司用）。
-  Future<SubmitOutcome> submit({required String comicName, required List<String> imagePaths}) async {
-    final res = await ref.read(mangaSvcClientProvider).createTask(comicName: comicName, imagePaths: imagePaths);
+  /// 远程翻译配置是否**阻止提交**。
+  ///
+  /// 选了远程但 token / 地址无效时返回 true —— 调用方据此提前提示，
+  /// 而不是等 HTTP 失败再让任务跑进流水线。
+  bool get remoteBlocked {
+    if (ref.read(translateSourceProvider) != TranslateSource.remote) return false;
+    return !ref.read(remoteConfigProvider).valid;
+  }
+
+  Future<SubmitOutcome> submit({
+    required String comicName,
+    required List<String> imagePaths,
+
+    /// 被拦下时写进任务失败原因的**本地化文案**（由 UI 层传入，controller 不碰 ARB）。
+    String? blockedReason,
+  }) async {
+    // 远程翻译前置校验：配置无效时**建任务但直接置失败**，不进翻译流水线。
+    final blocked = remoteBlocked;
+    final reason = blocked ? blockedReason : null;
+    final res = await ref
+        .read(mangaSvcClientProvider)
+        .createTask(comicName: comicName, imagePaths: imagePaths, failReason: reason);
     await refresh();
-    return SubmitOutcome(submitted: imagePaths.length, position: res.queuePosition);
+    return SubmitOutcome(submitted: imagePaths.length, position: res.queuePosition, blockedReason: reason);
   }
 }
 

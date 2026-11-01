@@ -147,6 +147,7 @@ class TaskQueue {
     String? clientTaskRef,
     String? idempotencyKey,
     String? targetDir,
+    String? failReason,
   }) async {
     if (imagePaths.isEmpty) {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
@@ -170,7 +171,17 @@ class TaskQueue {
       targetDir: targetDir,
     );
     _tasks.insert(0, task);
-    _scheduleDrain();
+    if (failReason != null && failReason.trim().isNotEmpty) {
+      // **前置校验失败**（如远程翻译配置无效）：任务如实记下来并直接置失败，
+      // 不进翻译流水线 —— 否则会白跑一遍引擎等待，用户还看不到原因。
+      task.status = TaskStatus.failed;
+      task.lastError = failReason;
+      task.failedReasons.add(failReason);
+      task.finishedAt = DateTime.now().toUtc();
+      _logLine('任务 ${task.comicName} 未执行：$failReason');
+    } else {
+      _scheduleDrain();
+    }
     await _persist();
     return task.toCreateResponse();
   }

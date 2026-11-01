@@ -60,11 +60,19 @@ enum MangaTaskSource { desktop, extension, unknown }
 
 /// 一次投放的结果（吐司用）。
 class SubmitOutcome {
-  const SubmitOutcome({required this.submitted, required this.position});
+  const SubmitOutcome({required this.submitted, required this.position, this.blockedReason});
 
   /// 已提交张数。
   final int submitted;
 
   /// 在队列中的位次。
   final int position;
+
+  /// 前置校验不通过的原因（非 null = 任务已建成 failed，未进流水线）。
+  ///
+  /// 典型场景：选了远程翻译，但 token / 地址没配好。
+  final String? blockedReason;
+
+  /// 是否被前置校验拦下。
+  bool get blocked => blockedReason != null;
 }

@@ -2185,5 +2185,9 @@
   "libMergeNoResult": "没有匹配的漫画",
   "@libMergeNoResult": {
     "description": "归并选择器无匹配结果"
+  },
+  "remoteConfigInvalid": "远程翻译配置不生效，请到设置页进行配置",
+  "@remoteConfigInvalid": {
+    "description": "远程翻译前置校验失败提示"
   }
 }
