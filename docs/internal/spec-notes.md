@@ -2495,3 +2495,28 @@
 - **测试**：`select_picker_test` 两条 —— AppSelect 菜单在按钮下方且选择生效；
   picker 搜索「香」后只剩香蕉、选中回传 `'b'`。
 - **验证**：应用 156 通过；analyze 与 l10n 通过。
+
+## D-127 队列终态三分支 + 桌面端隐藏大模型翻译
+
+- **状态**：完成（2026-11-02）
+- **① 队列卡在「部分失败」（真 bug）**：
+  `task_queue.dart` 原来只有一行判定
+  `t.status = t.failed > 0 ? partialFailed : done;` ——
+  **只要有一页失败就 partial_failed，即使每一页都失败**，
+  `TaskStatus.failed` 只在「落盘失败」的 catch 分支出现。
+  - 对照 miao-dock `store/pure.rs` 的 `end_status_of`：三分支
+    （`failed == 0 → done`；`success > 0 → partial_failed`；否则 `failed`）；
+  - 已按此修正，`t.done` 对应原项目的 success 计数。
+  - **验证方式**：把旧逻辑临时改回去，新测试立刻红（`Expected 'failed', Actual 'partial_failed'`），
+    证明测试咬得住这个 bug。
+- **② 桌面端隐藏【大模型翻译】**：新增 `const bool llmSourceEnabled = false;`
+  （实现与端点保留，打开常量即恢复，**不删代码路径**）：
+  - `_SourceRow` 的选项列表按常量过滤；
+  - `TranslateSourceNotifier.build()`：历史偏好是 `llm` 时**回落** local（桌面）/ remote（移动），
+    否则界面会显示一个列表里不存在的值；
+  - `set()` 拒绝切到已关闭的来源。
+- **③ 测试间污染修复**：`readiness_test` 依赖 `translateSourceProvider`，
+  而它会读**真实偏好文件** —— 设置页用例把来源存成 remote 后，
+  「服务正常但引擎未起」会因「远程不需要引擎」得到 ready。
+  已用 `translateSourceProvider.overrideWith(FakeLocalSource.new)` 隔离。
+- **验证**：应用 156 通过；服务 179 通过；analyze 与 l10n 通过。

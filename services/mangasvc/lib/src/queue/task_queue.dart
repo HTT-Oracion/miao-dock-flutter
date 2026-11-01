@@ -398,7 +398,16 @@ class TaskQueue {
         t.progressController.add(t.done);
       }
       t.finishedAt = DateTime.now().toUtc();
-      t.status = t.failed > 0 ? TaskStatus.partialFailed : TaskStatus.done;
+      // 终态三分支（对齐 miao-dock `end_status_of`）：
+      // 无失败 → done；有成功也有失败 → partial_failed；**全部失败 → failed**。
+      // 原来只有前两分支，导致「每一页都失败」也显示成「部分失败」。
+      if (t.failed == 0) {
+        t.status = TaskStatus.done;
+      } else if (t.done > 0) {
+        t.status = TaskStatus.partialFailed;
+      } else {
+        t.status = TaskStatus.failed;
+      }
       await _persist();
     } catch (e) {
       t.status = TaskStatus.failed;

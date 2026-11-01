@@ -53,12 +53,14 @@ void main() {
     // 按文案找会不稳定（实测在整包跑时红）。
     await tester.tap(find.byType(AppSelect<TranslateSource>));
     await tester.pumpAndSettle();
-    // 破坏点：下拉里缺选项 → 用户改不了来源，本条失败。
-    expect(find.text('大模型翻译'), findsWidgets);
+    // 【大模型翻译】暂时隐藏（llmSourceEnabled = false），只剩本地 / 远程。
+    // 破坏点：仍在列表里 → 用户会选到一个未开放的能力。
+    expect(find.text('大模型翻译'), findsNothing);
     expect(find.text('远程翻译'), findsWidgets);
-    await tester.tap(find.text('大模型翻译').last);
+    expect(find.text('本地翻译'), findsWidgets);
+    await tester.tap(find.text('远程翻译').last);
     await tester.pumpAndSettle();
-    expect(find.text('大模型翻译'), findsWidgets);
+    expect(find.text('远程翻译'), findsWidgets);
 
     // 引擎未启动时的主操作是「启动」
     expect(find.text('启动'), findsWidgets);

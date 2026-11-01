@@ -763,7 +763,8 @@ class _SourceRow extends ConsumerWidget {
         value: current,
         items: [
           (TranslateSource.local, l10n.sourceLocal),
-          (TranslateSource.llm, l10n.sourceLlm),
+          // 【大模型翻译】暂时隐藏（llmSourceEnabled）；实现保留，打开常量即恢复。
+          if (llmSourceEnabled) (TranslateSource.llm, l10n.sourceLlm),
           (TranslateSource.remote, l10n.sourceRemote),
         ],
         onChanged: (v) => ref.read(translateSourceProvider.notifier).set(v),

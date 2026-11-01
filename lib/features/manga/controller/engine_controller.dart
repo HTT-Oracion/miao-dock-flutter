@@ -78,9 +78,16 @@ class EngineNotifier extends Notifier<EngineRuntimeState> {
 
 final engineStateProvider = NotifierProvider<EngineNotifier, EngineRuntimeState>(EngineNotifier.new);
 
-/// 翻译来源（三选一，D-012）。
+/// 【大模型翻译】是否对用户开放。
+///
+/// 暂时关闭（用户要求桌面端先隐藏该选项）。实现与端点都留着，
+/// 打开这个常量即恢复；**不要删代码路径**。
+const bool llmSourceEnabled = false;
+
+/// 翻译来源（设计上三选一，D-012）。
 ///
 /// 默认值按平台分：桌面 `local`，移动端只能是 `remote`。
+/// 【大模型翻译】受 [llmSourceEnabled] 控制，关闭时对用户不可见也不可选。
 class TranslateSourceNotifier extends Notifier<TranslateSource> {
   @override
   TranslateSource build() {
@@ -89,6 +96,11 @@ class TranslateSourceNotifier extends Notifier<TranslateSource> {
       final parsed = TranslateSource.parse(saved);
       // Web / 移动端读到历史遗留的本地来源 → 强制回落 remote（本机跑不了引擎）。
       if (!supportsLocalEngine && parsed.requiresLocalRuntime) return TranslateSource.remote;
+      // 曾经选过大模型翻译、但当前已关闭 → 回落到本机可用来源，
+      // 否则界面会显示一个选项列表里根本不存在的值。
+      if (!llmSourceEnabled && parsed == TranslateSource.llm) {
+        return supportsLocalEngine ? TranslateSource.local : TranslateSource.remote;
+      }
       return parsed;
     }
     // Web / 移动端只有远程翻译（本机不跑引擎，D-001 / D-044）。
@@ -98,6 +110,8 @@ class TranslateSourceNotifier extends Notifier<TranslateSource> {
   void set(TranslateSource value) {
     // Web / 移动端不允许切到需要本机运行时的来源（D-044）。
     if (!supportsLocalEngine && value.requiresLocalRuntime) return;
+    // 已关闭的来源不允许被切到。
+    if (!llmSourceEnabled && value == TranslateSource.llm) return;
     state = value;
     persistTranslateSource(value.wire);
   }
