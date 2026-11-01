@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:protocol/protocol.dart';
@@ -106,6 +107,12 @@ class Handlers {
         await _ping(req);
       case 'POST /api/v1/translate/text':
         await _translateText(req);
+      case 'GET /api/v1/translate/options':
+        await _translateOptions(req);
+      case 'POST /api/v1/translate/settings':
+        await _translateSettings(req);
+      case 'POST /api/v1/translate/stream':
+        await _translateStream(req);
       case 'GET /api/v1/translate/log':
         await _translateLog(req);
       // ── tasks ───────────────────────────────────────────────────────────
@@ -252,6 +259,85 @@ class Handlers {
   ///
   /// 🔴 凭证**随请求传入**、用完即弃：唯一事实源是桌面端的系统钥匙串，
   /// 服务端不落盘（D-054 定案，撤销 D-052）。
+  /// 可选项（方向 / 平台）：供设置页下拉使用。
+  Future<void> _translateOptions(HttpRequest req) async {
+    await writeJson(req.response, 200, {
+      'platforms': ['youdaoZhiYun'],
+      'settings': _translateSettingsView(),
+      'sources': const <String>[],
+      'credentials': const <String>[],
+      'fileIssues': const {'exists': true, 'corrupt': false},
+    });
+  }
+
+  /// 非密钥设置补丁：白名单 strict（未知键直接报错，不静默吞）。
+  Future<void> _translateSettings(HttpRequest req) async {
+    final body = await readJsonBody(req);
+    const allowed = {'fromLang', 'toLang', 'platform'};
+    final unknown = [
+      for (final k in body.keys)
+        if (!allowed.contains(k)) k,
+    ];
+    if (unknown.isNotEmpty) {
+      throw ServiceError('INVALID_SETTING', '不支持的设置项：${unknown.join('、')}');
+    }
+    final file = _translateSettingsFile();
+    final current = _translateSettingsView();
+    final next = {...current, ...body};
+    file.parent.createSync(recursive: true);
+    file.writeAsStringSync(jsonEncode(next));
+    await writeJson(req.response, 200, {'ok': true, 'changed': body.length, 'settings': next});
+  }
+
+  /// 流式文本翻译：**逐分片**推送（首包发头，之后每行一个 `data:`）。
+  ///
+  /// 与旧项目一致：长文本一次返回对用户没有意义，流式才能看到进度。
+  Future<void> _translateStream(HttpRequest req) async {
+    final body = await readJsonBody(req);
+    final text = body['text'];
+    if (text is! String || text.trim().isEmpty) {
+      throw const ServiceError('INVALID_TEXT', '待翻译文本不能为空');
+    }
+    final rawCred = body['credentials'];
+    final cred = rawCred is Map ? Map<String, dynamic>.from(rawCred) : const <String, dynamic>{};
+    final appKey = '${cred['appKey'] ?? ''}';
+    final appSecret = '${cred['appSecret'] ?? ''}';
+    if (appKey.isEmpty || appSecret.isEmpty) {
+      throw const ServiceError('TRANSLATE_NOT_CONFIGURED', '未收到在线翻译密钥（appKey / appSecret）', status: 409);
+    }
+    final res = req.response;
+    res.statusCode = 200;
+    res.headers.contentType = ContentType('text', 'event-stream', charset: 'utf-8');
+    final client = YoudaoClient(
+      transport: youdaoTransport ?? makeYoudaoTransport(),
+      baseUrl: youdaoBaseUrl(),
+      appKey: appKey,
+      appSecret: appSecret,
+    );
+    try {
+      final result = await client.translateText(
+        YoudaoTranslateRequest(text: text, from: '${body['fromLang'] ?? 'ja'}', to: '${body['toLang'] ?? 'zh'}'),
+      );
+      res.write('data: ${jsonEncode({'type': 'result', 'text': result.text})}\n\n');
+    } catch (e) {
+      res.write('data: ${jsonEncode({'type': 'error', 'message': '$e'})}\n\n');
+    }
+    await res.close();
+  }
+
+  Map<String, dynamic> _translateSettingsView() {
+    try {
+      final f = _translateSettingsFile();
+      if (!f.existsSync()) return {'platform': 'youdaoZhiYun', 'fromLang': 'ja', 'toLang': 'zh'};
+      final m = jsonDecode(f.readAsStringSync());
+      return m is Map ? Map<String, dynamic>.from(m) : const {};
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  File _translateSettingsFile() => File('${store.stateDir}${Platform.pathSeparator}translate-settings.json');
+
   Future<void> _translateText(HttpRequest req) async {
     final body = await readJsonBody(req);
     final text = body['text'];

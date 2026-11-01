@@ -1680,3 +1680,21 @@
 - **同时修**：`_aggregatePlan` 用 `^(\d+)` 解析话号 → 小数话被跳过；改 `chapterNoFromDirName`。
 - **验证**：服务端 165 通过；应用 116 通过；实测 `01_第1话/002_translated.png` 正确生成、书根干净。
 - **关联**：D-083（归并）· D-087（右键菜单）。
+
+## D-089 路由↔handler 覆盖测试 + 补齐 translate 三端点
+
+- **状态**：完成（2026-11-01）
+- **防复发机制**（针对 D-088 那类「路由在、实现缺」）：
+  `route_handler_coverage_test.dart` 用正则扫 `handlers.dart` 的 `case 'METHOD /path':`，
+  与路由表**双向比对**：
+  - 路由无 case → 列出全部（该端点恒 501）；
+  - case 无路由 → 列出（改了字符串却没同步路由表，case 永远走不到）。
+  这条测试**当场抓到 3 个漏网端点**，证明有效。
+- **补齐的端点**（对照 `translate/mod.rs options_view/save_settings`）：
+  - `GET /translate/options`：platforms / settings / sources / credentials / fileIssues；
+  - `POST /translate/settings`：白名单 strict（`fromLang/toLang/platform`），未知键 → `INVALID_SETTING`，
+    落 `<state>/translate-settings.json`；
+  - `POST /translate/stream`：SSE 逐事件（`data: {"type":"result"|"error"}`），无凭证 → 409 `TRANSLATE_NOT_CONFIGURED`。
+- **实测**：options 返回结构正确；settings 写入并落盘；非法键被拒；stream 无凭证返回 409 而非 500。
+- **验证**：服务端 167 通过（新增 2 条覆盖测试）；应用 116 通过；analyze 双端干净。
+- **关联**：D-088（端点缺失）· D-075（翻译日志）。
