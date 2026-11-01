@@ -140,7 +140,13 @@ class _MenuTriggerState extends State<_MenuTrigger> {
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         onTapDown: (d) async {
-          final value = await showAppMenu(context, position: d.globalPosition, minWidth: 170, items: widget.items);
+          final box = context.findRenderObject()! as RenderBox;
+          final value = await showAppMenu(
+            context,
+            anchor: box.localToGlobal(Offset.zero) & box.size,
+            minWidth: 170,
+            items: widget.items,
+          );
           if (value != null) widget.onSelected(value);
         },
         child: Container(

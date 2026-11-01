@@ -20,7 +20,7 @@ class ShelfContextMenu {
     final l10n = AppLocalizations.of(context);
     final selected = await showAppMenu(
       context,
-      position: globalPosition,
+      anchor: Rect.fromLTWH(globalPosition.dx, globalPosition.dy, 0, 0),
       minWidth: 180,
       items: [
         AppMenuItem(value: 'open', label: l10n.shelfMenuOpenDir, icon: LucideIcons.folderUp),

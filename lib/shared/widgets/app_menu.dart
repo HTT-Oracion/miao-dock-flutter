@@ -135,9 +135,13 @@ class _MenuRowState extends State<_MenuRow> {
 }
 
 /// 打开统一样式的下拉菜单（自绘 Overlay：位置跟随锚点，点击外部关闭）。
+/// 打开统一样式的下拉菜单。
+///
+/// [anchor] 是**触发按钮的屏幕矩形**：菜单显示在按钮**正下方、与按钮左边缘对齐**
+/// （miao-dock `.ui-menu` 的定位口径）。空间不足时向上翻转，且始终夹在屏幕内。
 Future<String?> showAppMenu(
   BuildContext context, {
-  required Offset position,
+  required Rect anchor,
   required List<AppMenuItem> items,
   double minWidth = 180,
 }) {
@@ -153,12 +157,14 @@ Future<String?> showAppMenu(
     completer.complete(v);
   }
 
-  // 预估高度：项 30 + 间距，向上翻转避免越界。
+  // 预估高度：项 30 + 分隔线 7 + 面板内边距 8。
   final estHeight = items.fold<double>(8, (a, it) => a + (it.isSeparator ? 7 : 30));
-  final left = position.dx.clamp(8.0, size.width - minWidth - 8);
-  final top = (position.dy + estHeight > size.height)
-      ? (position.dy - estHeight).clamp(8.0, size.height - 8)
-      : position.dy;
+  final width = anchor.width > minWidth ? anchor.width : minWidth;
+  // 左边缘对齐按钮左边缘（不越出右侧）。
+  final left = anchor.left.clamp(8.0, (size.width - width - 8).clamp(8.0, size.width));
+  // 正下方，留 4px 间隙；放不下则翻到按钮上方。
+  final below = anchor.bottom + 4;
+  final top = (below + estHeight > size.height) ? (anchor.top - estHeight - 4).clamp(8.0, size.height - 8) : below;
 
   entry = OverlayEntry(
     builder: (context) => Stack(

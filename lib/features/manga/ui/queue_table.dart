@@ -261,10 +261,10 @@ class _MoreButton extends ConsumerWidget {
         label: l10n.actionMore,
         onTapDown: (details) async {
           final box = context.findRenderObject()! as RenderBox;
-          final origin = box.localToGlobal(Offset.zero);
           final value = await showAppMenu(
             context,
-            position: Offset(origin.dx, origin.dy + box.size.height + 4),
+            // 正下方 + 左对齐：传按钮矩形，由菜单自己算位置。
+            anchor: box.localToGlobal(Offset.zero) & box.size,
             minWidth: 160,
             items: [
               AppMenuItem(value: 'open', label: l10n.queueOpenDir, icon: LucideIcons.folderUp),
