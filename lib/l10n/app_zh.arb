@@ -1134,6 +1134,26 @@
   "@svcAutoStartEngineWhy": {
     "description": "设置：引擎自动唤起说明"
   },
+  "pairingTokenLabel": "配对令牌",
+  "@pairingTokenLabel": {
+    "description": "设置：本机服务令牌行标签"
+  },
+  "pairingTokenWhy": "其他端远程连接本机时随请求携带（X-Box-Token）。",
+  "@pairingTokenWhy": {
+    "description": "设置：配对令牌说明"
+  },
+  "pairingTokenCopy": "复制",
+  "@pairingTokenCopy": {
+    "description": "设置：复制令牌按钮"
+  },
+  "pairingTokenCopied": "令牌已复制到剪贴板",
+  "@pairingTokenCopied": {
+    "description": "设置：复制成功吐司"
+  },
+  "pairingTokenUnavailable": "无法获取（服务未由应用启动）",
+  "@pairingTokenUnavailable": {
+    "description": "设置：令牌不可获取说明"
+  },
   "svcIdleUnload": "空闲自动卸载",
   "@svcIdleUnload": {
     "description": "设置：空闲卸载"

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/process/service_controller.dart';
 import '../../../core/storage/paths.dart';
 import '../../../core/storage/shell_prefs.dart';
 import '../../../core/theme/theme_mode.dart';
@@ -800,6 +802,7 @@ class _PairingRows extends ConsumerWidget {
           why: l10n.svcAutoStartEngineWhy,
           control: AppSwitch(value: autoEngine, onChanged: (v) => ref.read(_autoStartEngineProvider.notifier).set(v)),
         ),
+        const _PairingTokenRow(),
         SettingRow(
           label: l10n.settingLibraryDirLabel,
           why: l10n.settingLibraryDirWhy,
@@ -822,6 +825,54 @@ class _PairingRows extends ConsumerWidget {
 }
 
 final _autoStartServiceProvider = NotifierProvider<_AutoStartService, bool>(_AutoStartService.new);
+
+/// 配对令牌行：本机 mangasvc 的 `X-Box-Token`，其他端远程连接时随请求携带。
+///
+/// 令牌来自服务启动时的 `--print-token`（D-065），只有本应用拉起服务才拿得到；
+/// 用户手动启动服务时如实说明，不放空行假装正常。
+class _PairingTokenRow extends ConsumerWidget {
+  const _PairingTokenRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final token = ref.watch(serviceSupervisorProvider)?.token;
+
+    return SettingRow(
+      label: l10n.pairingTokenLabel,
+      why: l10n.pairingTokenWhy,
+      control: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              token ?? l10n.pairingTokenUnavailable,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 9, color: token == null ? palette.mut : palette.ink2, fontFamily: 'monospace'),
+            ),
+          ),
+          if (token != null) ...[
+            const SizedBox(width: 10),
+            AppButton(
+              label: l10n.pairingTokenCopy,
+              variant: AppButtonVariant.secondary,
+              height: 24,
+              horizontalPadding: 10,
+              fontSize: 9.5,
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: token));
+                if (!context.mounted) return;
+                showAppToast(context, l10n.pairingTokenCopied, tone: ToastTone.good);
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class _AutoStartService extends Notifier<bool> {
   @override
