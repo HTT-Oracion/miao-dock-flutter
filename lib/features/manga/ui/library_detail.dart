@@ -195,148 +195,141 @@ class _Hero extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Cover(book: book),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  book.name,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTokens.textPrimary),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    if (!book.isBook) _MetaChip(l10n.libUnmerged),
-                    if (book.isBook) _MetaChip(l10n.bookAuthorLabel(book.author)),
-                    _MetaChip(
-                      book.isBook ? l10n.bookChapterCount(book.chapterCount) : l10n.bookPageCount(book.pageCount),
-                    ),
-                    if (book.isBook) _MetaChip(l10n.bookPageCount(book.pageCount)),
-                    _MetaChip(formatBytes(book.totalBytes)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    if (book.isBook) ...[
-                      _HeroButton(
-                        icon: LucideIcons.play,
-                        label: l10n.bookContinueTranslate,
-                        primary: true,
-                        onTap: () async {
-                          final client = ref.read(mangaSvcClientProvider);
-                          try {
-                            final plan = await client.getResumePlan(book.key);
-                            if (plan.pendingCount == 0) {
-                              if (context.mounted) {
-                                showAppToast(context, l10n.libAllTranslated, tone: ToastTone.info);
-                              }
-                              return;
-                            }
-                            await client.resumeBook(book.key);
+    // ver1.0 `.detail-hero`：纯排版（无卡片底），封面 96×126。
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Cover(book: book),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                book.name,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTokens.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (!book.isBook) _MetaChip(l10n.libUnmerged),
+                  if (book.isBook) _MetaChip(l10n.bookAuthorLabel(book.author)),
+                  _MetaChip(
+                    book.isBook ? l10n.bookChapterCount(book.chapterCount) : l10n.bookPageCount(book.pageCount),
+                  ),
+                  if (book.isBook) _MetaChip(l10n.bookPageCount(book.pageCount)),
+                  _MetaChip(formatBytes(book.totalBytes)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (book.isBook) ...[
+                    _HeroButton(
+                      icon: LucideIcons.play,
+                      label: l10n.bookContinueTranslate,
+                      primary: true,
+                      onTap: () async {
+                        final client = ref.read(mangaSvcClientProvider);
+                        try {
+                          final plan = await client.getResumePlan(book.key);
+                          if (plan.pendingCount == 0) {
                             if (context.mounted) {
-                              showAppToast(context, l10n.libResumeSubmitted, tone: ToastTone.good);
+                              showAppToast(context, l10n.libAllTranslated, tone: ToastTone.info);
                             }
-                          } catch (e) {
-                            if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                            return;
                           }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      _HeroButton(
-                        icon: LucideIcons.pencil,
-                        label: l10n.libEditInfo,
-                        onTap: () async {
-                          final r = await _EditBookDialog.show(context, book: book);
-                          if (r == null || !context.mounted) return;
-                          final client = ref.read(mangaSvcClientProvider);
-                          try {
-                            // 封面与文字**同一次保存**（miao-dock：拆开会有半落盘状态）。
-                            switch (r.cover) {
-                              case CoverIntent.keep:
-                                break;
-                              case CoverIntent.first:
-                                await client.setBookCoverFromFirstChapter(book.key);
-                              case CoverIntent.remove:
-                                await client.deleteBookCover(book.key);
-                              case CoverIntent.local:
-                                await client.setBookCover(
-                                  book.key,
-                                  bytes: r.coverBytes!,
-                                  filename: r.coverFileName ?? 'cover.png',
-                                );
-                            }
-                            await client.setBookMeta(book.key, r.meta);
-                            await ref.read(libraryProvider.notifier).refresh();
-                            if (context.mounted) showAppToast(context, l10n.libEditInfoOk, tone: ToastTone.good);
-                          } catch (e) {
-                            if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                          await client.resumeBook(book.key);
+                          if (context.mounted) {
+                            showAppToast(context, l10n.libResumeSubmitted, tone: ToastTone.good);
                           }
-                        },
-                      ),
-                    ] else ...[
-                      _HeroButton(
-                        icon: LucideIcons.bookOpen,
-                        label: l10n.libViewComic,
-                        onTap: () {
-                          ref
-                              .read(readerSessionProvider.notifier)
-                              .open(
-                                ReaderSession(
-                                  key: book.key,
-                                  pages: book.directPages,
-                                  translated: book.directTranslated,
-                                ),
-                              );
-                          context.go('/manga/reader');
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      _HeroButton(
-                        icon: LucideIcons.gitMerge,
-                        label: l10n.libMerge,
-                        primary: true,
-                        onTap: () async {
-                          final result = await showMergeDialog(context, src: book.key);
-                          if (result == null || !context.mounted) return;
-                          try {
-                            await ref
-                                .read(mangaSvcClientProvider)
-                                .mergeChapter(book.key, targetBook: result.$1, no: result.$2);
-                            await ref.read(libraryProvider.notifier).refresh();
-                            if (context.mounted) showAppToast(context, l10n.libMergeOk, tone: ToastTone.good);
-                          } catch (e) {
-                            if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
-                          }
-                        },
-                      ),
-                    ],
+                        } catch (e) {
+                          if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                        }
+                      },
+                    ),
                     const SizedBox(width: 8),
                     _HeroButton(
-                      icon: LucideIcons.folderOpen,
-                      label: l10n.actionOpenDir,
+                      icon: LucideIcons.pencil,
+                      label: l10n.libEditInfo,
                       onTap: () async {
-                        await ref.read(mangaSvcClientProvider).revealBook(book.key);
-                        if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
+                        final r = await _EditBookDialog.show(context, book: book);
+                        if (r == null || !context.mounted) return;
+                        final client = ref.read(mangaSvcClientProvider);
+                        try {
+                          // 封面与文字**同一次保存**（miao-dock：拆开会有半落盘状态）。
+                          switch (r.cover) {
+                            case CoverIntent.keep:
+                              break;
+                            case CoverIntent.first:
+                              await client.setBookCoverFromFirstChapter(book.key);
+                            case CoverIntent.remove:
+                              await client.deleteBookCover(book.key);
+                            case CoverIntent.local:
+                              await client.setBookCover(
+                                book.key,
+                                bytes: r.coverBytes!,
+                                filename: r.coverFileName ?? 'cover.png',
+                              );
+                          }
+                          await client.setBookMeta(book.key, r.meta);
+                          await ref.read(libraryProvider.notifier).refresh();
+                          if (context.mounted) showAppToast(context, l10n.libEditInfoOk, tone: ToastTone.good);
+                        } catch (e) {
+                          if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                        }
+                      },
+                    ),
+                  ] else ...[
+                    _HeroButton(
+                      icon: LucideIcons.bookOpen,
+                      label: l10n.libViewComic,
+                      onTap: () {
+                        ref
+                            .read(readerSessionProvider.notifier)
+                            .open(
+                              ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated),
+                            );
+                        context.go('/manga/reader');
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _HeroButton(
+                      icon: LucideIcons.gitMerge,
+                      label: l10n.libMerge,
+                      primary: true,
+                      onTap: () async {
+                        final result = await showMergeDialog(context, src: book.key);
+                        if (result == null || !context.mounted) return;
+                        try {
+                          await ref
+                              .read(mangaSvcClientProvider)
+                              .mergeChapter(book.key, targetBook: result.$1, no: result.$2);
+                          await ref.read(libraryProvider.notifier).refresh();
+                          if (context.mounted) showAppToast(context, l10n.libMergeOk, tone: ToastTone.good);
+                        } catch (e) {
+                          if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                        }
                       },
                     ),
                   ],
-                ),
-              ],
-            ),
+                  const SizedBox(width: 8),
+                  _HeroButton(
+                    icon: LucideIcons.folderOpen,
+                    label: l10n.actionOpenDir,
+                    onTap: () async {
+                      await ref.read(mangaSvcClientProvider).revealBook(book.key);
+                      if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -594,8 +587,8 @@ class _ChapterGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
         mainAxisExtent: 100,
       ),
       itemCount: book.chapters.length,
@@ -674,7 +667,7 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
                         const SizedBox(height: 3),
                         Text(
                           AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
-                          style: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+                          style: const TextStyle(fontSize: 8.5, color: AppTokens.textSecondary),
                         ),
                         const SizedBox(height: 8),
                         ClipRRect(

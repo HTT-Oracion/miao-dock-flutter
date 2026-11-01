@@ -61,23 +61,12 @@ class _ShelfHead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
-        children: [
-          const Icon(LucideIcons.bookOpen, size: 14, color: AppTokens.textSecondary),
-          const SizedBox(width: 8),
-          Text(
-            AppLocalizations.of(context).shelfTitle,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTokens.textPrimary),
-          ),
-          const Spacer(),
-          Text(
-            AppLocalizations.of(context).shelfCount(count),
-            style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
-          ),
-        ],
+    // ver1.0 左栏只有一行 9.5 号计数文字（没有大标题）。
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      child: Text(
+        AppLocalizations.of(context).shelfCount(count),
+        style: const TextStyle(fontSize: 9.5, color: AppTokens.textSecondary),
       ),
     );
   }
@@ -91,30 +80,33 @@ class _ShelfSearch extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      height: 40,
-      margin: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+      height: 30,
+      margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(color: AppTokens.card, borderRadius: BorderRadius.circular(8)),
       child: Row(
         children: [
-          const Icon(LucideIcons.search, size: 13, color: AppTokens.textSecondary),
-          const SizedBox(width: 8),
+          const Icon(LucideIcons.search, size: 12, color: AppTokens.textSecondary),
+          const SizedBox(width: 6),
           Expanded(
             child: TextField(
               onChanged: (v) => ref.read(shelfQueryProvider.notifier).set(v),
-              style: const TextStyle(fontSize: 12.5),
+              style: const TextStyle(fontSize: 10, color: AppTokens.textPrimary),
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context).shelfSearchHint,
-                hintStyle: const TextStyle(fontSize: 11.5, color: AppTokens.textSecondary),
+                hintStyle: const TextStyle(fontSize: 10, color: AppTokens.textSecondary),
                 border: InputBorder.none,
                 isDense: true,
               ),
             ),
           ),
           if (query.isNotEmpty)
-            GestureDetector(
-              onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
-              child: const Icon(LucideIcons.x, size: 13, color: AppTokens.textSecondary),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => ref.read(shelfQueryProvider.notifier).set(''),
+                child: const Icon(LucideIcons.x, size: 12, color: AppTokens.textSecondary),
+              ),
             ),
         ],
       ),
