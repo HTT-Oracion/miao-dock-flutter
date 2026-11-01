@@ -208,7 +208,13 @@ class EngineFacade {
       onStage?.call(line);
     }
     if (!out.ok || out.image == null) {
-      throw StateError(out.error?.message ?? '引擎翻译失败（无错误信息）');
+      // 把引擎错误的 code / details 拼进消息：只给「引擎翻译失败」时用户无从排查，
+      // code 能区分「引擎内部报错」与「回包被截断」。
+      final err = out.error;
+      final msg = err?.message ?? '引擎翻译失败（无错误信息）';
+      final details = err?.details ?? const <String, dynamic>{};
+      final extra = details.isEmpty ? '' : '（code=${err?.code} 详情=$details）';
+      throw StateError('$msg$extra');
     }
     return out.image!;
   }

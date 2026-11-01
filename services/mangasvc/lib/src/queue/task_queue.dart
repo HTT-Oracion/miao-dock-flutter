@@ -347,6 +347,7 @@ class TaskQueue {
     try {
       final bookDir = Directory(t.targetDir ?? '$rootDir/${t.comicName}');
       bookDir.createSync(recursive: true);
+      _logLine('任务开始 ${t.comicName}：${t.batches.length} 页 → ${bookDir.path}（引擎 ${real ? '真实' : '模拟'}）');
 
       for (var i = 0; i < t.batches.length; i++) {
         if (t.cancelRequested) {
@@ -369,22 +370,29 @@ class TaskQueue {
         }
         if (real) {
           // 真实翻译：引擎出图；失败只让**这一页**失败，不拖垮整本。
-          _logLine('开始翻译 ${t.comicName} 第 ${_pad(seq)} 页');
+          final inBytes = original.readAsBytesSync();
+          _logLine('第 ${_pad(seq)} 页：请求引擎（原图 ${inBytes.length} 字节）');
+          final sw = Stopwatch()..start();
           try {
-            final out = await translator!(original.readAsBytesSync(), (line) {
-              _logLine('[${t.comicName} 第${_pad(seq)}页] $line');
+            final out = await translator!(inBytes, (line) {
+              // 引擎流水线各阶段（检测 / 翻译 / 合成）原样转发。
+              _logLine('[第 ${_pad(seq)} 页] $line');
             });
             // 译文扩展名按引擎回包字节嗅探（miao-dock `write_item` 同），
             // 避免「内容是 PNG 却叫 .jpg」。
-            final translated = File('${bookDir.path}/${_pad(seq)}_translated.${sniffImageType(out) ?? 'png'}');
+            final extOut = sniffImageType(out) ?? 'png';
+            final translated = File('${bookDir.path}/${_pad(seq)}_translated.$extOut');
             translated.writeAsBytesSync(out);
-            _logLine('完成 ${t.comicName} 第 ${_pad(seq)} 页');
+            _logLine('第 ${_pad(seq)} 页：成功，译文 ${out.length} 字节 / $extOut，耗时 ${sw.elapsedMilliseconds}ms');
           } catch (e) {
             t.failed++;
             t.lastError = '$e';
-            // 进 failedReasons：任务行的 failedItems 才会带出原因，
-            // 否则「部分失败」之后用户看不到任何解释（D-075）。
-            t.failedReasons.add('第 ${_pad(seq)} 页：$e');
+            // 失败原因**同时**进日志：否则「部分失败」之后用户在日志里
+            // 只看得到「开始翻译」，完全不知道错在哪（D-128）。
+            // 去掉 StateError 的 `Bad state: ` 前缀，日志里只留人话。
+            final reason = '$e'.replaceFirst('Bad state: ', '');
+            _logLine('第 ${_pad(seq)} 页：失败，耗时 ${sw.elapsedMilliseconds}ms —— $reason');
+            t.failedReasons.add('第 ${_pad(seq)} 页：$reason');
             continue;
           }
         } else {
@@ -407,6 +415,14 @@ class TaskQueue {
         t.status = TaskStatus.partialFailed;
       } else {
         t.status = TaskStatus.failed;
+      }
+      // 任务级汇总：一眼能看出「几页成功 / 几页失败 / 最终状态」。
+      _logLine(
+        '任务结束 ${t.comicName}：成功 ${t.done} / 失败 ${t.failed} / 共 ${t.batches.length} 页'
+        ' → ${t.status.wire}',
+      );
+      for (final reason in t.failedReasons) {
+        _logLine('  失败明细 ${t.comicName}：$reason');
       }
       await _persist();
     } catch (e) {
