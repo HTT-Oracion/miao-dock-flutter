@@ -1899,3 +1899,18 @@
   - 标题 13.5 → **10**、状态行 11.5 → **8.5**；
   - 网格间距 10 → **12**。
 - **验证**：应用 135 通过；analyze 干净。
+
+## D-101 菜单细调：危险项 hover 与面板对比
+
+- **状态**：完成（2026-11-01）
+- **危险项**：原写成 `_hover ? bad : bad`（两边同值，等于常红）。
+  对齐 miao-dock `.ui-menu-item.is-danger:hover:not(:disabled){color:var(--md-error)}` ⇒
+  **平时正常文字色、hover 才转 `bad`**。
+- **菜单 hover 底色**：由 `navBg`(#141920) 改为 **`divider`(#252C35)**。
+  依据：面板底是 `card`(#1A2028)，设计稿 `.ui-menu-item:hover` 用 `--md-line-soft`，
+  对应本项目 `divider` —— 比面板亮一档但弱于选中态。
+  （注：`AppTextAction` 是「divider 默认 → card hover」，方向相反但同样正确，
+   因为两者面板底色不同，不能套用同一组色。）
+- **编辑弹窗复核**：宽 420、封面预览 96×128（ver1.0 `.cover-preview` 同尺寸）、
+  字段与按钮均走项目 token。
+- **验证**：应用 135 通过；服务端 171 通过；analyze 与 l10n 通过。

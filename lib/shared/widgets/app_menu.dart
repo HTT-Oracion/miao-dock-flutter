@@ -97,7 +97,8 @@ class _MenuRowState extends State<_MenuRow> {
     if (!enabled) {
       fg = AppTokens.textSecondary;
     } else if (it.danger) {
-      fg = _hover ? AppTokens.bad : AppTokens.bad;
+      // 对齐 miao-dock `.ui-menu-item.is-danger`：平时正常色，**hover 才转危险色**。
+      fg = _hover ? AppTokens.bad : AppTokens.textPrimary;
     } else {
       fg = AppTokens.textPrimary;
     }
@@ -111,7 +112,10 @@ class _MenuRowState extends State<_MenuRow> {
           height: 30,
           padding: const EdgeInsets.symmetric(horizontal: 9),
           decoration: BoxDecoration(
-            color: enabled && _hover ? AppTokens.navBg : Colors.transparent,
+            // hover 底色 = 设计稿 `--line`(== AppTokens.divider #252C35)，
+            // 与 miao-dock `.ui-menu-item:hover` 的 `--md-line-soft` 同层级：
+            // 比面板(card #1A2028)亮一档，但不像选中态那么强。
+            color: enabled && _hover ? AppTokens.divider : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Row(
