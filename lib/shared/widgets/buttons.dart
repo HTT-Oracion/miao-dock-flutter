@@ -84,3 +84,151 @@ class _AppTextActionState extends State<AppTextAction> {
     );
   }
 }
+
+/// 全项目按钮圆角**唯一来源**（以 `shared/buttons` 为准，禁止各页自定）。
+const double kButtonRadius = 6;
+
+/// 胶囊形按钮圆角（设计稿 `.chapcap` 等**固有形状**，不适用 [kButtonRadius]）。
+const double kPillRadius = 999;
+
+/// 按钮变体。
+enum AppButtonVariant {
+  /// 主操作：accent 底 + pageBg 字（新建漫画 / 查看 / 重试）。
+  primary,
+
+  /// 次级操作：divider 底 + textPrimary 字，hover 变 card（更多 / 取消 / 继续）。
+  secondary,
+
+  /// 幽灵：无底色，hover 变 card（返回书架 / 弹窗取消）。
+  ghost,
+
+  /// 文字链接：无底无内边距，hover 提亮（去投放 / 显示已隐藏）。
+  link,
+}
+
+/// 通用按钮（**漫画与队列模块的唯一按钮实现**）。
+///
+/// 尺寸可按调用点传入（26/24/32），但**圆角恒为 [kButtonRadius]**，
+/// 需要不同圆角请明确说明后改常量，不要在调用点覆盖。
+class AppButton extends StatefulWidget {
+  const AppButton({
+    super.key,
+    this.label = '',
+    required this.onTap,
+    this.variant = AppButtonVariant.secondary,
+    this.icon,
+    this.height = 26,
+    this.horizontalPadding = 10,
+    this.fontSize = 12,
+    this.color,
+    this.border = false,
+    this.width,
+  });
+
+  /// 文案；**留空 = 纯图标按钮**（此时必须给 [icon]）。
+  final String label;
+  final VoidCallback? onTap;
+  final AppButtonVariant variant;
+  final IconData? icon;
+  final double height;
+  final double horizontalPadding;
+  final double fontSize;
+
+  /// 覆盖文字色（如 danger 项）。
+  final Color? color;
+
+  /// 是否描边（ghost 变体常用）。
+  final bool border;
+
+  /// 固定宽度（纯图标按钮用，如章节卡「⋯」22×22）。
+  final double? width;
+
+  @override
+  State<AppButton> createState() => _AppButtonState();
+}
+
+class _AppButtonState extends State<AppButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
+    final v = widget.variant;
+
+    if (v == AppButtonVariant.link) {
+      final base = widget.color ?? AppTokens.accent;
+      return MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: widget.fontSize,
+              // hover 提亮到 ink，与原 _TextLink 行为一致。
+              color: _hover ? AppTokens.textPrimary : base,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final Color bg;
+    final Color fg;
+    switch (v) {
+      case AppButtonVariant.primary:
+        bg = enabled ? (_hover ? const Color(0xFFF0B96A) : AppTokens.accent) : AppTokens.divider;
+        fg = enabled ? AppTokens.pageBg : AppTokens.textSecondary;
+      case AppButtonVariant.secondary:
+        bg = enabled && _hover ? AppTokens.card : AppTokens.divider;
+        fg = enabled ? (widget.color ?? AppTokens.textPrimary) : AppTokens.textSecondary;
+      case AppButtonVariant.ghost:
+        bg = enabled && _hover ? AppTokens.card : Colors.transparent;
+        fg = enabled ? (widget.color ?? AppTokens.textPrimary) : AppTokens.textSecondary;
+      case AppButtonVariant.link:
+        throw StateError('link variant must be handled above');
+    }
+
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+      onEnter: (_) => enabled ? setState(() => _hover = true) : null,
+      onExit: (_) => setState(() => _hover = false),
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(kButtonRadius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(kButtonRadius),
+          onTap: widget.onTap,
+          child: Container(
+            width: widget.width,
+            height: widget.height,
+            padding: EdgeInsets.symmetric(horizontal: widget.width != null ? 0 : widget.horizontalPadding),
+            alignment: Alignment.center,
+            decoration: widget.border
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(kButtonRadius),
+                    border: Border.all(color: AppTokens.divider),
+                  )
+                : null,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, size: widget.fontSize + 1, color: fg),
+                  if (widget.label.isNotEmpty) const SizedBox(width: 5),
+                ],
+                if (widget.label.isNotEmpty)
+                  Text(
+                    widget.label,
+                    style: TextStyle(fontSize: widget.fontSize, color: fg),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

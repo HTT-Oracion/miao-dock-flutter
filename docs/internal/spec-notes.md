@@ -2083,3 +2083,20 @@
   单话无 manifest 时才回退第一页 ⇒ **设过封面的书会显示对应封面，符合预期**。
 - **验证**：`page_card_test`（断言页面卡真的调 `getBookFile` 取原图）；
   应用 149 通过；analyze 与 l10n 通过。
+
+## D-113 漫画模块按钮全部收敛到 shared/buttons
+
+- **状态**：完成（2026-11-01）
+- **问题**：漫画模块有 **12 个各自实现的按钮组件**（`_HeaderAction` / `_HeroButton` /
+  `_DialogButton` / `_CoverChoice` / `_BackToShelf` / `_Capsule` / `_TextLink` / `_HoverChip` /
+  `_MenuTrigger` / `_GhostButton` 等），样式靠各处照抄 ⇒ 反复出现「尺寸不一致 / 圆角不一致 /
+  hover 表现不同」。违反「不重复造轮子」。
+- **做法**：
+  - `shared/widgets/buttons.dart` 新增 **`AppButton`**（唯一实现），四种变体：
+    `primary`（accent 底）/ `secondary`（divider 底，hover 变 card）/ `ghost`（透明底）/ `link`（纯文字）；
+    支持 `icon`、纯图标（`label` 留空 + `width`）、`height` / `horizontalPadding` / `fontSize` / `border` / `color`。
+  - **圆角唯一来源**：`kButtonRadius = 6`，所有按钮引用该常量；
+    胶囊形（`.chapcap` 等设计稿固有形状）用 `kPillRadius = 999`。
+  - 上述 12 个自定义按钮**全部替换为 `AppButton`**，各文件不再有自己的按钮实现。
+- **踩坑**：`throw StateError('link 变体…')` 的中文字面量被 l10n 棘轮判为 UI 硬编码 —— 运行期字符串也要用英文。
+- **验证**：应用 149 通过；analyze 干净；l10n 棘轮通过。

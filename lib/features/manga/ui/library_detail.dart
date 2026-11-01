@@ -10,6 +10,7 @@ import 'package:protocol/protocol.dart' show BookMeta, jsNumStr;
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/toast.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
@@ -153,6 +154,7 @@ class LibraryHeaderActions extends ConsumerWidget {
   }
 }
 
+/// 头部动作（刷新 / 新建漫画）：统一走 [AppButton]。
 class _HeaderAction extends StatelessWidget {
   const _HeaderAction({required this.icon, required this.label, this.primary = false, required this.onTap});
 
@@ -163,26 +165,15 @@ class _HeaderAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _HoverTap(
+    return AppButton(
+      label: label,
+      icon: icon,
       onTap: onTap,
-      builder: (hover) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: primary
-              ? (hover ? const Color(0xFFF0B96A) : AppTokens.accent)
-              : (hover ? AppTokens.navBg : AppTokens.card),
-          borderRadius: BorderRadius.circular(6),
-          border: primary ? null : Border.all(color: AppTokens.divider),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 11, color: primary ? AppTokens.pageBg : AppTokens.textSecondary),
-            const SizedBox(width: 5),
-            Text(label, style: TextStyle(fontSize: 10.5, color: primary ? AppTokens.pageBg : AppTokens.textPrimary)),
-          ],
-        ),
-      ),
+      variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
+      border: !primary,
+      height: 26,
+      horizontalPadding: 10,
+      fontSize: 10.5,
     );
   }
 }
@@ -381,6 +372,7 @@ class _CoverState extends ConsumerState<_Cover> {
   }
 }
 
+/// Hero 动作（继续翻译 / 编辑信息 / 归并 / 打开目录）：统一走 [AppButton]。
 class _HeroButton extends StatelessWidget {
   const _HeroButton({required this.icon, required this.label, this.primary = false, required this.onTap});
 
@@ -391,25 +383,16 @@ class _HeroButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = primary
-        ? FilledButton.styleFrom(backgroundColor: AppTokens.accent, foregroundColor: AppTokens.pageBg)
-        : OutlinedButton.styleFrom(
-            foregroundColor: AppTokens.textPrimary,
-            side: const BorderSide(color: AppTokens.progressTrack),
-          );
-    return (primary
-        ? FilledButton.icon(
-            onPressed: onTap,
-            icon: Icon(icon, size: 13),
-            label: Text(label, style: const TextStyle(fontSize: 12.5)),
-            style: style,
-          )
-        : OutlinedButton.icon(
-            onPressed: onTap,
-            icon: Icon(icon, size: 13),
-            label: Text(label, style: const TextStyle(fontSize: 12.5)),
-            style: style,
-          ));
+    return AppButton(
+      label: label,
+      icon: icon,
+      onTap: onTap,
+      variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
+      border: !primary,
+      height: 26,
+      horizontalPadding: 10,
+      fontSize: 12.5,
+    );
   }
 }
 
@@ -588,7 +571,7 @@ class _PageCardState extends ConsumerState<_PageCard> {
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(kPillRadius),
                         ),
                         child: Text('$seq', style: const TextStyle(fontSize: 9, color: Colors.white)),
                       ),
@@ -853,7 +836,7 @@ class _CapsuleState extends State<_Capsule> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: AppTokens.navBg,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(kPillRadius),
             border: Border.all(color: _hover ? AppTokens.accent : AppTokens.divider),
           ),
           child: Row(
@@ -1151,8 +1134,8 @@ class _DialogField extends StatelessWidget {
   }
 }
 
-/// 弹窗按钮（ver1.0 `.btn`：26 高、6 圆角；主按钮 hover 提亮）。
-class _DialogButton extends StatefulWidget {
+/// 弹窗按钮：统一走 [AppButton]。
+class _DialogButton extends StatelessWidget {
   const _DialogButton({required this.label, required this.onTap, this.primary = false, this.enabled = true});
 
   final String label;
@@ -1161,54 +1144,20 @@ class _DialogButton extends StatefulWidget {
   final bool enabled;
 
   @override
-  State<_DialogButton> createState() => _DialogButtonState();
-}
-
-class _DialogButtonState extends State<_DialogButton> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
-    final primary = widget.primary;
-    final enabled = widget.enabled;
-    final Color bg;
-    if (!enabled) {
-      bg = AppTokens.divider;
-    } else if (primary) {
-      bg = _hover ? const Color(0xFFF0B96A) : AppTokens.accent;
-    } else {
-      bg = _hover ? AppTokens.navBg : Colors.transparent;
-    }
-    final fg = !enabled
-        ? AppTokens.textSecondary
-        : primary
-        ? AppTokens.pageBg
-        : AppTokens.textPrimary;
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
-      onEnter: (_) => enabled ? setState(() => _hover = true) : null,
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: enabled ? widget.onTap : null,
-        child: Container(
-          height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(6),
-            border: primary ? null : Border.all(color: AppTokens.divider),
-          ),
-          child: Text(
-            widget.label,
-            style: TextStyle(fontSize: 10.5, color: fg, fontWeight: primary ? FontWeight.w600 : FontWeight.w400),
-          ),
-        ),
-      ),
+    return AppButton(
+      label: label,
+      onTap: enabled ? onTap : null,
+      variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
+      border: !primary,
+      height: 26,
+      horizontalPadding: 12,
+      fontSize: 10.5,
     );
   }
 }
 
+/// 封面选择（本地图片 / 取首图 / 移除）：统一走 [AppButton]，选中态用 primary。
 class _CoverChoice extends StatelessWidget {
   const _CoverChoice({
     required this.icon,
@@ -1221,39 +1170,23 @@ class _CoverChoice extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
-  final bool enabled;
   final VoidCallback onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    final color = !enabled
-        ? AppTokens.textSecondary
-        : active
-        ? AppTokens.pageBg
-        : AppTokens.textPrimary;
-    return _HoverTap(
-      onTap: enabled ? onTap : () {},
-      builder: (hover) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? AppTokens.accent : (hover && enabled ? AppTokens.card : AppTokens.navBg),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: AppTokens.divider),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 11, color: color),
-            const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 10.5, color: color)),
-          ],
-        ),
-      ),
+    return AppButton(
+      label: label,
+      icon: icon,
+      onTap: enabled ? onTap : null,
+      variant: active ? AppButtonVariant.primary : AppButtonVariant.secondary,
+      height: 26,
+      horizontalPadding: 8,
+      fontSize: 10.5,
     );
   }
 }
 
-/// ver1.0 `.view-seg`：卡片 / 简易 切换（章节区与页面区共用）。
 class _ViewSeg extends StatelessWidget {
   const _ViewSeg({required this.mode, required this.onSelect});
 
@@ -1277,7 +1210,7 @@ class _ViewSeg extends StatelessWidget {
                   color: mode == m
                       ? AppTokens.card
                       : (hover ? AppTokens.card.withValues(alpha: 0.5) : Colors.transparent),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(kButtonRadius),
                 ),
                 child: Text(
                   m == 'card' ? l10n.libViewCard : l10n.libViewCapsule,
@@ -1291,53 +1224,27 @@ class _ViewSeg extends StatelessWidget {
   }
 }
 
-/// 「返回书架」按钮（ver1.0 `.btn.ghost`）。
-class _BackToShelf extends StatefulWidget {
+/// 「返回书架」：统一走 [AppButton]。
+class _BackToShelf extends StatelessWidget {
   const _BackToShelf({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  State<_BackToShelf> createState() => _BackToShelfState();
-}
-
-class _BackToShelfState extends State<_BackToShelf> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: _hover ? AppTokens.card : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppTokens.divider),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(LucideIcons.chevronLeft, size: 11, color: AppTokens.textSecondary),
-              const SizedBox(width: 4),
-              Text(
-                AppLocalizations.of(context).shelfBack,
-                style: const TextStyle(fontSize: 10.5, color: AppTokens.textSecondary),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return AppButton(
+      label: AppLocalizations.of(context).shelfBack,
+      icon: LucideIcons.chevronLeft,
+      onTap: onTap,
+      variant: AppButtonVariant.ghost,
+      border: true,
+      height: 26,
+      horizontalPadding: 10,
+      fontSize: 10.5,
     );
   }
 }
 
-/// 通用「可点 + hover」包装：cursor 变手型，并把 hover 态透传给 builder。
 class _HoverTap extends StatefulWidget {
   const _HoverTap({required this.onTap, required this.builder});
 

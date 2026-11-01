@@ -7,6 +7,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/app_checkbox.dart';
 import '../../../../shared/widgets/app_table.dart';
 import '../../../../shared/widgets/app_menu.dart';
+import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -287,51 +288,31 @@ class _MoreButton extends ConsumerWidget {
   }
 }
 
-/// 带 hover 的小胶囊触发器（替代 AppTextAction 包裹，避免手势被内层吞掉）。
-class _HoverChip extends StatefulWidget {
+/// 队列行按钮：统一走 [AppButton]。
+/// `primary` = 主操作（查看/重试）用 primary 变体；其余用 secondary（与「更多」一致）。
+class _HoverChip extends StatelessWidget {
   const _HoverChip({super.key, required this.label, required this.onTapDown, this.primary = false});
 
   final String label;
   final void Function(TapDownDetails) onTapDown;
-
-  /// true = 主操作样式（与「新建漫画」完全一致：accent 底、pageBg 字、无边框、10.5 号）；
-  /// false = 次级样式（与「更多」完全一致：divider 底、12 号、hover 变 card）。
   final bool primary;
 
   @override
-  State<_HoverChip> createState() => _HoverChipState();
-}
-
-class _HoverChipState extends State<_HoverChip> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTapDown: widget.onTapDown,
-        // 🔴 **尺寸恒定与「更多」完全一致**（height 24 / padding 9 / 12 号 / 圆角 6）：
-        // 主操作只改**颜色**（accent 底 + pageBg 字），不改尺寸 ——
-        // 同一行里两个按钮高度不同会显得错位（用户已指出）。
-        child: Container(
-          height: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: widget.primary
-                ? (_hover ? const Color(0xFFF0B96A) : AppTokens.accent)
-                : (_hover ? AppTokens.card : AppTokens.divider),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            widget.label,
-            style: TextStyle(fontSize: 12, color: widget.primary ? AppTokens.pageBg : AppTokens.textPrimary),
-          ),
-        ),
+    return Builder(
+      builder: (ctx) => AppButton(
+        label: label,
+        onTap: () => onTapDown(TapDownDetails(globalPosition: _centerOf(ctx))),
+        variant: primary ? AppButtonVariant.primary : AppButtonVariant.secondary,
+        height: 24,
+        horizontalPadding: 9,
       ),
     );
+  }
+
+  Offset _centerOf(BuildContext ctx) {
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null) return Offset.zero;
+    return box.localToGlobal(box.size.center(Offset.zero));
   }
 }

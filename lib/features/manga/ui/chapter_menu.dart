@@ -6,6 +6,7 @@ import 'package:protocol/protocol.dart' show jsNumStr;
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_menu.dart';
+import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -130,36 +131,30 @@ class _MenuTrigger extends StatefulWidget {
 }
 
 class _MenuTriggerState extends State<_MenuTrigger> {
-  bool _hover = false;
+  final _key = GlobalKey();
+
+  Future<void> _open() async {
+    final box = _key.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final value = await showAppMenu(
+      context,
+      anchor: box.localToGlobal(Offset.zero) & box.size,
+      minWidth: 170,
+      items: widget.items,
+    );
+    if (value != null) widget.onSelected(value);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTapDown: (d) async {
-          final box = context.findRenderObject()! as RenderBox;
-          final value = await showAppMenu(
-            context,
-            anchor: box.localToGlobal(Offset.zero) & box.size,
-            minWidth: 170,
-            items: widget.items,
-          );
-          if (value != null) widget.onSelected(value);
-        },
-        child: Container(
-          width: 22,
-          height: 22,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: _hover ? AppTokens.navBg : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(LucideIcons.ellipsis, size: 13, color: _hover ? AppTokens.textPrimary : AppTokens.textSecondary),
-        ),
-      ),
+    return AppButton(
+      key: _key,
+      icon: LucideIcons.ellipsis,
+      onTap: _open,
+      variant: AppButtonVariant.ghost,
+      width: 22,
+      height: 22,
+      fontSize: 13,
     );
   }
 }

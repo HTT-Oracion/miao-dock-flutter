@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../shared/widgets/buttons.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/drop_controller.dart';
@@ -251,6 +252,7 @@ class _DropZone extends StatelessWidget {
   }
 }
 
+/// 投放页次级按钮：统一走 [AppButton]。
 class _GhostButton extends StatelessWidget {
   const _GhostButton({required this.label, required this.onPressed});
 
@@ -259,18 +261,14 @@ class _GhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: palette.ink2,
-        minimumSize: const Size(0, 26),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        side: BorderSide(color: palette.line2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        textStyle: const TextStyle(fontSize: 9.5),
-      ),
-      child: Text(label),
+    return AppButton(
+      label: label,
+      onTap: onPressed,
+      variant: AppButtonVariant.ghost,
+      border: true,
+      height: 26,
+      horizontalPadding: 10,
+      fontSize: 9.5,
     );
   }
 }
