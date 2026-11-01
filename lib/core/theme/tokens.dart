@@ -132,6 +132,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   // ── 语义别名（与 AppTokens 同名，便于迁移时 1:1 替换）──────────────
   Color get pageBg => bg;
+
+  /// 主色 hover：与设计稿 `.btn.pri:hover{filter:brightness(1.08)}` 同义 ——
+  /// 把当前主色**提亮 8%**，自动适配深浅主题与任意主色，不写死色值。
+  Color get accHover {
+    final hsl = HSLColor.fromColor(acc);
+    return hsl.withLightness((hsl.lightness + 0.08).clamp(0.0, 1.0)).toColor();
+  }
+
   Color get textPrimary => ink;
   Color get textSecondary => mut;
   Color get textMuted => ink2;

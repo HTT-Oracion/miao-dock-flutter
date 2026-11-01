@@ -2159,3 +2159,16 @@
   - `clickable: false` → 真禁用（`forbidden` + 灰字）。
   `_CoverChoice` / `_DialogButton` 的禁用态显式传 `clickable: false`。
 - **验证**：应用 148 通过（新增光标用例 2 条）；analyze 干净；l10n 通过。
+
+## D-117 primary hover 改为设计稿的「提亮 8%」
+
+- **状态**：完成（2026-11-01）
+- **原实现**：primary hover 背景硬编码 `#F0B96A`（两处：`AppTextAction`、`AppButton`）。
+- **问题**：这个色值**设计稿里不存在**。设计稿是
+  `.btn.pri:hover{filter:brightness(1.08)}` —— 把**当前主色提亮 8%**。
+  硬编码带来的实际后果：切到浅色主题时主色是 `#C07C2E`，hover 却仍跳到深色档的橙，
+  两套主题用了同一个色值，浅色下明显偏亮。
+- **修法**：`AppPalette` 增加 `accHover` —— 用 HSL 把当前 `acc` 提亮 8%
+  （`hsl.lightness + 0.08`），自动适配深浅主题与任意主色；两处硬编码全部改为 `palette.accHover`。
+- **字体色**：primary 的 `fg` 只由 `enabled` 决定，**hover 不改变文字颜色**（用户要求，已核实）。
+- **验证**：应用 150 通过；analyze 干净；`#F0B96A` 已无引用。

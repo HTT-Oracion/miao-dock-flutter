@@ -59,7 +59,7 @@ class _AppTextActionState extends State<AppTextAction> {
     final palette = AppPalette.of(context);
     final highlight = widget.highlight;
     // ver1.0：主按钮 hover 提亮；ghost hover 底色变 card（设计稿 `.btn.ghost:hover`）。
-    final bg = highlight ? (_hover ? Color(0xFFF0B96A) : palette.accent) : (_hover ? palette.card : palette.divider);
+    final bg = highlight ? (_hover ? palette.accHover : palette.accent) : (_hover ? palette.card : palette.divider);
     return MouseRegion(
       cursor: widget.onTap == null ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
@@ -189,7 +189,7 @@ class _AppButtonState extends State<AppButton> {
     final Color fg;
     switch (v) {
       case AppButtonVariant.primary:
-        bg = enabled ? (_hover ? Color(0xFFF0B96A) : palette.accent) : palette.divider;
+        bg = enabled ? (_hover ? palette.accHover : palette.accent) : palette.divider;
         fg = enabled ? palette.pageBg : palette.textSecondary;
       case AppButtonVariant.secondary:
         bg = enabled && _hover ? palette.card : palette.divider;
