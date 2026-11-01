@@ -545,12 +545,9 @@ class _PageCardState extends ConsumerState<_PageCard> {
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _hover ? palette.accent : Colors.transparent),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [palette.accent, palette.coverEndDeep],
-                  ),
+                  // 单页卡：**不出现任何主色** —— 底色用中性层，无图时给专门的空状态。
+                  color: palette.card,
+                  border: Border.all(color: _hover ? palette.divider : palette.line),
                 ),
                 child: Stack(
                   fit: StackFit.expand,
@@ -560,7 +557,7 @@ class _PageCardState extends ConsumerState<_PageCard> {
                       builder: (context, snap) {
                         final bytes = snap.data;
                         if (bytes == null || bytes.isEmpty) {
-                          return Center(child: Icon(LucideIcons.fileImage, size: 18, color: palette.textSecondary));
+                          return _NoImagePlaceholder(palette: palette);
                         }
                         return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
                       },
@@ -595,7 +592,11 @@ class _PageCardState extends ConsumerState<_PageCard> {
                 Container(
                   width: 6,
                   height: 6,
-                  decoration: BoxDecoration(color: done ? palette.success : palette.accent, shape: BoxShape.circle),
+                  // 状态圆点：已完成用 good，未完成用**中性灰**（主色留给主操作，不在卡片里出现）。
+                  decoration: BoxDecoration(
+                    color: done ? palette.success : palette.textSecondary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -1271,6 +1272,29 @@ class _HoverTapState extends State<_HoverTap> {
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(onTap: widget.onTap, child: widget.builder(_hover)),
+    );
+  }
+}
+
+/// 单页卡片「无图」状态：中性底 + `imageOff` 图标 + 文案（**不含任何主色**）。
+class _NoImagePlaceholder extends StatelessWidget {
+  const _NoImagePlaceholder({required this.palette});
+
+  final AppPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: palette.card,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(LucideIcons.imageOff, size: 18, color: palette.textSecondary),
+          const SizedBox(height: 4),
+          Text(AppLocalizations.of(context).pageNoImage, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
+        ],
+      ),
     );
   }
 }

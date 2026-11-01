@@ -2113,5 +2113,9 @@
         "type": "String"
       }
     }
+  },
+  "pageNoImage": "无图",
+  "@pageNoImage": {
+    "description": "单页卡片缺原图时的占位"
   }
 }

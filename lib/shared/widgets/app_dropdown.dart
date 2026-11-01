@@ -152,6 +152,10 @@ class _MenuRowState extends State<_MenuRow> {
     return InkWell(
       onTap: enabled ? widget.onTap : null,
       mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+      // 行背景由 Container 控制（hover 时变 divider），不让 InkWell 再叠一层。
+      hoverColor: Colors.transparent,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
       onHover: (v) => setState(() => _hover = enabled && v),
       borderRadius: BorderRadius.circular(kButtonRadius),
       child: Container(

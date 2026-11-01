@@ -2215,3 +2215,21 @@
 - **测试钉住**：断言 `AppButton` 内层 `InkWell.mouseCursor == SystemMouseCursors.click`，
   防止以后被默认值覆盖而复发。
 - **验证**：应用 151 通过；analyze 干净。
+
+## D-120 按钮 hover 变灰的真因 + 单页卡去主色 + 无图状态
+
+- **状态**：完成（2026-11-01）
+- **① 按钮 hover 变浅灰（截图实锤）**：
+  - 我以为 `Material.color` 决定 hover 背景，实际 **`InkWell` 还会叠一层 `hoverColor`**；
+  - 主题里 `hoverColor: palette.card`（`theme.dart:54`），浅色主题是 `#F3F2EF` ——
+    正好盖在橙色主色上，于是出现截图里的「浅灰底 + 近白字」；
+  - 修法：按钮的 `InkWell` 显式 `hoverColor / splashColor / highlightColor = transparent`，
+    背景完全由外层 `Material.color` 控制（主色 hover 用 `accHover` 提亮 8%）。
+  - 菜单行同样处理（行背景由 `Container` 控制）。
+- **② 单页卡「闪 primary」**：不是 hover，是**封面占位用了主色渐变**
+  `[palette.accent, coverEndDeep]`，原图异步加载期间/失败时露出。
+  改为中性底 `palette.card` + 描边 `line`，**卡片内不再出现任何主色**：
+  - 无图状态：`LucideIcons.imageOff` + 「无图」文案，中性灰；
+  - 状态圆点：完成 `success`、未完成 `textSecondary`（原来用 `accent`）。
+- **③ 单本卡片的封面渐变未动**（用户只要求改单页卡）。
+- **验证**：应用 151 通过；analyze 与 l10n 通过。

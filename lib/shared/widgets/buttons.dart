@@ -70,6 +70,9 @@ class _AppTextActionState extends State<AppTextAction> {
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
           mouseCursor: widget.onTap == null ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+          hoverColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
           onTap: widget.onTap,
           child: Container(
             height: 24,
@@ -215,6 +218,10 @@ class _AppButtonState extends State<AppButton> {
           // 它在**桌面平台返回 basic**（只有 Web 才 click），且内层 MouseRegion
           // 优先于外层 ⇒ 不传就永远没有手型。
           mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+          // 背景由外层 Material 控制，禁用 InkWell 的 hover 覆盖层（否则会盖住主色）。
+          hoverColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
           // onTap 为 null 时 InkWell 不吸收手势，交给外层（如 MenuAnchor 的触发器）。
           onTap: widget.onTap,
           child: Container(
