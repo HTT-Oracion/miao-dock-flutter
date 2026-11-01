@@ -66,6 +66,15 @@ void main() {
     expect(find.text('打开'), findsNothing);
   });
 
+  testWidgets('主按钮与「更多」**尺寸完全一致**（只允许颜色不同）', (tester) async {
+    await tester.pumpWidget(harness(make(MangaTaskStatus.done)));
+    await tester.pumpAndSettle();
+    final view = tester.getSize(find.text('查看'));
+    final more = tester.getSize(find.text('更多'));
+    // 破坏点：主按钮用 padding 10×5/10.5 号 → 高度与「更多」不一致，同行错位。
+    expect(view.height, more.height);
+  });
+
   testWidgets('更多菜单含打开目录与删除', (tester) async {
     await tester.pumpWidget(harness(make(MangaTaskStatus.done)));
     await tester.pumpAndSettle();

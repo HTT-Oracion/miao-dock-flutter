@@ -305,28 +305,24 @@ class _HoverChipState extends State<_HoverChip> {
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         onTapDown: widget.onTapDown,
-        child: widget.primary
-            // 与「新建漫画」逐项对齐：padding 10×5、无边框、accent 底、pageBg 字、10.5 号。
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _hover ? const Color(0xFFF0B96A) : AppTokens.accent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(widget.label, style: const TextStyle(fontSize: 10.5, color: AppTokens.pageBg)),
-              )
-            // 与「更多」逐项对齐：height 24、padding 9、divider 底、hover 变 card、12 号。
-            : Container(
-                height: 24,
-                padding: const EdgeInsets.symmetric(horizontal: 9),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _hover ? AppTokens.card : AppTokens.divider,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(widget.label, style: const TextStyle(fontSize: 12, color: AppTokens.textPrimary)),
-              ),
+        // 🔴 **尺寸恒定与「更多」完全一致**（height 24 / padding 9 / 12 号 / 圆角 6）：
+        // 主操作只改**颜色**（accent 底 + pageBg 字），不改尺寸 ——
+        // 同一行里两个按钮高度不同会显得错位（用户已指出）。
+        child: Container(
+          height: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 9),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: widget.primary
+                ? (_hover ? const Color(0xFFF0B96A) : AppTokens.accent)
+                : (_hover ? AppTokens.card : AppTokens.divider),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(fontSize: 12, color: widget.primary ? AppTokens.pageBg : AppTokens.textPrimary),
+          ),
+        ),
       ),
     );
   }
