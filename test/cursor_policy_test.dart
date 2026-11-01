@@ -46,6 +46,16 @@ void main() {
     expect(cursorOf(tester, find.text('more')), SystemMouseCursors.click);
   });
 
+  testWidgets('AppButton 内层 InkWell 的 mouseCursor 必须是 click（桌面默认是 basic）', (tester) async {
+    await tester.pumpWidget(wrap(AppButton(label: 'x', onTap: () {})));
+    final ink = tester.widget<InkWell>(
+      find.descendant(of: find.byType(AppButton), matching: find.byType(InkWell)).first,
+    );
+    // 破坏点：不显式传 mouseCursor → InkWell 用 adaptiveClickable，
+    // 桌面平台返回 basic，外层 MouseRegion 被内层覆盖 ⇒ 永远没有手型。
+    expect(ink.mouseCursor, SystemMouseCursors.click);
+  });
+
   testWidgets('真禁用：clickable=false → 禁止符', (tester) async {
     await tester.pumpWidget(wrap(const AppButton(label: 'off', onTap: null, clickable: false)));
     expect(cursorOf(tester, find.text('off')), SystemMouseCursors.forbidden);

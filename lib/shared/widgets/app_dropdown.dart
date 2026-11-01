@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
+import 'buttons.dart';
 
 /// 下拉菜单项（与 [AppDropdownMenu] 配套）。
 class AppDropdownItem {
@@ -146,41 +147,40 @@ class _MenuRowState extends State<_MenuRow> {
     } else {
       fg = palette.textPrimary;
     }
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
-      onEnter: (_) => enabled ? setState(() => _hover = true) : null,
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: enabled ? widget.onTap : null,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 160),
-          height: 30,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
-          alignment: Alignment.centerLeft,
-          decoration: BoxDecoration(
-            color: enabled && _hover ? palette.divider : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              if (it.icon != null) ...[Icon(it.icon, size: 13, color: fg), const SizedBox(width: 8)],
-              Flexible(
-                child: Text(
-                  it.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: fg),
-                ),
+    // 与其它按钮统一：用 InkWell + **显式 mouseCursor**。
+    // InkWell 默认 `adaptiveClickable` 在桌面返回 basic，会盖掉外层 MouseRegion。
+    return InkWell(
+      onTap: enabled ? widget.onTap : null,
+      mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+      onHover: (v) => setState(() => _hover = enabled && v),
+      borderRadius: BorderRadius.circular(kButtonRadius),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 160),
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          color: enabled && _hover ? palette.divider : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            if (it.icon != null) ...[Icon(it.icon, size: 13, color: fg), const SizedBox(width: 8)],
+            Flexible(
+              child: Text(
+                it.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11.5, color: fg),
               ),
-              if (it.sub != null) ...[
-                const SizedBox(width: 6),
-                Text(it.sub!, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
-              ],
+            ),
+            if (it.sub != null) ...[
+              const SizedBox(width: 6),
+              Text(it.sub!, style: TextStyle(fontSize: 9.5, color: palette.textSecondary)),
             ],
-          ),
+          ],
         ),
       ),
     );

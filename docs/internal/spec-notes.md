@@ -2191,3 +2191,27 @@
   - `error_state` / `log_box` 的 `#D98C84` → `palette.bad`。
 - **剩余硬编码仅 6 处**：全部在 `domain/manga_status.dart`，属规范允许的领域层例外。
 - **验证**：应用 150 通过；analyze 干净。
+
+## D-119 按钮无手型的真正原因：InkWell 桌面默认光标是 basic
+
+- **状态**：完成（2026-11-01）
+- **现象**：`AppButton` 外层 `MouseRegion` 明明设了 `cursor: click`，但桌面端悬停仍无手型。
+- **根因**（查 Flutter 源码确认，**不是 `onTap` 判断的问题**）：
+  `InkWell` 内部**总会**包一个 `MouseRegion(cursor: effectiveMouseCursor)`，
+  位于外层 MouseRegion **内侧**，而**内侧光标优先**；
+  `effectiveMouseCursor` 默认取 `WidgetStateMouseCursor.adaptiveClickable`，
+  其实现为：
+  ```dart
+  static MouseCursor _adaptiveClickable(Set<WidgetState> states) {
+    if (states.contains(WidgetState.disabled)) return SystemMouseCursors.basic;
+    return kIsWeb ? SystemMouseCursors.click : SystemMouseCursors.basic;  // 桌面 = basic
+  }
+  ```
+  ⇒ **桌面平台（macOS/Windows/Linux）默认就不是手型**，只有 Web 才是。
+  这是 Flutter 遵循「桌面按钮通常不变手型」的原生惯例，但与本项目要求不符。
+- **修法**：给 `InkWell` **显式传** `mouseCursor`
+  （`AppButton` / `AppGhostButton` / `AppTextAction` / 菜单行 `_MenuRow` 全部处理）；
+  菜单行同时从 `GestureDetector + MouseRegion` 改为 `InkWell`（与其它按钮统一）。
+- **测试钉住**：断言 `AppButton` 内层 `InkWell.mouseCursor == SystemMouseCursors.click`，
+  防止以后被默认值覆盖而复发。
+- **验证**：应用 151 通过；analyze 干净。

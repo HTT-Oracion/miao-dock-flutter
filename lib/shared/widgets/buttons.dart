@@ -69,6 +69,7 @@ class _AppTextActionState extends State<AppTextAction> {
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
+          mouseCursor: widget.onTap == null ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
           onTap: widget.onTap,
           child: Container(
             height: 24,
@@ -210,6 +211,10 @@ class _AppButtonState extends State<AppButton> {
         borderRadius: BorderRadius.circular(kButtonRadius),
         child: InkWell(
           borderRadius: BorderRadius.circular(kButtonRadius),
+          // 🔴 必须显式传：InkWell 默认用 `WidgetStateMouseCursor.adaptiveClickable`，
+          // 它在**桌面平台返回 basic**（只有 Web 才 click），且内层 MouseRegion
+          // 优先于外层 ⇒ 不传就永远没有手型。
+          mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
           // onTap 为 null 时 InkWell 不吸收手势，交给外层（如 MenuAnchor 的触发器）。
           onTap: widget.onTap,
           child: Container(
