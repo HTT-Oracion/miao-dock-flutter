@@ -2830,3 +2830,25 @@
 - **③ 队列桌面端按钮**：实测 `QueueRowActions` 两个按钮
   均为 `42.5×24`、`Row` 同行（y 坐标一致），代码层面**本就一行**，未做改动。
 - **验证**：应用 177 通过；analyze 干净。
+
+## D-143 服务启动失败 = macOS 签名失效（不是代码问题）
+
+- **状态**：完成（2026-11-02）
+- **现象**：设置页服务卡片显示「启动失败：Connection refused」，
+  管道里存在 `mangasvc` 进程但**不监听任何端口**。
+- **排查路径**：
+  1. `ps` 发现两个 mangasvc：旧的在 5181 监听，新的（90788）存在但无端口，状态 `UE+`；
+  2. 手动跑打包出的二进制 → **静默退出，无任何输出**；
+  3. `dart run bin/mangasvc.dart` **能正常启动**（源码没问题）；
+  4. 前台执行二进制 → `Killed: 9`（exit 137）；
+  5. 系统日志：`load code signature error 2 for file "mangasvc"`；
+  6. 崩溃报告：`SIGKILL (Code Signature Invalid)` /
+     `namespace: CODESIGNING` / `Taskgated Invalid Signature`。
+- **根因**：`dart compile exe` 产物是 **linker-signed（ad-hoc）签名**，
+  被复制进 `.app/Contents/MacOS/` 后**签名不再有效**，macOS 直接 SIGKILL。
+  与引擎、端口、代码逻辑都无关。
+- **修复**：
+  1. `codesign --force --sign - <二进制>` 重新 ad-hoc 签名后立即可用（已验证 5186 端口监听）；
+  2. **固化到 `tool/package_macos.sh`**：复制进 `.app` 后自动重签，
+     否则每次构建都会复发（脚本注释写明原因）。
+- **遗留**：`kill -9` 杀不掉的 `UE+` 僵尸进程只能重启系统回收（不占端口，不影响使用）。

@@ -54,5 +54,15 @@ if [ -n "$DEST" ]; then
   fi
   cp -f "$OUT" "$DEST/mangasvc"
   chmod +x "$DEST/mangasvc"
+
+  # 🔴 必须重新签名：`dart compile exe` 产物的 linker-signed 签名在替换进
+  # .app 后失效，macOS 会直接 SIGKILL（`Taskgated Invalid Signature`）——
+  # 表现成「服务启动失败 / Connection refused」，与代码无关（D-143 实测）。
+  # ad-hoc 签名即可满足本机运行；分发给他人时再按正式证书签。
+  if command -v codesign >/dev/null 2>&1; then
+    codesign --force --sign - --timestamp=none "$DEST/mangasvc" 2>/dev/null \
+      && echo "▸ 已重新签名 $DEST/mangasvc"
+  fi
+
   echo "▸ 已放入 $DEST/mangasvc"
 fi
