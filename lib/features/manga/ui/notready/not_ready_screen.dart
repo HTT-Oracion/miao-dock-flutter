@@ -400,20 +400,29 @@ class _LayerStrip extends StatelessWidget {
       engineColor = palette.bad;
     }
 
-    final rows = <(Color, String, String, String)>[
+    // 图标对应原型三卡：远程连接=link / 引擎+大模型=cpu / 翻译来源=cloud。
+    final rows = <(Color, IconData, String, String, String)>[
       (
         serviceColor,
+        remote ? LucideIcons.link : LucideIcons.server,
         remote ? l10n.remoteTitle : l10n.nrLayerService,
         serviceStatus,
         remote ? l10n.sourceRemote : l10n.nrLayerServiceSub,
       ),
       (
         engineColor,
+        LucideIcons.cpu,
         l10n.nrLayerEngine,
         engineReady ? l10n.engineReady : l10n.engineNotReady,
         remote ? l10n.remoteGateEngineSub : l10n.nrLayerEngineSub,
       ),
-      (palette.blue, l10n.nrLayerSource, _sourceLabel(l10n, view.source), _sourceSub(l10n, view.source)),
+      (
+        palette.blue,
+        LucideIcons.cloud,
+        l10n.nrLayerSource,
+        _sourceLabel(l10n, view.source),
+        _sourceSub(l10n, view.source),
+      ),
     ];
 
     // 三列状态卡（原型 .status-grid）：均分三列，窄屏由外层走精简卡。
@@ -423,7 +432,7 @@ class _LayerStrip extends StatelessWidget {
         for (final (i, r) in rows.indexed) ...[
           if (i > 0) const SizedBox(width: 12),
           Expanded(
-            child: _StatusCard(color: r.$1, title: r.$2, value: r.$3, desc: r.$4),
+            child: _StatusCard(icon: r.$2, color: r.$1, title: r.$3, value: r.$4, desc: r.$5),
           ),
         ],
       ],
@@ -433,8 +442,15 @@ class _LayerStrip extends StatelessWidget {
 
 /// 单张状态卡（原型 `.status-card`）：小图标 + 标题 / 值 / 说明。
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.color, required this.title, required this.value, required this.desc});
+  const _StatusCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.value,
+    required this.desc,
+  });
 
+  final IconData icon;
   final Color color;
   final String title;
   final String value;
@@ -457,11 +473,7 @@ class _StatusCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
+              Icon(icon, size: 14, color: palette.mut),
               const SizedBox(width: 7),
               Flexible(
                 child: Text(
