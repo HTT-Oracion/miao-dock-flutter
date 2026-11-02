@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
+
+import 'package:protocol/protocol.dart' show jsNumStr;
+
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_checkbox.dart';
 import '../../../shared/widgets/buttons.dart';
@@ -123,6 +126,7 @@ class _MergeDialog extends ConsumerStatefulWidget {
 class _MergeDialogState extends ConsumerState<_MergeDialog> {
   final _noController = TextEditingController();
   String? _target;
+  bool _touchedNo = false;
 
   @override
   void dispose() {
@@ -130,11 +134,40 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
     super.dispose();
   }
 
+  /// 目标书已占用的话号（冲突校验用）。
+  Set<double> _usedNos(List<LibBook> books) {
+    final t = books.where((b) => b.key == _target).firstOrNull;
+    return {for (final c in t?.chapters ?? const <LibChapter>[]) c.no};
+  }
+
+  /// 建议话号 = 目标书最大话号 + 1（免得用户去数第几话）。
+  double? _suggestNo(List<LibBook> books) {
+    final t = books.where((b) => b.key == _target).firstOrNull;
+    final nos = t?.chapters.map((c) => c.no).toList() ?? const <double>[];
+    if (nos.isEmpty) return 1;
+    return nos.reduce((a, b) => a > b ? a : b) + 1;
+  }
+
+  void _onPicked(String picked, List<LibBook> books) {
+    setState(() {
+      _target = picked;
+      _touchedNo = false;
+      // 预填下一个可用话号；用户可改，冲突由下方校验拦。
+      final suggest = _suggestNo(books);
+      _noController.text = suggest == null ? '' : jsNumStr(suggest);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
     final targets = books.where((b) => b.isBook).toList();
+    final src = books.where((b) => b.key == widget.src).firstOrNull;
+    final no = double.tryParse(_noController.text.trim());
+    final noTaken = no != null && _usedNos(books).contains(no);
+    final canMerge = _target != null && no != null && !noTaken;
     return AppDialog(
       title: l10n.libMergeTitle,
       actions: [
@@ -142,13 +175,7 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
         AppButton(
           label: l10n.libMerge,
           variant: AppButtonVariant.primary,
-          onTap: _target == null
-              ? null
-              : () {
-                  final no = double.tryParse(_noController.text.trim());
-                  if (no == null) return;
-                  Navigator.of(context).pop((_target!, no));
-                },
+          onTap: canMerge ? () => Navigator.of(context).pop((_target!, no)) : null,
         ),
       ],
       child: SizedBox(
@@ -158,6 +185,17 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
           // 必须显式左对齐：Column 默认 center，而下面两行宽度不同会错位。
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 源信息：归并的是哪个单话、多少页——不写这行用户容易选错源。
+            Text(
+              l10n.libMergeSource,
+              style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              src == null ? widget.src : l10n.libMergeSourceInfo(src.name, src.pageCount),
+              style: TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600, color: palette.ink),
+            ),
+            const SizedBox(height: 12),
             // 目标漫画可能很多 → 用**可搜索选择器**（下拉里塞搜索框在 M3 下点不中）。
             SizedBox(
               width: 300,
@@ -172,7 +210,7 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
                     current: _target,
                     items: [for (final b in targets) (b.key, b.name)],
                   );
-                  if (picked != null && mounted) setState(() => _target = picked);
+                  if (picked != null && mounted) _onPicked(picked, books);
                 },
                 variant: AppButtonVariant.secondary,
                 height: 32,
@@ -181,7 +219,15 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
               ),
             ),
             const SizedBox(height: 10),
-            AppInput(controller: _noController, hint: l10n.libMergeNoHint),
+            AppInput(
+              controller: _noController,
+              hint: l10n.libMergeNoHint,
+              // 话号支持一位小数（1.5）：移动端弹数字键盘带小数点。
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              errorText: _touchedNo && noTaken ? l10n.libMergeNoTaken : null,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: canMerge ? (_) => Navigator.of(context).pop((_target!, no)) : null,
+            ),
           ],
         ),
       ),

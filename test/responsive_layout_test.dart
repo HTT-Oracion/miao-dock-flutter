@@ -34,9 +34,11 @@ void main() {
     // 破坏点：窄屏仍渲染左侧书架栏 → 网格被压成碎片。
     expect(find.byType(LibraryShelf), findsNothing);
     expect(find.byType(LibraryGrid), findsOneWidget);
-    // 书架入口必须还在（否则未归并单话在手机上无法到达）。
-    // 复用既有 ARB 词条（`shelfTitle` = 「我的书架」），没有新增文案。
-    expect(find.text('我的书架'), findsOneWidget);
+    // D-134：移动端网格显示全部（单本 + 单话）并带分段——书架入口按钮已移除
+    // （旧断言「我的书架」入口在库里没有书时整页空白，用户裁定废除）。
+    expect(find.text('全部 0'), findsOneWidget);
+    expect(find.text('单本 0'), findsOneWidget);
+    expect(find.text('单话 0'), findsOneWidget);
   });
 
   testWidgets('漫画库宽屏：书架栏与网格并排', (tester) async {

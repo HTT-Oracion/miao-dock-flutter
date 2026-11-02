@@ -166,6 +166,20 @@
   "@queueFilterApply": {
     "description": "队列筛选面板：关闭面板"
   },
+  "queueTitleCount": "队列 · {count} 条",
+  "@queueTitleCount": {
+    "description": "移动队列头部标题",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "queueFilterShowResults": "显示 {count} 条结果",
+  "@queueFilterShowResults": {
+    "description": "移动端筛选抽屉：按当前勾选预估结果数",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "sourceDesktop": "本机投放",
   "@sourceDesktop": {
     "description": "任务来源：桌面端投放"
@@ -1724,6 +1738,22 @@
     "description": "漫画库文案",
     "placeholders": null
   },
+  "libItemCount": "{count} 项 · {pages} 页",
+  "@libItemCount": {
+    "description": "漫画库移动端头：全部条目计数",
+    "placeholders": {
+      "count": { "type": "int" },
+      "pages": { "type": "int" }
+    }
+  },
+  "libSegAll": "全部",
+  "@libSegAll": { "description": "分段：全部", "placeholders": null },
+  "libSegBook": "单本",
+  "@libSegBook": { "description": "分段：单本", "placeholders": null },
+  "libSegChapter": "单话",
+  "@libSegChapter": { "description": "分段：单话", "placeholders": null },
+  "libSegEmpty": "这个分段下没有内容",
+  "@libSegEmpty": { "description": "分段筛选后为空", "placeholders": null },
   "libRefresh": "刷新",
   "@libRefresh": {
     "description": "漫画库文案",
@@ -1811,6 +1841,24 @@
   "libMergeNoHint": "话号（如 1 或 1.5）",
   "@libMergeNoHint": {
     "description": "漫画库文案",
+    "placeholders": null
+  },
+  "libMergeSource": "归并源",
+  "@libMergeSource": {
+    "description": "归并弹窗：源单话标签",
+    "placeholders": null
+  },
+  "libMergeSourceInfo": "{name} · {pageCount} 页",
+  "@libMergeSourceInfo": {
+    "description": "归并弹窗：源单话信息",
+    "placeholders": {
+      "name": { "type": "String" },
+      "pageCount": { "type": "int" }
+    }
+  },
+  "libMergeNoTaken": "该话号已存在，换一个",
+  "@libMergeNoTaken": {
+    "description": "归并弹窗：话号冲突错误",
     "placeholders": null
   },
   "libMergeOk": "已归并",

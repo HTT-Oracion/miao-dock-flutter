@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
-import '../../../l10n/app_localizations.dart';
 import '../../../shared/responsive.dart';
-import '../../../shared/widgets/buttons.dart';
 import '../controller/library_controller.dart';
 import 'library_detail.dart';
 import 'library_grid.dart';
@@ -34,13 +31,10 @@ class LibraryScreen extends ConsumerWidget {
     // 默认态：宽屏 = 左书架 + 右网格；**窄屏只留网格**（手机放不下双栏）。
     // 书架入口改到顶部按钮（否则「未归并的单话」在手机上无处可达）。
     if (context.isMobile) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _MobileShelfEntry(),
-          Expanded(child: LibraryGrid()),
-        ],
-      );
+      // 移动端：网格显示**全部（单本 + 未归并单话）**并带分段与常驻搜索
+      // ——桌面「网格只显示单本」的分工在手机上会让没有书的库整页空白（用户实测）。
+      // 书架抽屉入口随之移除（搜索已常驻，隐藏恢复后续单独立项）。
+      return const LibraryGrid(mobile: true);
     }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,39 +43,6 @@ class LibraryScreen extends ConsumerWidget {
         VerticalDivider(width: 1, color: palette.divider),
         const Expanded(child: LibraryGrid()),
       ],
-    );
-  }
-}
-
-/// 窄屏的「书架」入口：点开弹出底部抽屉列出书架内容（含未归并单话）。
-class _MobileShelfEntry extends ConsumerWidget {
-  const _MobileShelfEntry();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: AppButton(
-              label: l10n.shelfTitle,
-              icon: LucideIcons.library,
-              onTap: () => showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: AppPalette.of(context).panel,
-                builder: (_) => const SizedBox(height: 420, child: LibraryShelf()),
-              ),
-              variant: AppButtonVariant.secondary,
-              height: 32,
-              horizontalPadding: 12,
-              fontSize: AppFont.px10_5,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
