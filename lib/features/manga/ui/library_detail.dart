@@ -300,14 +300,17 @@ class _Hero extends ConsumerWidget {
                         }
                       },
                     ),
-                    _HeroButton(
-                      icon: LucideIcons.folderOpen,
-                      label: l10n.actionOpenDir,
-                      onTap: () async {
-                        await ref.read(mangaSvcClientProvider).revealBook(book.key);
-                        if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
-                      },
-                    ),
+                    // 🔴 打开目录 = 桌面端 reveal：移动端不显示（目录在桌面机器上，
+                    // 手机点了只会让桌面端弹资源管理器，容易误解；导出功能见 todo.md）。
+                    if (!context.isMobile)
+                      _HeroButton(
+                        icon: LucideIcons.folderOpen,
+                        label: l10n.actionOpenDir,
+                        onTap: () async {
+                          await ref.read(mangaSvcClientProvider).revealBook(book.key);
+                          if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
+                        },
+                      ),
                   ] else ...[
                     _HeroButton(
                       icon: LucideIcons.bookOpen,
@@ -321,14 +324,15 @@ class _Hero extends ConsumerWidget {
                         context.go('/manga/reader');
                       },
                     ),
-                    _HeroButton(
-                      icon: LucideIcons.folderOpen,
-                      label: l10n.actionOpenDir,
-                      onTap: () async {
-                        await ref.read(mangaSvcClientProvider).revealBook(book.key);
-                        if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
-                      },
-                    ),
+                    if (!context.isMobile)
+                      _HeroButton(
+                        icon: LucideIcons.folderOpen,
+                        label: l10n.actionOpenDir,
+                        onTap: () async {
+                          await ref.read(mangaSvcClientProvider).revealBook(book.key);
+                          if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
+                        },
+                      ),
                     // 归并是「单话 → 书」的操作，**单本没有**；且殿后（用户裁定）。
                     _HeroButton(
                       icon: LucideIcons.gitMerge,
