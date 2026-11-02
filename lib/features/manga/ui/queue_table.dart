@@ -129,8 +129,10 @@ class _ProgressCell extends StatelessWidget {
           borderRadius: BorderRadius.circular(2),
           child: SizedBox(
             height: 4,
+            // 只有**进行中**才允许不确定动画（value: null）；
+            // 终态（含全部失败 0/N）必须给确定值，否则失败任务上还挂着来回滚的动画。
             child: LinearProgressIndicator(
-              value: ratio == 0 ? null : ratio,
+              value: task.status.isTerminal || ratio > 0 ? ratio.clamp(0.0, 1.0) : null,
               backgroundColor: palette.progressTrack,
               valueColor: AlwaysStoppedAnimation(task.status.color),
             ),

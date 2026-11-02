@@ -29,6 +29,13 @@ extension MangaTaskStatusX on MangaTaskStatus {
     MangaTaskStatus.failed => const Color(0xFFD98C84),
     MangaTaskStatus.cancelled => const Color(0xFFA3B0BC),
   };
+
+  /// 终态（不再变化）：进度条不该再挂不确定动画。
+  bool get isTerminal =>
+      this == MangaTaskStatus.done ||
+      this == MangaTaskStatus.partialFailed ||
+      this == MangaTaskStatus.failed ||
+      this == MangaTaskStatus.cancelled;
 }
 
 /// 任务来源的展示语义。

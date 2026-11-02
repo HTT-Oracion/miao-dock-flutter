@@ -2616,3 +2616,31 @@
 - **改动**：`engine_parts_view.dart` 删除【重新校验】（`engineRecheck`，轻量快检入口）。
   用户要求去掉；【校验】（完整校验，含子进程与部件检查）保留。
   顺带清掉因此不再使用的 `engine_ready_controller` import。
+
+## D-133 「全部失败」进度条去动画 + Broken pipe 根因分析
+
+- **状态**：完成 / 分析（2026-11-02）
+- **① 进度条动画**：`_ProgressCell` 原来 `value: ratio == 0 ? null : ratio` ——
+  `null` = LinearProgressIndicator 的**不确定动画**（来回滚动）。
+  全部失败且 0 页完成（ratio==0）的终态任务上，动画还在滚。
+  改为：**只有非终态且 ratio==0 才给 null**；终态一律确定值（`MangaTaskStatus.isTerminal`）。
+- **② Broken pipe 根因（实机诊断，无结论性修复）**：
+  错误帧 `[Errno 32] Broken pipe`（恰好 22 字节，与 code 2 帧 size 吻合）
+  是 **executor（`manga_translator shared`）的 Python 进程**产生的：
+  翻译链路 = mangasvc → main.py(61240) → aiohttp → executor(61241)
+  → Sakura(openai SDK) → llama-server(8080)。
+  - **llama-server 本体健康**（`/health` ok、`/v1/chat/completions` 正常回包）；
+  - executor 直接调用 `/execute/translate` 返回 500 / **429 `is_locked: true`**；
+  - `sample` 显示 executor 主线程停在 `kevent`（空闲等事件），
+    **锁在流式路径的异常中未释放**：`check_lock()` acquire 后，
+    `run_method` 的 `finally` 只在 `progress_queue` 收到 0/2 帧时执行；
+    若翻译协程**卡死**（如 Sakura 连接建立后对端断开），锁永远占着，
+    后续请求全部 429。
+  - 「Broken pipe」具体是 executor 内部哪个 socket 写失败，**executor 的 stderr
+    没有落盘**（launchd 继承自终端 ttys003），无法进一步定位；猜测是
+    Sakura 的 openai 客户端向 llama-server 写请求时对端关闭（模型卸载/重启）。
+- **建议（未实施）**：
+  1. mangasvc 起 executor 时把 stdout/stderr **重定向到文件**（诊断必需）；
+  2. executor 的锁加**超时保护**（上游代码，属引擎侧）；
+  3. 客户端对 `ENGINE_ERROR` + `Broken pipe` 给「重试」引导。
+- **验证**：应用 160 通过；analyze 与 l10n 通过。
