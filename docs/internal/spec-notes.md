@@ -2609,3 +2609,10 @@
   （探测是真实网络请求，连接超时 3s，必须有反馈）。
 - **测试**：`submit_remote_guard_test` 增加用例：ping 失败 ⇒ `remoteUsable == false`。
 - **验证**：应用 160 通过；analyze 与 l10n 通过。
+
+## D-132 移除引擎目录的「重新校验」按钮
+
+- **状态**：完成（2026-11-02）
+- **改动**：`engine_parts_view.dart` 删除【重新校验】（`engineRecheck`，轻量快检入口）。
+  用户要求去掉；【校验】（完整校验，含子进程与部件检查）保留。
+  顺带清掉因此不再使用的 `engine_ready_controller` import。

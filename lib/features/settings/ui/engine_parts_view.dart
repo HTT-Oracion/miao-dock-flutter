@@ -8,7 +8,6 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/log_box.dart';
 import '../../manga/ui/notready/runtime_picker.dart';
-import '../../manga/controller/engine_ready_controller.dart';
 import '../controller/engine_dir_controller.dart';
 
 /// 设置页「引擎与模型」小节的**部件表**（D-027）。
@@ -91,15 +90,6 @@ class EnginePartsSection extends ConsumerWidget {
                 variant: AppButtonVariant.primary,
                 height: 30,
                 horizontalPadding: 12,
-                fontSize: AppFont.px10_5,
-              ),
-              const SizedBox(width: 8),
-              // 轻量重查：只重做门禁用的快检（毫秒级），不起子进程。
-              AppButton(
-                label: l10n.engineRecheck,
-                onTap: busy ? null : () => ref.read(enginePresenceProvider.notifier).refresh(),
-                clickable: !busy,
-                variant: AppButtonVariant.link,
                 fontSize: AppFont.px10_5,
               ),
               const SizedBox(width: 10),
