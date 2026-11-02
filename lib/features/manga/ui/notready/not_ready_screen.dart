@@ -163,19 +163,19 @@ class _NotReadyCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.panel,
         border: Border.all(color: palette.line2),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
       ),
-      padding: const EdgeInsets.fromLTRB(28, 26, 28, 24),
+      padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _Header(icon: meta.icon, title: meta.title, chip: meta.chip, chipTone: meta.tone, desc: meta.desc),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
           _LayerStrip(view: view),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           if (view.state != NotReadyState.downloading) ...[
             _StepsRow(remote: remoteBlocked),
-            const SizedBox(height: 18),
+            const SizedBox(height: 32),
           ],
           if (view.state == NotReadyState.downloading) ...[
             _DownloadSection(view: view, entries: downloadEntries),
@@ -310,16 +310,17 @@ class _Header extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 原型：36×36 图标块（浅色底 + 主色图标），不再用 64 的大块。
         Container(
-          width: 64,
-          height: 64,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: chipTone == _Tone.bad ? tone.withValues(alpha: 0.12) : palette.accSoft,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
           ),
-          child: Icon(icon, size: 26, color: chipTone == _Tone.bad ? tone : palette.acc),
+          child: Icon(icon, size: 20, color: chipTone == _Tone.bad ? tone : palette.acc),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,19 +330,20 @@ class _Header extends StatelessWidget {
                   Flexible(
                     child: Text(
                       title,
-                      style: TextStyle(fontSize: AppFont.px19, fontWeight: FontWeight.w800, color: palette.ink),
+                      style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w600, color: palette.ink),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
                       color: tone.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(color: tone.withValues(alpha: 0.25)),
                     ),
                     child: Text(
                       chip,
-                      style: TextStyle(fontSize: AppFont.px9_5, color: tone),
+                      style: TextStyle(fontSize: AppFont.px12, color: tone),
                     ),
                   ),
                 ],
@@ -414,111 +416,81 @@ class _LayerStrip extends StatelessWidget {
       (palette.blue, l10n.nrLayerSource, _sourceLabel(l10n, view.source), _sourceSub(l10n, view.source)),
     ];
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
-      child: Container(
-        decoration: BoxDecoration(border: Border.all(color: palette.line)),
-        child: Column(
-          children: [
-            for (final (i, r) in rows.indexed) ...[
-              if (i > 0) Container(height: 1, color: palette.line),
-              Container(
-                color: palette.card,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(color: r.$1, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 96,
-                      child: Text(
-                        r.$2,
-                        style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        r.$3,
-                        style: TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600, color: palette.ink),
-                      ),
-                    ),
-                    Text(
-                      r.$4,
-                      style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+    // 三列状态卡（原型 .status-grid）：均分三列，窄屏由外层走精简卡。
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (i, r) in rows.indexed) ...[
+          if (i > 0) const SizedBox(width: 12),
+          Expanded(
+            child: _StatusCard(color: r.$1, title: r.$2, value: r.$3, desc: r.$4),
+          ),
+        ],
+      ],
     );
   }
-
-  static String _sourceLabel(AppLocalizations l10n, TranslateSource s) => switch (s) {
-    TranslateSource.local => l10n.sourceLocal,
-    TranslateSource.llm => l10n.sourceLlm,
-    TranslateSource.remote => l10n.sourceRemote,
-  };
-
-  static String _sourceSub(AppLocalizations l10n, TranslateSource s) => switch (s) {
-    TranslateSource.local => l10n.sourceLocalSub,
-    TranslateSource.llm => l10n.sourceLlmSub,
-    TranslateSource.remote => l10n.sourceRemoteSub,
-  };
 }
 
-/// 三步说明（把原 guide 三大段压成一行）。
-class _StepsRow extends StatelessWidget {
-  const _StepsRow({this.remote = false});
+/// 单张状态卡（原型 `.status-card`）：小图标 + 标题 / 值 / 说明。
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({required this.color, required this.title, required this.value, required this.desc});
 
-  final bool remote;
+  final Color color;
+  final String title;
+  final String value;
+  final String desc;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    final steps = remote
-        ? [l10n.remoteGateStep1, l10n.remoteGateStep2, l10n.remoteGateStep3]
-        : [l10n.nrStep1, l10n.nrStep2, l10n.nrStep3];
+    final warn = color == palette.warn;
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
       decoration: BoxDecoration(
         color: palette.card,
         border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
       ),
-      child: Wrap(
-        spacing: 18,
-        runSpacing: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final (i, s) in steps.indexed)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: palette.accSoft, shape: BoxShape.circle),
-                  child: Text(
-                    '${i + 1}',
-                    style: TextStyle(fontSize: AppFont.px9, fontWeight: FontWeight.w800, color: palette.acc),
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: AppFont.px11, color: palette.ink2),
                 ),
-                const SizedBox(width: 7),
-                Text(
-                  s,
-                  style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: AppFont.px14,
+              fontWeight: FontWeight.w600,
+              color: warn ? palette.warn : palette.ink,
             ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            desc,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: AppFont.px10_5, height: 1.4, color: palette.mut),
+          ),
         ],
       ),
     );
@@ -742,16 +714,20 @@ class _Actions extends StatelessWidget {
           width: 200,
           child: AppButton(
             label: primary,
+            // 校验中显示 spinner（用户要求）：`loading` 自带转圈且禁用点击。
+            loading: remoteChecking,
             onTap: view.state == NotReadyState.starting || remoteChecking
                 ? null
-                : (view.state == NotReadyState.degraded
-                      ? onRetryService
-                      : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary)),
+                : (remoteBlocked
+                      ? onVerifyRemote
+                      : (view.state == NotReadyState.degraded
+                            ? onRetryService
+                            : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary))),
             clickable: view.state != NotReadyState.starting && !remoteChecking,
             variant: AppButtonVariant.primary,
-            height: 38,
-            horizontalPadding: 20,
-            fontSize: AppFont.px12,
+            height: 36,
+            horizontalPadding: 24,
+            fontSize: AppFont.px12_5,
           ),
         ),
         if (_secondaryActions(context, l10n, remoteBlocked).isNotEmpty) ...[
@@ -973,3 +949,76 @@ class _MobileNotReadyCard extends StatelessWidget {
     );
   }
 }
+
+/// 横向步骤条（原型 `.steps-wrap`）：序号圆点 + 文案，中间用短横线连接。
+class _StepsRow extends StatelessWidget {
+  const _StepsRow({this.remote = false});
+
+  final bool remote;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final steps = remote
+        ? [l10n.remoteGateStep1, l10n.remoteGateStep2, l10n.remoteGateStep3]
+        : [l10n.nrStep1, l10n.nrStep2, l10n.nrStep3];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: palette.card,
+        border: Border.all(color: palette.line),
+        borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
+      ),
+      child: Row(
+        children: [
+          for (final (i, s) in steps.indexed) ...[
+            if (i > 0) ...[
+              Container(width: 20, height: 1, color: palette.line2, margin: const EdgeInsets.symmetric(horizontal: 12)),
+            ],
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 18,
+                    height: 18,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: palette.accSoft, shape: BoxShape.circle),
+                    child: Text(
+                      '${i + 1}',
+                      style: TextStyle(fontSize: AppFont.px10, fontWeight: FontWeight.w600, color: palette.acc),
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Text(
+                      s,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: AppFont.px11_5, color: palette.ink2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 翻译来源的展示名。
+String _sourceLabel(AppLocalizations l10n, TranslateSource source) => switch (source) {
+  TranslateSource.local => l10n.sourceLocal,
+  TranslateSource.llm => l10n.sourceLlm,
+  TranslateSource.remote => l10n.sourceRemote,
+};
+
+/// 翻译来源的一句话说明。
+String _sourceSub(AppLocalizations l10n, TranslateSource source) => switch (source) {
+  TranslateSource.local => l10n.sourceLocalSub,
+  TranslateSource.llm => l10n.sourceLlmSub,
+  TranslateSource.remote => l10n.sourceRemoteSub,
+};
