@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/app_pager.dart';
 import '../controller/queue_controller.dart';
@@ -22,7 +23,8 @@ class QueueScreen extends ConsumerWidget {
     final queue = ref.watch(queueProvider);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final mobile = constraints.maxWidth < 720;
+        // 统一断点（AGENTS §4 第 16 条）：不再用 720 魔数，避免与外壳 768 不一致。
+        final mobile = constraints.maxWidth <= AppMetrics.breakpoint;
         final Widget body;
         // 🔴 先判错误：Riverpod 的 `hasError` 与 `isLoading` 可能**同时为真**
         // （重试期间的状态是 AsyncLoading.copyWithPrevious(error)）。先判 loading

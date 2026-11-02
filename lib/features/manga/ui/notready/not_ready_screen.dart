@@ -694,62 +694,84 @@ class _Actions extends StatelessWidget {
             NotReadyState.downloading => paused ? l10n.nrActionResume : l10n.nrActionPause,
           };
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    // 主操作与次要操作**分行**：原来并排时主按钮和「重新下载」同高同宽，
+    // 视觉上没有主次，用户得逐个读文字才知道点哪个（桌面端实测反馈）。
+    // 现在主按钮独占一行且更宽更高，次要操作降为一行小字链接。
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppButton(
-          label: primary,
-          onTap: view.state == NotReadyState.starting || remoteChecking
-              ? null
-              : (view.state == NotReadyState.degraded
-                    ? onRetryService
-                    : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary)),
-          clickable: view.state != NotReadyState.starting && !remoteChecking,
-          variant: AppButtonVariant.primary,
-          height: 34,
-          horizontalPadding: 18,
-          fontSize: AppFont.px11,
+        SizedBox(
+          width: 200,
+          child: AppButton(
+            label: primary,
+            onTap: view.state == NotReadyState.starting || remoteChecking
+                ? null
+                : (view.state == NotReadyState.degraded
+                      ? onRetryService
+                      : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary)),
+            clickable: view.state != NotReadyState.starting && !remoteChecking,
+            variant: AppButtonVariant.primary,
+            height: 38,
+            horizontalPadding: 20,
+            fontSize: AppFont.px12,
+          ),
         ),
-        if (remoteBlocked && onSecondary != null)
-          AppButton(
-            label: l10n.remoteGateActionSettings,
-            onTap: onSecondary,
-            variant: AppButtonVariant.secondary,
-            height: 34,
-            horizontalPadding: 14,
-            fontSize: AppFont.px9_5,
+        if (_secondaryActions(context, l10n, remoteBlocked).isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 14,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: _secondaryActions(context, l10n, remoteBlocked),
           ),
-        if (!remoteBlocked && view.state == NotReadyState.failed && onSecondary != null)
-          AppButton(
-            label: l10n.nrActionRedownload,
-            onTap: onSecondary,
-            variant: AppButtonVariant.secondary,
-            height: 34,
-            horizontalPadding: 14,
-            fontSize: AppFont.px9_5,
-          ),
-        // 导入本地运行时（D-015）：指向已有 runtimes，跳过下载。
-        if (view.state == NotReadyState.uninstalled && onImportLocal != null)
-          AppButton(
-            label: l10n.runtimeImport,
-            icon: LucideIcons.folderInput,
-            onTap: onImportLocal,
-            variant: AppButtonVariant.secondary,
-            height: 34,
-            horizontalPadding: 14,
-            fontSize: AppFont.px9_5,
-          ),
-        // 只读出口：不需要引擎，因此不会与「等引擎」形成死循环。
-        if (onBrowseLibrary != null)
-          AppButton(
-            label: l10n.engineBrowseLibrary,
-            onTap: onBrowseLibrary,
-            variant: AppButtonVariant.link,
-            fontSize: AppFont.px11,
-          ),
+        ],
       ],
     );
+  }
+
+  /// 次要操作（统一降级为 link，不与主按钮争视觉）。
+  List<Widget> _secondaryActions(BuildContext context, AppLocalizations l10n, bool remoteBlocked) {
+    final out = <Widget>[];
+    if (remoteBlocked && onSecondary != null) {
+      out.add(
+        AppButton(
+          label: l10n.remoteGateActionSettings,
+          onTap: onSecondary,
+          variant: AppButtonVariant.link,
+          fontSize: AppFont.px10_5,
+        ),
+      );
+    }
+    if (!remoteBlocked && view.state == NotReadyState.failed && onSecondary != null) {
+      out.add(
+        AppButton(
+          label: l10n.nrActionRedownload,
+          onTap: onSecondary,
+          variant: AppButtonVariant.link,
+          fontSize: AppFont.px10_5,
+        ),
+      );
+    }
+    if (view.state == NotReadyState.uninstalled && onImportLocal != null) {
+      out.add(
+        AppButton(
+          label: l10n.runtimeImport,
+          onTap: onImportLocal,
+          variant: AppButtonVariant.link,
+          fontSize: AppFont.px10_5,
+        ),
+      );
+    }
+    if (onBrowseLibrary != null) {
+      out.add(
+        AppButton(
+          label: l10n.engineBrowseLibrary,
+          onTap: onBrowseLibrary,
+          variant: AppButtonVariant.link,
+          fontSize: AppFont.px10_5,
+        ),
+      );
+    }
+    return out;
   }
 }

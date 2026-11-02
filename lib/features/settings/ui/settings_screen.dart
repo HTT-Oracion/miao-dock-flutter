@@ -14,6 +14,7 @@ import '../../../app/shell/shell_controller.dart';
 import '../../../core/theme/theme_mode.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/responsive.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/buttons.dart';
@@ -62,6 +63,33 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final selected = ref.watch(_sectionProvider);
 
+    // 窄屏：左栏 208 会把内容区压到不足 200 —— 改成顶部横向滚动标签。
+    if (context.isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              children: [
+                for (final (id, labelKey, count) in _sections)
+                  _MobileTab(
+                    label: _labelOf(l10n, labelKey),
+                    count: count,
+                    active: selected == id,
+                    onTap: () => ref.read(_sectionProvider.notifier).select(id),
+                  ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: palette.line),
+          Expanded(child: _sectionBody(selected, l10n)),
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -91,18 +119,17 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
         Container(width: 1, color: palette.line),
-        Expanded(
-          child: switch (selected) {
-            'general' => const _GeneralSection(),
-            'translate' => const _TranslateSection(),
-            _ => _PlaceholderSection(
-              label: _labelOf(l10n, selected == 'media' ? 'settingsNavMedia' : 'settingsNavAbout'),
-            ),
-          },
-        ),
+        Expanded(child: _sectionBody(selected, l10n)),
       ],
     );
   }
+
+  /// 分区正文 —— 宽屏（左栏）与窄屏（顶部标签）**共用**，保证两套布局内容一致。
+  Widget _sectionBody(String selected, AppLocalizations l10n) => switch (selected) {
+    'general' => const _GeneralSection(),
+    'translate' => const _TranslateSection(),
+    _ => _PlaceholderSection(label: _labelOf(l10n, selected == 'media' ? 'settingsNavMedia' : 'settingsNavAbout')),
+  };
 
   static String _labelOf(AppLocalizations l10n, String key) => switch (key) {
     'settingsNavGeneral' => l10n.settingsNavGeneral,
@@ -1007,4 +1034,33 @@ Future<bool> _saveLog(BuildContext context, String text, String suggestedName) a
   if (location == null) return false;
   await File(location.path).writeAsString(text);
   return true;
+}
+
+/// 窄屏顶部标签（设置分区切换）。
+///
+/// 只做「横排标签」这一种排布，外观复用 [AppButton] —— 不引入第二套按钮样式。
+class _MobileTab extends StatelessWidget {
+  const _MobileTab({required this.label, required this.active, required this.onTap, this.count});
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final int? count;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+      child: AppButton(
+        label: count == null ? label : '$label $count',
+        onTap: onTap,
+        variant: active ? AppButtonVariant.secondary : AppButtonVariant.ghost,
+        height: 30,
+        horizontalPadding: 12,
+        fontSize: AppFont.px10_5,
+        color: active ? palette.textPrimary : palette.textSecondary,
+      ),
+    );
+  }
 }

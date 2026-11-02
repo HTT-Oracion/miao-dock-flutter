@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../shared/responsive.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../l10n/app_localizations.dart';
@@ -162,7 +163,10 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                 ],
 
                 const SizedBox(height: 16),
-                Row(
+                // 窄屏换成 Wrap：两个按钮在手机上并排会溢出（Row 不给换行）。
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     AppButton(
                       label: state.files.isEmpty ? l10n.dropSubmit : '${l10n.dropSubmit} ${state.files.length}',
@@ -173,7 +177,6 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                       horizontalPadding: 18,
                       fontSize: AppFont.px11,
                     ),
-                    const SizedBox(width: 8),
                     AppButton(
                       label: l10n.dropClear,
                       onTap: state.files.isEmpty ? null : () => ref.read(dropController.notifier).clear(),
@@ -224,7 +227,8 @@ class _DropZone extends StatelessWidget {
       onDragExited: (_) => onDragExit(),
       onDragDone: (details) => onDrop(details.files.map((f) => f.path).toList()),
       child: Container(
-        height: 150,
+        // 窄屏压到 110：手机竖屏 150 会占掉近 1/5 屏，下面列表被挤没了。
+        height: context.isMobile ? 110 : 150,
         decoration: BoxDecoration(
           color: active ? palette.accSoft : palette.panel,
           border: Border.all(color: active ? palette.acc : palette.line2, width: 1.5),
