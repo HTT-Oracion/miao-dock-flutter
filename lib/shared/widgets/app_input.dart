@@ -109,7 +109,10 @@ class AppInput extends StatelessWidget {
       fillColor: palette.navBg,
       hintText: hint,
       hintStyle: TextStyle(fontSize: fontSize, color: palette.textSecondary),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      // 🔴 垂直内距按高度算：`isDense: true` + 固定 vertical 8 会让输入框
+      // 实际高度远小于外层 `SizedBox(height:)`（用户实测"输入框太小"）。
+      // 用 (height - 字号行高) / 2 让文字在框内垂直居中、且撑满给定高度。
+      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: ((height - fontSize * 1.25) / 2).clamp(4.0, 20.0)),
       enabledBorder: border,
       disabledBorder: OutlineInputBorder(
         borderRadius: radius,
