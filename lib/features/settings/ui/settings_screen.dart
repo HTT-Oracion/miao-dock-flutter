@@ -61,15 +61,6 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    // 深链：`/settings?section=translate` 直接定位分组（引导页跳转用）。
-    // 用 `maybeOf`：设置页在测试里常被直接挂载（无 GoRouter 祖先），
-    // `GoRouterState.of` 会抛 "no GoRouterState above the current context"。
-    final wanted = GoRouter.maybeOf(context)?.state.uri.queryParameters['section'];
-    if (wanted != null && wanted.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) ref.read(_sectionProvider.notifier).jump(wanted);
-      });
-    }
     final selected = ref.watch(_sectionProvider);
 
     // 窄屏：左栏 208 会把内容区压到不足 200 —— 改成顶部横向滚动标签。
@@ -750,9 +741,16 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
             const SizedBox(height: 8),
             urlField,
             const SizedBox(height: 10),
-            SizedBox(
+            // 用 AppButton.width 撑满：`FittedBox` 会把文字一起缩放（实测被拉变形）。
+            AppButton(
+              label: _testing ? l10n.remoteTesting : l10n.remoteTest,
+              onTap: _testing ? null : _test,
+              clickable: !_testing,
+              loading: _testing,
+              variant: AppButtonVariant.primary,
+              width: double.infinity,
               height: 40,
-              child: FittedBox(fit: BoxFit.fill, child: testButton),
+              fontSize: AppFont.px11_5,
             ),
           ],
         ),

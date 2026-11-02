@@ -2815,3 +2815,18 @@
 - **修法**：数据行元组加 `IconData` 位（本地图标用 `server`，因为该行在非远程态显示"服务"），
   `_StatusCard` 增加 `icon` 参数，按原型 14px 灰色渲染在标题前。
 - **验证**：应用 177 通过；analyze 干净。
+
+## D-142 移动端测试按钮变形 + 设置深链走 didChangeDependencies
+
+- **状态**：完成（2026-11-02）
+- **① 移动端「测试连接」文字被拉伸**：窄屏那行用了
+  `SizedBox(height: 40, child: FittedBox(fit: BoxFit.fill, child: 按钮))` ——
+  `FittedBox` 会把整个子树（含文字）缩放，按钮被横向拉扁。
+  改用 `AppButton(width: double.infinity)` 撑满，文字保持原样。
+  顺带补 `loading: _testing`（探测中显示转圈）。
+- **② 移动端跳设置页没定位到「翻译服务」**：深链读 query 原本放在 `build` 里 +
+  `addPostFrameCallback`。Shell 会**保活**设置页，二次进入时 build 可能拿不到新 query
+  ⇒ 跳转失效。改为 `didChangeDependencies` + `_handledSection` 去重。
+- **③ 队列桌面端按钮**：实测 `QueueRowActions` 两个按钮
+  均为 `42.5×24`、`Row` 同行（y 坐标一致），代码层面**本就一行**，未做改动。
+- **验证**：应用 177 通过；analyze 干净。
