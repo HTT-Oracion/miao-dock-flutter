@@ -251,6 +251,7 @@ final notReadyViewProvider = Provider<NotReadyView>((ref) {
     engine: engineGroup,
     source: base.source,
     remoteVerification: base.remoteVerification,
+    remoteFailure: ref.watch(remoteVerifyMessageProvider),
     downloadProgress: base.downloadProgress,
     failedPhase: base.failedPhase,
     logs: base.logs,

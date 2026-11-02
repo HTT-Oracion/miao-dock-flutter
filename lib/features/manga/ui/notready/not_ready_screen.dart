@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/tokens.dart';
+import '../../../../shared/responsive.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/log_box.dart';
@@ -73,18 +74,31 @@ class NotReadyScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 880),
-            child: _NotReadyCard(
-              view: view,
-              onPrimary: onPrimary,
-              onSecondary: onSecondary,
-              onRetryService: onRetryService,
-              onTogglePause: onTogglePause,
-              paused: paused,
-              downloadEntries: downloadEntries,
-              onExportLogs: onExportLogs,
-              onImportLocal: onImportLocal,
-              onBrowseLibrary: onBrowseLibrary,
-            ),
+            // 窄屏走精简版：移动端不跑本地引擎，分层状态 / 三步教程 / 日志框
+            // 全是桌面排查用的噪音，只保留「结论 + 一个按钮」（D-138）。
+            child: context.isMobile
+                ? _MobileNotReadyCard(
+                    view: view,
+                    onPrimary: onPrimary,
+                    onSecondary: onSecondary,
+                    onRetryService: onRetryService,
+                    onTogglePause: onTogglePause,
+                    paused: paused,
+                    onImportLocal: onImportLocal,
+                    onBrowseLibrary: onBrowseLibrary,
+                  )
+                : _NotReadyCard(
+                    view: view,
+                    onPrimary: onPrimary,
+                    onSecondary: onSecondary,
+                    onRetryService: onRetryService,
+                    onTogglePause: onTogglePause,
+                    paused: paused,
+                    downloadEntries: downloadEntries,
+                    onExportLogs: onExportLogs,
+                    onImportLocal: onImportLocal,
+                    onBrowseLibrary: onBrowseLibrary,
+                  ),
           ),
         ),
       ),
@@ -773,5 +787,148 @@ class _Actions extends StatelessWidget {
       );
     }
     return out;
+  }
+}
+
+/// 窄屏引导卡（D-138）：只讲**结论 + 一个动作**。
+///
+/// 移动端不跑本地引擎 —— 分层状态 / 三步教程 / 日志框都是桌面排查用的，
+/// 塞进手机只会让用户不知道点哪。保留下来的三样是真正有用的：
+/// 远程校验失败原因（一行）、下载进度（防"以为卡死"）、浏览书架出口。
+class _MobileNotReadyCard extends StatelessWidget {
+  const _MobileNotReadyCard({
+    required this.view,
+    required this.onPrimary,
+    required this.onSecondary,
+    required this.onRetryService,
+    required this.onTogglePause,
+    required this.paused,
+    required this.onImportLocal,
+    required this.onBrowseLibrary,
+  });
+
+  final NotReadyView view;
+  final VoidCallback onPrimary;
+  final VoidCallback? onSecondary;
+  final VoidCallback onRetryService;
+  final VoidCallback? onTogglePause;
+  final bool paused;
+  final VoidCallback? onImportLocal;
+  final VoidCallback? onBrowseLibrary;
+
+  /// 结构化失败 → 一行人话（UI 层查 ARB；controller 不带中文）。
+  static String _failureText(AppLocalizations l10n, ({RemoteVerifyIssue kind, String? detail}) f) => switch (f.kind) {
+    RemoteVerifyIssue.configIncomplete => l10n.remoteVerifyConfigIncomplete,
+    RemoteVerifyIssue.engineNotReady => l10n.remoteVerifyEngineNotReady,
+    RemoteVerifyIssue.probeFailed => f.detail == null ? l10n.remoteFail : '${l10n.remoteFail}：${f.detail}',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final meta = _NotReadyCard._metaOf(l10n, view);
+    final remoteBlocked =
+        view.state != NotReadyState.degraded &&
+        view.source == TranslateSource.remote &&
+        !view.remoteVerification.isReady;
+    final remoteChecking = view.remoteVerification == RemoteVerificationState.checking;
+    final busy = view.state == NotReadyState.starting || remoteChecking;
+
+    final primary = remoteBlocked
+        ? (remoteChecking ? l10n.remoteChecking : l10n.remoteGateActionVerify)
+        : switch (view.state) {
+            NotReadyState.uninstalled => l10n.nrActionDownload,
+            NotReadyState.installed => l10n.nrActionStart,
+            NotReadyState.starting => l10n.nrActionStarting,
+            NotReadyState.failed => l10n.nrActionRetry,
+            NotReadyState.degraded => l10n.nrActionRestartService,
+            NotReadyState.downloading => paused ? l10n.nrActionResume : l10n.nrActionPause,
+          };
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+      decoration: BoxDecoration(
+        color: palette.panel,
+        border: Border.all(color: palette.line2),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(meta.icon, size: 22, color: meta.tone == _Tone.bad ? palette.bad : palette.acc),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  meta.title,
+                  style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.ink),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            meta.desc,
+            style: TextStyle(fontSize: AppFont.px11_5, height: 1.6, color: palette.ink2),
+          ),
+          // 远程校验失败：把**原因**摆出来（一行，截断），否则用户只会看到"失败"。
+          if (view.remoteVerification == RemoteVerificationState.failed && view.remoteFailure != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _failureText(l10n, view.remoteFailure!),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: AppFont.px10_5, height: 1.5, color: palette.bad),
+            ),
+          ],
+          // 下载中：细进度条 + 百分比（没有反馈会被当成卡死）。
+          if (view.state == NotReadyState.downloading) ...[
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: SizedBox(
+                height: 6,
+                child: LinearProgressIndicator(
+                  value: view.downloadProgress,
+                  backgroundColor: palette.progressTrack,
+                  valueColor: AlwaysStoppedAnimation(palette.acc),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              view.downloadProgress == null ? l10n.nrDownloading : '${(view.downloadProgress! * 100).round()}%',
+              style: TextStyle(fontSize: AppFont.px10, color: palette.mut),
+            ),
+          ],
+          const SizedBox(height: 18),
+          // 主按钮**占满整行**：窄屏上并排会窄成一条，单手也难点中。
+          AppButton(
+            label: primary,
+            onTap: busy
+                ? null
+                : (view.state == NotReadyState.degraded
+                      ? onRetryService
+                      : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary)),
+            clickable: !busy,
+            variant: AppButtonVariant.primary,
+            height: 42,
+            fontSize: AppFont.px12_5,
+          ),
+          if (onBrowseLibrary != null) ...[
+            const SizedBox(height: 10),
+            AppButton(
+              label: l10n.engineBrowseLibrary,
+              onTap: onBrowseLibrary,
+              variant: AppButtonVariant.link,
+              fontSize: AppFont.px11,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

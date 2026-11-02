@@ -141,6 +141,18 @@ enum ReadinessLevel {
   unconfigured,
 }
 
+/// 远程校验失败的种类（**不携带文案**：中文由 UI 层查 ARB）。
+enum RemoteVerifyIssue {
+  /// 令牌或地址没填完整（本地校验就没过）。
+  configIncomplete,
+
+  /// 能连上，但对面引擎没就绪。
+  engineNotReady,
+
+  /// 探测本身失败（连不上 / 令牌错）。
+  probeFailed,
+}
+
 /// 启动引导的完整视图模型。
 @immutable
 class NotReadyView {
@@ -149,6 +161,7 @@ class NotReadyView {
     required this.engine,
     required this.source,
     this.remoteVerification = RemoteVerificationState.unverified,
+    this.remoteFailure,
     this.downloadProgress,
     this.failedPhase,
     this.logs = const [],
@@ -158,6 +171,9 @@ class NotReadyView {
   final EngineRuntimeState engine;
   final TranslateSource source;
   final RemoteVerificationState remoteVerification;
+
+  /// 远程校验失败的**结构化**信息（文案由 UI 层查 ARB）；成功或未校验为 null。
+  final ({RemoteVerifyIssue kind, String? detail})? remoteFailure;
 
   /// 下载进度（0–1）；null = 无真实来源（**不编造百分比**）。
   final double? downloadProgress;
@@ -194,6 +210,7 @@ class NotReadyView {
     EngineRuntimeState? engine,
     TranslateSource? source,
     RemoteVerificationState? remoteVerification,
+    ({RemoteVerifyIssue kind, String? detail})? remoteFailure,
     double? downloadProgress,
     String? failedPhase,
     List<String>? logs,
@@ -202,6 +219,7 @@ class NotReadyView {
     engine: engine ?? this.engine,
     source: source ?? this.source,
     remoteVerification: remoteVerification ?? this.remoteVerification,
+    remoteFailure: remoteFailure ?? this.remoteFailure,
     downloadProgress: downloadProgress ?? this.downloadProgress,
     failedPhase: failedPhase ?? this.failedPhase,
     logs: logs ?? this.logs,

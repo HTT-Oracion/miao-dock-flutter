@@ -90,6 +90,23 @@ final remoteVerificationProvider = NotifierProvider<RemoteVerificationNotifier, 
   RemoteVerificationNotifier.new,
 );
 
+/// 最近一次远程校验的失败信息（null = 无 / 已成功）。
+///
+/// `verify()` 原本把 `RemoteProbe.message` 丢掉了，界面只能说「失败」，
+/// 用户不知道是令牌错、地址错还是对面引擎没起（D-138）。
+typedef RemoteVerifyFailure = ({RemoteVerifyIssue kind, String? detail});
+
+final remoteVerifyMessageProvider = NotifierProvider<RemoteVerifyMessageNotifier, RemoteVerifyFailure?>(
+  RemoteVerifyMessageNotifier.new,
+);
+
+class RemoteVerifyMessageNotifier extends Notifier<RemoteVerifyFailure?> {
+  @override
+  RemoteVerifyFailure? build() => null;
+
+  void set(RemoteVerifyFailure? value) => state = value;
+}
+
 class RemoteVerificationNotifier extends Notifier<RemoteVerificationState> {
   int _generation = 0;
 
@@ -99,12 +116,14 @@ class RemoteVerificationNotifier extends Notifier<RemoteVerificationState> {
   void invalidate() {
     _generation += 1;
     state = RemoteVerificationState.unverified;
+    ref.read(remoteVerifyMessageProvider.notifier).set(null);
   }
 
   Future<RemoteProbe?> verify() async {
     final config = ref.read(remoteConfigProvider);
     if (!config.valid) {
       state = RemoteVerificationState.failed;
+      ref.read(remoteVerifyMessageProvider.notifier).set((kind: RemoteVerifyIssue.configIncomplete, detail: null));
       return null;
     }
 
@@ -116,7 +135,18 @@ class RemoteVerificationNotifier extends Notifier<RemoteVerificationState> {
       state = RemoteVerificationState.unverified;
       return null;
     }
-    state = probe.ok && probe.engineReady ? RemoteVerificationState.ready : RemoteVerificationState.failed;
+    final ok = probe.ok && probe.engineReady;
+    state = ok ? RemoteVerificationState.ready : RemoteVerificationState.failed;
+    ref
+        .read(remoteVerifyMessageProvider.notifier)
+        .set(
+          ok
+              ? null
+              : (
+                  kind: probe.ok ? RemoteVerifyIssue.engineNotReady : RemoteVerifyIssue.probeFailed,
+                  detail: probe.ok ? null : probe.message,
+                ),
+        );
     return probe;
   }
 }

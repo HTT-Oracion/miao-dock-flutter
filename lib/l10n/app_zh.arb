@@ -2249,5 +2249,17 @@
   "svcLlmMissing": "引擎运行中，大模型未就绪 —— 翻译不可用",
   "@svcLlmMissing": {
     "description": "服务卡片：L3 缺失时的副标"
+  },
+  "nrDownloading": "下载中…",
+  "@nrDownloading": {
+    "description": "下载进度未知时的占位"
+  },
+  "remoteVerifyConfigIncomplete": "令牌或地址未填写完整",
+  "@remoteVerifyConfigIncomplete": {
+    "description": "远程校验失败原因"
+  },
+  "remoteVerifyEngineNotReady": "远程端引擎未就绪",
+  "@remoteVerifyEngineNotReady": {
+    "description": "远程校验失败原因"
   }
 }
