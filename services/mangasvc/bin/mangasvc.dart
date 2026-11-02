@@ -41,10 +41,16 @@ Future<void> main(List<String> args) async {
   await stdout.flush();
 
   // 优雅退出：Ctrl+C / SIGTERM 时关服务，不留半开连接。
-  ProcessSignal.sigint.watch().listen((_) async {
+  var closing = false;
+  Future<void> shutdown(ProcessSignal _) async {
+    if (closing) return;
+    closing = true;
     await server.stop();
     exit(0);
-  });
+  }
+
+  ProcessSignal.sigint.watch().listen(shutdown);
+  if (!Platform.isWindows) ProcessSignal.sigterm.watch().listen(shutdown);
 }
 
 /// 取 `--key value` 形式的值；缺省返回 null。

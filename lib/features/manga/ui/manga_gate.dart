@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/process/service_controller.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../shared/widgets/skeleton.dart';
+import '../../../shared/widgets/toast.dart';
+import '../../../l10n/app_localizations.dart';
 import '../controller/engine_controller.dart';
 import '../controller/engine_install_controller.dart';
 import '../controller/engine_ready_controller.dart';
@@ -137,7 +139,7 @@ class _GateCard extends ConsumerWidget {
       onPrimary: () => _primary(context, ref, gate),
       onSecondary: () => context.go('/settings'),
       // 主按钮直接校验已保存配置；配置缺失/失败时仍保留设置页深链用于修正。
-      onVerifyRemote: () => ref.read(remoteVerificationProvider.notifier).verify(),
+      onVerifyRemote: () => _verifyRemote(context, ref),
       onOpenRemoteSettings: () => context.go('/settings?section=translate'),
       onRetryService: () => ref.read(serviceStatusProvider.notifier).start(),
       onImportLocal: () => _import(context, ref),
@@ -172,5 +174,18 @@ class _GateCard extends ConsumerWidget {
     if (r == null) return;
     ref.read(engineRootProvider.notifier).set(r.dir);
     await ref.read(enginePresenceProvider.notifier).refresh();
+  }
+
+  Future<void> _verifyRemote(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final probe = await ref.read(remoteVerificationProvider.notifier).verify();
+    if (!context.mounted) return;
+    if (probe?.ok == true && probe?.engineReady == true) {
+      showAppToast(context, l10n.remoteTestOkToast, tone: ToastTone.good);
+    } else if (probe?.ok == true) {
+      showAppToast(context, l10n.remoteOkNoEngine, tone: ToastTone.warn);
+    } else {
+      showAppToast(context, l10n.remoteTestFailToast, tone: ToastTone.bad);
+    }
   }
 }

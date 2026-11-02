@@ -38,6 +38,7 @@ const List<RouteDef> routes = [
   /// 证明不了「令牌对」。远程端（手机 / 插件）要一次问清三件事：
   /// 能不能连上、令牌对不对、对面引擎起没起 —— 这个端点就是为它准备的。
   RouteDef(method: 'GET', pattern: '/api/v1/ping', group: 'health'),
+  RouteDef(method: 'POST', pattern: '/api/v1/pairing/token/refresh', group: 'health'),
 
   // ── tasks ───────────────────────────────────────────────────────────────
   RouteDef(method: 'GET', pattern: '/api/v1/tasks', group: 'tasks'),

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'dto/engine.dart';
 import 'dto/library.dart';
 import 'dto/task_row.dart';
@@ -14,6 +16,13 @@ import 'dto/task_status.dart';
 ///
 /// ## 本期实现范围
 /// P0-A 只落**契约**与传输层；`services/mangasvc` 真实实现在 P0-B。
+class TaskImageUpload {
+  const TaskImageUpload({required this.filename, required this.bytes});
+
+  final String filename;
+  final Uint8List bytes;
+}
+
 abstract class MangaSvcClient {
   // ── health ───────────────────────────────────────────────────────────────
 
@@ -25,6 +34,9 @@ abstract class MangaSvcClient {
   /// 与 [health] 的区别：`/health` 不校验令牌，只能证明「服务在」；
   /// ping 走鉴权，因此能同时证明「令牌对」。远程端要一次问清三件事就靠它。
   Future<Map<String, dynamic>> ping();
+
+  /// `POST /api/v1/pairing/token/refresh` —— 使旧令牌立即失效并返回新令牌。
+  Future<String> refreshPairingToken();
 
   // ── tasks ────────────────────────────────────────────────────────────────
 
@@ -38,6 +50,7 @@ abstract class MangaSvcClient {
   Future<CreateTaskResponse> createTask({
     required String comicName,
     required List<String> imagePaths,
+    List<TaskImageUpload> uploads = const [],
 
     /// 提交方身份（D-046）：`app` / `plugin` / `desktop`。缺省视为本机应用。
     String client = 'app',

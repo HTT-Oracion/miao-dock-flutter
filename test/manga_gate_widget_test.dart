@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/manga/controller/engine_controller.dart';
 import 'package:miao_dock_flutter/features/manga/controller/engine_ready_controller.dart';
+import 'package:miao_dock_flutter/features/manga/controller/remote_controller.dart';
 import 'package:miao_dock_flutter/features/manga/domain/not_ready_state.dart';
 import 'package:miao_dock_flutter/features/manga/ui/manga_gate.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
@@ -19,11 +20,18 @@ class _RemoteSource extends TranslateSourceNotifier {
   TranslateSource build() => TranslateSource.remote;
 }
 
+class _RemoteConfig extends RemoteConfigNotifier {
+  @override
+  RemoteConfig build() => const RemoteConfig(baseUrl: 'http://192.168.1.2:5180', token: 'token');
+}
+
 void main() {
   Widget host(MangaGateState state, {String path = '/manga/drop', bool remote = false}) => ProviderScope(
     overrides: [
       mangaGateProvider.overrideWithValue(state),
       translateSourceProvider.overrideWith(remote ? _RemoteSource.new : _LocalSource.new),
+      if (remote) remoteConfigProvider.overrideWith(_RemoteConfig.new),
+      if (remote) remotePingProvider.overrideWithValue((_) async => const RemoteProbe(ok: false, message: 'offline')),
     ],
     child: MaterialApp(
       theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
@@ -67,5 +75,11 @@ void main() {
     expect(find.text('请先校验远程配置'), findsOneWidget);
     expect(find.text('校验远程配置'), findsOneWidget);
     expect(find.text('目标页面'), findsNothing);
+
+    await tester.tap(find.text('校验远程配置'));
+    await tester.pump();
+    // 根 Overlay toast：设置页测试与门禁测试使用同一全局提示组件。
+    expect(find.text('远程连接失败'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 3300));
   });
 }

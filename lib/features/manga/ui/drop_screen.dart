@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -38,15 +39,64 @@ class DropScreen extends ConsumerStatefulWidget {
 }
 
 class _DropScreenState extends ConsumerState<DropScreen> {
+  static const _folderChannel = MethodChannel('miao_dock/folder_picker');
   bool _over = false;
 
   Future<void> _pickImages() async {
     final files = await openFiles();
     if (files.isEmpty) return;
-    ref.read(dropController.notifier).addFiles(files.map((f) => f.path));
+    // 🔴 移动端（Android/iOS）返回的是 content:// URI，**没有扩展名也没有真实路径**：
+    // `addFiles` 按扩展名过滤会全部丢掉 —— 表现成「选了图片但列表没反应」（实测）。
+    // 这里把字节落进缓存目录换成真实路径；桌面端 path 本来就是真路径，直接放行。
+    final paths = <String>[];
+    for (final f in files) {
+      if (f.path.startsWith('content://') || !File(f.path).existsSync()) {
+        final saved = await _materialize(f);
+        if (saved != null) paths.add(saved);
+      } else {
+        paths.add(f.path);
+      }
+    }
+    if (paths.isEmpty) return;
+    ref.read(dropController.notifier).addFiles(paths);
+  }
+
+  /// 把「非真实路径」的选择结果落盘到缓存目录，返回可读的真实路径。
+  ///
+  /// 文件名取原名的扩展名（`XFile.name` 带扩展名），保不住就按 png 处理 ——
+  /// 下游按扩展名判图片类型，没有扩展名会被当成非法文件。
+  Future<String?> _materialize(XFile file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) return null;
+      final base = file.name.isNotEmpty ? file.name : 'image.png';
+      final ext = base.contains('.') ? base.split('.').last.toLowerCase() : 'png';
+      final dir = Directory('${Directory.systemTemp.path}/miao-drop');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final target = File('${dir.path}/${DateTime.now().microsecondsSinceEpoch}_$base');
+      await target.writeAsBytes(bytes);
+      // 扩展名不在白名单时补一个，避免被 addFiles 过滤掉。
+      return target.path.endsWith('.$ext') ? target.path : '${target.path}.$ext';
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _pickFolder() async {
+    if (Platform.isAndroid) {
+      try {
+        final paths = await _folderChannel.invokeListMethod<String>('pickImageFolder') ?? const [];
+        if (paths.isNotEmpty) ref.read(dropController.notifier).addFiles(paths);
+      } on PlatformException {
+        if (mounted) showAppToast(context, AppLocalizations.of(context).dropFolderPickFailed, tone: ToastTone.bad);
+      }
+      return;
+    }
+    // iOS 的系统目录授权能力与 Android SAF 不同，暂时保留多选图片回退。
+    if (Platform.isIOS) {
+      await _pickImages();
+      return;
+    }
     final dirPath = await getDirectoryPath();
     if (dirPath == null) return;
     final dir = Directory(dirPath);
@@ -100,13 +150,24 @@ class _DropScreenState extends ConsumerState<DropScreen> {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(dropController);
 
+    // 原型 `.upload-panel`：白色卡片（max 720 / 内距 32 / 圆角 6）+ 四周留白。
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: EdgeInsets.fromLTRB(
+        context.isMobile ? 12 : 20,
+        context.isMobile ? 12 : 40,
+        context.isMobile ? 12 : 20,
+        40,
+      ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 30),
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Container(
+            padding: EdgeInsets.all(context.isMobile ? 16 : 32),
+            decoration: BoxDecoration(
+              color: palette.panel,
+              border: Border.all(color: palette.line),
+              borderRadius: BorderRadius.circular(context.isMobile ? 8 : 6),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -129,7 +190,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                 const SizedBox(height: 6),
                 Text(
                   l10n.dropComicNameHint,
-                  style: TextStyle(fontSize: AppFont.px9, height: 1.6, color: palette.mut),
+                  style: TextStyle(fontSize: AppFont.px12, height: 1.5, color: palette.mut),
                 ),
 
                 if (state.files.isNotEmpty) ...[
@@ -202,7 +263,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
 }
 
 /// 拖拽区（`.dropzone`：150 高 / 圆角 12 / 1.5px 描边；hover 与拖入都是主色）。
-class _DropZone extends StatelessWidget {
+class _DropZone extends StatefulWidget {
   const _DropZone({
     required this.over,
     required this.onPickImages,
@@ -220,58 +281,80 @@ class _DropZone extends StatelessWidget {
   final ValueChanged<List<String>> onDrop;
 
   @override
+  State<_DropZone> createState() => _DropZoneState();
+}
+
+class _DropZoneState extends State<_DropZone> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    final active = over;
+    // 拖拽中或鼠标悬停都算 active（原型 `.drop-zone:hover` 变主色）。
+    final active = widget.over || _hover;
 
-    return DropTarget(
-      onDragEntered: (_) => onDragEnter(),
-      onDragExited: (_) => onDragExit(),
-      onDragDone: (details) => onDrop(details.files.map((f) => f.path).toList()),
-      child: Container(
-        // 窄屏压到 110：手机竖屏 150 会占掉近 1/5 屏，下面列表被挤没了。
-        height: context.isMobile ? 110 : 150,
-        decoration: BoxDecoration(
-          color: active ? palette.accSoft : palette.panel,
-          border: Border.all(color: active ? palette.acc : palette.line2, width: 1.5),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(LucideIcons.upload, size: 20, color: active ? palette.acc : palette.mut),
-            const SizedBox(height: 7),
-            Text(
-              active ? l10n.dropDropHintActive : l10n.dropDropHint,
-              style: TextStyle(
-                fontSize: AppFont.px12,
-                fontWeight: FontWeight.w700,
-                color: active ? palette.acc : palette.ink,
-              ),
-            ),
-            const SizedBox(height: 4),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Text(
-                l10n.dropSpec,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: DropTarget(
+        onDragEntered: (_) => widget.onDragEnter(),
+        onDragExited: (_) => widget.onDragExit(),
+        onDragDone: (details) => widget.onDrop(details.files.map((f) => f.path).toList()),
+        child: Container(
+          // 原型 `.drop-zone`：**虚线**边框 + 内距撑开（不再固定高度，
+          // 固定高度在窄屏会把文案和按钮挤在一起）。
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: context.isMobile ? 24 : 32),
+          decoration: BoxDecoration(
+            color: active ? palette.accSoft : palette.card,
+            border: Border.all(color: active ? palette.acc : palette.line2, width: 1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(LucideIcons.upload, size: 40, color: active ? palette.acc : palette.acc.withValues(alpha: 0.8)),
+              const SizedBox(height: 12),
+              Text(
+                active ? l10n.dropDropHintActive : l10n.dropDropHint,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                style: TextStyle(
+                  fontSize: AppFont.px15,
+                  fontWeight: FontWeight.w600,
+                  color: active ? palette.acc : palette.ink,
+                ),
               ),
-            ),
-            const SizedBox(height: 7),
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _GhostButton(label: l10n.dropPickImages, onPressed: onPickImages),
-                  const SizedBox(width: 8),
-                  _GhostButton(label: l10n.dropPickFolder, onPressed: onPickFolder),
-                ],
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Text(
+                  l10n.dropSpec,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              // 原型：桌面并排居中；窄屏**纵向堆叠且占满整行**（手指好点）。
+              if (context.isMobile)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _GhostButton(label: l10n.dropPickImages, onPressed: widget.onPickImages, full: true),
+                    const SizedBox(height: 10),
+                    _GhostButton(label: l10n.dropPickFolder, onPressed: widget.onPickFolder, full: true),
+                  ],
+                )
+              else
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _GhostButton(label: l10n.dropPickImages, onPressed: widget.onPickImages),
+                    const SizedBox(width: 12),
+                    _GhostButton(label: l10n.dropPickFolder, onPressed: widget.onPickFolder),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -280,10 +363,13 @@ class _DropZone extends StatelessWidget {
 
 /// 投放页次级按钮：统一走 [AppButton]。
 class _GhostButton extends StatelessWidget {
-  const _GhostButton({required this.label, required this.onPressed});
+  const _GhostButton({required this.label, required this.onPressed, this.full = false});
 
   final String label;
   final VoidCallback onPressed;
+
+  /// 是否占满整行（窄屏用）。
+  final bool full;
 
   @override
   Widget build(BuildContext context) {
@@ -292,9 +378,11 @@ class _GhostButton extends StatelessWidget {
       onTap: onPressed,
       variant: AppButtonVariant.ghost,
       border: true,
-      height: 26,
-      horizontalPadding: 10,
-      fontSize: AppFont.px9_5,
+      width: full ? double.infinity : null,
+      // 原型 34 高、14 号字；窄屏拉到 40（触控区域）。
+      height: context.isMobile ? 40 : 34,
+      horizontalPadding: 20,
+      fontSize: AppFont.px14,
     );
   }
 }
@@ -314,12 +402,12 @@ class _FieldLabel extends StatelessWidget {
       children: [
         Text(
           text,
-          style: TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600, color: palette.ink),
+          style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w500, color: palette.ink),
         ),
         if (required_)
           Text(
             ' *',
-            style: TextStyle(fontSize: AppFont.px11, color: palette.bad),
+            style: TextStyle(fontSize: AppFont.px14, color: palette.bad),
           ),
         if (suffix != null)
           Text(
@@ -365,8 +453,9 @@ class _NameInputState extends State<_NameInput> {
     return AppInput(
       controller: _c,
       hint: l10n.dropComicNamePlaceholder,
-      height: 38,
-      fontSize: AppFont.px10_5,
+      // 原型 `.form-input` 写 38 偏小（实测反馈）；桌面 44 / 窄屏 48 更好点按。
+      height: context.isMobile ? 48 : 44,
+      fontSize: AppFont.px14,
       onChanged: widget.onChanged,
     );
   }

@@ -1146,6 +1146,18 @@
   "@pairingTokenCopied": {
     "description": "设置：复制成功吐司"
   },
+  "pairingTokenRefresh": "刷新",
+  "@pairingTokenRefresh": {
+    "description": "重新生成桌面端配对令牌按钮"
+  },
+  "pairingTokenRefreshed": "配对令牌已刷新，旧令牌已失效",
+  "@pairingTokenRefreshed": {
+    "description": "重新生成配对令牌成功吐司"
+  },
+  "pairingTokenRefreshFailed": "配对令牌刷新失败",
+  "@pairingTokenRefreshFailed": {
+    "description": "重新生成配对令牌失败吐司"
+  },
   "pairingTokenUnavailable": "无法获取（服务未由应用启动）",
   "@pairingTokenUnavailable": {
     "description": "设置：令牌不可获取说明"
@@ -1614,6 +1626,10 @@
   "dropSubmitFailed": "提交失败",
   "@dropSubmitFailed": {
     "description": "投放提交失败提示"
+  },
+  "dropFolderPickFailed": "无法读取所选文件夹",
+  "@dropFolderPickFailed": {
+    "description": "移动端选择图片文件夹失败提示"
   },
   "svcStartOk": "服务已启动",
   "@svcStartOk": {
@@ -2154,13 +2170,17 @@
   "@remoteUrlInvalid": {
     "description": "远程翻译校验与提示"
   },
-  "remoteTestOkToast": "远程连接成功",
+  "remoteTestOkToast": "远程连接成功，地址与令牌已保存",
   "@remoteTestOkToast": {
     "description": "远程翻译校验与提示"
   },
   "remoteTestFailToast": "远程连接失败",
   "@remoteTestFailToast": {
     "description": "远程翻译校验与提示"
+  },
+  "remoteConfigPersistFailed": "连接成功，但地址或令牌保存失败",
+  "@remoteConfigPersistFailed": {
+    "description": "远程测试成功但持久化失败提示"
   },
   "remoteGateTitle": "请先校验远程配置",
   "@remoteGateTitle": {

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:protocol/protocol.dart';
 
 import '../../../core/net/service_locator.dart';
+import 'mobile_mirror_store.dart';
 
 /// `MangaSvcClient` 的 HTTP 实现 —— 对应 P0-A1 契约的落地。
 ///
@@ -14,9 +16,12 @@ import '../../../core/net/service_locator.dart';
 /// 3. **未实现端点不伪造**：本类所有方法都直连真实端点；P0-B 尚未实现的服务端
 ///    会返回错误信封，按 [MangaSvcException] 如实抛出。
 class HttpMangaSvcClient implements MangaSvcClient {
-  HttpMangaSvcClient(this._locator);
+  HttpMangaSvcClient(this._locator, {MobileMirrorStore? mirror})
+    // ignore: prefer_initializing_formals
+    : _mirror = mirror;
 
   final ServiceLocator _locator;
+  final MobileMirrorStore? _mirror;
 
   Future<Map<String, dynamic>> _get(String path, {Map<String, dynamic>? query}) async {
     final client = await _locator.client();
@@ -41,6 +46,20 @@ class HttpMangaSvcClient implements MangaSvcClient {
     return _healthOf(json);
   }
 
+  @override
+  Future<String> refreshPairingToken() async {
+    final json = await _post('/pairing/token/refresh');
+    final token = '${json['token'] ?? ''}';
+    if (token.isEmpty) {
+      throw const MangaSvcException(
+        kind: MangaSvcErrorKind.protocol,
+        message: 'pairing token response is missing token',
+      );
+    }
+    if (_locator case final LocalServiceLocator locator) locator.updateToken(token);
+    return token;
+  }
+
   // ── tasks ────────────────────────────────────────────────────────────────
 
   @override
@@ -50,8 +69,18 @@ class HttpMangaSvcClient implements MangaSvcClient {
       // 来源隔离（D-046）：只取自己提交的任务。
       'source': ?source,
     };
-    final json = await _get('/tasks', query: query.isEmpty ? null : query);
-    return _taskListOf(json);
+    try {
+      final json = await _get('/tasks', query: query.isEmpty ? null : query);
+      final response = _taskListOf(json);
+      await _mirror?.saveQueue(json);
+      unawaited(_mirror?.syncCompletedTasks(response, _fetchBookFile) ?? Future<void>.value());
+      return response;
+    } on MangaSvcException catch (error) {
+      if (!_canUseMirror(error)) rethrow;
+      final cached = await _mirror?.loadQueue();
+      if (cached != null) return _taskListOf(cached);
+      rethrow;
+    }
   }
 
   @override
@@ -64,6 +93,7 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<CreateTaskResponse> createTask({
     required String comicName,
     required List<String> imagePaths,
+    List<TaskImageUpload> uploads = const [],
     String client = 'app',
     String? failReason,
   }) async {
@@ -72,6 +102,10 @@ class HttpMangaSvcClient implements MangaSvcClient {
       body: {
         'comicName': comicName,
         'imagePaths': imagePaths,
+        if (uploads.isNotEmpty)
+          'images': [
+            for (final image in uploads) {'filename': image.filename, 'base64': base64Encode(image.bytes)},
+          ],
         // 来源归因（D-046）：服务端据此做来源隔离，插件与手机端互不可见。
         'client': client,
         'failReason': ?failReason,
@@ -162,20 +196,30 @@ class HttpMangaSvcClient implements MangaSvcClient {
 
   @override
   Future<LibraryResponse> listLibrary() async {
-    final json = await _get('/library');
-    return LibraryResponse(
-      root: _stringOf(json['root']),
-      count: _intOf(json['count']),
-      totalImages: _intOf(json['totalImages']),
-      totalBytes: _intOf(json['totalBytes']),
-      comics: _listOf(json['comics'], _comicOf),
-      books: json['books'] == null ? null : _listOf(json['books'], _bookOf),
-      others: json['others'] == null ? null : _listOf(json['others'], _chapterOf),
-      hidden: json['hidden'] == null ? null : _stringList(json['hidden']),
-      hiddenCount: json['hiddenCount'] is num ? (json['hiddenCount'] as num).toInt() : null,
-      updatedAt: _dateOf(json['updatedAt']) ?? DateTime.now(),
-    );
+    try {
+      final json = await _get('/library');
+      await _mirror?.saveLibrary(json);
+      return _libraryResponseOf(json);
+    } on MangaSvcException catch (error) {
+      if (!_canUseMirror(error)) rethrow;
+      final cached = await _mirror?.loadLibrary();
+      if (cached != null) return _libraryResponseOf(cached);
+      rethrow;
+    }
   }
+
+  LibraryResponse _libraryResponseOf(Map<String, dynamic> json) => LibraryResponse(
+    root: _stringOf(json['root']),
+    count: _intOf(json['count']),
+    totalImages: _intOf(json['totalImages']),
+    totalBytes: _intOf(json['totalBytes']),
+    comics: _listOf(json['comics'], _comicOf),
+    books: json['books'] == null ? null : _listOf(json['books'], _bookOf),
+    others: json['others'] == null ? null : _listOf(json['others'], _chapterOf),
+    hidden: json['hidden'] == null ? null : _stringList(json['hidden']),
+    hiddenCount: json['hiddenCount'] is num ? (json['hiddenCount'] as num).toInt() : null,
+    updatedAt: _dateOf(json['updatedAt']) ?? DateTime.now(),
+  );
 
   @override
   Future<void> createBook(String bookName) => _post('/library/create', body: {'bookName': bookName});
@@ -281,6 +325,19 @@ class HttpMangaSvcClient implements MangaSvcClient {
 
   @override
   Future<List<int>> getBookFile(String bookName, int seq, {bool translated = false}) async {
+    try {
+      final bytes = await _fetchBookFile(bookName, seq, translated);
+      await _mirror?.savePage(bookName, seq, translated: translated, bytes: bytes);
+      return bytes;
+    } on MangaSvcException catch (error) {
+      if (!_canUseMirror(error)) rethrow;
+      final cached = await _mirror?.loadPage(bookName, seq, translated: translated);
+      if (cached != null) return cached;
+      rethrow;
+    }
+  }
+
+  Future<List<int>> _fetchBookFile(String bookName, int seq, bool translated) async {
     final client = await _locator.client();
     final q = translated ? '?variant=translated' : '';
     return await client.getBytes('/library/${Uri.encodeComponent(bookName)}/files/$seq$q') ?? const [];
@@ -288,10 +345,21 @@ class HttpMangaSvcClient implements MangaSvcClient {
 
   @override
   Future<List<int>> getChapterFile(String bookName, double chapterNo, int seq, {bool translated = false}) async {
-    final client = await _locator.client();
-    final q = translated ? '?variant=translated' : '';
     final noText = jsNumStr(chapterNo);
-    return await client.getBytes('/library/${Uri.encodeComponent(bookName)}/chapters/$noText/files/$seq$q') ?? const [];
+    final mirrorKey = '$bookName/chapter-$noText';
+    try {
+      final client = await _locator.client();
+      final q = translated ? '?variant=translated' : '';
+      final bytes =
+          await client.getBytes('/library/${Uri.encodeComponent(bookName)}/chapters/$noText/files/$seq$q') ?? const [];
+      await _mirror?.savePage(mirrorKey, seq, translated: translated, bytes: bytes);
+      return bytes;
+    } on MangaSvcException catch (error) {
+      if (!_canUseMirror(error)) rethrow;
+      final cached = await _mirror?.loadPage(mirrorKey, seq, translated: translated);
+      if (cached != null) return cached;
+      rethrow;
+    }
   }
 
   // ── translate ────────────────────────────────────────────────────────────
@@ -385,6 +453,9 @@ class HttpMangaSvcClient implements MangaSvcClient {
   @override
   Future<ModelDownloadView> pauseModelDownload() async => _downloadOf(await _post('/engine/models/download/pause'));
 }
+
+bool _canUseMirror(MangaSvcException error) =>
+    error.kind == MangaSvcErrorKind.unreachable || error.kind == MangaSvcErrorKind.timeout;
 
 // ── JSON → DTO 解析（集中一处，便于按契约审查）────────────────────────────
 

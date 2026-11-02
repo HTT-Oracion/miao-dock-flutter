@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:miao_dock_flutter/features/manga/controller/engine_controller.dart';
@@ -71,11 +73,17 @@ void main() {
     final c = containerWith(baseUrl: 'http://127.0.0.1:5180', token: 'tk');
     await c.read(remoteVerificationProvider.notifier).verify();
     expect(await c.read(queueProvider.notifier).remoteUsable(), isTrue);
+    final image = File('${Directory.systemTemp.path}/miao-remote-upload-${DateTime.now().microsecondsSinceEpoch}.png')
+      ..writeAsBytesSync(const [1, 2, 3]);
+    addTearDown(() => image.deleteSync());
     final out = await c
         .read(queueProvider.notifier)
-        .submit(comicName: '某书', imagePaths: const ['/a.png'], blockedReason: '不该用到');
+        .submit(comicName: '某书', imagePaths: [image.path], blockedReason: '不该用到');
     expect(out.blocked, isFalse);
-    expect((c.read(mangaSvcClientProvider) as _Client).lastFailReason, isNull);
+    final client = c.read(mangaSvcClientProvider) as _Client;
+    expect(client.lastFailReason, isNull);
+    expect(client.lastImagePaths, isEmpty);
+    expect(client.lastUploads, hasLength(1));
   });
 
   test('连接成功但对面引擎未就绪 → 校验失败', () async {
@@ -112,15 +120,20 @@ class _Cfg extends RemoteConfigNotifier {
 
 class _Client extends FakeMangaSvcClient {
   String? lastFailReason;
+  List<String> lastImagePaths = const [];
+  List<TaskImageUpload> lastUploads = const [];
 
   @override
   Future<CreateTaskResponse> createTask({
     required String comicName,
     required List<String> imagePaths,
+    List<TaskImageUpload> uploads = const [],
     String client = 'app',
     String? failReason,
   }) async {
     lastFailReason = failReason;
+    lastImagePaths = imagePaths;
+    lastUploads = uploads;
     return CreateTaskResponse(
       taskId: 't-1',
       comicName: comicName,

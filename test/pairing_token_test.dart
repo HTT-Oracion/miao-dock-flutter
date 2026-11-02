@@ -63,12 +63,19 @@ void main() {
     // 令牌完整可见（monospace 行），且带复制按钮。
     expect(find.text(token), findsOneWidget);
     expect(find.text('复制'), findsOneWidget);
+    expect(find.text('刷新'), findsOneWidget);
 
     await tester.tap(find.text('复制'));
     await tester.pumpAndSettle();
 
     expect(copied, token);
     expect(find.text('令牌已复制到剪贴板'), findsOneWidget);
+
+    await tester.tap(find.text('刷新'));
+    await tester.pumpAndSettle();
+    expect(find.text('fake-refreshed-token'), findsOneWidget);
+    expect(supervisor.token, 'fake-refreshed-token');
+    expect(find.text('配对令牌已刷新，旧令牌已失效'), findsOneWidget);
 
     // 吐司驻留 3200ms（D-070）；不推过这个时间，退出时会有挂起 Timer。
     await tester.pump(const Duration(milliseconds: 3300));

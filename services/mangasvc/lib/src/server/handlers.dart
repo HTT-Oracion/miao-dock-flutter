@@ -33,6 +33,7 @@ class Handlers {
     String? modelsDir,
     String? stateDir,
     String engineMode = 'mock',
+    Future<String> Function()? refreshPairingToken,
   }) {
     final store = LibraryStore(rootDir: rootDir, stateDir: stateDir);
     final rt = runtimeRoot ?? _defaultEngineDir();
@@ -44,15 +45,16 @@ class Handlers {
     if (engineMode != 'mock') {
       queue.translateImage = (bytes, onStage) => facade.translateImage(bytes, onStage: onStage);
     }
-    return Handlers._(store, queue, facade, engineMode);
+    return Handlers._(store, queue, facade, engineMode, refreshPairingToken);
   }
 
-  Handlers._(this.store, this.queue, this.engine, this.engineMode);
+  Handlers._(this.store, this.queue, this.engine, this.engineMode, this.refreshPairingToken);
 
   final LibraryStore store;
   final TaskQueue queue;
   final EngineFacade engine;
   final String engineMode;
+  final Future<String> Function()? refreshPairingToken;
 
   /// 引擎目录默认根（`<数据根>/manga/engine`，与 `lib/core/storage/paths.dart` 同口径）。
   ///
@@ -112,6 +114,8 @@ class Handlers {
         await _health(req);
       case 'GET /api/v1/ping':
         await _ping(req);
+      case 'POST /api/v1/pairing/token/refresh':
+        await _refreshPairingToken(req);
       case 'POST /api/v1/translate/text':
         await _translateText(req);
       case 'GET /api/v1/translate/options':
@@ -388,9 +392,16 @@ class Handlers {
       'platform': Platform.operatingSystem,
       'engineReady': engineReadyOf(status),
       'engineMode': engineMode,
+      'capabilities': ['remoteUploads', 'pairingTokenRefresh', 'mobileMirror'],
       'requiresToken': true,
       'serverTime': isoOf(DateTime.now()),
     });
+  }
+
+  Future<void> _refreshPairingToken(HttpRequest req) async {
+    final refresh = refreshPairingToken;
+    if (refresh == null) throw const ServiceError('NOT_SUPPORTED', '当前服务不支持刷新令牌', status: 409);
+    await writeJson(req.response, 200, {'token': await refresh()});
   }
 
   // ── tasks ───────────────────────────────────────────────────────────────
@@ -413,6 +424,7 @@ class Handlers {
     final body = await readJsonBody(req);
     final comicName = body['comicName'];
     final imagePaths = body['imagePaths'];
+    final images = body['images'];
     if (comicName is! String || comicName.trim().isEmpty) {
       throw const ServiceError('INVALID_COMIC_NAME', '漫画名不能为空');
     }
@@ -422,10 +434,13 @@ class Handlers {
       throw ServiceError(nameResult.code!, nameResult.message!);
     }
     final normalized = nameResult.name!;
-    if (imagePaths is! List || imagePaths.isEmpty) {
+    final paths = imagePaths is List ? imagePaths.whereType<String>().toList() : <String>[];
+    if (images is List && images.isNotEmpty) {
+      paths.addAll(await _materializeTaskUploads(images));
+    }
+    if (paths.isEmpty) {
       throw const ServiceError('INVALID_IMAGES', '没有可用图片');
     }
-    final paths = imagePaths.whereType<String>().toList();
     // 来源归因（D-046）：**请求体 `client` 优先**，缺省回落到 `X-Box-Client` 头。
     // 定案用请求体字段（方案 B），保留 header 是为了兼容早期调用方。
     final bodyClient = body['client'];
@@ -450,6 +465,38 @@ class Handlers {
       failReason: body['failReason'] as String?,
     );
     await writeJson(req.response, 200, created);
+  }
+
+  Future<List<String>> _materializeTaskUploads(List<dynamic> images) async {
+    if (images.length > 100) throw const ServiceError('INVALID_IMAGES', '单次上传图片过多');
+    final sep = Platform.pathSeparator;
+    final dir = Directory('${store.stateDir}${sep}remote-uploads${sep}u-${DateTime.now().microsecondsSinceEpoch}');
+    dir.createSync(recursive: true);
+    final paths = <String>[];
+    var totalBytes = 0;
+    for (var i = 0; i < images.length; i++) {
+      final item = images[i];
+      if (item is! Map) throw const ServiceError('INVALID_IMAGES', '上传图片格式无效');
+      final encoded = item['base64'];
+      if (encoded is! String || encoded.isEmpty) throw const ServiceError('INVALID_IMAGES', '上传图片内容为空');
+      late final List<int> bytes;
+      try {
+        bytes = base64Decode(encoded);
+      } on FormatException {
+        throw const ServiceError('INVALID_IMAGES', '上传图片编码无效');
+      }
+      totalBytes += bytes.length;
+      if (bytes.isEmpty || totalBytes > 200 * 1024 * 1024) {
+        throw const ServiceError('INVALID_IMAGES', '上传图片为空或总大小超过限制');
+      }
+      final rawName = '${item['filename'] ?? 'image-${i + 1}.png'}';
+      final safeName = rawName.split(RegExp(r'[/\\]')).last.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+      final filename = safeName.isEmpty ? 'image-${i + 1}.png' : '${(i + 1).toString().padLeft(3, '0')}-$safeName';
+      final file = File('${dir.path}$sep$filename');
+      await file.writeAsBytes(bytes, flush: true);
+      paths.add(file.path);
+    }
+    return paths;
   }
 
   Future<void> _getTask(HttpRequest req, String id) async {

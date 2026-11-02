@@ -53,7 +53,12 @@ class MangaSvcServer {
 
   /// 当前服务令牌（父进程要把它传给客户端；`--print-token` 会输出）。
   String? get token => _token;
-  late final Handlers _handlers = Handlers(rootDir: rootDir, engineMode: engineMode, stateDir: stateDir);
+  late final Handlers _handlers = Handlers(
+    rootDir: rootDir,
+    engineMode: engineMode,
+    stateDir: stateDir,
+    refreshPairingToken: _refreshPairingToken,
+  );
 
   /// 实际绑定的端口（未启动为 null）。
   int? get port => _server?.port;
@@ -76,7 +81,7 @@ class MangaSvcServer {
         _token = token;
         server.listen(_dispatch);
         await _handlers.init();
-        return p;
+        return server.port;
       } on SocketException catch (e) {
         lastError = e; // 端口被占，试下一个
       }
@@ -89,6 +94,14 @@ class MangaSvcServer {
     await _handlers.dispose();
     await _server?.close(force: true);
     _server = null;
+  }
+
+  Future<String> _refreshPairingToken() async {
+    final dir = stateDir ?? '${_handlers.store.rootDir}${Platform.pathSeparator}.miao-state';
+    final token = regenerateToken(stateDir: dir);
+    _token = token;
+    _policy = SecurityPolicy(token: token);
+    return token;
   }
 
   Future<void> _dispatch(HttpRequest req) async {

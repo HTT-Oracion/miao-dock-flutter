@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -161,9 +162,22 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
     // 远程翻译未显式校验通过时，建任务但直接置失败，不进翻译流水线。
     final blocked = !await remoteUsable();
     final reason = blocked ? blockedReason : null;
+    final remote = ref.read(translateSourceProvider) == TranslateSource.remote;
+    final uploads = <TaskImageUpload>[];
+    if (remote && !blocked) {
+      for (final path in imagePaths) {
+        final file = File(path);
+        uploads.add(TaskImageUpload(filename: file.uri.pathSegments.last, bytes: await file.readAsBytes()));
+      }
+    }
     final res = await ref
         .read(mangaSvcClientProvider)
-        .createTask(comicName: comicName, imagePaths: imagePaths, failReason: reason);
+        .createTask(
+          comicName: comicName,
+          imagePaths: remote && !blocked ? const [] : imagePaths,
+          uploads: uploads,
+          failReason: reason,
+        );
     await refresh();
     return SubmitOutcome(submitted: imagePaths.length, position: res.queuePosition, blockedReason: reason);
   }

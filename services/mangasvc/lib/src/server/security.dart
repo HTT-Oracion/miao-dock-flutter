@@ -11,6 +11,7 @@
 library;
 
 import 'dart:io';
+import 'dart:math';
 
 import 'http.dart';
 
@@ -173,10 +174,18 @@ String? resolveToken({required String stateDir, bool enabled = true}) {
   }
 }
 
-/// 生成 n 字节随机数的 hex（64 字符 = 32 字节）。
-String _randomHex(int bytes) {
-  final rnd = List<int>.generate(bytes, (_) => DateTime.now().microsecondsSinceEpoch & 0xFF ^ _seed++);
-  return rnd.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+/// 生成并持久化新令牌；刷新请求本身仍须先通过旧令牌鉴权。
+String regenerateToken({required String stateDir}) {
+  final token = _randomHex(32);
+  final file = File('$stateDir${Platform.pathSeparator}token');
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync(token, flush: true);
+  return token;
 }
 
-int _seed = 0;
+/// 生成 n 字节随机数的 hex（64 字符 = 32 字节）。
+String _randomHex(int bytes) {
+  final secure = Random.secure();
+  final rnd = List<int>.generate(bytes, (_) => secure.nextInt(256));
+  return rnd.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+}

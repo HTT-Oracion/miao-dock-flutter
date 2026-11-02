@@ -120,11 +120,13 @@ class FakeMangaSvcClient implements MangaSvcClient {
   Future<CreateTaskResponse> createTask({
     required String comicName,
     required List<String> imagePaths,
+    List<TaskImageUpload> uploads = const [],
     String client = 'app',
     String? failReason,
   }) async {
     final now = DateTime.now();
     final position = _tasks.where((t) => t.status.occupiesQueue).length + 1;
+    final count = imagePaths.length + uploads.length;
     final row = TaskRow(
       taskId: 't-${++_seq}',
       comicName: comicName,
@@ -132,7 +134,7 @@ class FakeMangaSvcClient implements MangaSvcClient {
       source: TaskSource.desktop,
       status: TaskStatus.queued,
       queuePosition: position,
-      progress: TaskProgress(total: imagePaths.length, done: 0, failed: 0, current: 0),
+      progress: TaskProgress(total: count, done: 0, failed: 0, current: 0),
       outputDir: '/fake/library/$comicName',
       createdAt: now,
     );
@@ -272,6 +274,9 @@ class FakeMangaSvcClient implements MangaSvcClient {
     'engineReady': false,
     'requiresToken': true,
   };
+
+  @override
+  Future<String> refreshPairingToken() async => 'fake-refreshed-token';
 
   @override
   Future<HealthResponse> health() async => HealthResponse(
