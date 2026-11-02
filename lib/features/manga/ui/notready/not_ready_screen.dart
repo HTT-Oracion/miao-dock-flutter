@@ -32,6 +32,8 @@ class NotReadyScreen extends StatelessWidget {
     this.onTogglePause,
     this.paused = false,
     this.onExportLogs,
+    this.onVerifyRemote,
+    this.onOpenRemoteSettings,
   });
 
   final NotReadyView view;
@@ -47,6 +49,12 @@ class NotReadyScreen extends StatelessWidget {
 
   /// 导入本地运行时（仅未装配态可用）。
   final VoidCallback? onImportLocal;
+
+  /// 【校验远程配置】：只做探测，不跳转。
+  final VoidCallback? onVerifyRemote;
+
+  /// 【去设置远程配置】：跳到设置页的「翻译服务」分组。
+  final VoidCallback? onOpenRemoteSettings;
 
   /// 下载中的逐条目状态（设计稿：下载卡是「一列文件 + 每行进度条」）。
   final List<InstallEntry> downloadEntries;
@@ -81,6 +89,8 @@ class NotReadyScreen extends StatelessWidget {
                     view: view,
                     onPrimary: onPrimary,
                     onSecondary: onSecondary,
+                    onVerifyRemote: onVerifyRemote,
+                    onOpenRemoteSettings: onOpenRemoteSettings,
                     onRetryService: onRetryService,
                     onTogglePause: onTogglePause,
                     paused: paused,
@@ -91,6 +101,8 @@ class NotReadyScreen extends StatelessWidget {
                     view: view,
                     onPrimary: onPrimary,
                     onSecondary: onSecondary,
+                    onVerifyRemote: onVerifyRemote,
+                    onOpenRemoteSettings: onOpenRemoteSettings,
                     onRetryService: onRetryService,
                     onTogglePause: onTogglePause,
                     paused: paused,
@@ -118,11 +130,15 @@ class _NotReadyCard extends StatelessWidget {
     required this.onImportLocal,
     required this.onBrowseLibrary,
     required this.downloadEntries,
+    this.onVerifyRemote,
+    this.onOpenRemoteSettings,
   });
 
   final NotReadyView view;
   final VoidCallback onPrimary;
   final VoidCallback? onSecondary;
+  final VoidCallback? onVerifyRemote;
+  final VoidCallback? onOpenRemoteSettings;
   final VoidCallback onRetryService;
   final VoidCallback? onTogglePause;
   final bool paused;
@@ -173,6 +189,8 @@ class _NotReadyCard extends StatelessWidget {
             view: view,
             onPrimary: onPrimary,
             onSecondary: onSecondary,
+            onVerifyRemote: onVerifyRemote,
+            onOpenRemoteSettings: onOpenRemoteSettings,
             onRetryService: onRetryService,
             onTogglePause: onTogglePause,
             paused: paused,
@@ -678,11 +696,15 @@ class _Actions extends StatelessWidget {
     required this.paused,
     required this.onImportLocal,
     required this.onBrowseLibrary,
+    this.onVerifyRemote,
+    this.onOpenRemoteSettings,
   });
 
   final NotReadyView view;
   final VoidCallback onPrimary;
   final VoidCallback? onSecondary;
+  final VoidCallback? onVerifyRemote;
+  final VoidCallback? onOpenRemoteSettings;
   final VoidCallback onRetryService;
   final VoidCallback? onTogglePause;
   final bool paused;
@@ -697,6 +719,8 @@ class _Actions extends StatelessWidget {
         view.source == TranslateSource.remote &&
         !view.remoteVerification.isReady;
     final remoteChecking = view.remoteVerification == RemoteVerificationState.checking;
+    // 远程门禁：**两个按钮**各司其职 —— 校验只做探测，去设置只跳转。
+    // 原来合成一个主按钮，点了既不校验也不跳转（实测无反应，D-139）。
     final primary = remoteBlocked
         ? (remoteChecking ? l10n.remoteChecking : l10n.remoteGateActionVerify)
         : switch (view.state) {
@@ -746,11 +770,11 @@ class _Actions extends StatelessWidget {
   /// 次要操作（统一降级为 link，不与主按钮争视觉）。
   List<Widget> _secondaryActions(BuildContext context, AppLocalizations l10n, bool remoteBlocked) {
     final out = <Widget>[];
-    if (remoteBlocked && onSecondary != null) {
+    if (remoteBlocked && (onOpenRemoteSettings ?? onSecondary) != null) {
       out.add(
         AppButton(
           label: l10n.remoteGateActionSettings,
-          onTap: onSecondary,
+          onTap: onOpenRemoteSettings ?? onSecondary,
           variant: AppButtonVariant.link,
           fontSize: AppFont.px10_5,
         ),
@@ -805,11 +829,15 @@ class _MobileNotReadyCard extends StatelessWidget {
     required this.paused,
     required this.onImportLocal,
     required this.onBrowseLibrary,
+    this.onVerifyRemote,
+    this.onOpenRemoteSettings,
   });
 
   final NotReadyView view;
   final VoidCallback onPrimary;
   final VoidCallback? onSecondary;
+  final VoidCallback? onVerifyRemote;
+  final VoidCallback? onOpenRemoteSettings;
   final VoidCallback onRetryService;
   final VoidCallback? onTogglePause;
   final bool paused;
@@ -910,14 +938,27 @@ class _MobileNotReadyCard extends StatelessWidget {
             label: primary,
             onTap: busy
                 ? null
-                : (view.state == NotReadyState.degraded
-                      ? onRetryService
-                      : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary)),
+                : (remoteBlocked
+                      ? onVerifyRemote
+                      : (view.state == NotReadyState.degraded
+                            ? onRetryService
+                            : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary))),
             clickable: !busy,
             variant: AppButtonVariant.primary,
             height: 42,
             fontSize: AppFont.px12_5,
           ),
+          // 远程门禁的第二个动作：跳设置页「翻译服务」。
+          if (remoteBlocked && (onOpenRemoteSettings ?? onSecondary) != null) ...[
+            const SizedBox(height: 10),
+            AppButton(
+              label: l10n.remoteGateActionSettings,
+              onTap: onOpenRemoteSettings ?? onSecondary,
+              variant: AppButtonVariant.secondary,
+              height: 40,
+              fontSize: AppFont.px11_5,
+            ),
+          ],
           if (onBrowseLibrary != null) ...[
             const SizedBox(height: 10),
             AppButton(

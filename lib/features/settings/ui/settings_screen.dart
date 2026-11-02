@@ -61,6 +61,15 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
+    // 深链：`/settings?section=translate` 直接定位分组（引导页跳转用）。
+    // 用 `maybeOf`：设置页在测试里常被直接挂载（无 GoRouter 祖先），
+    // `GoRouterState.of` 会抛 "no GoRouterState above the current context"。
+    final wanted = GoRouter.maybeOf(context)?.state.uri.queryParameters['section'];
+    if (wanted != null && wanted.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) ref.read(_sectionProvider.notifier).jump(wanted);
+      });
+    }
     final selected = ref.watch(_sectionProvider);
 
     // 窄屏：左栏 208 会把内容区压到不足 200 —— 改成顶部横向滚动标签。
@@ -74,10 +83,11 @@ class SettingsScreen extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               children: [
-                for (final (id, labelKey, count) in _sections)
+                for (final (id, labelKey, _) in _sections)
                   _MobileTab(
                     label: _labelOf(l10n, labelKey),
-                    count: count,
+                    // 窄屏**不显示计数**：数字是宽屏侧栏的分区规模提示，
+                    // 贴到顶部标签上会被读成"13 条未读/13 项"（用户实测困惑，D-139）。
                     active: selected == id,
                     onTap: () => ref.read(_sectionProvider.notifier).select(id),
                   ),
@@ -145,6 +155,11 @@ class _SectionNotifier extends Notifier<String> {
   String build() => 'general';
 
   void select(String id) => state = id;
+
+  /// 外部跳转（如引导页「去设置远程配置」）指定分组。
+  void jump(String id) {
+    if (state != id) state = id;
+  }
 }
 
 final _sectionProvider = NotifierProvider<_SectionNotifier, String>(_SectionNotifier.new);
@@ -693,49 +708,68 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
     // 吃掉剩余宽度（URL 长度不定，宽输入更合理），按钮因此自然**贴行最右**。
     // 按钮规格对齐设置页 `_primaryStyle`（内距 18 / 字 11 / w600），
     // 高度取 36 与同行输入框同高（D-055：同排控件同高更稳）。
+    final tokenField = AppInput(
+      controller: _token,
+      hint: l10n.remoteTokenHint,
+      obscure: true,
+      errorText: _tokenError(l10n),
+      onChanged: (_) {
+        ref.read(remoteVerificationProvider.notifier).invalidate();
+        setState(() {});
+      },
+    );
+    final urlField = AppInput(
+      controller: _url,
+      hint: l10n.remoteBaseUrlHint2,
+      errorText: _urlError(l10n),
+      onChanged: (_) {
+        ref.read(remoteVerificationProvider.notifier).invalidate();
+        setState(() {});
+      },
+    );
+    final testButton = AppButton(
+      label: _testing ? l10n.remoteTesting : l10n.remoteTest,
+      onTap: _testing ? null : _test,
+      clickable: !_testing,
+      variant: AppButtonVariant.primary,
+      height: 26,
+      horizontalPadding: 18,
+      fontSize: AppFont.px9_5,
+      fontWeight: FontWeight.w600,
+    );
+
+    // 窄屏：三个控件**各占一行**。并排时 200 + 输入框 + 按钮在 390 宽下
+    // 会把输入框挤成一条缝（用户实测"太挤"，D-139）。
+    if (context.isMobile) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            tokenField,
+            const SizedBox(height: 8),
+            urlField,
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 40,
+              child: FittedBox(fit: BoxFit.fill, child: testButton),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 200,
-            child: AppInput(
-              controller: _token,
-              hint: l10n.remoteTokenHint,
-              obscure: true,
-              errorText: _tokenError(l10n),
-              onChanged: (_) {
-                ref.read(remoteVerificationProvider.notifier).invalidate();
-                setState(() {});
-              },
-            ),
-          ),
+          SizedBox(width: 200, child: tokenField),
           const SizedBox(width: 8),
-          Expanded(
-            child: AppInput(
-              controller: _url,
-              hint: l10n.remoteBaseUrlHint2,
-              errorText: _urlError(l10n),
-              onChanged: (_) {
-                ref.read(remoteVerificationProvider.notifier).invalidate();
-                setState(() {});
-              },
-            ),
-          ),
+          Expanded(child: urlField),
           const SizedBox(width: 8),
-          AppButton(
-            label: _testing ? l10n.remoteTesting : l10n.remoteTest,
-            onTap: _testing ? null : _test,
-            clickable: !_testing,
-            variant: AppButtonVariant.primary,
-            // 字体规格 = 服务卡片「停止」按钮（_primaryStyle + 9.5 号字）；
-            // 高度 = 同行输入框（D-055：同排控件同高）。
-            height: 26,
-            horizontalPadding: 18,
-            fontSize: AppFont.px9_5,
-            fontWeight: FontWeight.w600,
-          ),
+          // 高度 = 同行输入框（D-055：同排控件同高）。
+          testButton,
         ],
       ),
     );
@@ -1040,12 +1074,11 @@ Future<bool> _saveLog(BuildContext context, String text, String suggestedName) a
 ///
 /// 只做「横排标签」这一种排布，外观复用 [AppButton] —— 不引入第二套按钮样式。
 class _MobileTab extends StatelessWidget {
-  const _MobileTab({required this.label, required this.active, required this.onTap, this.count});
+  const _MobileTab({required this.label, required this.active, required this.onTap});
 
   final String label;
   final bool active;
   final VoidCallback onTap;
-  final int? count;
 
   @override
   Widget build(BuildContext context) {
@@ -1053,7 +1086,7 @@ class _MobileTab extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
       child: AppButton(
-        label: count == null ? label : '$label $count',
+        label: label,
         onTap: onTap,
         variant: active ? AppButtonVariant.secondary : AppButtonVariant.ghost,
         height: 30,

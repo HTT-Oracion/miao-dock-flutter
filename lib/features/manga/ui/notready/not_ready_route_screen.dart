@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../controller/engine_controller.dart';
+import '../../controller/remote_controller.dart';
 import '../../controller/engine_install_controller.dart';
 import '../../domain/not_ready_state.dart';
 import 'not_ready_screen.dart';
@@ -62,6 +63,10 @@ class NotReadyRouteScreen extends ConsumerWidget {
             break;
         }
       },
+      // 【校验远程配置】：只探测（按钮自身负责 loading 态）。
+      onVerifyRemote: () => ref.read(remoteVerificationProvider.notifier).verify(),
+      // 【去设置远程配置】：直达「翻译服务」分组。
+      onOpenRemoteSettings: () => context.go('/settings?section=translate'),
       onRetryService: () {},
       onExportLogs: null,
       downloadEntries: ref.watch(engineInstallProvider).entries,

@@ -18,7 +18,7 @@ void main() {
     home: Scaffold(body: child),
   );
 
-  NotReadyScreen screen({String? probeDetail}) => NotReadyScreen(
+  NotReadyScreen screen({String? probeDetail, VoidCallback? onVerify, VoidCallback? onSettings}) => NotReadyScreen(
     view: NotReadyView(
       state: NotReadyState.installed,
       engine: EngineRuntimeState.off,
@@ -35,6 +35,8 @@ void main() {
     onExportLogs: null,
     onImportLocal: null,
     onBrowseLibrary: () {},
+    onVerifyRemote: onVerify,
+    onOpenRemoteSettings: onSettings,
   );
 
   testWidgets('窄屏：不显示三步教程与分层状态，主按钮占满整行', (tester) async {
@@ -48,6 +50,9 @@ void main() {
     // 破坏点：窄屏仍渲染三步流程 → 一屏全是排查信息。
     expect(find.text('填写远程地址与访问令牌'), findsNothing);
     expect(find.text('校验连接与对面引擎'), findsNothing);
+    // 两个按钮各司其职（D-139：原来合成一个，点了既不校验也不跳转）。
+    expect(find.text('校验远程配置'), findsOneWidget);
+    expect(find.text('去设置远程配置'), findsOneWidget);
     // 校验失败原因必须显示（用户要知道错在哪）。
     expect(find.textContaining('令牌无效'), findsOneWidget);
   });

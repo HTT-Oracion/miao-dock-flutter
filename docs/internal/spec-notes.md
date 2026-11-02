@@ -2766,3 +2766,25 @@
 - **测试**：`notready_mobile_test` 两条互为反证 —— 窄屏不出现三步教程、
   宽屏必须出现（防止「删过头把桌面端也删了」）。
 - **验证**：应用 177 通过；analyze 与 l10n 干净。
+
+## D-139 远程门禁拆两按钮 + 设置深链 + 窄屏输入框堆叠
+
+- **状态**：完成（2026-11-02）
+- **① 校验按钮点了没反应（真 bug）**：`_Actions` 的远程门禁主按钮
+  映射到 `onPrimary`，而 `not_ready_route_screen` 的 `onPrimary` switch
+  **只处理 uninstalled/installed/failed 等本地状态，远程门禁不在其中** ⇒ 空转。
+  同时 `RemoteVerificationNotifier.verify()` 从未被调用。
+- **② 拆成两个按钮**（用户要求）：
+  - 【校验远程配置】→ `onVerifyRemote` → `verify()`；`remoteChecking` 期间按钮禁用、
+    文案变「正在校验远程配置」（loading 态）；
+  - 【去设置远程配置】→ `onOpenRemoteSettings` → `/settings?section=translate`；
+    桌面端为次要 link、窄屏为次要按钮（40 高）。
+- **③ 设置页深链**：`SettingsScreen` 读 `GoRouter.maybeOf(context)?.state.uri
+  .queryParameters['section']` 定位分组。
+  **必须用 `maybeOf`**：测试里直接挂载设置页没有 GoRouter 祖先，
+  `GoRouterState.of` 会抛 "no GoRouterState above the current context"（实测 4 个用例连锁红）。
+- **④ 窄屏标签去掉计数**：`翻译服务 13` 里的 13 是 `_sections` 的**硬编码代码块数**
+  （不是设置项数），贴在窄屏标签上被读成「13 条未读」。窄屏不显示，宽屏侧栏保留。
+- **⑤ 窄屏令牌/地址各占一行**：原 `Row(200 + Expanded + 按钮)` 在 390 宽把输入框
+  挤成一条缝。窄屏改 `Column`：令牌 → 地址 → 测试按钮（占满整行），桌面端不变。
+- **验证**：应用 177 通过；analyze 与 l10n 干净。
