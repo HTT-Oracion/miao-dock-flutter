@@ -86,9 +86,10 @@ class QueueCardList extends ConsumerWidget {
           Widget chip(String label, bool on, VoidCallback onTap) => GestureDetector(
             onTap: onTap,
             child: Container(
-              height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 11),
-              alignment: Alignment.center,
+              // 🔴 不能用 alignment/height：Container 一带 alignment 就撑满
+              // 可用宽度 → 每个 chip 独占一行（与原型不符）。对称垂直 padding
+              // 让宽度收缩到文字，垂直方向天然居中。
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
               decoration: BoxDecoration(
                 color: on ? palette.accSoft : palette.card,
                 border: Border.all(color: on ? palette.accent : palette.line2),

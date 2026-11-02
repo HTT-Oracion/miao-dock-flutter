@@ -259,33 +259,33 @@ class _AppButtonState extends State<AppButton> {
             width: widget.width,
             height: widget.height,
             padding: EdgeInsets.symmetric(horizontal: widget.width != null ? 0 : widget.horizontalPadding),
-            alignment: Alignment.center,
-            decoration: widget.border
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(kButtonRadius),
-                    border: Border.all(color: palette.divider),
-                  )
-                : null,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.loading) ...[
-                  SizedBox(
-                    width: widget.fontSize + 2,
-                    height: widget.fontSize + 2,
-                    child: CircularProgressIndicator(strokeWidth: 1.6, color: fg),
-                  ),
-                  if (widget.label.isNotEmpty) const SizedBox(width: 6),
-                ] else if (widget.icon != null) ...[
-                  Icon(widget.icon, size: widget.fontSize + 1, color: fg),
-                  if (widget.label.isNotEmpty) const SizedBox(width: 5),
+            // 🔴 **不能用 alignment: center**：带 alignment 的 Container 会撑满
+            // 有界宽度——在 Row（无界）里没事，在 Wrap / 定宽格里每个按钮都被
+            // 撑成整行/整格（桌面详情按钮竖排、移动筛选 chip 独占一行同源）。
+            // 居中交给 Center(widthFactor: 1)：宽度收缩到内容、高度仍填满。
+            child: Center(
+              widthFactor: widget.width == null ? 1 : null,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.loading) ...[
+                    SizedBox(
+                      width: widget.fontSize + 2,
+                      height: widget.fontSize + 2,
+                      child: CircularProgressIndicator(strokeWidth: 1.6, color: fg),
+                    ),
+                    if (widget.label.isNotEmpty) const SizedBox(width: 6),
+                  ] else if (widget.icon != null) ...[
+                    Icon(widget.icon, size: widget.fontSize + 1, color: fg),
+                    if (widget.label.isNotEmpty) const SizedBox(width: 5),
+                  ],
+                  if (widget.label.isNotEmpty)
+                    Text(
+                      widget.label,
+                      style: TextStyle(fontSize: widget.fontSize, fontWeight: widget.fontWeight, color: fg),
+                    ),
                 ],
-                if (widget.label.isNotEmpty)
-                  Text(
-                    widget.label,
-                    style: TextStyle(fontSize: widget.fontSize, fontWeight: widget.fontWeight, color: fg),
-                  ),
-              ],
+              ),
             ),
           ),
         ),

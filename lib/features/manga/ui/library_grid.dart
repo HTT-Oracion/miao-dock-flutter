@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:protocol/protocol.dart' show fuzzyMatch;
 
 import '../../../core/theme/tokens.dart';
+import '../../../shared/responsive.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -157,7 +158,8 @@ class _LibraryGridState extends ConsumerState<LibraryGrid> {
                   maxCrossAxisExtent: mobile ? 150 : 170,
                   mainAxisSpacing: mobile ? 10 : 16,
                   crossAxisSpacing: mobile ? 10 : 16,
-                  childAspectRatio: 0.62,
+                  // 移动端 0.62 放不下名字 + 副标两行（实测溢出 2.8px）→ 放宽到 0.56。
+                  childAspectRatio: mobile ? 0.56 : 0.62,
                 ),
                 itemCount: shown.length,
                 itemBuilder: (context, i) => _BookCard(key: ValueKey('grid-card-${shown[i].key}'), book: shown[i]),
@@ -180,16 +182,61 @@ class _BookCard extends ConsumerStatefulWidget {
 
 class _BookCardState extends ConsumerState<_BookCard> {
   bool _hover = false;
-  Future<List<int>?>? _cover;
+  // 🔴 封面 provider 缓存在 state：此前每次 build 都 Uint8List.fromList +
+  // 新 MemoryImage（identity 不等）→ 触摸重建就重新解码 → 卡片闪烁（用户实测）。
+  MemoryImage? _cover;
+
+  /// 封面加载已完成（成功 / 确认无图 / 回退完成）。加载中显**中性底**
+  /// （不是橙渐变也不是透明——透明会让整页卡片看起来是空的，橙渐变
+  /// 在加载/重建的一瞬露出就是「闪」）。
+  bool _coverLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _cover = ref
+    _loadCover();
+  }
+
+  void _loadCover() {
+    ref
         .read(mangaSvcClientProvider)
         .getBookCover(widget.book.key)
-        .then<List<int>?>((v) => v)
-        .catchError((_) => null);
+        .then((v) {
+          if (!mounted) return;
+          if (v != null && v.isNotEmpty) {
+            setState(() {
+              _cover = MemoryImage(Uint8List.fromList(v));
+              _coverLoaded = true;
+            });
+            return;
+          }
+          _loadFirstPageFallback();
+        })
+        .catchError((_) => _loadFirstPageFallback());
+  }
+
+  /// 🔴 单话卡片**默认以第一页作为封面**：服务端 `/cover` 已做回退，
+  /// 这里再兜客户端侧——封面缺失 / 请求失败时直接取第 1 页原图，
+  /// 不让单话卡片落成渐变占位（用户裁定）。
+  void _loadFirstPageFallback() {
+    if (widget.book.isBook) {
+      setState(() => _coverLoaded = true);
+      return;
+    }
+    ref
+        .read(mangaSvcClientProvider)
+        .getBookFile(widget.book.key, 1)
+        .then((v) {
+          if (!mounted) return;
+          setState(() {
+            _cover = v.isEmpty ? null : MemoryImage(Uint8List.fromList(v));
+            _coverLoaded = true;
+          });
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() => _coverLoaded = true);
+        });
   }
 
   @override
@@ -197,15 +244,18 @@ class _BookCardState extends ConsumerState<_BookCard> {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final b = widget.book;
+    // 🔴 触摸屏上 MouseRegion 会在按下时触发 hover 且不退出——橙色描边点完
+    // 就挂在卡片上（用户实测）。悬停上浮/描边是桌面交互，移动端整个关掉。
+    final hoverable = !context.isMobile;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      onEnter: hoverable ? (_) => setState(() => _hover = true) : null,
+      onExit: hoverable ? (_) => setState(() => _hover = false) : null,
       child: GestureDetector(
         onTap: () => ref.read(selectedBookProvider.notifier).select(b.key),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          transform: Matrix4.translationValues(0, _hover ? -3 : 0, 0),
+          transform: Matrix4.translationValues(0, hoverable && _hover ? -3 : 0, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -213,26 +263,30 @@ class _BookCardState extends ConsumerState<_BookCard> {
                 aspectRatio: 3 / 4,
                 child: Container(
                   clipBehavior: Clip.antiAlias,
+                  // 加载中 = 中性 card 底（可见但不闪）；确认无图的**单本**才铺
+                  // 渐变占位；单话永远有第一页兜底（见 _loadFirstPageFallback）。
                   decoration: BoxDecoration(
+                    color: palette.card,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _hover ? palette.accent : Colors.transparent),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [palette.accent, palette.coverEndDeep],
-                    ),
+                    border: Border.all(color: hoverable && _hover ? palette.accent : Colors.transparent),
                   ),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      FutureBuilder<List<int>?>(
-                        future: _cover,
-                        builder: (context, snap) {
-                          final bytes = snap.data;
-                          if (bytes == null || bytes.isEmpty) return const SizedBox.shrink();
-                          return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
-                        },
-                      ),
+                      if (_cover != null)
+                        Image(image: _cover!, fit: BoxFit.cover)
+                      else if (_coverLoaded)
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [palette.accent, palette.coverEndDeep],
+                            ),
+                          ),
+                        )
+                      else
+                        const SizedBox.shrink(),
                       Positioned(
                         left: 8,
                         top: 8,

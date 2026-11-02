@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:protocol/protocol.dart' show BookMeta, jsNumStr;
 
 import '../../../core/theme/tokens.dart';
+import '../../../shared/responsive.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -35,7 +36,10 @@ class LibraryDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final query = ref.watch(shelfQueryProvider).trim();
-    if (query.isNotEmpty) {
+    // 🔴 搜索结果页只在**桌面**接管：桌面搜索在左栏，选中命中项后聚合展示命中话；
+    // 移动端的搜索是网格页自己的，点卡片就该进详情——被这里劫持就永远到不了
+    // 详情（用户实测：搜索后点卡片跳到搜索聚合页）。
+    if (query.isNotEmpty && !context.isMobile) {
       return LibrarySearchResults(query: query);
     }
     final state = ref.watch(libraryProvider);
@@ -91,7 +95,17 @@ class LibraryDetail extends ConsumerWidget {
           const SizedBox(height: 16),
           const _PageSectionHeader(),
           const SizedBox(height: 10),
-          ref.watch(libModeProvider) == 'capsule' ? _PageCapsules(book: book) : _PageGrid(book: book),
+          ref.watch(libModeProvider) == 'capsule'
+              ? _PageCapsules(
+                  book: book,
+                  onTapPage: (seq) {
+                    ref
+                        .read(readerSessionProvider.notifier)
+                        .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
+                    context.go('/manga/reader');
+                  },
+                )
+              : _PageGrid(book: book),
         ],
         if (book.isBook) ...[
           const SizedBox(height: 16),
@@ -286,6 +300,14 @@ class _Hero extends ConsumerWidget {
                         }
                       },
                     ),
+                    _HeroButton(
+                      icon: LucideIcons.folderOpen,
+                      label: l10n.actionOpenDir,
+                      onTap: () async {
+                        await ref.read(mangaSvcClientProvider).revealBook(book.key);
+                        if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
+                      },
+                    ),
                   ] else ...[
                     _HeroButton(
                       icon: LucideIcons.bookOpen,
@@ -299,6 +321,15 @@ class _Hero extends ConsumerWidget {
                         context.go('/manga/reader');
                       },
                     ),
+                    _HeroButton(
+                      icon: LucideIcons.folderOpen,
+                      label: l10n.actionOpenDir,
+                      onTap: () async {
+                        await ref.read(mangaSvcClientProvider).revealBook(book.key);
+                        if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
+                      },
+                    ),
+                    // 归并是「单话 → 书」的操作，**单本没有**；且殿后（用户裁定）。
                     _HeroButton(
                       icon: LucideIcons.gitMerge,
                       label: l10n.libMerge,
@@ -318,14 +349,6 @@ class _Hero extends ConsumerWidget {
                       },
                     ),
                   ],
-                  _HeroButton(
-                    icon: LucideIcons.folderOpen,
-                    label: l10n.actionOpenDir,
-                    onTap: () async {
-                      await ref.read(mangaSvcClientProvider).revealBook(book.key);
-                      if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
-                    },
-                  ),
                 ],
               ),
             ],
@@ -395,6 +418,21 @@ class _HeroButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 移动端：一行纯图标（30×30，语义靠 Tooltip）；桌面：图文按钮。
+    if (context.isMobile) {
+      return Tooltip(
+        message: label,
+        child: AppButton(
+          icon: icon,
+          onTap: onTap,
+          variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
+          border: !primary,
+          width: 30,
+          height: 30,
+          fontSize: AppFont.px13,
+        ),
+      );
+    }
     return AppButton(
       label: label,
       icon: icon,
@@ -643,9 +681,10 @@ class _PageCardState extends ConsumerState<_PageCard> {
 
 /// 单话「页面」区（简易态）：页码胶囊 + 状态圆点。
 class _PageCapsules extends StatelessWidget {
-  const _PageCapsules({required this.book});
+  const _PageCapsules({required this.book, required this.onTapPage});
 
   final LibBook book;
+  final ValueChanged<int> onTapPage;
 
   @override
   Widget build(BuildContext context) {
@@ -655,25 +694,29 @@ class _PageCapsules extends StatelessWidget {
       runSpacing: 8,
       children: [
         for (var seq = 1; seq <= book.directPages; seq++)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(999)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$seq',
-                  style: TextStyle(fontSize: AppFont.px11_5, color: palette.textPrimary),
-                ),
-                if (!book.directTranslated.contains(seq)) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(color: palette.accent, shape: BoxShape.circle),
+          // 🔴 胶囊必须可点（D-109 曾断言过）：重构中丢了 onTap → 简易模式点击没反应。
+          GestureDetector(
+            onTap: () => onTapPage(seq),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(999)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$seq',
+                    style: TextStyle(fontSize: AppFont.px11_5, color: palette.textPrimary),
                   ),
+                  if (!book.directTranslated.contains(seq)) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(color: palette.accent, shape: BoxShape.circle),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
       ],
