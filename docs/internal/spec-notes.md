@@ -2852,3 +2852,22 @@
   2. **固化到 `tool/package_macos.sh`**：复制进 `.app` 后自动重签，
      否则每次构建都会复发（脚本注释写明原因）。
 - **遗留**：`kill -9` 杀不掉的 `UE+` 僵尸进程只能重启系统回收（不占端口，不影响使用）。
+
+## D-144 投放按钮被拉伸 + 设置深链真正落地
+
+- **状态**：完成（2026-11-02）
+- **① 投放页「提交 / 清空」各占一整行**（截图实测）：
+  外层 `Column(crossAxisAlignment: stretch)` 把 `Wrap` 撑满，按钮被拉成通栏。
+  修法：`Wrap` 外套 `Align(centerLeft)` ⇒ 按钮恢复自身宽度、桌面端并排一行、窄屏换行。
+- **② 设置页深链之前**从未生效**（上一轮改动静默失败）**：
+  `SettingsScreen` 是 **`ConsumerWidget`（无 State）**，而我上轮加的是
+  `didChangeDependencies` —— **方法根本不存在于该类**，替换没落地也没报错。
+  修法：在 `build` 里读 `GoRouter.maybeOf(context)?.state.uri.queryParameters['section']`，
+  与当前分组不同才 `postFrameCallback` 跳转（否则每次 build 都会把用户手动切的分组拽回）。
+- **③ 实测验证**（不是推断）：
+  - `settings_deeplink_test` 两条：`?section=translate` 落在翻译分组、无参数落通用分组 —— **通过**；
+  - 队列动作列在同一 `QueueRowActions` 内量得两按钮 y 均为 132.5 —— **本就同一行**，
+    之前"不在一行"的观测是我取 `.last` 跨行命中的测试错误，非产品缺陷。
+- **教训**：`ConsumerWidget` 没有 `didChangeDependencies`；改代码后必须**运行验证**，
+  静默替换失败不会报错（D-124/D-133 同类问题第三次）。
+- **验证**：应用 179 通过；analyze 与 l10n 干净。

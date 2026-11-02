@@ -61,6 +61,21 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
+
+    // 深链：`/settings?section=translate`（引导页「去设置远程配置」）。
+    // 🔴 本屏是 ConsumerWidget（无 State），只能在 build 里处理；
+    // 且必须检查当前值是否已命中，否则每次 build 都会把用户手动切的
+    // 分组拽回 query 指定的那个（用户点不动其它分组）。
+    final wanted = GoRouter.maybeOf(context)?.state.uri.queryParameters['section'];
+    if (wanted != null && wanted.isNotEmpty) {
+      final current = ref.read(_sectionProvider);
+      if (current != wanted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) ref.read(_sectionProvider.notifier).jump(wanted);
+        });
+      }
+    }
+
     final selected = ref.watch(_sectionProvider);
 
     // 窄屏：左栏 208 会把内容区压到不足 200 —— 改成顶部横向滚动标签。

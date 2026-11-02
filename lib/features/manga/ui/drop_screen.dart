@@ -163,31 +163,37 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                 ],
 
                 const SizedBox(height: 16),
-                // 窄屏换成 Wrap：两个按钮在手机上并排会溢出（Row 不给换行）。
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    AppButton(
-                      label: state.files.isEmpty ? l10n.dropSubmit : '${l10n.dropSubmit} ${state.files.length}',
-                      onTap: (state.name.isNotEmpty && state.files.isNotEmpty) ? _submit : null,
-                      clickable: state.name.isNotEmpty && state.files.isNotEmpty,
-                      variant: AppButtonVariant.primary,
-                      height: 34,
-                      horizontalPadding: 18,
-                      fontSize: AppFont.px11,
-                    ),
-                    AppButton(
-                      label: l10n.dropClear,
-                      onTap: state.files.isEmpty ? null : () => ref.read(dropController.notifier).clear(),
-                      clickable: state.files.isNotEmpty,
-                      variant: AppButtonVariant.ghost,
-                      border: true,
-                      height: 34,
-                      horizontalPadding: 14,
-                      fontSize: AppFont.px9_5,
-                    ),
-                  ],
+                // 桌面端一行并排；窄屏才换行。
+                // 🔴 必须套 Align：外层层 Column 是 `stretch`，直接把 Wrap 放进去
+                // 会让按钮被拉伸成通栏（实测截图：提交/清空各占满一整行）。
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      AppButton(
+                        label: state.files.isEmpty ? l10n.dropSubmit : '${l10n.dropSubmit} ${state.files.length}',
+                        onTap: (state.name.isNotEmpty && state.files.isNotEmpty) ? _submit : null,
+                        clickable: state.name.isNotEmpty && state.files.isNotEmpty,
+                        variant: AppButtonVariant.primary,
+                        height: 34,
+                        horizontalPadding: 18,
+                        fontSize: AppFont.px11,
+                      ),
+                      AppButton(
+                        label: l10n.dropClear,
+                        onTap: state.files.isEmpty ? null : () => ref.read(dropController.notifier).clear(),
+                        clickable: state.files.isNotEmpty,
+                        variant: AppButtonVariant.ghost,
+                        border: true,
+                        height: 34,
+                        horizontalPadding: 14,
+                        fontSize: AppFont.px9_5,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
