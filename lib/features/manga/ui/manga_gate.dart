@@ -136,6 +136,9 @@ class _GateCard extends ConsumerWidget {
       view: view,
       onPrimary: () => _primary(context, ref, gate),
       onSecondary: () => context.go('/settings'),
+      // 主按钮直接校验已保存配置；配置缺失/失败时仍保留设置页深链用于修正。
+      onVerifyRemote: () => ref.read(remoteVerificationProvider.notifier).verify(),
+      onOpenRemoteSettings: () => context.go('/settings?section=translate'),
       onRetryService: () => ref.read(serviceStatusProvider.notifier).start(),
       onImportLocal: () => _import(context, ref),
       // 方案 C：整模块拦截，但留一条**不需要引擎**的只读出口。

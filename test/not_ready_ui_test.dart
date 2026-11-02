@@ -134,6 +134,8 @@ void main() {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
+    var verified = false;
+    var openedSettings = false;
     await tester.pumpWidget(
       host(
         NotReadyScreen(
@@ -144,6 +146,8 @@ void main() {
           ),
           onPrimary: () {},
           onSecondary: () {},
+          onVerifyRemote: () => verified = true,
+          onOpenRemoteSettings: () => openedSettings = true,
           onRetryService: () {},
         ),
       ),
@@ -155,6 +159,11 @@ void main() {
     expect(find.text('校验远程配置'), findsOneWidget);
     expect(find.text('去设置远程配置'), findsOneWidget);
     expect(find.text('启动引擎'), findsNothing);
+
+    await tester.tap(find.text('校验远程配置'));
+    expect(verified, isTrue);
+    await tester.tap(find.text('去设置远程配置'));
+    expect(openedSettings, isTrue);
   });
 
   testWidgets('移除「稍后再说」（会造成死循环）', (tester) async {

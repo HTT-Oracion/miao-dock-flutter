@@ -50,7 +50,7 @@ class NotReadyScreen extends StatelessWidget {
   /// 导入本地运行时（仅未装配态可用）。
   final VoidCallback? onImportLocal;
 
-  /// 【校验远程配置】：只做探测，不跳转。
+  /// 【校验远程配置】：直接探测已保存的远程地址、令牌与对面引擎。
   final VoidCallback? onVerifyRemote;
 
   /// 【去设置远程配置】：跳到设置页的「翻译服务」分组。
@@ -703,8 +703,7 @@ class _Actions extends StatelessWidget {
         view.source == TranslateSource.remote &&
         !view.remoteVerification.isReady;
     final remoteChecking = view.remoteVerification == RemoteVerificationState.checking;
-    // 远程门禁：**两个按钮**各司其职 —— 校验只做探测，去设置只跳转。
-    // 原来合成一个主按钮，点了既不校验也不跳转（实测无反应，D-139）。
+    // 主按钮原地探测；配置缺失或失败时由次按钮进入设置页修正。
     final primary = remoteBlocked
         ? (remoteChecking ? l10n.remoteChecking : l10n.remoteGateActionVerify)
         : switch (view.state) {

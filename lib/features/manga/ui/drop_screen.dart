@@ -163,34 +163,31 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                 ],
 
                 const SizedBox(height: 16),
-                // 桌面端一行并排；窄屏才换行。
-                // 🔴 必须套 Align：外层层 Column 是 `stretch`，直接把 Wrap 放进去
-                // 会让按钮被拉伸成通栏（实测截图：提交/清空各占满一整行）。
+                // 提交与清空固定一行；Align 隔离外层 stretch，Row 用最小宽度避免按钮拉伸。
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       AppButton(
                         label: state.files.isEmpty ? l10n.dropSubmit : '${l10n.dropSubmit} ${state.files.length}',
                         onTap: (state.name.isNotEmpty && state.files.isNotEmpty) ? _submit : null,
                         clickable: state.name.isNotEmpty && state.files.isNotEmpty,
                         variant: AppButtonVariant.primary,
-                        height: 34,
-                        horizontalPadding: 18,
-                        fontSize: AppFont.px11,
+                        height: 36,
+                        horizontalPadding: 24,
+                        fontSize: AppFont.px12_5,
                       ),
+                      const SizedBox(width: 8),
                       AppButton(
                         label: l10n.dropClear,
                         onTap: state.files.isEmpty ? null : () => ref.read(dropController.notifier).clear(),
                         clickable: state.files.isNotEmpty,
                         variant: AppButtonVariant.ghost,
                         border: true,
-                        height: 34,
-                        horizontalPadding: 14,
-                        fontSize: AppFont.px9_5,
+                        height: 36,
+                        horizontalPadding: 24,
+                        fontSize: AppFont.px12_5,
                       ),
                     ],
                   ),
