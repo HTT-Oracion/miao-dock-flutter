@@ -145,6 +145,16 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
     return probe.ok;
   }
 
+  /// UI 层（WidgetRef）用的同步入口：把守卫结果换成本地化文案。
+  /// 见 `remote_guard.dart` 的 `RemoteGuard` 扩展。
+  static Future<String?> guardRemote(Ref ref, String reason) async {
+    if (ref.read(translateSourceProvider) != TranslateSource.remote) return null;
+    final cfg = ref.read(remoteConfigProvider);
+    if (!cfg.valid) return reason;
+    final probe = await ref.read(remotePingProvider)(cfg);
+    return probe.ok ? null : reason;
+  }
+
   Future<SubmitOutcome> submit({
     required String comicName,
     required List<String> imagePaths,

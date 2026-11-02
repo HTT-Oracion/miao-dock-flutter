@@ -2189,5 +2189,9 @@
   "remoteConfigInvalid": "远程翻译配置不生效，请到设置页进行配置",
   "@remoteConfigInvalid": {
     "description": "远程翻译前置校验失败提示"
+  },
+  "remoteChecking": "校验中…",
+  "@remoteChecking": {
+    "description": "远程配置探测进行中"
   }
 }

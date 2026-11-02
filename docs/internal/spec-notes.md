@@ -2588,3 +2588,24 @@
 - **验证方式**：服务端用例断言重试后 `engineCalls == 0` 且状态回 `failed`；
   客户端用例用可注入的 `remotePingProvider` 模拟【测试连接】结果。
 - **验证**：应用 159 通过；服务 185 通过；analyze 与 l10n 通过。
+
+## D-131 远程守卫全入口接入 + 重试 loading 态
+
+- **状态**：完成（2026-11-02）
+- **① 全入口盘点**（会启动翻译流水线的 5 类）：
+  | 入口 | 位置 | 状态 |
+  |---|---|---|
+  | 投放提交 | `drop_screen.submit` | ✅ D-129 |
+  | 队列重试/继续 | `queue_table.retry` | ✅ D-129 |
+  | 整本补页 | `shelf_menu` / `library_detail` | ✅ 本轮 |
+  | 整本返工 | `shelf_menu` | ✅ 本轮 |
+  | 章节补页/重译 | `chapter_menu` | ✅ 本轮 |
+- **② 守卫收敛为共享扩展**：`controller/remote_guard.dart` 的
+  `WidgetRef.remoteGuard(l10n)` —— 判定本体仍是 `QueueNotifier.remoteUsable()`
+  （与设置页【测试连接】同一探测），扩展只负责给本地化文案。
+  被拦时 toast（bad）并**不建任务**（补页/返工是纯 UI 拦截，任务还没创建）。
+- **③ 重试 loading 态**：`QueueRowActions` 改 `ConsumerStatefulWidget`，
+  重试期间 `_busy = true`：按钮禁用（防双击重复排队）、文案变「校验中…」
+  （探测是真实网络请求，连接超时 3s，必须有反馈）。
+- **测试**：`submit_remote_guard_test` 增加用例：ping 失败 ⇒ `remoteUsable == false`。
+- **验证**：应用 160 通过；analyze 与 l10n 通过。

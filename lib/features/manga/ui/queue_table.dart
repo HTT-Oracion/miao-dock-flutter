@@ -168,13 +168,23 @@ class _StatusCell extends StatelessWidget {
 }
 
 /// 队列行动作（桌面与移动共用，避免两处各写一套导致行为漂移）。
-class QueueRowActions extends ConsumerWidget {
+class QueueRowActions extends ConsumerStatefulWidget {
   const QueueRowActions({super.key, required this.task});
 
   final MangaTask task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QueueRowActions> createState() => _QueueRowActionsState();
+}
+
+class _QueueRowActionsState extends ConsumerState<QueueRowActions> {
+  /// 重试进行中（含远程探测）：按钮禁用，避免双击重复排队。
+  bool _busy = false;
+
+  MangaTask get task => widget.task;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final st = task.status;
 
@@ -191,6 +201,8 @@ class QueueRowActions extends ConsumerWidget {
         );
       } catch (e) {
         if (context.mounted) showAppToast(context, l10n.queueRetryFailed('$e'), tone: ToastTone.bad);
+      } finally {
+        if (mounted) setState(() => _busy = false);
       }
     }
 
@@ -221,12 +233,12 @@ class QueueRowActions extends ConsumerWidget {
         };
       case MangaTaskStatus.failed:
       case MangaTaskStatus.partialFailed:
-        label = l10n.actionRetry;
-        action = retry;
+        label = _busy ? l10n.remoteChecking : l10n.actionRetry;
+        action = _busy ? null : retry;
         highlighted = true; // 「重试」是主操作，高亮
       case MangaTaskStatus.cancelled:
-        label = l10n.actionContinue;
-        action = retry;
+        label = _busy ? l10n.remoteChecking : l10n.actionContinue;
+        action = _busy ? null : retry;
       case MangaTaskStatus.done:
         label = l10n.actionView;
         action = view;

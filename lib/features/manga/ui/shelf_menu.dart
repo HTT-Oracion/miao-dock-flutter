@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_picker.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
+import '../controller/remote_guard.dart';
 import '../controller/queue_controller.dart';
 import '../domain/lib_book.dart';
 
@@ -56,6 +57,12 @@ class ShelfContextMenu {
         case 'open':
           await client.revealBook(book.key);
         case 'resume':
+          // 远程翻译：先探测（与测试连接同逻辑），不可用则提示且**不建任务**。
+          final guardRs = await ref.remoteGuard(l10n);
+          if (guardRs != null) {
+            if (context.mounted) showAppToast(context, guardRs, tone: ToastTone.bad);
+            return;
+          }
           final plan = await client.getResumePlan(book.key);
           if (plan.pendingCount == 0) {
             if (context.mounted) showAppToast(context, l10n.shelfAllTranslated, tone: ToastTone.info);
@@ -64,6 +71,11 @@ class ShelfContextMenu {
           await client.resumeBook(book.key);
           if (context.mounted) showAppToast(context, l10n.shelfContinueOk(book.name), tone: ToastTone.good);
         case 'retranslate':
+          final guardRt = await ref.remoteGuard(l10n);
+          if (guardRt != null) {
+            if (context.mounted) showAppToast(context, guardRt, tone: ToastTone.bad);
+            return;
+          }
           await client.retranslateBook(book.key);
           if (context.mounted) showAppToast(context, l10n.shelfRetranslateOk(book.name), tone: ToastTone.good);
         case 'merge':

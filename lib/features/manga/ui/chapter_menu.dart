@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
+import '../controller/remote_guard.dart';
 import '../controller/queue_controller.dart';
 import '../domain/lib_book.dart';
 
@@ -66,11 +67,21 @@ class ChapterMenuButton extends ConsumerWidget {
         case 'open':
           await client.revealBook('${book.key}/${chapter.dirName}');
         case 'resume':
+          final guardC = await ref.remoteGuard(l10n);
+          if (guardC != null) {
+            if (context.mounted) showAppToast(context, guardC, tone: ToastTone.bad);
+            return;
+          }
           await client.resumeChapter(book.key, chapter.no);
           if (context.mounted) {
             showAppToast(context, l10n.chapterResumeOk(book.name), tone: ToastTone.good);
           }
         case 'retranslate':
+          final guardCr = await ref.remoteGuard(l10n);
+          if (guardCr != null) {
+            if (context.mounted) showAppToast(context, guardCr, tone: ToastTone.bad);
+            return;
+          }
           await client.retranslateChapter(book.key, chapter.no);
           if (context.mounted) {
             showAppToast(context, l10n.chapterRetranslateOk(book.name), tone: ToastTone.good);

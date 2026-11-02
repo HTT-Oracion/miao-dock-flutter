@@ -17,6 +17,7 @@ import '../../../shared/widgets/toast.dart';
 import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
+import '../controller/remote_guard.dart';
 import '../domain/lib_book.dart';
 import '../domain/manga_status.dart';
 import '../domain/manga_task.dart';
@@ -234,6 +235,11 @@ class _Hero extends ConsumerWidget {
                             if (context.mounted) {
                               showAppToast(context, l10n.libAllTranslated, tone: ToastTone.info);
                             }
+                            return;
+                          }
+                          final guardRes = await ref.remoteGuard(l10n);
+                          if (guardRes != null) {
+                            if (context.mounted) showAppToast(context, guardRes, tone: ToastTone.bad);
                             return;
                           }
                           await client.resumeBook(book.key);

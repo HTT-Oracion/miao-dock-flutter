@@ -42,6 +42,21 @@ void main() {
     expect(await c.read(queueProvider.notifier).remoteUsable(), isFalse);
   });
 
+  test('探测失败时 remoteUsable 为 false（guard 的判定本体）', () async {
+    final c = ProviderContainer(
+      overrides: [
+        translateSourceProvider.overrideWith(_RemoteSource.new),
+        remoteConfigProvider.overrideWith(
+          () => _Cfg(const RemoteConfig(baseUrl: 'http://127.0.0.1:5180', token: 'tk')),
+        ),
+        remotePingProvider.overrideWithValue((cfg) async => const RemoteProbe(ok: false, message: '拒绝')),
+      ],
+    );
+    addTearDown(c.dispose);
+    // 破坏点：ping 失败仍放行 → 任务会跑进流水线。
+    expect(await c.read(queueProvider.notifier).remoteUsable(), isFalse);
+  });
+
   test('配置有效 → 不拦', () async {
     final c = containerWith(baseUrl: 'http://127.0.0.1:5180', token: 'tk');
     expect(await c.read(queueProvider.notifier).remoteUsable(), isTrue);
