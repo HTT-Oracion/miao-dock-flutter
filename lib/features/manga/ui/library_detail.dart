@@ -220,7 +220,11 @@ class _Hero extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
+              // Wrap 而非 Row：移动端窄屏三个按钮放不下会溢出（用户实测黄黑条纹），
+              // 桌面端单行放得下时与 Row 视觉一致（spacing 8 等价于原手写间距）。
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   if (book.isBook) ...[
                     _HeroButton(
@@ -251,7 +255,6 @@ class _Hero extends ConsumerWidget {
                         }
                       },
                     ),
-                    const SizedBox(width: 8),
                     _HeroButton(
                       icon: LucideIcons.pencil,
                       label: l10n.libEditInfo,
@@ -296,7 +299,6 @@ class _Hero extends ConsumerWidget {
                         context.go('/manga/reader');
                       },
                     ),
-                    const SizedBox(width: 8),
                     _HeroButton(
                       icon: LucideIcons.gitMerge,
                       label: l10n.libMerge,
@@ -316,7 +318,6 @@ class _Hero extends ConsumerWidget {
                       },
                     ),
                   ],
-                  const SizedBox(width: 8),
                   _HeroButton(
                     icon: LucideIcons.folderOpen,
                     label: l10n.actionOpenDir,
