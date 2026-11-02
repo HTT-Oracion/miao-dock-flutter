@@ -96,7 +96,13 @@ class SettingsScreen extends ConsumerWidget {
                     // 窄屏**不显示计数**：数字是宽屏侧栏的分区规模提示，
                     // 贴到顶部标签上会被读成"13 条未读/13 项"（用户实测困惑，D-139）。
                     active: selected == id,
-                    onTap: () => ref.read(_sectionProvider.notifier).select(id),
+                    // 手动切换同步更新 URL：深链监听按 URL 参数对齐，
+                    // 不同步的话点任何分组都会被拽回深链指定的那个（用户实测）。
+                    // maybeOf：测试宿主没有路由，不抛错。
+                    onTap: () {
+                      ref.read(_sectionProvider.notifier).select(id);
+                      GoRouter.maybeOf(context)?.go('/settings?section=$id');
+                    },
                   ),
               ],
             ),
@@ -122,7 +128,10 @@ class SettingsScreen extends ConsumerWidget {
                   label: _labelOf(l10n, labelKey),
                   count: count,
                   active: selected == id,
-                  onTap: () => ref.read(_sectionProvider.notifier).select(id),
+                  onTap: () {
+                    ref.read(_sectionProvider.notifier).select(id);
+                    GoRouter.maybeOf(context)?.go('/settings?section=$id');
+                  },
                 ),
               const Spacer(),
               _NavItem(
@@ -727,6 +736,10 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
       hint: l10n.remoteTokenHint,
       obscure: true,
       errorText: _tokenError(l10n),
+      // 🔴 令牌是 64 位十六进制：非 hex 字符（含中文/空白）一旦进入就会被
+      // 拼进 HTTP 头 → dart:io 抛 FormatException，报错完全看不出原因。
+      // 键入与粘贴都过滤，垃圾内容根本进不来。
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9a-fA-F]')), LengthLimitingTextInputFormatter(64)],
       onChanged: (v) {
         // 输入即进内存态：服务定位器（投放链路）立刻能用，落盘等「测试连接」。
         ref.read(remoteConfigProvider.notifier).stage(token: v);

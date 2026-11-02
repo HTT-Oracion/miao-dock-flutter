@@ -154,6 +154,10 @@
   "@queueFilterEmpty": {
     "description": "队列筛选后为空的提示"
   },
+  "queueFilterEmptyHint": "点表头的筛选图标，调整勾选即可恢复列表",
+  "@queueFilterEmptyHint": {
+    "description": "队列筛选空态的恢复指引"
+  },
   "queueFilterClear": "清除",
   "@queueFilterClear": {
     "description": "队列筛选面板：清除勾选"

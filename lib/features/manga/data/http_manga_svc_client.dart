@@ -28,9 +28,9 @@ class HttpMangaSvcClient implements MangaSvcClient {
     return client.getJson(path, query: query);
   }
 
-  Future<Map<String, dynamic>> _post(String path, {Object? body}) async {
+  Future<Map<String, dynamic>> _post(String path, {Object? body, Duration? receiveTimeout}) async {
     final client = await _locator.client();
-    return client.postJson(path, body: body);
+    return client.postJson(path, body: body, receiveTimeout: receiveTimeout);
   }
 
   Future<Map<String, dynamic>> _delete(String path, {Object? body}) async {
@@ -439,7 +439,13 @@ class HttpMangaSvcClient implements MangaSvcClient {
   Future<Map<String, dynamic>> getEngineInstall() => _get('/engine/install');
 
   @override
-  Future<EngineStatus> startEngine() async => _engineStatusOf(await _post('/engine/start'));
+  @override
+  Future<EngineStatus> startEngine() async {
+    // 服务端 /engine/start 同步做装配检查 + 拉起 + 等健康，冷启动可超 20s
+    // —— 全局接收超时会把它误报成「启动失败」，而引擎实际起成功（用户实测）。
+    final json = await _post('/engine/start', receiveTimeout: const Duration(seconds: 180));
+    return _engineStatusOf(json);
+  }
 
   @override
   Future<EngineStatus> stopEngine() async => _engineStatusOf(await _post('/engine/stop'));

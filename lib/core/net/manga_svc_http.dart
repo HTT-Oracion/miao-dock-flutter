@@ -75,8 +75,15 @@ class MangaSvcHttpClient {
     return _request(() => _dio.get<dynamic>(path, queryParameters: query));
   }
 
-  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
-    return _request(() => _dio.post<dynamic>(path, data: body));
+  Future<Map<String, dynamic>> postJson(String path, {Object? body, Duration? receiveTimeout}) async {
+    return _request(
+      () => _dio.post<dynamic>(
+        path,
+        data: body,
+        // 引擎启动等服务端同步等就绪的调用，单次放宽接收超时（全局仍是 20s）。
+        options: Options(receiveTimeout: receiveTimeout),
+      ),
+    );
   }
 
   Future<Map<String, dynamic>> deleteJson(String path, {Object? body}) async {
@@ -174,6 +181,14 @@ class MangaSvcHttpClient {
   }
 
   MangaSvcException _fromDioException(DioException e) {
+    // 非法头（如令牌混入非 ASCII 字符）在 dart:io 设置头时抛 FormatException，
+    // dio 包成 message=null 的 unknown —— 不翻译成提示用户就完全看不懂。
+    if (e.error is FormatException) {
+      return const MangaSvcException(
+        kind: MangaSvcErrorKind.protocol,
+        message: 'invalid request header (pairing token must be 64 hex chars)',
+      );
+    }
     final kind = switch (e.type) {
       DioExceptionType.connectionError ||
       DioExceptionType.connectionTimeout ||

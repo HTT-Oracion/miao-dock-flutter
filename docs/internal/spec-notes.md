@@ -2952,3 +2952,45 @@
   analyze 干净；l10n 棘轮通过（诊断 debugPrint 按 D-072 先例用 ASCII）。
 - **关联**：D-046（来源归因）· D-114（MenuAnchor 模式）· D-115（shared 扩展路径）
   · D-069（投放页原型规格）。
+
+## D-132 测试污染真实偏好：桌面端「有时」启动默认远程翻译
+
+- **状态**：已修复，**未提交**（随 D-130 批次一起验证后提交）
+- **根因（实测实锤）**：`settings_ui_test` 的来源下拉用例会**点「远程翻译」**
+  → `set()` → `persistTranslateSource('remote')` → 写进**用户真实偏好文件**
+  → 之后桌面端启动读到 remote，默认来源就是远程。
+  `readiness_test` 的注释早已承认「这是测试间污染」，但只把自己用 override
+  绕开，没修污染源——污染一直都在。同文件还实测出第二个证据：真实偏好里
+  残留 `"miao.remote-token": "next-token"`（`submit_remote_guard_test` 写入）。
+- **为什么「有时」**：只有跑过测试之后的那几次启动才中招；用户切回本地后
+  偏好又是 local，看起来「随机」。
+- **修法**：`shell_prefs` 在 `FLUTTER_TEST == 'true'`（`flutter test` 自动注入）
+  时把偏好文件重定向到**进程私有临时目录**——所有测试零改动即全量隔离，
+  桌面 / 移动端真实路径不受影响。另：清理真实偏好里的 `next-token` 残留。
+- **验证**：全量 200 通过 + 8 跳过后，真实偏好文件 **mtime 与内容均未变化**
+  （测试前 `stat` 对比测试后）；`translate-source` 保持 `local`。
+- **关联**：D-005（偏好落盘）· D-121（来源持久化）· D-130（移动端远程）。
+
+## D-133 远程连接三连修：非法令牌 / 启动超时误报 / 深链锁死
+
+- **状态**：已修复，**未提交**（用户先验证）
+- **① 手机端测试连接报「Invalid HTTP header field value: 圆点 + 文案胶囊…」**：
+  令牌框里被粘贴进了一段代码注释（截图里 28 个遮蔽点 ≈ 注释长度），注释含中文
+  → 拼 `X-Box-Token` 头时 dart:io 抛 FormatException，dio 包成 message=null 的
+  unknown —— 报错完全看不出原因。**修法**：令牌输入框加
+  `FilteringTextInputFormatter.allow(hex)` + 64 位上限（键入与粘贴都过滤，
+  垃圾内容进不来）；`_fromDioException` 对 `error is FormatException` 翻译成
+  明确提示（pairing token must be 64 hex chars）。
+- **② 桌面端「启动失败：timeout 20s」但状态点又是「引擎就绪」**：
+  `/engine/start` 在服务端同步做装配检查 + 拉起 + 等健康，冷启动可超
+  全局 20s 接收超时 → 客户端误报失败，引擎实际起成功。**修法**：
+  `postJson` 支持单次 `receiveTimeout` 覆盖，`startEngine` 传 180s
+  （全局 20s 不动，其余调用不受影响）。
+- **③ 深链进设置后【通用】点不动**：深链监听在每次 build 里按 URL 参数
+  对齐分组——点【通用】改的只是 provider，URL 还停在 `?section=translate`
+  → postFrame 又拽回去。**修法**：手动切换分组时**同步更新 URL**
+  （`GoRouter.maybeOf(context)?.go('/settings?section=$id')`，URL 是唯一事实源；
+  maybeOf 兼容无路由的测试宿主）。
+- **验证**：`flutter analyze` 干净；全量 **200 通过 + 8 跳过**；l10n 棘轮通过。
+  过时的「圆点 + 文案胶囊」注释同步更正（本次事故的誘因）。
+- **关联**：D-045（远程配置）· D-130（移动端远程）· D-062（启动按钮）· D-006（棘轮）。

@@ -46,9 +46,19 @@ Future<void> ensureShellPrefsLoaded() async {
   debugPrint('[prefs] warmed, keys=${_memoryPrefs?.keys.toList()}');
 }
 
+/// 测试进程的偏好目录（进程级一次）。
+String? _testDir;
+
 /// 偏好文件路径：移动端用预热目录，桌面端基于 `$HOME`（macOS 与 Windows 用
 /// Application Support、Linux 用 `.config`；Windows 走 `LOCALAPPDATA`）。
 File _prefsFile() {
+  // 🔴 测试进程（`flutter test` 自动设 FLUTTER_TEST）把偏好重定向到进程私有
+  // 临时目录：设置页测试点一次「远程翻译」就会持久化，把真实偏好改成 remote
+  // → 桌面端启动默认远程翻译（用户实测「有时默认远程」即此因）。
+  if (Platform.environment['FLUTTER_TEST'] == 'true') {
+    _testDir ??= '${Directory.systemTemp.path}/miao-prefs-test-$pid';
+    return File('$_testDir/shell-prefs.json');
+  }
   final resolved = _resolvedDir;
   if (resolved != null) return File('$resolved/shell-prefs.json');
   final env = Platform.environment;

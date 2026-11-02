@@ -7,6 +7,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/app_checkbox.dart';
 import '../../../../shared/widgets/app_table.dart';
 import '../../../../shared/widgets/app_dropdown.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
@@ -105,6 +106,10 @@ class QueueTable extends ConsumerWidget {
           : null,
       rowColor: (_, i) => selection.ids.contains(rows[i].id) ? palette.navActive : null,
       rowAccentColor: (_, i) => selection.ids.contains(rows[i].id) ? palette.accent : null,
+      // 🔴 空态只占表格主体，表头常驻——筛选入口消失就恢复不了列表（用户实测）。
+      emptyPlaceholder: filter.active
+          ? EmptyState(icon: LucideIcons.filterX, title: l10n.queueFilterEmpty, description: l10n.queueFilterEmptyHint)
+          : null,
       rowBuilder: (context, i) => [
         _NameCell(task: rows[i]),
         _SourceCell(task: rows[i]),
@@ -373,7 +378,7 @@ class _HoverChip extends StatelessWidget {
   }
 }
 
-/// 来源列单元格：圆点 + 文案胶囊（本地=蓝 / 插件端=主色 / 其他=灰）。
+/// 来源列单元格：直接显示文本（本地 / 插件端 / 其他），不做容器处理。
 class _SourceCell extends StatelessWidget {
   const _SourceCell({required this.task});
 
@@ -382,19 +387,10 @@ class _SourceCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return Container(
-      height: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        color: palette.card,
-        border: Border.all(color: palette.line2),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        task.source.label(AppLocalizations.of(context)),
-        style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
-      ),
+    // 来源直接显示文本，不做任何容器处理（用户要求）。
+    return Text(
+      task.source.label(AppLocalizations.of(context)),
+      style: TextStyle(fontSize: AppFont.px12, color: palette.ink2),
     );
   }
 }
@@ -428,12 +424,13 @@ class _HeaderFilterState<T> extends State<_HeaderFilter<T>> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    // 对齐筛选原型：card 底 / 定宽 160 / 行高 24 / 16px 勾选框 / 底部分隔 + 双链接。
     return MenuAnchor(
       controller: _controller,
       alignmentOffset: const Offset(0, 4),
       consumeOutsideTap: true,
       style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(palette.panel),
+        backgroundColor: WidgetStatePropertyAll(palette.card),
         elevation: const WidgetStatePropertyAll(0),
         padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
         shape: WidgetStatePropertyAll(
@@ -445,48 +442,63 @@ class _HeaderFilterState<T> extends State<_HeaderFilter<T>> {
       ),
       menuChildren: [
         for (final (value, label) in widget.options)
-          InkWell(
-            borderRadius: BorderRadius.circular(5),
-            onTap: () => widget.onToggle(value),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppCheckbox(
-                    value: widget.selected.contains(value),
-                    tristate: false,
-                    onChanged: (_) => widget.onToggle(value),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: TextStyle(fontSize: AppFont.px11, color: palette.ink),
-                  ),
-                ],
+          SizedBox(
+            width: 160,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(5),
+              // 面板底是 card，hover 升到 hi（比 card 亮一档）。
+              hoverColor: palette.hi,
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+              onTap: () => widget.onToggle(value),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: AppCheckbox(
+                        value: widget.selected.contains(value),
+                        tristate: false,
+                        onChanged: (_) => widget.onToggle(value),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(fontSize: AppFont.px11, color: palette.ink),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         Padding(
-          padding: const EdgeInsets.only(top: 4, left: 6, right: 6),
+          padding: const EdgeInsets.only(top: 4, left: 8, right: 8),
           child: Divider(height: 1, thickness: 1, color: palette.divider),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            AppButton(
-              label: AppLocalizations.of(context).queueFilterClear,
-              variant: AppButtonVariant.link,
-              fontSize: AppFont.px10_5,
-              onTap: widget.onClear,
-            ),
-            AppButton(
-              label: AppLocalizations.of(context).queueFilterApply,
-              variant: AppButtonVariant.link,
-              fontSize: AppFont.px10_5,
-              onTap: _controller.close,
-            ),
-          ],
+        SizedBox(
+          width: 160,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              AppButton(
+                label: AppLocalizations.of(context).queueFilterClear,
+                variant: AppButtonVariant.link,
+                fontSize: AppFont.px10_5,
+                onTap: widget.onClear,
+              ),
+              AppButton(
+                label: AppLocalizations.of(context).queueFilterApply,
+                variant: AppButtonVariant.link,
+                fontSize: AppFont.px10_5,
+                onTap: _controller.close,
+              ),
+            ],
+          ),
         ),
       ],
       builder: (context, controller, child) => InkWell(

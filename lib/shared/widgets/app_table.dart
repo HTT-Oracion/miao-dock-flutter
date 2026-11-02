@@ -28,6 +28,7 @@ class AppTable extends StatelessWidget {
     this.onRowTap,
     this.rowColor,
     this.rowAccentColor,
+    this.emptyPlaceholder,
   });
 
   final List<AppTableColumn> columns;
@@ -46,6 +47,9 @@ class AppTable extends StatelessWidget {
 
   /// 行左侧 3px 色条（与漫画库选中样式同语言）。
   final Color? Function(BuildContext context, int index)? rowAccentColor;
+
+  /// 行数为 0 时表格主体显示的占位（表头仍然常驻——筛选入口不能消失）。
+  final Widget? emptyPlaceholder;
 
   @override
   Widget build(BuildContext context) {
@@ -88,36 +92,38 @@ class AppTable extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: rowCount,
-              itemExtent: 58,
-              itemBuilder: (context, i) {
-                final cells = rowBuilder(context, i);
-                final color = rowColor?.call(context, i);
-                final accent = rowAccentColor?.call(context, i);
-                final leading = rowLeading?.call(context, i);
-                final row = Container(
-                  height: 58,
-                  padding: EdgeInsets.only(left: accent != null ? 11 : 14, right: 14),
-                  decoration: BoxDecoration(
-                    color: color,
-                    border: Border(
-                      bottom: BorderSide(color: palette.divider),
-                      left: accent != null ? BorderSide(color: accent, width: 3) : BorderSide.none,
-                    ),
+            child: rowCount == 0 && emptyPlaceholder != null
+                ? emptyPlaceholder!
+                : ListView.builder(
+                    itemCount: rowCount,
+                    itemExtent: 58,
+                    itemBuilder: (context, i) {
+                      final cells = rowBuilder(context, i);
+                      final color = rowColor?.call(context, i);
+                      final accent = rowAccentColor?.call(context, i);
+                      final leading = rowLeading?.call(context, i);
+                      final row = Container(
+                        height: 58,
+                        padding: EdgeInsets.only(left: accent != null ? 11 : 14, right: 14),
+                        decoration: BoxDecoration(
+                          color: color,
+                          border: Border(
+                            bottom: BorderSide(color: palette.divider),
+                            left: accent != null ? BorderSide(color: accent, width: 3) : BorderSide.none,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            if (leading != null) SizedBox(width: 36, child: leading),
+                            for (final (j, cell) in cells.indexed)
+                              columns[j].flex ? Expanded(child: cell) : SizedBox(width: columns[j].width, child: cell),
+                          ],
+                        ),
+                      );
+                      final tap = onRowTap;
+                      return tap == null ? row : InkWell(onTap: () => tap(context, i), child: row);
+                    },
                   ),
-                  child: Row(
-                    children: [
-                      if (leading != null) SizedBox(width: 36, child: leading),
-                      for (final (j, cell) in cells.indexed)
-                        columns[j].flex ? Expanded(child: cell) : SizedBox(width: columns[j].width, child: cell),
-                    ],
-                  ),
-                );
-                final tap = onRowTap;
-                return tap == null ? row : InkWell(onTap: () => tap(context, i), child: row);
-              },
-            ),
           ),
         ],
       ),
