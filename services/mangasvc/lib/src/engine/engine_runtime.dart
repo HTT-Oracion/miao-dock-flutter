@@ -49,6 +49,7 @@ class EngineRuntime {
   /// 引擎端口（未启动为 null）。队列执行器要用它建客户端。
   int? get port => _enginePort;
   int? _llmPort;
+  String? _llmModel;
   bool _warmed = false;
   final DateTime startedAt = DateTime.now().toUtc();
 
@@ -232,7 +233,8 @@ class EngineRuntime {
     _llmSupervisor = sup;
     _llmPort = port;
     _llmPid = sup.pid;
-    _log('[engine] L3 llm ready on $port（${gguf.uri.pathSegments.last}）');
+    _llmModel = gguf.uri.pathSegments.last;
+    _log('[engine] L3 llm ready on $port（$_llmModel）');
     return sup;
   }
 
@@ -254,6 +256,7 @@ class EngineRuntime {
       await llmSup.stop();
       _llmSupervisor = null;
     }
+    _llmModel = null;
     _state = EngineState.stopped;
     _phase = null;
     _enginePid = null;
@@ -271,12 +274,19 @@ class EngineRuntime {
     _log('[engine] unloaded weights');
   }
 
+  /// 测试专用：跳过真实进程把状态置为 running（L3 语义断言用）。
+  void markRunningForTest() {
+    _state = EngineState.running;
+  }
+
   /// 契约 `EngineStatus`。
   Map<String, dynamic> toStatusView() => {
     'engine': {'state': _state.wire, 'version': engineVersion, 'port': _enginePort, 'pid': _enginePid},
     'llm': {
-      'state': _state == EngineState.running ? 'running' : _state.wire,
-      'model': null,
+      // 🔴 LLM 状态**不能**照抄引擎整体状态：L3 缺权重时引擎仍是 running
+      // （OCR 可用），但翻译不可用 —— 照抄会让 UI 以为全部就绪（D-134 遗留）。
+      'state': _llmPid != null ? 'running' : (_state == EngineState.error ? 'failed' : 'off'),
+      'model': _llmModel,
       'port': _llmPort,
       'pid': _llmPid,
     },

@@ -2671,3 +2671,18 @@
 - **验证**：服务 185 通过；应用 160 通过；analyze 与 l10n 通过。
 - **遗留**：llama 端口固定 8080 与「端口段探测」的一致性、L3 失败时侧栏状态点的呈现，
   需要一次 UI 层接线（本轮未动）。
+
+## D-135 LLM 状态如实上报（侧栏状态点接线的服务端一环）
+
+- **状态**：完成（2026-11-02）
+- **为什么只动服务端**：UI 侧链路（`applyStatus` 合并两进程、`deriveNotReadyView`
+  判 bothRunning、`shellReadinessProvider`）在 D-033 就已就位并有测试；
+  断的一环是服务端 `toStatusView()` 把 `llm.state` **直接照抄引擎整体状态** ——
+  L3 缺权重时引擎 running ⇒ UI 以为 LLM 也 running ⇒ 侧栏绿点、点翻译才炸。
+- **修复**：`llm.state` 改为按 LLM 自身推导：有 pid ⇒ running；
+  引擎 error ⇒ failed；否则 off。同时补 `model` 字段（权重文件名）。
+- **验证**：`engine_llm_state_test` —— L3 未起（无 pid）时 llm.state 必须是 `off`，
+  **反证过**（改回照抄立即红）。服务 186 / 应用 160 全通过。
+- **踩坑**：反证后的恢复脚本用 `'state': _state.wire` 做替换，
+  **把 engine 行也误改了**（同字面量）—— 靠 engine_test 的既有断言当场抓住。
+  批量替换后必须 grep 核对目标行，第二条教训（D-124 同类）。
