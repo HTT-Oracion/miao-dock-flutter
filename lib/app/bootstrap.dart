@@ -14,8 +14,10 @@ import '../../core/process/service_launch.dart';
 import '../../core/process/service_supervisor.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
+import '../../features/manga/controller/remote_controller.dart';
 import '../../features/manga/domain/platform_caps.dart';
 import '../../features/manga/data/http_manga_svc_client.dart';
+import '../../features/manga/data/mobile_mirror_store.dart';
 import 'engine_autostart.dart';
 
 /// 启动装配收口（AGENTS §3）：桌面 / 移动平台分支与 Fake / 真客户端注入只在这里发生，
@@ -29,6 +31,8 @@ import 'engine_autostart.dart';
 /// `--dart-define=MIAO_SVC_TOKEN=...` 注入配对令牌。
 Future<void> bootstrap(Widget app) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 偏好先预热（移动端目录解析是异步的）：后面 readEngineDir / 远程地址读的都是它。
+  await ensureShellPrefsLoaded();
   await initDesktopWindow();
   await initMobileSystemUi();
 
@@ -42,11 +46,16 @@ Future<void> bootstrap(Widget app) async {
   if (isDesktopPlatform && forcedBaseUrl.isEmpty) {
     final existingBaseUrl = await const PortProbe().discover();
     final existingToken = _readExistingServiceToken();
-    if (existingBaseUrl != null && existingToken != null) {
+    final compatible =
+        existingBaseUrl != null &&
+        existingToken != null &&
+        await _existingServiceCompatible(existingBaseUrl, existingToken);
+    if (compatible) {
       final port = Uri.parse(existingBaseUrl).port;
       supervisor = ServiceSupervisor.attached(port: port, token: existingToken);
       debugPrint('[bootstrap] reuse running mangasvc → port $port');
     } else {
+      if (existingBaseUrl != null) await _stopIncompatibleLocalService(Uri.parse(existingBaseUrl).port);
       final plan = ServiceLaunchPlan.resolve(
         forcedBin: serviceBin.isEmpty ? null : serviceBin,
         overrideBin: Platform.environment['MIAO_SERVICE_BIN'],
@@ -66,14 +75,25 @@ Future<void> bootstrap(Widget app) async {
   // 服务自报的令牌优先（编译期常量通常为空）。
   final serviceToken = supervisor?.token ?? (token.isEmpty ? null : token);
 
+  // 🔴 容器先建好再 runApp（UncontrolledProviderScope）：动态定位器要读
+  // remoteConfigProvider 的**内存态**——读落盘偏好的话，用户输入了但还没点
+  // 「测试连接」的配置定位器看不到，投放报「未配置桌面端服务地址」（用户实测）。
+  late final ProviderContainer container;
+
   final ServiceLocator locator;
   if (forcedBaseUrl.isNotEmpty) {
     locator = RemoteServiceLocator(baseUrl: forcedBaseUrl, token: token.isEmpty ? null : token);
   } else if (isDesktopPlatform) {
     locator = LocalServiceLocator(probe: const PortProbe(), token: serviceToken);
   } else {
-    // 移动端 / Web：地址来自设置域（待 P5 落地后接入），此处先用同一个 define 兜住。
-    locator = RemoteServiceLocator(baseUrl: forcedBaseUrl, token: token.isEmpty ? null : token);
+    // 移动端 / Web：每次请求读当前配置（输入即生效，落盘只是持久层）。
+    locator = DynamicRemoteServiceLocator(
+      readBaseUrl: () => container.read(remoteConfigProvider).baseUrl.trim(),
+      readToken: () {
+        final t = container.read(remoteConfigProvider).token.trim();
+        return t.isEmpty ? null : t;
+      },
+    );
   }
 
   // P0-D2：应用退出时带走子进程，避免留孤儿占端口。
@@ -81,23 +101,58 @@ Future<void> bootstrap(Widget app) async {
     AppLifecycleCleanup(supervisor).attach();
   }
 
-  runApp(
-    ProviderScope(
-      overrides: [
-        mangaSvcClientProvider.overrideWithValue(
-          HttpMangaSvcClient(
-            // Web / 移动端：本机没有服务，也没有端口探测（`ServerSocket` 在 Web 上不可用）。
-            // 一律走用户配置的远程地址（D-045）。
-            supportsLocalEngine
-                ? locator
-                : DynamicRemoteServiceLocator(readBaseUrl: () => readRemoteBaseUrl() ?? '', readToken: readRemoteToken),
-          ),
+  container = ProviderContainer(
+    overrides: [
+      mangaSvcClientProvider.overrideWithValue(
+        HttpMangaSvcClient(
+          // Web / 移动端：本机没有服务，也没有端口探测（`ServerSocket` 在 Web 上不可用）。
+          // 一律走用户配置的远程地址（D-045）；动态定位器读内存配置（输入即生效）。
+          locator,
+          mirror: supportsLocalEngine ? null : MobileMirrorStore(),
         ),
-        if (supervisor != null) serviceSupervisorProvider.overrideWithValue(supervisor),
-      ],
+      ),
+      if (supervisor != null) serviceSupervisorProvider.overrideWithValue(supervisor),
+    ],
+  );
+
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
       child: EngineAutoStart(child: app),
     ),
   );
+}
+
+Future<bool> _existingServiceCompatible(String baseUrl, String token) async {
+  try {
+    final ping = await HttpMangaSvcClient(RemoteServiceLocator(baseUrl: baseUrl, token: token)).ping();
+    final capabilities = (ping['capabilities'] as List?)?.map((item) => '$item').toSet() ?? const <String>{};
+    return capabilities.containsAll({'remoteUploads', 'pairingTokenRefresh', 'mobileMirror'});
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<void> _stopIncompatibleLocalService(int port) async {
+  if (!Platform.isMacOS && !Platform.isLinux) return;
+  try {
+    final found = await Process.run('lsof', ['-tiTCP:$port', '-sTCP:LISTEN']);
+    for (final line in '${found.stdout}'.split('\n')) {
+      final pid = int.tryParse(line.trim());
+      if (pid == null) continue;
+      final details = await Process.run('ps', ['-p', '$pid', '-o', 'command=']);
+      if (!'${details.stdout}'.contains('mangasvc')) continue;
+      // 旧版本只监听 SIGINT；用它可先停引擎/LLM，再退出服务，避免留下孤儿进程。
+      Process.killPid(pid, ProcessSignal.sigint);
+    }
+    final deadline = DateTime.now().add(const Duration(seconds: 3));
+    while (DateTime.now().isBefore(deadline)) {
+      if (await const PortProbe().discover() == null) break;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+  } catch (_) {
+    // 无法清理时仍会启动到端口段下一个端口，不阻塞应用。
+  }
 }
 
 String? _readExistingServiceToken() {

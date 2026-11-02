@@ -11,6 +11,7 @@ import '../../../core/process/service_controller.dart';
 import '../../../core/storage/paths.dart';
 import '../../../core/storage/shell_prefs.dart';
 import '../../../app/shell/shell_controller.dart';
+import '../../../app/pairing_token_controller.dart';
 import '../../../core/theme/theme_mode.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
@@ -687,23 +688,30 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
     final l10n = AppLocalizations.of(context);
     setState(() => _touched = true);
     if (!_canTest(l10n)) return;
-    ref.read(remoteConfigProvider.notifier).save(baseUrl: _url.text, token: _token.text);
+    final persisted = ref.read(remoteConfigProvider.notifier).save(baseUrl: _url.text, token: _token.text);
+    debugPrint('[remote] save persisted=$persisted');
     setState(() => _testing = true);
     final probe = await ref.read(remoteVerificationProvider.notifier).verify();
+    debugPrint(
+      '[remote] probe=${probe == null ? "null" : "ok=${probe.ok} engineReady=${probe.engineReady} ${probe.message}"}',
+    );
     if (!mounted) return;
     setState(() => _testing = false);
     final probeOk = probe?.ok == true;
     final engineReady = probe?.engineReady == true;
     String message;
-    if (probeOk) {
+    if (probeOk && persisted) {
       message = engineReady ? l10n.remoteTestOkToast : '${l10n.remoteTestOkToast}（${l10n.remoteOkNoEngine}）';
+    } else if (probeOk) {
+      message = l10n.remoteConfigPersistFailed;
     } else if (probe == null) {
       message = l10n.remoteTestFailToast;
     } else {
       message = '${l10n.remoteTestFailToast}：${probe.message}';
     }
     // 成功/失败都吐司（用户要求）。
-    showAppToast(context, message, tone: probeOk ? (engineReady ? ToastTone.good : ToastTone.warn) : ToastTone.bad);
+    final success = probeOk && persisted;
+    showAppToast(context, message, tone: success ? (engineReady ? ToastTone.good : ToastTone.warn) : ToastTone.bad);
   }
 
   @override
@@ -719,7 +727,9 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
       hint: l10n.remoteTokenHint,
       obscure: true,
       errorText: _tokenError(l10n),
-      onChanged: (_) {
+      onChanged: (v) {
+        // 输入即进内存态：服务定位器（投放链路）立刻能用，落盘等「测试连接」。
+        ref.read(remoteConfigProvider.notifier).stage(token: v);
         ref.read(remoteVerificationProvider.notifier).invalidate();
         setState(() {});
       },
@@ -728,7 +738,8 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
       controller: _url,
       hint: l10n.remoteBaseUrlHint2,
       errorText: _urlError(l10n),
-      onChanged: (_) {
+      onChanged: (v) {
+        ref.read(remoteConfigProvider.notifier).stage(baseUrl: v);
         ref.read(remoteVerificationProvider.notifier).invalidate();
         setState(() {});
       },
@@ -922,7 +933,8 @@ class _PairingTokenRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    final token = ref.watch(serviceSupervisorProvider)?.token;
+    final tokenState = ref.watch(pairingTokenProvider);
+    final token = tokenState.value ?? ref.watch(serviceSupervisorProvider)?.token;
 
     return SettingRow(
       label: l10n.pairingTokenLabel,
@@ -955,6 +967,33 @@ class _PairingTokenRow extends ConsumerWidget {
                 if (!context.mounted) return;
                 showAppToast(context, l10n.pairingTokenCopied, tone: ToastTone.good);
               },
+            ),
+            const SizedBox(width: 6),
+            AppButton(
+              label: l10n.pairingTokenRefresh,
+              variant: AppButtonVariant.secondary,
+              height: 24,
+              horizontalPadding: 10,
+              fontSize: AppFont.px9_5,
+              loading: tokenState.isLoading,
+              onTap: tokenState.isLoading
+                  ? null
+                  : () async {
+                      final refreshed = await ref.read(pairingTokenProvider.notifier).refreshToken();
+                      if (!context.mounted) return;
+                      if (refreshed != null) {
+                        showAppToast(context, l10n.pairingTokenRefreshed, tone: ToastTone.good);
+                      } else {
+                        // 带上原因：404（服务是旧版没这条路由）和 403 排障方向完全不同。
+                        final state = ref.read(pairingTokenProvider);
+                        final err = state.hasError ? state.error : null;
+                        showAppToast(
+                          context,
+                          err == null ? l10n.pairingTokenRefreshFailed : '${l10n.pairingTokenRefreshFailed}：$err',
+                          tone: ToastTone.bad,
+                        );
+                      }
+                    },
             ),
           ],
         ],

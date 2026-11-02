@@ -67,6 +67,7 @@
 |---|---|---|
 | `desktop_drop` | 投放屏拖拽 | manga/submit 屏 |
 | `file_selector`（官方） | 文件选择 | manga/submit 屏 |
+| `path_provider`（官方） | 应用支持目录（Android/iOS 偏好落盘） | core/storage/shell_prefs（D-130） |
 | `qr_flutter` | 扫码投放（若保留该功能） | 产品确认后 |
 
 ### App：UI 单元

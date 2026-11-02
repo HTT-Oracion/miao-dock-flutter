@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// 壳层偏好持久化 —— 对应原项目 `src/stores/shell-prefs.ts`。
 ///
@@ -18,9 +19,36 @@ const String _kTranslateSourceKey = 'miao.translate-source';
 const String _kEngineDirKey = 'miao.engine-dir';
 const String _kAutoStartEngineKey = 'miao.auto-start-engine';
 
-/// 偏好文件路径（均基于 `$HOME`）：macOS 与 Windows 用 Application Support、
-/// Linux 用 `.config`；Windows 走 `LOCALAPPDATA`。
+/// 已解析的偏好目录：移动端由 [ensureShellPrefsLoaded] 经 path_provider 取得
+/// （Android 没有稳定 `$HOME`，`Directory.systemTemp.parent` 实测指向 `/`，
+/// 写盘必然失败——用户实测「连接成功但保存失败」即此因）；null = 未预热，
+/// 回落桌面端的 HOME 推导。
+String? _resolvedDir;
+
+/// 启动时预热：移动端先取应用支持目录再读文件进内存；
+/// 桌面端路径是同步可得的，只需预热内存缓存。必须在 `runApp` 之前 await。
+Future<void> ensureShellPrefsLoaded() async {
+  if (kIsWeb) return;
+  if (Platform.isAndroid || Platform.isIOS) {
+    try {
+      final support = await getApplicationSupportDirectory();
+      _resolvedDir = '${support.path}/miao-dock-flutter';
+      debugPrint('[prefs] dir=$_resolvedDir');
+    } catch (e) {
+      // 🔴 热重载/热重启不会注册新加的原生插件——path_provider 要完整重编才有。
+      debugPrint('[prefs] 目录解析失败（若刚加 path_provider，请完整 flutter run 重编）：$e');
+      return;
+    }
+  }
+  _readPrefs();
+  debugPrint('[prefs] 预热完成，键=${_memoryPrefs?.keys.toList()}');
+}
+
+/// 偏好文件路径：移动端用预热目录，桌面端基于 `$HOME`（macOS 与 Windows 用
+/// Application Support、Linux 用 `.config`；Windows 走 `LOCALAPPDATA`）。
 File _prefsFile() {
+  final resolved = _resolvedDir;
+  if (resolved != null) return File('$resolved/shell-prefs.json');
   final env = Platform.environment;
   final home = env['HOME'] ?? '.';
   // 路径一律基于 `HOME`：macOS 启用 App Sandbox 时，沙箱内 `HOME` 本身就是容器目录
@@ -40,29 +68,36 @@ File _prefsFile() {
 /// 同步读偏好（启动首帧要用，不能异步）。
 ///
 /// 失败一律回落空表：偏好读不到只影响观感，不该让应用起不来。
+Map<String, String>? _memoryPrefs;
+
 Map<String, String> _readPrefs() {
+  final memory = _memoryPrefs;
+  if (memory != null) return Map<String, String>.of(memory);
   if (kIsWeb) return const {};
   try {
     final file = _prefsFile();
-    if (!file.existsSync()) return const {};
+    if (!file.existsSync()) return _memoryPrefs = <String, String>{};
     final decoded = jsonDecode(file.readAsStringSync());
-    if (decoded is! Map) return const {};
-    return {for (final e in decoded.entries) '${e.key}': '${e.value}'};
+    if (decoded is! Map) return _memoryPrefs = <String, String>{};
+    return Map<String, String>.of(_memoryPrefs = {for (final e in decoded.entries) '${e.key}': '${e.value}'});
   } catch (_) {
-    return const {};
+    return _memoryPrefs = <String, String>{};
   }
 }
 
 /// 写偏好：先建目录再写；失败静默（下次启动回落到默认值）。
-void _writePref(String key, String value) {
-  if (kIsWeb) return;
+bool _writePref(String key, String value) {
+  final prefs = {..._readPrefs(), key: value};
+  _memoryPrefs = prefs;
+  if (kIsWeb) return false;
   try {
     final file = _prefsFile();
     if (!file.existsSync()) file.parent.createSync(recursive: true);
-    final prefs = {..._readPrefs(), key: value};
-    file.writeAsStringSync(jsonEncode(prefs));
+    file.writeAsStringSync(jsonEncode(prefs), flush: true);
+    return true;
   } catch (_) {
     // 偏好非关键路径，写失败不阻断交互。
+    return false;
   }
 }
 
@@ -132,7 +167,7 @@ String? readRemoteBaseUrl() {
   return (v == null || v.isEmpty) ? null : v;
 }
 
-void persistRemoteBaseUrl(String url) => _writePref('miao.remote-base-url', url);
+bool persistRemoteBaseUrl(String url) => _writePref('miao.remote-base-url', url);
 
 /// 远程令牌。远程连接必须带令牌，否则等于把桌面端暴露给同网段任何人。
 String? readRemoteToken() {
@@ -140,7 +175,7 @@ String? readRemoteToken() {
   return (v == null || v.isEmpty) ? null : v;
 }
 
-void persistRemoteToken(String token) => _writePref('miao.remote-token', token);
+bool persistRemoteToken(String token) => _writePref('miao.remote-token', token);
 
 /// 阅读器是否显示原图（false = 显示译文，默认）。
 ///

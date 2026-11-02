@@ -26,6 +26,8 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   go_router: ^16.0.0
   lucide_icons_flutter: ^4.0.1
+  # 移动端偏好落盘目录（path_provider 官方包）；桌面端仍走 HOME 推导（D-005）
+  path_provider: ^2.1.5
   protocol:
     path: packages/protocol
   window_manager: ^0.5.2

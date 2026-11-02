@@ -42,15 +42,29 @@ class RemoteConfigNotifier extends Notifier<RemoteConfig> {
   @override
   RemoteConfig build() => RemoteConfig(baseUrl: readRemoteBaseUrl() ?? '', token: readRemoteToken() ?? '');
 
-  /// 保存并落盘（输入框失焦或点「测试连接」时调用都安全）。
-  void save({String? baseUrl, String? token}) {
+  /// 只更新**内存态**（输入过程逐键调用）：服务定位器读的就是这份状态，
+  /// 输入即生效 —— 不必先点「测试连接」才能投放。落盘由 [save] 负责。
+  void stage({String? baseUrl, String? token}) {
     final next = state.copyWith(baseUrl: baseUrl, token: token);
     if (next.baseUrl != state.baseUrl || next.token != state.token) {
       ref.read(remoteVerificationProvider.notifier).invalidate();
     }
     state = next;
-    if (baseUrl != null) persistRemoteBaseUrl(baseUrl.trim());
-    if (token != null) persistRemoteToken(token.trim());
+  }
+
+  /// 保存并落盘（输入框失焦或点「测试连接」时调用都安全）。
+  bool save({String? baseUrl, String? token}) {
+    final next = state.copyWith(baseUrl: baseUrl, token: token);
+    if (next.baseUrl != state.baseUrl || next.token != state.token) {
+      ref.read(remoteVerificationProvider.notifier).invalidate();
+    }
+    state = next;
+    final baseSaved = baseUrl == null || persistRemoteBaseUrl(baseUrl.trim());
+    final tokenSaved = token == null || persistRemoteToken(token.trim());
+    return baseSaved &&
+        tokenSaved &&
+        readRemoteBaseUrl() == next.baseUrl.trim() &&
+        readRemoteToken() == next.token.trim();
   }
 }
 
