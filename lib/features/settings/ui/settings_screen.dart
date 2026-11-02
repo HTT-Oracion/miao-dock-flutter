@@ -368,8 +368,7 @@ class _ServiceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    // 🔴 订阅轮询流（1.5s）：`engineStatusPollProvider` 是懒加载 StreamProvider，
-    // 没人 watch 就永远不会跑 —— 启动后状态不再同步，「点了启动还显示未启动」（实测踩过）。
+    // 壳层已全局订阅；这里保留订阅，让设置页被单独挂载时也能同步真实状态。
     ref.watch(engineStatusPollProvider);
     final view = ref.watch(notReadyViewProvider);
     final install = ref.watch(engineInstallProvider);
@@ -619,7 +618,7 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
     super.dispose();
   }
 
-  /// 令牌必填；远程地址**非必填**，填了就必须是合法 http(s) URL。
+  /// 令牌与远程地址均必填，地址必须是合法 http(s) URL。
   String? _tokenError(AppLocalizations l10n) {
     if (!_touched) return null;
     return _token.text.trim().isEmpty ? l10n.remoteTokenRequired : null;
@@ -627,32 +626,36 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
 
   String? _urlError(AppLocalizations l10n) {
     final raw = _url.text.trim();
-    if (raw.isEmpty) return null; // 留空 = 同域，合法
+    if (raw.isEmpty) return _touched ? l10n.remoteUrlRequired : null;
     final uri = Uri.tryParse(raw);
     final ok = uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && uri.host.isNotEmpty;
     return ok ? null : l10n.remoteUrlInvalid;
   }
 
-  bool _canTest(AppLocalizations l10n) => _token.text.trim().isNotEmpty && _urlError(l10n) == null;
+  bool _canTest(AppLocalizations l10n) =>
+      _token.text.trim().isNotEmpty && _url.text.trim().isNotEmpty && _urlError(l10n) == null;
 
   Future<void> _test() async {
     final l10n = AppLocalizations.of(context);
     setState(() => _touched = true);
     if (!_canTest(l10n)) return;
-    final cfg = RemoteConfig(baseUrl: _url.text.trim(), token: _token.text.trim());
     ref.read(remoteConfigProvider.notifier).save(baseUrl: _url.text, token: _token.text);
     setState(() => _testing = true);
-    final probe = await ref.read(remotePingProvider)(cfg);
+    final probe = await ref.read(remoteVerificationProvider.notifier).verify();
     if (!mounted) return;
     setState(() => _testing = false);
+    final probeOk = probe?.ok == true;
+    final engineReady = probe?.engineReady == true;
+    String message;
+    if (probeOk) {
+      message = engineReady ? l10n.remoteTestOkToast : '${l10n.remoteTestOkToast}（${l10n.remoteOkNoEngine}）';
+    } else if (probe == null) {
+      message = l10n.remoteTestFailToast;
+    } else {
+      message = '${l10n.remoteTestFailToast}：${probe.message}';
+    }
     // 成功/失败都吐司（用户要求）。
-    showAppToast(
-      context,
-      probe.ok
-          ? (probe.engineReady ? l10n.remoteTestOkToast : '${l10n.remoteTestOkToast}（${l10n.remoteOkNoEngine}）')
-          : '${l10n.remoteTestFailToast}：${probe.message}',
-      tone: probe.ok ? (probe.engineReady ? ToastTone.good : ToastTone.warn) : ToastTone.bad,
-    );
+    showAppToast(context, message, tone: probeOk ? (engineReady ? ToastTone.good : ToastTone.warn) : ToastTone.bad);
   }
 
   @override
@@ -675,7 +678,10 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
               hint: l10n.remoteTokenHint,
               obscure: true,
               errorText: _tokenError(l10n),
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) {
+                ref.read(remoteVerificationProvider.notifier).invalidate();
+                setState(() {});
+              },
             ),
           ),
           const SizedBox(width: 8),
@@ -684,7 +690,10 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
               controller: _url,
               hint: l10n.remoteBaseUrlHint2,
               errorText: _urlError(l10n),
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) {
+                ref.read(remoteVerificationProvider.notifier).invalidate();
+                setState(() {});
+              },
             ),
           ),
           const SizedBox(width: 8),

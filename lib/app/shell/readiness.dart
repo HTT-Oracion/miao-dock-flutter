@@ -12,12 +12,12 @@ import '../../features/manga/domain/not_ready_state.dart';
 /// 让任一侧去 import 另一侧都会破坏分层（AGENTS §3：core 不得 import features）。
 ///
 /// ## 判定顺序（先硬后软）
-/// 1. 服务进程失败 → 红：整个漫画模块都不可用，此时引擎状态无意义；
+/// 1. 受托管服务未运行 → 红：整个漫画模块都不可用，此时引擎状态无意义；
 /// 2. 服务未托管（移动端）→ 用引擎 / 来源的判定；
 /// 3. 其余 → 引擎就绪度。
 final shellReadinessProvider = Provider<ReadinessLevel>((ref) {
   final service = ref.watch(serviceStatusProvider);
-  if (service.supported && service.state == ServiceProcessState.failed) {
+  if (service.supported && service.state != ServiceProcessState.running) {
     return ReadinessLevel.broken;
   }
   return ref.watch(notReadyViewProvider).readiness;

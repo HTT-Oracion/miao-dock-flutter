@@ -121,8 +121,7 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
 
   /// 重试/继续任务（D-075）：失败 → 重跑；取消 → 续跑。
   ///
-  /// 远程翻译时与提交一样**先探测**（同一套 `remotePingProvider`）：
-  /// 不可用则把任务置回 failed 并带上原因，不重新排队。
+  /// 远程翻译未通过本次会话校验时，把任务置回 failed，不重新排队。
   Future<bool> retry(String taskId, {String? blockedReason}) async {
     final blocked = !(await remoteUsable());
     await ref.read(mangaSvcClientProvider).retryTask(taskId, failReason: blocked ? blockedReason : null);
@@ -134,15 +133,13 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
   /// 投放，返回提交结果（吐司用）。
   /// 远程翻译是否**真的可用**（提交前的硬校验）。
   ///
-  /// 与设置页【测试连接】**同一个探测逻辑**（`remotePingProvider` → `GET /api/v1/ping`）：
-  /// 只看配置格式证明不了「服务在、令牌对」，必须真连一次。
-  /// 本地格式校验先跑，省掉一次必然失败的请求。
+  /// 设置页或门禁的【校验】会调用 `remotePingProvider`，且要求对面引擎就绪；
+  /// 提交入口只消费该显式校验结果，不能自行探测后绕过门禁。
   Future<bool> remoteUsable() async {
     if (ref.read(translateSourceProvider) != TranslateSource.remote) return true;
     final cfg = ref.read(remoteConfigProvider);
     if (!cfg.valid) return false;
-    final probe = await ref.read(remotePingProvider)(cfg);
-    return probe.ok;
+    return ref.read(remoteVerificationProvider).isReady;
   }
 
   /// UI 层（WidgetRef）用的同步入口：把守卫结果换成本地化文案。
@@ -151,8 +148,7 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
     if (ref.read(translateSourceProvider) != TranslateSource.remote) return null;
     final cfg = ref.read(remoteConfigProvider);
     if (!cfg.valid) return reason;
-    final probe = await ref.read(remotePingProvider)(cfg);
-    return probe.ok ? null : reason;
+    return ref.read(remoteVerificationProvider).isReady ? null : reason;
   }
 
   Future<SubmitOutcome> submit({
@@ -162,8 +158,7 @@ class QueueNotifier extends AsyncNotifier<List<MangaTask>> {
     /// 被拦下时写进任务失败原因的**本地化文案**（由 UI 层传入，controller 不碰 ARB）。
     String? blockedReason,
   }) async {
-    // 远程翻译前置校验：**真连一次**（与设置页测试连接同逻辑），
-    // 不可用则**建任务但直接置失败**，不进翻译流水线。
+    // 远程翻译未显式校验通过时，建任务但直接置失败，不进翻译流水线。
     final blocked = !await remoteUsable();
     final reason = blocked ? blockedReason : null;
     final res = await ref

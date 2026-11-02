@@ -123,7 +123,11 @@ class _NotReadyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    final meta = _metaOf(l10n, view.state);
+    final meta = _metaOf(l10n, view);
+    final remoteBlocked =
+        view.state != NotReadyState.degraded &&
+        view.source == TranslateSource.remote &&
+        !view.remoteVerification.isReady;
 
     return Container(
       decoration: BoxDecoration(
@@ -139,7 +143,10 @@ class _NotReadyCard extends StatelessWidget {
           const SizedBox(height: 18),
           _LayerStrip(view: view),
           const SizedBox(height: 20),
-          if (view.state != NotReadyState.downloading) ...[_StepsRow(), const SizedBox(height: 18)],
+          if (view.state != NotReadyState.downloading) ...[
+            _StepsRow(remote: remoteBlocked),
+            const SizedBox(height: 18),
+          ],
           if (view.state == NotReadyState.downloading) ...[
             _DownloadSection(view: view, entries: downloadEntries),
             const SizedBox(height: 16),
@@ -169,51 +176,81 @@ class _NotReadyCard extends StatelessWidget {
   /// 并在 P0-C 接入真实日志后移除。
   static ({IconData icon, String title, String desc, String chip, _Tone tone}) _metaOf(
     AppLocalizations l10n,
-    NotReadyState state,
-  ) => switch (state) {
-    NotReadyState.uninstalled => (
-      icon: LucideIcons.download,
-      title: l10n.nrTitleUninstalled,
-      desc: l10n.nrDescUninstalled,
-      chip: l10n.nrChipUninstalled,
-      tone: _Tone.warn,
-    ),
-    NotReadyState.downloading => (
-      icon: LucideIcons.download,
-      title: l10n.nrTitleDownloading,
-      desc: l10n.nrDescDownloading,
-      chip: l10n.nrChipDownloading,
-      tone: _Tone.warn,
-    ),
-    NotReadyState.installed => (
-      icon: LucideIcons.power,
-      title: l10n.nrTitleInstalled,
-      desc: l10n.nrDescInstalled,
-      chip: l10n.nrChipNotStarted,
-      tone: _Tone.warn,
-    ),
-    NotReadyState.starting => (
-      icon: LucideIcons.loader,
-      title: l10n.nrTitleStarting,
-      desc: l10n.nrDescStarting,
-      chip: l10n.nrChipStarting,
-      tone: _Tone.warn,
-    ),
-    NotReadyState.failed => (
-      icon: LucideIcons.triangleAlert,
-      title: l10n.nrTitleFailed,
-      desc: l10n.nrDescFailed,
-      chip: l10n.nrChipFailed,
-      tone: _Tone.bad,
-    ),
-    NotReadyState.degraded => (
-      icon: LucideIcons.cloudOff,
-      title: l10n.nrTitleDegraded,
-      desc: l10n.nrDescDegraded,
-      chip: l10n.nrChipDegraded,
-      tone: _Tone.bad,
-    ),
-  };
+    NotReadyView view,
+  ) {
+    if (view.state != NotReadyState.degraded &&
+        view.source == TranslateSource.remote &&
+        !view.remoteVerification.isReady) {
+      return switch (view.remoteVerification) {
+        RemoteVerificationState.checking => (
+          icon: LucideIcons.loader,
+          title: l10n.remoteGateCheckingTitle,
+          desc: l10n.remoteGateDesc,
+          chip: l10n.remoteChecking,
+          tone: _Tone.warn,
+        ),
+        RemoteVerificationState.failed => (
+          icon: LucideIcons.cloudOff,
+          title: l10n.remoteGateFailedTitle,
+          desc: l10n.remoteGateDesc,
+          chip: l10n.remoteFail,
+          tone: _Tone.bad,
+        ),
+        _ => (
+          icon: LucideIcons.shieldCheck,
+          title: l10n.remoteGateTitle,
+          desc: l10n.remoteGateDesc,
+          chip: l10n.remoteGateUnverified,
+          tone: _Tone.warn,
+        ),
+      };
+    }
+
+    return switch (view.state) {
+      NotReadyState.uninstalled => (
+        icon: LucideIcons.download,
+        title: l10n.nrTitleUninstalled,
+        desc: l10n.nrDescUninstalled,
+        chip: l10n.nrChipUninstalled,
+        tone: _Tone.warn,
+      ),
+      NotReadyState.downloading => (
+        icon: LucideIcons.download,
+        title: l10n.nrTitleDownloading,
+        desc: l10n.nrDescDownloading,
+        chip: l10n.nrChipDownloading,
+        tone: _Tone.warn,
+      ),
+      NotReadyState.installed => (
+        icon: LucideIcons.power,
+        title: l10n.nrTitleInstalled,
+        desc: l10n.nrDescInstalled,
+        chip: l10n.nrChipNotStarted,
+        tone: _Tone.warn,
+      ),
+      NotReadyState.starting => (
+        icon: LucideIcons.loader,
+        title: l10n.nrTitleStarting,
+        desc: l10n.nrDescStarting,
+        chip: l10n.nrChipStarting,
+        tone: _Tone.warn,
+      ),
+      NotReadyState.failed => (
+        icon: LucideIcons.triangleAlert,
+        title: l10n.nrTitleFailed,
+        desc: l10n.nrDescFailed,
+        chip: l10n.nrChipFailed,
+        tone: _Tone.bad,
+      ),
+      NotReadyState.degraded => (
+        icon: LucideIcons.cloudOff,
+        title: l10n.nrTitleDegraded,
+        desc: l10n.nrDescDegraded,
+        chip: l10n.nrChipDegraded,
+        tone: _Tone.bad,
+      ),
+    };
+  }
 }
 
 enum _Tone { warn, bad }
@@ -301,20 +338,46 @@ class _LayerStrip extends StatelessWidget {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final serviceBroken = view.state == NotReadyState.degraded;
-    final engineReady = view.engine.isReady;
+    final remote = view.source == TranslateSource.remote;
+    final engineReady = remote ? view.remoteVerification.isReady : view.engine.isReady;
+    final remoteFailed = view.remoteVerification == RemoteVerificationState.failed;
+    var remoteStatus = l10n.remoteGateUnverified;
+    if (engineReady) {
+      remoteStatus = l10n.remoteOk;
+    } else if (remoteFailed) {
+      remoteStatus = l10n.remoteFail;
+    }
+    var serviceColor = palette.good;
+    if (serviceBroken || remoteFailed) {
+      serviceColor = palette.bad;
+    } else if (remote && !engineReady) {
+      serviceColor = palette.warn;
+    }
+    var serviceStatus = l10n.engineReady;
+    if (serviceBroken) {
+      serviceStatus = l10n.nrChipDegraded;
+    } else if (remote) {
+      serviceStatus = remoteStatus;
+    }
+    var engineColor = palette.mut;
+    if (engineReady) {
+      engineColor = palette.good;
+    } else if (view.engine == EngineRuntimeState.failed || remoteFailed) {
+      engineColor = palette.bad;
+    }
 
     final rows = <(Color, String, String, String)>[
       (
-        serviceBroken ? palette.bad : palette.good,
-        l10n.nrLayerService,
-        serviceBroken ? l10n.nrChipDegraded : l10n.engineReady,
-        l10n.nrLayerServiceSub,
+        serviceColor,
+        remote ? l10n.remoteTitle : l10n.nrLayerService,
+        serviceStatus,
+        remote ? l10n.sourceRemote : l10n.nrLayerServiceSub,
       ),
       (
-        engineReady ? palette.good : (view.engine == EngineRuntimeState.failed ? palette.bad : palette.mut),
+        engineColor,
         l10n.nrLayerEngine,
-        engineReady ? l10n.engineReady : l10n.engineNotStarted,
-        l10n.nrLayerEngineSub,
+        engineReady ? l10n.engineReady : l10n.engineNotReady,
+        remote ? l10n.remoteGateEngineSub : l10n.nrLayerEngineSub,
       ),
       (palette.blue, l10n.nrLayerSource, _sourceLabel(l10n, view.source), _sourceSub(l10n, view.source)),
     ];
@@ -380,11 +443,17 @@ class _LayerStrip extends StatelessWidget {
 
 /// 三步说明（把原 guide 三大段压成一行）。
 class _StepsRow extends StatelessWidget {
+  const _StepsRow({this.remote = false});
+
+  final bool remote;
+
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    final steps = [l10n.nrStep1, l10n.nrStep2, l10n.nrStep3];
+    final steps = remote
+        ? [l10n.remoteGateStep1, l10n.remoteGateStep2, l10n.remoteGateStep3]
+        : [l10n.nrStep1, l10n.nrStep2, l10n.nrStep3];
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -609,14 +678,21 @@ class _Actions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final primary = switch (view.state) {
-      NotReadyState.uninstalled => l10n.nrActionDownload,
-      NotReadyState.installed => l10n.nrActionStart,
-      NotReadyState.starting => l10n.nrActionStarting,
-      NotReadyState.failed => l10n.nrActionRetry,
-      NotReadyState.degraded => l10n.nrActionRestartService,
-      NotReadyState.downloading => paused ? l10n.nrActionResume : l10n.nrActionPause,
-    };
+    final remoteBlocked =
+        view.state != NotReadyState.degraded &&
+        view.source == TranslateSource.remote &&
+        !view.remoteVerification.isReady;
+    final remoteChecking = view.remoteVerification == RemoteVerificationState.checking;
+    final primary = remoteBlocked
+        ? (remoteChecking ? l10n.remoteChecking : l10n.remoteGateActionVerify)
+        : switch (view.state) {
+            NotReadyState.uninstalled => l10n.nrActionDownload,
+            NotReadyState.installed => l10n.nrActionStart,
+            NotReadyState.starting => l10n.nrActionStarting,
+            NotReadyState.failed => l10n.nrActionRetry,
+            NotReadyState.degraded => l10n.nrActionRestartService,
+            NotReadyState.downloading => paused ? l10n.nrActionResume : l10n.nrActionPause,
+          };
 
     return Wrap(
       spacing: 10,
@@ -625,18 +701,27 @@ class _Actions extends StatelessWidget {
       children: [
         AppButton(
           label: primary,
-          onTap: view.state == NotReadyState.starting
+          onTap: view.state == NotReadyState.starting || remoteChecking
               ? null
               : (view.state == NotReadyState.degraded
                     ? onRetryService
                     : (view.state == NotReadyState.downloading ? onTogglePause : onPrimary)),
-          clickable: view.state != NotReadyState.starting,
+          clickable: view.state != NotReadyState.starting && !remoteChecking,
           variant: AppButtonVariant.primary,
           height: 34,
           horizontalPadding: 18,
           fontSize: AppFont.px11,
         ),
-        if (view.state == NotReadyState.failed && onSecondary != null)
+        if (remoteBlocked && onSecondary != null)
+          AppButton(
+            label: l10n.remoteGateActionSettings,
+            onTap: onSecondary,
+            variant: AppButtonVariant.secondary,
+            height: 34,
+            horizontalPadding: 14,
+            fontSize: AppFont.px9_5,
+          ),
+        if (!remoteBlocked && view.state == NotReadyState.failed && onSecondary != null)
           AppButton(
             label: l10n.nrActionRedownload,
             onTap: onSecondary,

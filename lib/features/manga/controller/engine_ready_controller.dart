@@ -8,6 +8,7 @@ import '../../../core/storage/paths.dart';
 import '../domain/not_ready_state.dart';
 import 'engine_controller.dart';
 import 'engine_install_controller.dart';
+import 'remote_controller.dart';
 
 /// 引擎目录的**快检**结果（D-037）。
 ///
@@ -107,6 +108,9 @@ enum MangaGateState {
 
   /// 可以正常使用：直接渲染目标视图。
   ready,
+
+  /// 远程来源尚未通过本次会话校验。
+  remoteBlocked,
 }
 
 /// 由四路信号合成门禁状态（纯函数，便于测试）。
@@ -120,9 +124,13 @@ MangaGateState deriveMangaGate({
   required bool engineStarting,
   required bool engineFailed,
   required bool needsLocalEngine,
+  required bool remoteVerified,
 }) {
-  // 远程翻译不依赖本机引擎：装配缺失也不该拦。
-  if (!needsLocalEngine) return MangaGateState.ready;
+  // 远程翻译不依赖本机装配，但必须先显式校验地址、令牌与对面引擎。
+  if (!needsLocalEngine) {
+    if (serviceBroken) return MangaGateState.degraded;
+    return remoteVerified ? MangaGateState.ready : MangaGateState.remoteBlocked;
+  }
 
   if (presenceLoading) return MangaGateState.checking;
   if (installing) return MangaGateState.downloading;
@@ -144,18 +152,21 @@ final mangaGateProvider = Provider<MangaGateState>((ref) {
   final engine = ref.watch(engineStateProvider);
   final llm = ref.watch(llmStateProvider);
   final service = ref.watch(serviceStatusProvider);
+  final remoteVerification = ref.watch(remoteVerificationProvider);
+  final engineGroup = deriveEngineGroupState(engine, llm);
 
   return deriveMangaGate(
     presenceLoading: presence.isLoading && !presence.hasValue,
     presence: presence.value ?? EnginePresence.checking,
     installing: install.running,
     installError: install.error != null,
-    serviceBroken: service.supported && service.state == ServiceProcessState.failed,
+    serviceBroken: service.supported && service.state != ServiceProcessState.running,
     // 🔴 「就绪」= 网关在跑 **且** LLM 在跑：只判网关会让「LLM 没起」
     // 被当成能翻译，点进去才炸（D-136）。
-    engineRunning: engine.isReady && llm.isReady,
-    engineStarting: engine == EngineRuntimeState.starting,
-    engineFailed: engine == EngineRuntimeState.failed,
+    engineRunning: engineGroup.isReady,
+    engineStarting: engineGroup == EngineRuntimeState.starting,
+    engineFailed: engineGroup == EngineRuntimeState.failed,
     needsLocalEngine: source.requiresLocalRuntime,
+    remoteVerified: remoteVerification.isReady,
   );
 });

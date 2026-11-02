@@ -81,10 +81,21 @@ void main() {
   });
 
   group('翻译来源', () {
-    test('远程翻译不需要本机引擎，直接可用', () {
+    test('远程翻译不需要本机引擎，但默认未校验不可用', () {
       final v = deriveNotReadyView(source: TranslateSource.remote, status: null, modelsInstalled: false);
-      // 破坏点：远程来源仍要求本机模型 → 移动端永远不可用，本条失败。
       expect(v.needsLocalEngine, isFalse);
+      // 破坏点：仅凭远程来源就置 ready → 地址、令牌、对面引擎均未确认也会放行。
+      expect(v.canTranslate, isFalse);
+      expect(v.readiness, ReadinessLevel.broken);
+    });
+
+    test('远程配置显式校验通过后才可翻译', () {
+      final v = deriveNotReadyView(
+        source: TranslateSource.remote,
+        status: null,
+        modelsInstalled: false,
+        remoteVerification: RemoteVerificationState.ready,
+      );
       expect(v.canTranslate, isTrue);
       expect(v.readiness, ReadinessLevel.ready);
     });

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../../../core/storage/paths.dart';
 import '../domain/not_ready_state.dart';
 import '../domain/platform_caps.dart';
 import 'engine_install_controller.dart';
+import 'remote_controller.dart';
 
 /// 引擎运行状态（L1 + L2 合并，共用一个开关 —— D-012）。
 ///
@@ -22,6 +24,12 @@ class EngineNotifier extends Notifier<EngineRuntimeState> {
   /// 最近一次上报的 **LLM** 状态（与 [engineStateProvider] 平行；
   /// 供 gate / 设置页圆点区分「引擎在跑但翻译不可用」）。
   EngineRuntimeState buildLlm() => EngineRuntimeState.off;
+
+  /// 当前状态无法确认时立即撤销就绪，避免来源切换期间短暂放行。
+  void markUnavailable() {
+    ref.read(llmStateProvider.notifier).set(EngineRuntimeState.off);
+    state = EngineRuntimeState.off;
+  }
 
   /// 启动引擎 + 大模型（共用一个开关，D-012）。
   ///
@@ -58,7 +66,8 @@ class EngineNotifier extends Notifier<EngineRuntimeState> {
     try {
       applyStatus(await ref.read(mangaSvcClientProvider).getEngineStatus());
     } catch (_) {
-      // 拉取失败**不改状态**：网络抖动不该把「运行中」误判成「已停止」。
+      // 无法确认两个进程都存活时不能继续显示就绪；下一轮成功会立即恢复。
+      markUnavailable();
     }
   }
 
@@ -98,6 +107,29 @@ class LlmStateNotifier extends Notifier<EngineRuntimeState> {
   void set(EngineRuntimeState value) => state = value;
 }
 
+/// 引擎状态全局轮询；顶部状态、设置圆点与漫画门禁共用同一份实时结果。
+final engineStatusPollProvider = StreamProvider<EngineRuntimeState>((ref) {
+  final controller = StreamController<EngineRuntimeState>();
+  Timer? timer;
+
+  Future<void> tick() async {
+    if (ref.read(translateSourceProvider).requiresLocalRuntime) {
+      await ref.read(engineStateProvider.notifier).refreshFromServer();
+    }
+    if (!controller.isClosed) controller.add(ref.read(engineStateProvider));
+  }
+
+  ref.onDispose(() {
+    timer?.cancel();
+    controller.close();
+  });
+
+  // Provider 初始化期间不能同步修改 engine / llm provider，首轮延后到 microtask。
+  unawaited(Future<void>.microtask(tick));
+  timer = Timer.periodic(const Duration(milliseconds: 1500), (_) => tick());
+  return controller.stream;
+});
+
 /// 【大模型翻译】是否对用户开放。
 ///
 /// 暂时关闭（用户要求桌面端先隐藏该选项）。实现与端点都留着，
@@ -132,8 +164,18 @@ class TranslateSourceNotifier extends Notifier<TranslateSource> {
     if (!supportsLocalEngine && value.requiresLocalRuntime) return;
     // 已关闭的来源不允许被切到。
     if (!llmSourceEnabled && value == TranslateSource.llm) return;
+    if (value == state) return;
+    final wasRemote = !state.requiresLocalRuntime;
+    if (value == TranslateSource.remote) {
+      ref.read(remoteVerificationProvider.notifier).invalidate();
+    } else if (wasRemote) {
+      ref.read(engineStateProvider.notifier).markUnavailable();
+    }
     state = value;
     persistTranslateSource(value.wire);
+    if (wasRemote && value.requiresLocalRuntime) {
+      unawaited(ref.read(engineStateProvider.notifier).refreshFromServer());
+    }
   }
 }
 
@@ -196,13 +238,19 @@ final notReadyViewProvider = Provider<NotReadyView>((ref) {
     modelsInstalled: ref.watch(modelsInstalledProvider),
     downloadProgress: null,
     logs: const [],
+    remoteVerification: ref.watch(remoteVerificationProvider),
   );
-  // 🔴 必须用真实引擎状态覆盖：derive 传的是 `status: null`，其 engine 恒为 off，
-  // 会导致顶栏、侧栏圆点、队列横幅全部误报「未启动」。
+  final engineGroup = deriveEngineGroupState(ref.watch(engineStateProvider), ref.watch(llmStateProvider));
+  final state = switch (engineGroup) {
+    EngineRuntimeState.starting => NotReadyState.starting,
+    EngineRuntimeState.failed => NotReadyState.failed,
+    _ => base.state,
+  };
   return NotReadyView(
-    state: base.state,
-    engine: ref.watch(engineStateProvider),
+    state: state,
+    engine: engineGroup,
     source: base.source,
+    remoteVerification: base.remoteVerification,
     downloadProgress: base.downloadProgress,
     failedPhase: base.failedPhase,
     logs: base.logs,

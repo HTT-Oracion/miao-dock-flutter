@@ -130,6 +130,33 @@ void main() {
     expect(find.text('本地翻译'), findsOneWidget);
   });
 
+  testWidgets('远程未校验时显示专用门禁与校验按钮', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      host(
+        NotReadyScreen(
+          view: const NotReadyView(
+            state: NotReadyState.installed,
+            engine: EngineRuntimeState.off,
+            source: TranslateSource.remote,
+          ),
+          onPrimary: () {},
+          onSecondary: () {},
+          onRetryService: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 破坏点：远程来源套用本地「启动引擎」卡片，会误导用户且无法完成远程校验。
+    expect(find.text('请先校验远程配置'), findsOneWidget);
+    expect(find.text('校验远程配置'), findsOneWidget);
+    expect(find.text('去设置远程配置'), findsOneWidget);
+    expect(find.text('启动引擎'), findsNothing);
+  });
+
   testWidgets('移除「稍后再说」（会造成死循环）', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;

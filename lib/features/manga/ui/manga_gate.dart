@@ -8,6 +8,7 @@ import '../../../shared/widgets/skeleton.dart';
 import '../controller/engine_controller.dart';
 import '../controller/engine_install_controller.dart';
 import '../controller/engine_ready_controller.dart';
+import '../controller/remote_controller.dart';
 import '../domain/not_ready_state.dart';
 import 'notready/not_ready_screen.dart';
 import 'notready/runtime_picker.dart';
@@ -96,6 +97,7 @@ class _GateCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final install = ref.watch(engineInstallProvider);
     final source = ref.watch(translateSourceProvider);
+    final currentView = ref.watch(notReadyViewProvider);
 
     final view = switch (gate) {
       MangaGateState.downloading => NotReadyView(
@@ -126,6 +128,7 @@ class _GateCard extends ConsumerWidget {
         source: source,
         logs: const [],
       ),
+      MangaGateState.remoteBlocked => currentView,
       _ => NotReadyView(state: NotReadyState.uninstalled, engine: EngineRuntimeState.off, source: source),
     };
 
@@ -154,6 +157,8 @@ class _GateCard extends ConsumerWidget {
         await ref.read(enginePresenceProvider.notifier).refresh();
       case MangaGateState.installed:
         await ref.read(engineStateProvider.notifier).start();
+      case MangaGateState.remoteBlocked:
+        await ref.read(remoteVerificationProvider.notifier).verify();
       default:
         break;
     }

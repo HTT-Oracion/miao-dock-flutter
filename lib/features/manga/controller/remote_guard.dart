@@ -5,7 +5,7 @@ import 'queue_controller.dart';
 
 /// 远程翻译入口守卫（**提交 / 重试 / 补页 / 返工全部走这里**）。
 ///
-/// 判定本体在 `QueueNotifier.remoteUsable()`（与设置页【测试连接】同一探测）；
+/// 判定本体在 `QueueNotifier.remoteUsable()`（消费设置页或门禁的显式校验结果）；
 /// 本扩展只负责把「不可用」翻译成本地化文案，让 UI 拿到就能弹。
 extension RemoteGuard on WidgetRef {
   /// 返回 null = 放行；非 null = 拦下原因（已本地化）。

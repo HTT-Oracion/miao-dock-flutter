@@ -8,6 +8,8 @@ import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
 import '../../features/manga/controller/engine_controller.dart';
+import '../../features/manga/controller/remote_controller.dart';
+import '../../features/manga/ui/manga_gate.dart';
 import 'readiness.dart';
 import '../../features/manga/domain/manga_task.dart';
 import '../../features/manga/domain/not_ready_state.dart';
@@ -29,12 +31,14 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final location = _ShellLocation.of(GoRouterState.of(context).uri.path, AppLocalizations.of(context));
+    ref.watch(engineStatusPollProvider);
+    final path = GoRouterState.of(context).uri.path;
+    final location = _ShellLocation.of(path, AppLocalizations.of(context));
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth > AppMetrics.breakpoint;
-        if (wide) return _DesktopShell(shell: navigationShell, location: location);
-        return _MobileShell(shell: navigationShell, location: location);
+        if (wide) return _DesktopShell(shell: navigationShell, location: location, path: path);
+        return _MobileShell(shell: navigationShell, location: location, path: path);
       },
     );
   }
@@ -105,10 +109,11 @@ int _queueDepth(List<MangaTask> tasks) =>
 // ── 桌面壳 ────────────────────────────────────────────────────────────────
 
 class _DesktopShell extends ConsumerWidget {
-  const _DesktopShell({required this.shell, required this.location});
+  const _DesktopShell({required this.shell, required this.location, required this.path});
 
   final StatefulNavigationShell shell;
   final _ShellLocation location;
+  final String path;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -149,7 +154,9 @@ class _DesktopShell extends ConsumerWidget {
                   actions: [if (location.moduleIndex == 0) const _TranslateStatusChips()],
                 ),
                 Container(height: 1, color: palette.line),
-                Expanded(child: shell),
+                Expanded(
+                  child: MangaGate(enabled: location.moduleIndex == 0, path: path, child: shell),
+                ),
               ],
             ),
           ),
@@ -278,10 +285,11 @@ class _Crumbs extends StatelessWidget {
 
 /// 主题切换（design.html §01：深浅双主题；图标沿用 lucide 线性风格）。
 class _MobileShell extends ConsumerStatefulWidget {
-  const _MobileShell({required this.shell, required this.location});
+  const _MobileShell({required this.shell, required this.location, required this.path});
 
   final StatefulNavigationShell shell;
   final _ShellLocation location;
+  final String path;
 
   @override
   ConsumerState<_MobileShell> createState() => _MobileShellState();
@@ -314,7 +322,9 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
           children: [
             _MobileTopBar(title: title, onMenu: () => _scaffoldKey.currentState?.openDrawer()),
             Container(height: 1, color: palette.line),
-            Expanded(child: widget.shell),
+            Expanded(
+              child: MangaGate(enabled: widget.location.moduleIndex == 0, path: widget.path, child: widget.shell),
+            ),
           ],
         ),
       ),
@@ -419,7 +429,8 @@ class _TranslateStatusChips extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final view = ref.watch(notReadyViewProvider);
     final source = ref.watch(translateSourceProvider);
-    final engineReady = view.engine.isReady || !view.needsLocalEngine;
+    final remoteVerification = ref.watch(remoteVerificationProvider);
+    final engineReady = source == TranslateSource.remote ? remoteVerification.isReady : view.engine.isReady;
 
     final sourceLabel = switch (source) {
       TranslateSource.local => l10n.sourceLocal,
@@ -432,7 +443,15 @@ class _TranslateStatusChips extends ConsumerWidget {
       children: [
         // 引擎就绪度：未就绪时**可点击**直接拉起（不让用户先去别的页面）
         InkWell(
-          onTap: engineReady ? null : () => ref.read(engineStateProvider.notifier).start(),
+          onTap: engineReady
+              ? null
+              : () {
+                  if (source == TranslateSource.remote) {
+                    context.go('/settings');
+                  } else {
+                    ref.read(engineStateProvider.notifier).start();
+                  }
+                },
           borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -442,12 +461,12 @@ class _TranslateStatusChips extends ConsumerWidget {
                 Container(
                   width: 5,
                   height: 5,
-                  decoration: BoxDecoration(color: engineReady ? palette.good : palette.warn, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: engineReady ? palette.good : palette.bad, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  engineReady ? l10n.engineReady : l10n.engineNotStarted,
-                  style: TextStyle(fontSize: AppFont.px10, color: engineReady ? palette.ink2 : palette.warn),
+                  engineReady ? l10n.engineReady : l10n.engineNotReady,
+                  style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
                 ),
               ],
             ),

@@ -1,9 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../manga/controller/engine_controller.dart';
-import '../../manga/domain/not_ready_state.dart';
 import '../../manga/controller/queue_controller.dart';
 
 /// 引擎设置项（C2 白名单内的键）。
@@ -82,24 +78,3 @@ class EngineSettingsNotifier extends Notifier<EngineSettings> {
     return needsRestart;
   }
 }
-
-/// 引擎状态轮询（设置页打开时每 1.5s 拉一次，与原项目同节奏）。
-final engineStatusPollProvider = StreamProvider<EngineRuntimeState>((ref) {
-  final controller = StreamController<EngineRuntimeState>();
-  Timer? timer;
-  Future<void> tick() async {
-    try {
-      await ref.read(engineStateProvider.notifier).refreshFromServer();
-    } catch (_) {}
-    controller.add(ref.read(engineStateProvider));
-  }
-
-  ref.onDispose(() {
-    timer?.cancel();
-    controller.close();
-  });
-
-  tick();
-  timer = Timer.periodic(const Duration(milliseconds: 1500), (_) => tick());
-  return controller.stream;
-});

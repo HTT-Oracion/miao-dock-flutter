@@ -98,12 +98,37 @@ enum EngineRuntimeState {
   };
 }
 
+/// 远程翻译配置的本次会话校验状态。
+enum RemoteVerificationState {
+  unverified,
+  checking,
+  ready,
+  failed;
+
+  bool get isReady => this == ready;
+}
+
+/// 合成引擎与 LLM 的真实可翻译状态。
+EngineRuntimeState deriveEngineGroupState(EngineRuntimeState engine, EngineRuntimeState llm) {
+  if (engine.isReady && llm.isReady) return EngineRuntimeState.running;
+  if (engine == EngineRuntimeState.starting || llm == EngineRuntimeState.starting) {
+    return EngineRuntimeState.starting;
+  }
+  if (engine == EngineRuntimeState.failed || llm == EngineRuntimeState.failed) {
+    return EngineRuntimeState.failed;
+  }
+  if (engine == EngineRuntimeState.stopping || llm == EngineRuntimeState.stopping) {
+    return EngineRuntimeState.stopping;
+  }
+  return EngineRuntimeState.off;
+}
+
 /// 「能否翻译」的四色语义 —— 对应侧栏状态点（D-012）。
 ///
 /// 🔴 为什么不再用「服务已启动」做标识：服务常驻后它永远是绿的，**没有信息量**，
 /// 而且会误导（服务绿 ≠ 能翻译）。用户真正关心的是「我现在能不能翻译」。
 enum ReadinessLevel {
-  /// 绿：服务在且引擎就绪（或来源是远程且地址已配）。
+  /// 绿：本地引擎与 LLM 均就绪，或远程配置已校验通过。
   ready,
 
   /// 黄：服务在，但引擎未启动。
@@ -123,6 +148,7 @@ class NotReadyView {
     required this.state,
     required this.engine,
     required this.source,
+    this.remoteVerification = RemoteVerificationState.unverified,
     this.downloadProgress,
     this.failedPhase,
     this.logs = const [],
@@ -131,6 +157,7 @@ class NotReadyView {
   final NotReadyState state;
   final EngineRuntimeState engine;
   final TranslateSource source;
+  final RemoteVerificationState remoteVerification;
 
   /// 下载进度（0–1）；null = 无真实来源（**不编造百分比**）。
   final double? downloadProgress;
@@ -147,22 +174,26 @@ class NotReadyView {
   /// 侧栏状态点语义。
   ReadinessLevel get readiness {
     if (state == NotReadyState.degraded) return ReadinessLevel.broken;
-    if (!needsLocalEngine) return ReadinessLevel.ready;
+    if (!needsLocalEngine) {
+      return remoteVerification.isReady ? ReadinessLevel.ready : ReadinessLevel.broken;
+    }
     return engine.isReady ? ReadinessLevel.ready : ReadinessLevel.partial;
   }
 
   /// 是否处于「可以正常使用、只是不能翻译」的状态。
   ///
-  /// 远程来源永远可用（翻译交给其他端）；其余看引擎是否就绪。
+  /// 远程来源须先校验配置；其余看引擎与 LLM 是否都就绪。
   bool get canBrowse => state != NotReadyState.degraded;
 
   /// 是否可以开始翻译。
-  bool get canTranslate => state != NotReadyState.degraded && (!needsLocalEngine || engine.isReady);
+  bool get canTranslate =>
+      state != NotReadyState.degraded && (needsLocalEngine ? engine.isReady : remoteVerification.isReady);
 
   NotReadyView copyWith({
     NotReadyState? state,
     EngineRuntimeState? engine,
     TranslateSource? source,
+    RemoteVerificationState? remoteVerification,
     double? downloadProgress,
     String? failedPhase,
     List<String>? logs,
@@ -170,6 +201,7 @@ class NotReadyView {
     state: state ?? this.state,
     engine: engine ?? this.engine,
     source: source ?? this.source,
+    remoteVerification: remoteVerification ?? this.remoteVerification,
     downloadProgress: downloadProgress ?? this.downloadProgress,
     failedPhase: failedPhase ?? this.failedPhase,
     logs: logs ?? this.logs,
@@ -185,10 +217,17 @@ NotReadyView deriveNotReadyView({
   required bool modelsInstalled,
   double? downloadProgress,
   List<String> logs = const [],
+  RemoteVerificationState remoteVerification = RemoteVerificationState.unverified,
 }) {
-  // 远程来源：本机不需要任何运行时，直接可用。
+  // 远程来源不需要本机运行时，但必须由用户显式校验远程配置。
   if (!source.requiresLocalRuntime) {
-    return NotReadyView(state: NotReadyState.installed, engine: EngineRuntimeState.running, source: source, logs: logs);
+    return NotReadyView(
+      state: NotReadyState.installed,
+      engine: EngineRuntimeState.off,
+      source: source,
+      remoteVerification: remoteVerification,
+      logs: logs,
+    );
   }
 
   if (!modelsInstalled) {
@@ -204,17 +243,7 @@ NotReadyView deriveNotReadyView({
   final engineState = EngineRuntimeState.fromWire(status?.engine.state);
   final llmState = EngineRuntimeState.fromWire(status?.llm.state);
   // 🔴 引擎组就绪 = 两个进程都 running。只判 engine 会让「LLM 没起来」被当成就绪。
-  final bothRunning = engineState == EngineRuntimeState.running && llmState == EngineRuntimeState.running;
-  final anyStarting = engineState == EngineRuntimeState.starting || llmState == EngineRuntimeState.starting;
-  final anyFailed = engineState == EngineRuntimeState.failed || llmState == EngineRuntimeState.failed;
-
-  final runtimeState = bothRunning
-      ? EngineRuntimeState.running
-      : anyStarting
-      ? EngineRuntimeState.starting
-      : anyFailed
-      ? EngineRuntimeState.failed
-      : EngineRuntimeState.off;
+  final runtimeState = deriveEngineGroupState(engineState, llmState);
 
   final state = switch (runtimeState) {
     EngineRuntimeState.running => NotReadyState.installed,

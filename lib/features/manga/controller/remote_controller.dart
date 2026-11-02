@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/storage/shell_prefs.dart';
 import '../../../core/net/service_locator.dart';
 import '../data/http_manga_svc_client.dart';
+import '../domain/not_ready_state.dart';
 
 /// 远程连接配置（D-045）。
 ///
@@ -43,7 +44,11 @@ class RemoteConfigNotifier extends Notifier<RemoteConfig> {
 
   /// 保存并落盘（输入框失焦或点「测试连接」时调用都安全）。
   void save({String? baseUrl, String? token}) {
-    state = state.copyWith(baseUrl: baseUrl, token: token);
+    final next = state.copyWith(baseUrl: baseUrl, token: token);
+    if (next.baseUrl != state.baseUrl || next.token != state.token) {
+      ref.read(remoteVerificationProvider.notifier).invalidate();
+    }
+    state = next;
     if (baseUrl != null) persistRemoteBaseUrl(baseUrl.trim());
     if (token != null) persistRemoteToken(token.trim());
   }
@@ -79,3 +84,39 @@ final remotePingProvider = Provider<Future<RemoteProbe> Function(RemoteConfig)>(
     }
   },
 );
+
+/// 远程配置必须在本次会话中显式校验；仅持久化地址与令牌不代表可用。
+final remoteVerificationProvider = NotifierProvider<RemoteVerificationNotifier, RemoteVerificationState>(
+  RemoteVerificationNotifier.new,
+);
+
+class RemoteVerificationNotifier extends Notifier<RemoteVerificationState> {
+  int _generation = 0;
+
+  @override
+  RemoteVerificationState build() => RemoteVerificationState.unverified;
+
+  void invalidate() {
+    _generation += 1;
+    state = RemoteVerificationState.unverified;
+  }
+
+  Future<RemoteProbe?> verify() async {
+    final config = ref.read(remoteConfigProvider);
+    if (!config.valid) {
+      state = RemoteVerificationState.failed;
+      return null;
+    }
+
+    state = RemoteVerificationState.checking;
+    final generation = _generation;
+    final probe = await ref.read(remotePingProvider)(config);
+    final current = ref.read(remoteConfigProvider);
+    if (_generation != generation || current.baseUrl != config.baseUrl || current.token != config.token) {
+      state = RemoteVerificationState.unverified;
+      return null;
+    }
+    state = probe.ok && probe.engineReady ? RemoteVerificationState.ready : RemoteVerificationState.failed;
+    return probe;
+  }
+}

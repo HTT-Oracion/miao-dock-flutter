@@ -933,6 +933,10 @@
   "@engineNotStarted": {
     "description": "工具条：引擎未启动"
   },
+  "engineNotReady": "引擎未就绪",
+  "@engineNotReady": {
+    "description": "工具条与门禁：引擎或远程配置未就绪"
+  },
   "runtimePickTitle": "选择引擎安装位置",
   "@runtimePickTitle": {
     "description": "运行时目录选择：标题"
@@ -2134,13 +2138,17 @@
   "@remoteTokenHint": {
     "description": "远程翻译校验与提示"
   },
-  "remoteBaseUrlHint2": "远程地址（可留空，默认同域）",
+  "remoteBaseUrlHint2": "远程地址（例如 http://192.168.1.10:5180）",
   "@remoteBaseUrlHint2": {
     "description": "远程翻译校验与提示"
   },
   "remoteTokenRequired": "请先填写访问令牌",
   "@remoteTokenRequired": {
     "description": "远程翻译校验与提示"
+  },
+  "remoteUrlRequired": "请先填写远程地址",
+  "@remoteUrlRequired": {
+    "description": "远程翻译地址必填提示"
   },
   "remoteUrlInvalid": "远程地址格式不正确（需以 http:// 或 https:// 开头）",
   "@remoteUrlInvalid": {
@@ -2153,6 +2161,50 @@
   "remoteTestFailToast": "远程连接失败",
   "@remoteTestFailToast": {
     "description": "远程翻译校验与提示"
+  },
+  "remoteGateTitle": "请先校验远程配置",
+  "@remoteGateTitle": {
+    "description": "远程翻译门禁：未校验标题"
+  },
+  "remoteGateCheckingTitle": "正在校验远程配置",
+  "@remoteGateCheckingTitle": {
+    "description": "远程翻译门禁：校验中标题"
+  },
+  "remoteGateFailedTitle": "远程配置未通过校验",
+  "@remoteGateFailedTitle": {
+    "description": "远程翻译门禁：失败标题"
+  },
+  "remoteGateDesc": "需要确认远程地址、访问令牌和对面引擎均可用，通过后才能进入投放与队列。",
+  "@remoteGateDesc": {
+    "description": "远程翻译门禁说明"
+  },
+  "remoteGateUnverified": "尚未校验",
+  "@remoteGateUnverified": {
+    "description": "远程翻译门禁状态"
+  },
+  "remoteGateActionVerify": "校验远程配置",
+  "@remoteGateActionVerify": {
+    "description": "远程翻译门禁主操作"
+  },
+  "remoteGateActionSettings": "去设置远程配置",
+  "@remoteGateActionSettings": {
+    "description": "远程翻译门禁次操作"
+  },
+  "remoteGateEngineSub": "使用远程端运行时",
+  "@remoteGateEngineSub": {
+    "description": "远程翻译门禁引擎说明"
+  },
+  "remoteGateStep1": "填写远程地址与访问令牌",
+  "@remoteGateStep1": {
+    "description": "远程翻译门禁步骤 1"
+  },
+  "remoteGateStep2": "校验连接与对面引擎",
+  "@remoteGateStep2": {
+    "description": "远程翻译门禁步骤 2"
+  },
+  "remoteGateStep3": "进入投放或队列",
+  "@remoteGateStep3": {
+    "description": "远程翻译门禁步骤 3"
   },
   "llmAppKeyHint": "应用 ID（appKey）",
   "@llmAppKeyHint": {

@@ -15,6 +15,7 @@ void main() {
     bool starting = false,
     bool failed = false,
     bool needsLocal = true,
+    bool remoteVerified = false,
   }) => deriveMangaGate(
     presenceLoading: loading,
     presence: presence,
@@ -25,6 +26,7 @@ void main() {
     engineStarting: starting,
     engineFailed: failed,
     needsLocalEngine: needsLocal,
+    remoteVerified: remoteVerified,
   );
 
   test('快检中 → checking（不能先画未装配）', () {
@@ -66,8 +68,14 @@ void main() {
     expect(gateBypassedFor('/manga/queue'), isFalse);
   });
 
-  test('远程翻译不拦（本机不需要引擎）', () {
-    // 破坏点：远程来源也被装配缺失拦住 → 移动端永远进不去，本条失败。
-    expect(gate(presence: EnginePresence.absent, needsLocal: false), MangaGateState.ready);
+  test('远程翻译默认拦截，显式校验通过后放行', () {
+    // 破坏点：只因不需要本机引擎就放行 → 未校验地址与令牌也能进入投放，本条失败。
+    expect(gate(presence: EnginePresence.absent, needsLocal: false), MangaGateState.remoteBlocked);
+    expect(gate(presence: EnginePresence.absent, needsLocal: false, remoteVerified: true), MangaGateState.ready);
+  });
+
+  test('远程已校验但本机漫画服务异常 → 仍拦截', () {
+    // 破坏点：远程校验优先于 L0 服务 → 桌面端本地队列服务已挂仍进入页面。
+    expect(gate(needsLocal: false, remoteVerified: true, serviceBroken: true), MangaGateState.degraded);
   });
 }
