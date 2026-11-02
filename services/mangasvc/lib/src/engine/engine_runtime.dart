@@ -17,7 +17,15 @@ import 'supervisor.dart';
 /// - `warmed`：HTTP 真应答过才算「预热完成」——**不拿进程存活当预热**。
 /// - 状态只在**真实事件**后推进，不预置「假装 running」。
 class EngineRuntime {
-  EngineRuntime({required this.runtimeRoot, required this.modelsDir, this.healthTimeout = const Duration(seconds: 60)});
+  EngineRuntime({
+    required this.runtimeRoot,
+    required this.modelsDir,
+    this.healthTimeout = const Duration(seconds: 60),
+    this.probeBudget = const Duration(seconds: 90),
+  });
+
+  /// L2 执行器探测的**总预算**（默认 90s：模型首次装载可能很慢）。
+  final Duration probeBudget;
 
   /// 引擎运行时根（用户可选，D-015）。
   final String runtimeRoot;
@@ -29,6 +37,7 @@ class EngineRuntime {
   final Duration healthTimeout;
 
   EngineSupervisor? _supervisor;
+  EngineSupervisor? _llmSupervisor;
 
   EngineState _state = EngineState.stopped;
   String? _phase;
@@ -113,6 +122,9 @@ class EngineRuntime {
       workingDirectory: runtimeRoot,
       environment: spec.env,
       healthTimeout: healthTimeout,
+      // 🔴 引擎输出必须落盘：executor 崩溃的 traceback 只打在 stdout/stderr，
+      // 没有文件现场，Broken pipe 这类问题永远查不到根因（D-133）。
+      logFile: File('$runtimeRoot${Platform.pathSeparator}engine.log'),
     );
     _supervisor = sup;
     _enginePort = spec.port;
@@ -129,10 +141,99 @@ class EngineRuntime {
       _lastError = '引擎未能在 ${healthTimeout.inSeconds}s 内就绪（健康检查 ${spec.healthUrl()}）';
       return;
     }
-    _state = EngineState.running;
+
+    // ── L2：翻译执行器（main.py 自己 spawn 的 port+1 子进程）──────────
+    // 启动成功 ≠ 执行器就绪：Broken pipe / 锁死都发生在这一层，
+    // 不在这里探，用户要等到「点翻译」才炸。
+    _phase = 'L2';
+    final executorReady = await _waitExecutorReady(spec.port);
+    if (!executorReady) {
+      _state = EngineState.error;
+      _phase = 'L2';
+      _lastError = '翻译执行器未就绪（${spec.port + 1}；进程可能仍在加载模型）';
+      _log('[engine] L2 executor not ready on ${spec.port + 1}');
+      return;
+    }
+    _log('[engine] L2 executor ready on ${spec.port + 1}');
+
+    // ── L3：大模型后端（llama-server + Sakura 权重）───────────────────
+    _phase = 'L3';
+    final llm = await _startLlm();
+    if (llm == null) {
+      // LLM 没起来**不是**整个引擎失败：OCR/检测仍可用，
+      // 但翻译会失败 —— 状态保持 running 并明确标注，让上层引导补模型。
+      _state = EngineState.running;
+      _phase = 'L3';
+      _lastError = '大模型后端未就绪（缺 llama-server 或模型权重），翻译不可用';
+      _log('[engine] L3 llm backend missing — translation unavailable');
+      return;
+    }
     _phase = null;
+    _state = EngineState.running;
     _warmed = false;
-    _log('[engine] ready on ${spec.port}');
+    _log('[engine] ready on ${spec.port}（llm on $_llmPort）');
+  }
+
+  /// 等执行器（port+1）就绪：`manga_translator shared` 起来后才有 /openapi.json。
+  Future<bool> _waitExecutorReady(int enginePort) async {
+    final deadline = DateTime.now().add(probeBudget);
+    final url = 'http://127.0.0.1:${enginePort + 1}/openapi.json';
+    while (DateTime.now().isBefore(deadline)) {
+      if (await EngineSupervisor.probeHealth(url, timeout: const Duration(seconds: 2))) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    return false;
+  }
+
+  /// 挑一个系统分发的空闲端口（绑定后立即释放——存在竞态，可接受）。
+  Future<int> _freePort() async {
+    final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final port = socket.port;
+    await socket.close();
+    return port;
+  }
+
+  /// 启动 LLM 后端（llama-server + Sakura 权重）。
+  ///
+  /// 返回 null = 后端不可用（缺二进制或缺权重）——**如实返回**，
+  /// 不假装启动成功让用户等到翻译时才炸。
+  /// 成功则记录 [_llmPort]/[_llmPid] 并把 `SAKURA_API_BASE` 指向它。
+  Future<EngineSupervisor?> _startLlm() async {
+    final llama = File(
+      '$runtimeRoot${Platform.pathSeparator}bin${Platform.pathSeparator}llama'
+      '${Platform.pathSeparator}llama-b11417${Platform.pathSeparator}llama-server',
+    );
+    final modelDir = Directory('$runtimeRoot${Platform.pathSeparator}models${Platform.pathSeparator}sakura');
+    if (!llama.existsSync()) {
+      _log('[engine] L3 缺 llama-server：${llama.path}');
+      return null;
+    }
+    final gguf = modelDir.existsSync()
+        ? modelDir.listSync().whereType<File>().where((f) => f.path.endsWith('.gguf')).firstOrNull
+        : null;
+    if (gguf == null) {
+      _log('[engine] L3 缺 Sakura 权重：${modelDir.path}（到设置页「下载模型」补齐）');
+      return null;
+    }
+
+    final port = await _freePort();
+    final sup = EngineSupervisor(
+      processPath: llama.path,
+      processArgs: ['-m', gguf.path, '--port', '$port', '-c', '4096', '-ngl', '99'],
+      healthUrl: 'http://127.0.0.1:$port/health',
+      healthTimeout: const Duration(seconds: 60),
+      logFile: File('$runtimeRoot${Platform.pathSeparator}llama.log'),
+    );
+    final ok = await sup.start();
+    for (final line in sup.log) {
+      _log('[llama] $line');
+    }
+    if (!ok) return null;
+    _llmSupervisor = sup;
+    _llmPort = port;
+    _llmPid = sup.pid;
+    _log('[engine] L3 llm ready on $port（${gguf.uri.pathSegments.last}）');
+    return sup;
   }
 
   /// 停止（主动停止：监督器不会把它当崩溃重启）。
@@ -147,6 +248,11 @@ class EngineRuntime {
         _log(line);
       }
       _supervisor = null;
+    }
+    final llmSup = _llmSupervisor;
+    if (llmSup != null) {
+      await llmSup.stop();
+      _llmSupervisor = null;
     }
     _state = EngineState.stopped;
     _phase = null;

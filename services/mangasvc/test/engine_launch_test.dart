@@ -16,17 +16,26 @@ void main() {
   late String rt;
   late String models;
 
+  // D-134：启动序列现在是三层 —— L1 网关(port)、L2 执行器(port+1)、L3 LLM。
+  // fake 引擎要同时当 L1 与 L2（同一个 server 对两个端口都应答），
+  // 否则 L2 探测会等满 90s 把测试拖死。
   const fakeEngine = r'''
+import 'dart:async';
 import 'dart:io';
 void main(List<String> args) async {
   final port = int.parse(args[0]);
-  final s = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
-  stdout.writeln('[fake] listening ${s.port}');
-  await for (final req in s) {
-    req.response.statusCode = 200;
-    req.response.write('ok');
-    await req.response.close();
+  final s1 = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+  final s2 = await HttpServer.bind(InternetAddress.loopbackIPv4, port + 1);
+  stdout.writeln('[fake] listening ${s1.port}/${s2.port}');
+  Future<void> serve(HttpServer s) async {
+    await for (final req in s) {
+      req.response.statusCode = 200;
+      req.response.write('ok');
+      await req.response.close();
+    }
   }
+  unawaited(serve(s1));
+  await serve(s2);
 }
 ''';
 
@@ -104,12 +113,12 @@ void main(List<String> args) async {
       File(script).writeAsStringSync(fakeEngine);
       writeSpec(command: Platform.resolvedExecutable, port: port, args: ['run', script, '$port']);
 
-      final facade = EngineFacade(runtimeRoot: rt, modelsDir: models);
+      final facade = EngineFacade(runtimeRoot: rt, modelsDir: models, healthTimeout: const Duration(seconds: 10));
       addTearDown(facade.dispose);
 
       final s = await facade.startEngine();
       // 破坏点：接线后仍返回旧的「未实现」错误 → 本条失败。
-      expect((s['engine'] as Map)['state'], 'running', reason: '${s['lastError']}');
+      expect((s['engine'] as Map)['state'], 'running', reason: 'view=${s['recentStageLog']}');
       expect((s['engine'] as Map)['pid'], isNotNull);
       expect((s['engine'] as Map)['port'], port);
     });
@@ -120,7 +129,7 @@ void main(List<String> args) async {
       File(script).writeAsStringSync(fakeEngine);
       writeSpec(command: Platform.resolvedExecutable, port: port, args: ['run', script, '$port']);
 
-      final facade = EngineFacade(runtimeRoot: rt, modelsDir: models);
+      final facade = EngineFacade(runtimeRoot: rt, modelsDir: models, healthTimeout: const Duration(seconds: 10));
       addTearDown(facade.dispose);
 
       await facade.startEngine();
@@ -133,7 +142,9 @@ void main(List<String> args) async {
 
     test('健康地址指错 → error 且带出「未能就绪」', () async {
       final port = await freePort();
-      final wrongPort = await freePort();
+      // 与 port 拉开距离：freePort 常连续分配，wrongPort 撞上 fake 的 port+1
+      // 会让 L1「歪打正着」通过、失败落到 L2（实测踩过）。
+      final wrongPort = port + 50;
       final script = '${tmp.path}/fake.dart';
       File(script).writeAsStringSync(fakeEngine);
       // 启动的进程监听 port，但规格声明的健康端口是 wrongPort
@@ -146,12 +157,20 @@ void main(List<String> args) async {
         }),
       );
 
-      final facade = EngineFacade(runtimeRoot: rt, modelsDir: models, healthTimeout: const Duration(seconds: 2));
+      final facade = EngineFacade(
+        runtimeRoot: rt,
+        modelsDir: models,
+        // 30s：L1 失败要等满 healthTimeout；之后还有 L2 探测（90s）与 L3。
+        // 上游语义不变（L1 失败即 error），这里只为把用例时长压进测试超时。
+        healthTimeout: const Duration(seconds: 3),
+        probeBudget: const Duration(seconds: 25),
+      );
       addTearDown(facade.dispose);
       final s = await facade.startEngine();
       // 破坏点：健康探测失败仍报 running → 用户点翻译必然超时，本条失败。
       expect((s['engine'] as Map)['state'], 'error');
-      expect(s['lastError'], contains('未能'));
+      // L1 / L2 的失败文案都含「就绪」，不绑定具体层。
+      expect(s['lastError'], contains('就绪'));
     });
   });
 

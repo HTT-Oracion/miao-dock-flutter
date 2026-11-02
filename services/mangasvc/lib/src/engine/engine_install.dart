@@ -300,7 +300,16 @@ class EngineInstaller {
       // 🔴 mocr 权重走 HF 缓存：必须把 HF_HOME 指到引擎目录内，否则
       // `MangaOcr()` 会去 `~/.cache/huggingface` 找不到就**静默联网下载**。
       // OFFLINE=1 是保险丝：宁可报错，也不要悄悄联网。
-      'env': {'HF_HOME': _abs('.hf'), 'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1'},
+      // 🔴 SAKURA_API_BASE 必须显式注入：不注入时 executor 用 keys.py 的默认
+      // `127.0.0.1:8080`，连上的是「碰巧占着 8080 的任何进程」——
+      // 那台挂了就 Broken pipe（D-133 实锤过）。端口固定 8080：
+      // keys.py 读的是 env，写死在这里保证 executor 与我们的预期一致。
+      'env': {
+        'HF_HOME': _abs('.hf'),
+        'HF_HUB_OFFLINE': '1',
+        'TRANSFORMERS_OFFLINE': '1',
+        'SAKURA_API_BASE': 'http://127.0.0.1:8080/v1',
+      },
     };
     File(_abs('launch.json')).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(data));
     _log('[install] 写入 launch.json（端口 $port）');

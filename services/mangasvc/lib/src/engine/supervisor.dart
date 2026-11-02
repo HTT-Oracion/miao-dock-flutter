@@ -18,6 +18,7 @@ class EngineSupervisor {
     required this.healthUrl,
     this.workingDirectory,
     this.environment,
+    this.logFile,
     this.healthTimeout = const Duration(seconds: 60),
     this.healthInterval = const Duration(milliseconds: 150),
     this.maxRestarts = 3,
@@ -35,6 +36,12 @@ class EngineSupervisor {
   /// 🔴 必须支持：mocr 权重走 HF 缓存，靠 `HF_HOME` + 两个 OFFLINE 开关定位。
   /// 不注入的话引擎会去 `~/.cache/huggingface` 找不到，然后**静默联网下载**。
   final Map<String, String>? environment;
+
+  /// 子进程 stdout/stderr 的**落盘文件**（诊断必需）。
+  ///
+  /// 内存环（[_log]）只有 200 行，executor 崩溃的 traceback 会把它冲掉；
+  /// Broken pipe 这类问题没有文件现场就无法定位根因。
+  final File? logFile;
 
   /// 等待健康应答的总时长（首次加载模型可能很慢）。
   final Duration healthTimeout;
@@ -92,12 +99,28 @@ class EngineSupervisor {
       _append('[supervisor] spawned pid=${proc.pid}');
 
       // 持续排空两个流：不排空会让子进程在写满管道后阻塞（整机看起来"卡住"）。
-      proc.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((l) {
-        if (l.isNotEmpty) _append(l);
-      });
-      proc.stderr.transform(utf8.decoder).transform(const LineSplitter()).listen((l) {
-        if (l.isNotEmpty) _append(l);
-      });
+      IOSink? sink;
+      final target = logFile;
+      if (target != null) {
+        try {
+          sink = target.openWrite(mode: FileMode.append);
+          sink.writeln('===== ${DateTime.now().toIso8601String()} spawn pid =====');
+        } catch (_) {
+          sink = null; // 落盘失败不阻断启动。
+        }
+      }
+      void drain(Stream<List<int>> stream, {required bool isErr}) {
+        stream.transform(utf8.decoder).transform(const LineSplitter()).listen((l) {
+          if (l.isEmpty) return;
+          _append(l);
+          try {
+            sink?.writeln('${DateTime.now().toIso8601String()} ${isErr ? '[stderr] ' : ''}$l');
+          } catch (_) {}
+        });
+      }
+
+      drain(proc.stdout, isErr: false);
+      drain(proc.stderr, isErr: true);
 
       unawaited(
         proc.exitCode.then((code) {

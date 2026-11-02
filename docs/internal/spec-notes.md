@@ -2644,3 +2644,30 @@
   2. executor 的锁加**超时保护**（上游代码，属引擎侧）；
   3. 客户端对 `ENGINE_ERROR` + `Broken pipe` 给「重试」引导。
 - **验证**：应用 160 通过；analyze 与 l10n 通过。
+
+## D-134 启动判定分层化（L1 网关 / L2 执行器 / L3 LLM）+ 引擎日志落盘
+
+- **状态**：完成（2026-11-02）
+- **回答「启动成功指什么」**：修复前只判定 **L1**（main.py 的 `/openapi.json`）；
+  executor（port+1）与 LLM（llama-server）**完全不在判定内** ——
+  LLM 是残留的旧进程、SAKURA_API_BASE 靠 keys.py 默认值碰巧连上；
+  Broken pipe / 执行器锁死都发生在 L2/L3，启动却照样「成功」。
+- **修复**：
+  1. **L2**：`_waitExecutorReady(port+1 /openapi.json)`，预算 `probeBudget`（默认 90s，
+     模型首载慢）；不就绪 ⇒ `error` + 明确文案；
+  2. **L3**：`_startLlm()` —— mangasvc **自己管理 llama-server**
+     （runtime 内 `bin/llama/llama-b11417/llama-server` + `models/sakura/*.gguf`，
+     挑空闲端口起进程、`/health` 探活）；缺二进制或缺权重 ⇒ **如实**保持
+     running 但 `lastError` 标注「大模型后端未就绪，翻译不可用」（OCR 仍可用）；
+  3. **SAKURA_API_BASE 显式注入** launch.json env（`127.0.0.1:8080/v1`）：
+     executor 不再依赖 keys.py 默认值去碰「碰巧占 8080 的进程」；
+  4. **引擎输出落盘**：supervisor 支持 `logFile`（`engine.log` / `llama.log`），
+     stdout/stderr 逐行带时间戳写入 —— 没有文件现场，Broken pipe 这类问题查不到根因；
+  5. `stop()` 同步停掉 LLM 监督器。
+- **踩坑**：
+  - fake 引擎夹具缺 `dart:async`（`unawaited`）→ 子进程秒崩、L1 超时，白查一轮；
+  - 测试用例 `wrongPort = freePort()` 与 fake 的 `port+1` 撞车 ⇒ L1「歪打正着」通过、
+    失败落到 L2 —— 改为 `port + 50` 拉开距离，断言放宽到「就绪」二字（不绑层）。
+- **验证**：服务 185 通过；应用 160 通过；analyze 与 l10n 通过。
+- **遗留**：llama 端口固定 8080 与「端口段探测」的一致性、L3 失败时侧栏状态点的呈现，
+  需要一次 UI 层接线（本轮未动）。

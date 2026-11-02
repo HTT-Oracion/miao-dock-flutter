@@ -176,7 +176,13 @@ class EngineFacade {
     required this.runtimeRoot,
     required this.modelsDir,
     Duration healthTimeout = const Duration(seconds: 60),
-  }) : runtime = EngineRuntime(runtimeRoot: runtimeRoot, modelsDir: modelsDir, healthTimeout: healthTimeout),
+    Duration probeBudget = const Duration(seconds: 90),
+  }) : runtime = EngineRuntime(
+         runtimeRoot: runtimeRoot,
+         modelsDir: modelsDir,
+         healthTimeout: healthTimeout,
+         probeBudget: probeBudget,
+       ),
        downloader = ModelDownloadCoordinator(modelsDir: modelsDir);
 
   final String runtimeRoot;
