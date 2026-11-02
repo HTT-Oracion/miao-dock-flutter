@@ -208,6 +208,59 @@ class SelectionNotifier extends Notifier<SelectionState> {
 /// 分页状态（页码从 1 起；页大小 10 / 20 / 50，设计稿 H Note 04）。
 typedef PagerState = ({int page, int pageSize});
 
+/// 队列筛选（方案 A 表头多选）：集合为空 = 该维度不过滤。
+class QueueFilterState {
+  const QueueFilterState({this.sources = const {}, this.statuses = const {}});
+
+  final Set<MangaTaskSource> sources;
+  final Set<MangaTaskStatus> statuses;
+
+  bool get active => sources.isNotEmpty || statuses.isNotEmpty;
+}
+
+class QueueFilterNotifier extends Notifier<QueueFilterState> {
+  @override
+  QueueFilterState build() => const QueueFilterState();
+
+  void toggleSource(MangaTaskSource s) {
+    final next = {...state.sources};
+    next.contains(s) ? next.remove(s) : next.add(s);
+    state = QueueFilterState(sources: next, statuses: state.statuses);
+    ref.read(pagerProvider.notifier).goTo(1);
+  }
+
+  void toggleStatus(MangaTaskStatus s) {
+    final next = {...state.statuses};
+    next.contains(s) ? next.remove(s) : next.add(s);
+    state = QueueFilterState(sources: state.sources, statuses: next);
+    ref.read(pagerProvider.notifier).goTo(1);
+  }
+
+  void clearSources() {
+    state = QueueFilterState(sources: const {}, statuses: state.statuses);
+    ref.read(pagerProvider.notifier).goTo(1);
+  }
+
+  void clearStatuses() {
+    state = QueueFilterState(sources: state.sources, statuses: const {});
+    ref.read(pagerProvider.notifier).goTo(1);
+  }
+}
+
+final queueFilterProvider = NotifierProvider<QueueFilterNotifier, QueueFilterState>(QueueFilterNotifier.new);
+
+/// 按筛选态过滤任务列表（客户端过滤：表格本就全量拉取 + 本地分页）。
+List<MangaTask> applyQueueFilter(List<MangaTask> tasks, QueueFilterState f) {
+  if (!f.active) return tasks;
+  return tasks
+      .where(
+        (t) =>
+            (f.sources.isEmpty || f.sources.contains(t.source)) &&
+            (f.statuses.isEmpty || f.statuses.contains(t.status)),
+      )
+      .toList();
+}
+
 final pagerProvider = NotifierProvider<PagerNotifier, PagerState>(PagerNotifier.new);
 
 class PagerNotifier extends Notifier<PagerState> {

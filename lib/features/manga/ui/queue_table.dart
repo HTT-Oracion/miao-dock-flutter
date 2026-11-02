@@ -26,10 +26,19 @@ class QueueTable extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
     final pager = ref.watch(pagerProvider);
     final selection = ref.watch(selectionProvider);
-    final start = (pager.page - 1) * pager.pageSize;
-    final rows = tasks.skip(start).take(pager.pageSize).toList();
+    final filter = ref.watch(queueFilterProvider);
+    final filtered = applyQueueFilter(tasks, filter);
+    // 筛选后不足一页时钳制起始行，避免空白页。
+    var start = (pager.page - 1) * pager.pageSize;
+    if (filtered.isEmpty) {
+      start = 0;
+    } else if (start > filtered.length - 1) {
+      start = filtered.length - 1;
+    }
+    final rows = filtered.skip(start).take(pager.pageSize).toList();
     final pageDeletableIds = {
       for (final t in rows)
         if (t.deletable) t.id,
@@ -39,10 +48,38 @@ class QueueTable extends ConsumerWidget {
 
     return AppTable(
       columns: [
-        AppTableColumn(AppLocalizations.of(context).colComic, flex: true),
-        AppTableColumn(AppLocalizations.of(context).colProgress, width: 180),
-        AppTableColumn(AppLocalizations.of(context).colStatus, width: 120),
-        AppTableColumn(AppLocalizations.of(context).colActions, width: 150),
+        AppTableColumn(l10n.colComic, flex: true),
+        AppTableColumn(
+          l10n.colSource,
+          width: 92,
+          headerWidget: _HeaderFilter(
+            label: l10n.colSource,
+            active: filter.sources.isNotEmpty,
+            options: [
+              (MangaTaskSource.app, l10n.queueSrcLocal),
+              (MangaTaskSource.plugin, l10n.queueSrcPlugin),
+              (MangaTaskSource.desktop, l10n.queueSrcOther),
+              (MangaTaskSource.unknown, l10n.queueSrcOther),
+            ],
+            selected: filter.sources,
+            onToggle: (v) => ref.read(queueFilterProvider.notifier).toggleSource(v),
+            onClear: () => ref.read(queueFilterProvider.notifier).clearSources(),
+          ),
+        ),
+        AppTableColumn(l10n.colProgress, width: 180),
+        AppTableColumn(
+          l10n.colStatus,
+          width: 132,
+          headerWidget: _HeaderFilter(
+            label: l10n.colStatus,
+            active: filter.statuses.isNotEmpty,
+            options: [for (final st in MangaTaskStatus.values) (st, st.label(l10n))],
+            selected: filter.statuses,
+            onToggle: (st) => ref.read(queueFilterProvider.notifier).toggleStatus(st),
+            onClear: () => ref.read(queueFilterProvider.notifier).clearStatuses(),
+          ),
+        ),
+        AppTableColumn(l10n.colActions, width: 150),
       ],
       rowCount: rows.length,
       headerLeading: selection.enabled
@@ -70,6 +107,7 @@ class QueueTable extends ConsumerWidget {
       rowAccentColor: (_, i) => selection.ids.contains(rows[i].id) ? palette.accent : null,
       rowBuilder: (context, i) => [
         _NameCell(task: rows[i]),
+        _SourceCell(task: rows[i]),
         _ProgressCell(task: rows[i]),
         _StatusCell(task: rows[i]),
         QueueRowActions(task: rows[i]),
@@ -332,5 +370,143 @@ class _HoverChip extends StatelessWidget {
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null) return Offset.zero;
     return box.localToGlobal(box.size.center(Offset.zero));
+  }
+}
+
+/// 来源列单元格：圆点 + 文案胶囊（本地=蓝 / 插件端=主色 / 其他=灰）。
+class _SourceCell extends StatelessWidget {
+  const _SourceCell({required this.task});
+
+  final MangaTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(
+        color: palette.card,
+        border: Border.all(color: palette.line2),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        task.source.label(AppLocalizations.of(context)),
+        style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
+      ),
+    );
+  }
+}
+
+/// 表头筛选（方案 A）：列名 + 筛选图标，点开多选勾选面板（清除 / 确定）。
+/// 有活跃筛选时图标转主色，一眼知道哪列在过滤。
+class _HeaderFilter<T> extends StatefulWidget {
+  const _HeaderFilter({
+    required this.label,
+    required this.options,
+    required this.selected,
+    required this.onToggle,
+    required this.onClear,
+    this.active = false,
+  });
+
+  final String label;
+  final List<(T, String)> options;
+  final Set<T> selected;
+  final ValueChanged<T> onToggle;
+  final VoidCallback onClear;
+  final bool active;
+
+  @override
+  State<_HeaderFilter<T>> createState() => _HeaderFilterState<T>();
+}
+
+class _HeaderFilterState<T> extends State<_HeaderFilter<T>> {
+  final _controller = MenuController();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return MenuAnchor(
+      controller: _controller,
+      alignmentOffset: const Offset(0, 4),
+      consumeOutsideTap: true,
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(palette.panel),
+        elevation: const WidgetStatePropertyAll(0),
+        padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(color: palette.line2),
+          ),
+        ),
+      ),
+      menuChildren: [
+        for (final (value, label) in widget.options)
+          InkWell(
+            borderRadius: BorderRadius.circular(5),
+            onTap: () => widget.onToggle(value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppCheckbox(
+                    value: widget.selected.contains(value),
+                    tristate: false,
+                    onChanged: (_) => widget.onToggle(value),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(fontSize: AppFont.px11, color: palette.ink),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 4, left: 6, right: 6),
+          child: Divider(height: 1, thickness: 1, color: palette.divider),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            AppButton(
+              label: AppLocalizations.of(context).queueFilterClear,
+              variant: AppButtonVariant.link,
+              fontSize: AppFont.px10_5,
+              onTap: widget.onClear,
+            ),
+            AppButton(
+              label: AppLocalizations.of(context).queueFilterApply,
+              variant: AppButtonVariant.link,
+              fontSize: AppFont.px10_5,
+              onTap: _controller.close,
+            ),
+          ],
+        ),
+      ],
+      builder: (context, controller, child) => InkWell(
+        borderRadius: BorderRadius.circular(4),
+        onTap: () => controller.isOpen ? controller.close() : controller.open(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.label,
+                style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+              ),
+              const SizedBox(width: 4),
+              Icon(LucideIcons.filter, size: 12, color: widget.active ? palette.accent : palette.mut),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

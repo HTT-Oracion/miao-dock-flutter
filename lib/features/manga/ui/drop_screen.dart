@@ -162,7 +162,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
           child: Container(
-            padding: EdgeInsets.all(context.isMobile ? 16 : 32),
+            padding: EdgeInsets.all(context.isMobile ? 12 : 32),
             decoration: BoxDecoration(
               color: palette.panel,
               border: Border.all(color: palette.line),
@@ -183,7 +183,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                   },
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: context.isMobile ? 12 : 16),
                 _FieldLabel(text: l10n.dropComicName, required_: true),
                 const SizedBox(height: 6),
                 _NameInput(value: state.name, onChanged: (v) => ref.read(dropController.notifier).setName(v)),
@@ -194,7 +194,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                 ),
 
                 if (state.files.isNotEmpty) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: context.isMobile ? 12 : 16),
                   _FieldLabel(
                     text: '${l10n.dropPendingList} ${state.files.length}',
                     suffix: state.batchCount > 1 ? l10n.dropBatchSummary(state.batchCount) : null,
@@ -223,7 +223,7 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                   ),
                 ],
 
-                const SizedBox(height: 16),
+                SizedBox(height: context.isMobile ? 12 : 16),
                 // 提交与清空固定一行；Align 隔离外层 stretch，Row 用最小宽度避免按钮拉伸。
                 Align(
                   alignment: Alignment.centerLeft,
@@ -235,9 +235,9 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                         onTap: (state.name.isNotEmpty && state.files.isNotEmpty) ? _submit : null,
                         clickable: state.name.isNotEmpty && state.files.isNotEmpty,
                         variant: AppButtonVariant.primary,
-                        height: 36,
-                        horizontalPadding: 24,
-                        fontSize: AppFont.px12_5,
+                        height: context.isMobile ? 32 : 36,
+                        horizontalPadding: context.isMobile ? 18 : 24,
+                        fontSize: context.isMobile ? AppFont.px12 : AppFont.px12_5,
                       ),
                       const SizedBox(width: 8),
                       AppButton(
@@ -246,9 +246,9 @@ class _DropScreenState extends ConsumerState<DropScreen> {
                         clickable: state.files.isNotEmpty,
                         variant: AppButtonVariant.ghost,
                         border: true,
-                        height: 36,
-                        horizontalPadding: 24,
-                        fontSize: AppFont.px12_5,
+                        height: context.isMobile ? 32 : 36,
+                        horizontalPadding: context.isMobile ? 18 : 24,
+                        fontSize: context.isMobile ? AppFont.px12 : AppFont.px12_5,
                       ),
                     ],
                   ),
@@ -304,7 +304,7 @@ class _DropZoneState extends State<_DropZone> {
         child: Container(
           // 原型 `.drop-zone`：**虚线**边框 + 内距撑开（不再固定高度，
           // 固定高度在窄屏会把文案和按钮挤在一起）。
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: context.isMobile ? 24 : 32),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: context.isMobile ? 14 : 32),
           decoration: BoxDecoration(
             color: active ? palette.accSoft : palette.card,
             border: Border.all(color: active ? palette.acc : palette.line2, width: 1),
@@ -313,18 +313,22 @@ class _DropZoneState extends State<_DropZone> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(LucideIcons.upload, size: 40, color: active ? palette.acc : palette.acc.withValues(alpha: 0.8)),
-              const SizedBox(height: 12),
+              Icon(
+                LucideIcons.upload,
+                size: context.isMobile ? 26 : 40,
+                color: active ? palette.acc : palette.acc.withValues(alpha: 0.8),
+              ),
+              SizedBox(height: context.isMobile ? 6 : 12),
               Text(
                 active ? l10n.dropDropHintActive : l10n.dropDropHint,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: AppFont.px15,
+                  fontSize: context.isMobile ? AppFont.px12 : AppFont.px15,
                   fontWeight: FontWeight.w600,
                   color: active ? palette.acc : palette.ink,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: context.isMobile ? 4 : 8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
                 child: Text(
@@ -333,7 +337,7 @@ class _DropZoneState extends State<_DropZone> {
                   style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: context.isMobile ? 10 : 20),
               // 原型：桌面并排居中；窄屏**纵向堆叠且占满整行**（手指好点）。
               if (context.isMobile)
                 Column(
@@ -379,10 +383,10 @@ class _GhostButton extends StatelessWidget {
       variant: AppButtonVariant.ghost,
       border: true,
       width: full ? double.infinity : null,
-      // 原型 34 高、14 号字；窄屏拉到 40（触控区域）。
-      height: context.isMobile ? 40 : 34,
-      horizontalPadding: 20,
-      fontSize: AppFont.px14,
+      // 原型 34 高、14 号字；窄屏收窄到 34/12（与其余移动页同量级，仍好点按）。
+      height: context.isMobile ? 34 : 34,
+      horizontalPadding: context.isMobile ? 14 : 20,
+      fontSize: context.isMobile ? AppFont.px12 : AppFont.px14,
     );
   }
 }
@@ -472,7 +476,7 @@ class _FileList extends StatelessWidget {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     return Container(
-      constraints: const BoxConstraints(maxHeight: 210),
+      constraints: BoxConstraints(maxHeight: context.isMobile ? 150 : 210),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: palette.panel,

@@ -134,6 +134,34 @@
       }
     }
   },
+  "queueSrcLocal": "本地",
+  "@queueSrcLocal": {
+    "description": "队列来源：本应用（桌面/手机）提交"
+  },
+  "queueSrcPlugin": "插件端",
+  "@queueSrcPlugin": {
+    "description": "队列来源：浏览器插件提交"
+  },
+  "queueSrcOther": "其他",
+  "@queueSrcOther": {
+    "description": "队列来源：其余调用方"
+  },
+  "colSource": "来源",
+  "@colSource": {
+    "description": "队列表头：来源列"
+  },
+  "queueFilterEmpty": "没有符合筛选条件的任务",
+  "@queueFilterEmpty": {
+    "description": "队列筛选后为空的提示"
+  },
+  "queueFilterClear": "清除",
+  "@queueFilterClear": {
+    "description": "队列筛选面板：清除勾选"
+  },
+  "queueFilterApply": "确定",
+  "@queueFilterApply": {
+    "description": "队列筛选面板：关闭面板"
+  },
   "sourceDesktop": "本机投放",
   "@sourceDesktop": {
     "description": "任务来源：桌面端投放"

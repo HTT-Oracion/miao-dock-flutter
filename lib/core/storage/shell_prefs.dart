@@ -21,7 +21,7 @@ const String _kAutoStartEngineKey = 'miao.auto-start-engine';
 
 /// 已解析的偏好目录：移动端由 [ensureShellPrefsLoaded] 经 path_provider 取得
 /// （Android 没有稳定 `$HOME`，`Directory.systemTemp.parent` 实测指向 `/`，
-/// 写盘必然失败——用户实测「连接成功但保存失败」即此因）；null = 未预热，
+/// write always fails there (user-tested); null = not warmed up,
 /// 回落桌面端的 HOME 推导。
 String? _resolvedDir;
 
@@ -36,12 +36,14 @@ Future<void> ensureShellPrefsLoaded() async {
       debugPrint('[prefs] dir=$_resolvedDir');
     } catch (e) {
       // 🔴 热重载/热重启不会注册新加的原生插件——path_provider 要完整重编才有。
-      debugPrint('[prefs] 目录解析失败（若刚加 path_provider，请完整 flutter run 重编）：$e');
+      // Hot reload/restart does NOT register newly added native plugins;
+      // a full `flutter run` rebuild is required for path_provider to appear.
+      debugPrint('[prefs] support-dir resolve failed (full rebuild needed?): $e');
       return;
     }
   }
   _readPrefs();
-  debugPrint('[prefs] 预热完成，键=${_memoryPrefs?.keys.toList()}');
+  debugPrint('[prefs] warmed, keys=${_memoryPrefs?.keys.toList()}');
 }
 
 /// 偏好文件路径：移动端用预热目录，桌面端基于 `$HOME`（macOS 与 Windows 用

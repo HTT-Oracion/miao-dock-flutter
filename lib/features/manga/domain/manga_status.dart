@@ -38,11 +38,14 @@ extension MangaTaskStatusX on MangaTaskStatus {
       this == MangaTaskStatus.cancelled;
 }
 
-/// 任务来源的展示语义。
+/// 任务来源的展示语义（用户口径三档：本地 / 插件端 / 其他）。
 extension MangaTaskSourceX on MangaTaskSource {
   String label(AppLocalizations l10n) => switch (this) {
-    MangaTaskSource.desktop => l10n.queueSourceLocal,
-    MangaTaskSource.extension => l10n.sourceExtension,
-    MangaTaskSource.unknown => l10n.sourceUnknown,
+    MangaTaskSource.app => l10n.queueSrcLocal,
+    MangaTaskSource.plugin => l10n.queueSrcPlugin,
+    // 旧持久化数据里的 `extension` 是插件的旧 wire 值，展示归并到插件端。
+    MangaTaskSource.extension => l10n.queueSrcPlugin,
+    MangaTaskSource.desktop => l10n.queueSrcOther,
+    MangaTaskSource.unknown => l10n.queueSrcOther,
   };
 }

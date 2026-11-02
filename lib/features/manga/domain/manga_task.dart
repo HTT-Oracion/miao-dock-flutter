@@ -56,7 +56,9 @@ enum MangaTaskStatus { translating, queued, done, partialFailed, failed, cancell
 ///
 /// 之所以不直接存中文：`data/` 层没有 `BuildContext`，文案必须由 UI 层经 ARB 取
 /// （AGENTS §3 国际化约束：不得在 lib/ 里写死中文字面量）。
-enum MangaTaskSource { desktop, extension, unknown }
+/// 任务来源（服务端归一化：`app|mobile → app`、`plugin|extension → plugin`、
+/// 其余 `desktop`；`extension` 只出现在旧持久化数据里）。
+enum MangaTaskSource { app, plugin, desktop, extension, unknown }
 
 /// 一次投放的结果（吐司用）。
 class SubmitOutcome {

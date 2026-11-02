@@ -95,7 +95,7 @@ class _TaskCard extends ConsumerWidget {
                     task.donePages,
                     task.pageCount,
                     task.batchNo,
-                    _sourceLabel(l10n, task.source),
+                    task.source.label(l10n),
                   ),
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
@@ -205,10 +205,3 @@ class _MobileSelectionBar extends ConsumerWidget {
     );
   }
 }
-
-/// 任务来源 → ARB 文案。
-String _sourceLabel(AppLocalizations l10n, MangaTaskSource source) => switch (source) {
-  MangaTaskSource.desktop => l10n.sourceDesktop,
-  MangaTaskSource.extension => l10n.sourceExtension,
-  MangaTaskSource.unknown => l10n.sourceUnknown,
-};

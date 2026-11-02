@@ -33,6 +33,8 @@ enum TaskStatus {
 
 /// 任务来源归因（服务端按 `X-Box-Client` 判定）。
 enum TaskSource {
+  app('app'),
+  plugin('plugin'),
   extension('extension'),
   desktop('desktop'),
   unknown('unknown');

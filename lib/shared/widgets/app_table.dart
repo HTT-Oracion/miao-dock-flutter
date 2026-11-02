@@ -4,11 +4,14 @@ import '../../core/theme/tokens.dart';
 
 /// 表格列定义：width 为固定像素宽；flex 列占满剩余宽（width 留 0）。
 class AppTableColumn {
-  const AppTableColumn(this.header, {this.width = 0, this.flex = false});
+  const AppTableColumn(this.header, {this.width = 0, this.flex = false, this.headerWidget});
 
   final String header;
   final double width;
   final bool flex;
+
+  /// 表头自定义件（如「来源 ▾」筛选触发器）；非 null 时替代 [header] 文本。
+  final Widget? headerWidget;
 }
 
 /// 通用表格卡（设计稿 TableCard）：圆角卡容器 + 40 表头 + 58px 行 + 分隔线。
@@ -65,17 +68,21 @@ class AppTable extends StatelessWidget {
                 for (final c in columns)
                   c.flex
                       ? Expanded(
-                          child: Text(
-                            c.header,
-                            style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
-                          ),
+                          child:
+                              c.headerWidget ??
+                              Text(
+                                c.header,
+                                style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+                              ),
                         )
                       : SizedBox(
                           width: c.width,
-                          child: Text(
-                            c.header,
-                            style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
-                          ),
+                          child:
+                              c.headerWidget ??
+                              Text(
+                                c.header,
+                                style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+                              ),
                         ),
               ],
             ),

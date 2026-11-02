@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/app_pager.dart';
 import '../controller/queue_controller.dart';
@@ -83,15 +84,30 @@ class _QueueContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pager = ref.watch(pagerProvider);
+    final palette = AppPalette.of(context);
+    final filter = ref.watch(queueFilterProvider);
+    // 汇总条始终看全量（它统计的是队列整体）；表格与分页只看筛选后的列表。
+    final filtered = applyQueueFilter(tasks, filter);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         QueueSumBar(tasks: tasks),
         const SizedBox(height: 10),
-        Expanded(child: QueueTable(tasks: tasks)),
+        Expanded(
+          child: filtered.isEmpty && filter.active
+              ? Container(
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(10)),
+                  child: Text(
+                    AppLocalizations.of(context).queueFilterEmpty,
+                    style: TextStyle(fontSize: AppFont.px11, color: AppPalette.of(context).textSecondary),
+                  ),
+                )
+              : QueueTable(tasks: filtered),
+        ),
         const SizedBox(height: 10),
         AppPager(
-          total: tasks.length,
+          total: filtered.length,
           page: pager.page,
           pageSize: pager.pageSize,
           onPage: ref.read(pagerProvider.notifier).goTo,

@@ -51,6 +51,8 @@ LibChapter toLibChapter(ChapterEntry chapter) => LibChapter(
 int batchOf(int pages) => pages <= 0 ? 1 : (pages / 20).ceil();
 
 MangaTaskSource _sourceOf(TaskSource source) => switch (source) {
+  TaskSource.app => MangaTaskSource.app,
+  TaskSource.plugin => MangaTaskSource.plugin,
   TaskSource.extension => MangaTaskSource.extension,
   TaskSource.desktop => MangaTaskSource.desktop,
   TaskSource.unknown => MangaTaskSource.unknown,
