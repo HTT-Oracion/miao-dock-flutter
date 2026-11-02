@@ -3,6 +3,8 @@ import 'package:protocol/protocol.dart';
 import 'manga_svc_http.dart';
 import 'port_probe.dart';
 
+const _remoteAddressMissingMessage = '未配置桌面端服务地址（见 设置 → 翻译服务）';
+
 /// 服务定位与鉴权 —— 对应 P0-A3 + P0-A4。
 ///
 /// ## 职责
@@ -79,7 +81,7 @@ class RemoteServiceLocator implements ServiceLocator {
   @override
   Future<MangaSvcHttpClient> client() async {
     if (baseUrl.trim().isEmpty) {
-      throw const MangaSvcException(kind: MangaSvcErrorKind.unreachable, message: '未配置桌面端服务地址（见 设置 → 翻译服务）');
+      throw const MangaSvcException(kind: MangaSvcErrorKind.unreachable, message: _remoteAddressMissingMessage);
     }
     return _cached ??= _factory(_normalize(baseUrl), token);
   }
@@ -95,5 +97,37 @@ class RemoteServiceLocator implements ServiceLocator {
     }
     if (url.endsWith('/api/v1')) return url;
     return '$url/api/v1';
+  }
+}
+
+/// 移动端运行期可修改远程配置；每次请求按最新地址/令牌取客户端。
+class DynamicRemoteServiceLocator implements ServiceLocator {
+  DynamicRemoteServiceLocator({
+    required this.readBaseUrl,
+    required this.readToken,
+    MangaSvcHttpClient Function(String baseUrl, String? token)? factory,
+  }) : _factory = factory ?? ((baseUrl, token) => MangaSvcHttpClient(baseUrl: baseUrl, token: token));
+
+  final String Function() readBaseUrl;
+  final String? Function() readToken;
+  final MangaSvcHttpClient Function(String baseUrl, String? token) _factory;
+
+  String? _cacheKey;
+  MangaSvcHttpClient? _cached;
+
+  @override
+  Future<MangaSvcHttpClient> client() async {
+    final baseUrl = readBaseUrl().trim();
+    if (baseUrl.isEmpty) {
+      throw const MangaSvcException(kind: MangaSvcErrorKind.unreachable, message: _remoteAddressMissingMessage);
+    }
+    final token = readToken();
+    final normalized = RemoteServiceLocator._normalize(baseUrl);
+    final key = '$normalized\u0000${token ?? ''}';
+    if (_cached == null || _cacheKey != key) {
+      _cacheKey = key;
+      _cached = _factory(normalized, token);
+    }
+    return _cached!;
   }
 }

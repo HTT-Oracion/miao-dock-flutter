@@ -3,6 +3,10 @@ import 'dart:io';
 import 'engine_launch.dart';
 import 'supervisor.dart';
 
+/// llama-server 可能在 `/health` 已返回 200 后才报告 Metal 后端不可用。
+bool shouldFallbackLlmToCpu(Iterable<String> logs) =>
+    logs.any((line) => line.contains('Insufficient Memory') || line.contains('backend is in error state'));
+
 /// 引擎状态机（P0-C1）—— L1 翻译引擎 + L2 大模型，**共用一个开关**（D-012）。
 ///
 /// ## 五态（与原项目 `ServiceState` 同构）
@@ -50,6 +54,7 @@ class EngineRuntime {
   int? get port => _enginePort;
   int? _llmPort;
   String? _llmModel;
+  bool _llmCpuFallback = false;
   bool _warmed = false;
   final DateTime startedAt = DateTime.now().toUtc();
 
@@ -267,6 +272,7 @@ class EngineRuntime {
   /// 不假装启动成功让用户等到翻译时才炸。
   /// 成功则记录 [_llmPort]/[_llmPid] 并把 `SAKURA_API_BASE` 指向它。
   Future<EngineSupervisor?> _startLlm() async {
+    _llmCpuFallback = false;
     final sep = Platform.pathSeparator;
     // 🔴 二进制与权重的候选路径要覆盖两种实际布局：
     // - 安装器产物：`bin/llama/llama-b11417/llama-server` + `models/sakura/*.gguf`
@@ -307,16 +313,29 @@ class EngineRuntime {
     }
 
     final port = await _freePort();
-    final sup = EngineSupervisor(
-      processPath: llama.path,
-      processArgs: ['-m', gguf.path, '--port', '$port', '-c', '4096', '-ngl', '99'],
+    EngineSupervisor supervisorFor(int gpuLayers) => EngineSupervisor(
+      processPath: llama!.path,
+      processArgs: ['-m', gguf!.path, '--port', '$port', '-c', '4096', '-ngl', '$gpuLayers'],
       healthUrl: 'http://127.0.0.1:$port/health',
       healthTimeout: const Duration(seconds: 60),
       logFile: File('$runtimeRoot${Platform.pathSeparator}llama.log'),
     );
-    final ok = await sup.start();
+
+    var sup = supervisorFor(99);
+    var ok = await sup.start();
     for (final line in sup.log) {
       _log('[llama] $line');
+    }
+    final metalOutOfMemory = shouldFallbackLlmToCpu(sup.log);
+    if (ok && metalOutOfMemory) {
+      _log('[engine] L3 Metal 显存不足，改用 CPU 重试');
+      await sup.stop();
+      sup = supervisorFor(0);
+      ok = await sup.start();
+      _llmCpuFallback = ok;
+      for (final line in sup.log) {
+        _log('[llama-cpu] $line');
+      }
     }
     if (!ok) {
       await sup.stop();
@@ -337,6 +356,7 @@ class EngineRuntime {
     _llmPid = null;
     _llmPort = null;
     _llmModel = null;
+    _llmCpuFallback = false;
   }
 
   /// 停止（主动停止：监督器不会把它当崩溃重启）。
@@ -387,7 +407,7 @@ class EngineRuntime {
       'pid': _llmPid,
     },
     'tier': null,
-    'accel': Platform.isMacOS ? 'mps' : 'cpu',
+    'accel': Platform.isMacOS && !_llmCpuFallback ? 'mps' : 'cpu',
     'warmed': _warmed,
     'config': {
       'translator': 'manga-image-translator',

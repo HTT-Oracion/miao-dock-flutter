@@ -39,9 +39,22 @@ class ServiceSupervisor {
     this.stopGrace = const Duration(seconds: 3),
     this.maxRestarts = 2,
     this.restartBackoff = const Duration(seconds: 1),
-  });
+  }) : _attached = false;
 
-  final ServiceLaunchPlan plan;
+  /// 复用已经运行的本机服务；当前 App 不拥有该进程，退出时不得将它杀掉。
+  ServiceSupervisor.attached({required int port, this.token})
+    : plan = null,
+      readyTimeout = Duration.zero,
+      stopGrace = Duration.zero,
+      maxRestarts = 0,
+      restartBackoff = Duration.zero,
+      _attached = true,
+      _state = ServiceProcessState.running,
+      // ignore: prefer_initializing_formals
+      _port = port;
+
+  final ServiceLaunchPlan? plan;
+  final bool _attached;
 
   /// 等就绪行的上限。开发期 `dart run` 首次可能要编译，给宽一点。
   final Duration readyTimeout;
@@ -90,6 +103,7 @@ class ServiceSupervisor {
   ///
   /// 返回就绪端口；失败返回 null（原因见 [log] 与 [lastError]）。
   Future<int?> start() async {
+    if (_attached) return _port;
     if (_state == ServiceProcessState.running) return _port;
     if (_state == ServiceProcessState.starting) return _readyCompleter?.future;
 
@@ -114,9 +128,9 @@ class ServiceSupervisor {
 
     try {
       final proc = await Process.start(
-        plan.executable,
-        plan.args,
-        workingDirectory: plan.workingDirectory,
+        plan!.executable,
+        plan!.args,
+        workingDirectory: plan!.workingDirectory,
         runInShell: false,
         // 🔴 把「用户选的引擎目录」交给服务进程（D-061）。
         // 服务的引擎目录默认是 appData 下那个；用户手动导入到别处时，
@@ -125,7 +139,7 @@ class ServiceSupervisor {
         environment: {...Platform.environment, 'MIAO_MANGA_ENGINE_DIR': ?_engineDirEnv()},
       );
       _proc = proc;
-      _append('[service] spawned pid=${proc.pid} (${plan.origin})');
+      _append('[service] spawned pid=${proc.pid} (${plan!.origin})');
 
       proc.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen(_onStdout);
       proc.stderr.transform(utf8.decoder).transform(const LineSplitter()).listen((l) {
@@ -153,7 +167,7 @@ class ServiceSupervisor {
       _append('[service] ready on port $port');
       return port;
     } on ProcessException catch (e) {
-      lastError = '起不了 mangasvc（${plan.executable}）：${e.message}';
+      lastError = '起不了 mangasvc（${plan!.executable}）：${e.message}';
       _append('[service] spawn failed: ${e.message}');
       _setState(ServiceProcessState.failed);
       return null;
@@ -216,6 +230,7 @@ class ServiceSupervisor {
 
   /// 主动停止（不触发重启）。
   Future<void> stop() async {
+    if (_attached) return;
     _intentionalStop = true;
     _restartTimer?.cancel();
     _restartTimer = null;
@@ -262,7 +277,7 @@ class ServiceSupervisor {
   }
 
   Future<void> dispose() async {
-    await stop();
+    if (!_attached) await stop();
     await _stateController.close();
   }
 }

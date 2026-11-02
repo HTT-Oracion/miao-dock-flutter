@@ -13,6 +13,13 @@ import '../store/library_store.dart';
 import 'http.dart';
 import 'routes.dart';
 
+/// 远程端可翻译 = 图像引擎与 LLM 都真实运行；`engineMode=real` 本身不代表就绪。
+bool engineReadyOf(Map<String, dynamic> status) {
+  final engine = status['engine'];
+  final llm = status['llm'];
+  return engine is Map && engine['state'] == 'running' && llm is Map && llm['state'] == 'running';
+}
+
 /// 端点实现的分发层。
 ///
 /// 职责：把 `RouteMatch` 映射到具体处理函数，读体、调门面、出信封。
@@ -373,12 +380,13 @@ class Handlers {
   /// 能走到这里就说明**令牌是对的**（鉴权在路由之前）；返回内容再补齐
   /// 「对面引擎起没起」与「平台」两件事。
   Future<void> _ping(HttpRequest req) async {
+    final status = engine.status();
     await writeJson(req.response, 200, {
       'ok': true,
       'service': 'mangasvc',
       'version': '0.1.0',
       'platform': Platform.operatingSystem,
-      'engineReady': engineMode == 'ready',
+      'engineReady': engineReadyOf(status),
       'engineMode': engineMode,
       'requiresToken': true,
       'serverTime': isoOf(DateTime.now()),

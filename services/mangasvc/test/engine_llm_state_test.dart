@@ -16,4 +16,10 @@ void main() {
     expect(llm['state'], 'off');
     expect(llm['pid'], isNull);
   });
+
+  test('Metal 报显存不足时必须回退 CPU，不能把 health 200 当成可用', () {
+    expect(shouldFallbackLlmToCpu(['error: Insufficient Memory']), isTrue);
+    expect(shouldFallbackLlmToCpu(['backend is in error state from a previous command buffer failure']), isTrue);
+    expect(shouldFallbackLlmToCpu(['model loaded', 'listening']), isFalse);
+  });
 }

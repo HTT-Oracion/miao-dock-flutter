@@ -9,7 +9,8 @@ import 'security.dart';
 /// mangasvc 的 HTTP 服务本体。
 ///
 /// ## 端口段（与客户端探测约定一致）
-/// 在 **127.0.0.1:5180–5190** 内「先探测再绑定」：先起的占 5180，被占则顺延。
+/// 在 **0.0.0.0:5180–5190** 内「先探测再绑定」：本机仍走 127.0.0.1，
+/// Android / iOS 通过局域网地址访问；令牌校验负责跨设备暴露面的鉴权。
 /// 客户端 `PortProbe` 按同一段逐端口试，靠 `/health` 的 `service` 字段认领。
 ///
 /// ## 单实例语义
@@ -57,12 +58,15 @@ class MangaSvcServer {
   /// 实际绑定的端口（未启动为 null）。
   int? get port => _server?.port;
 
+  /// 实际监听地址（诊断与测试用）。
+  String? get listenAddress => _server?.address.address;
+
   /// 启动服务：在端口段内找到第一个可用端口并开始监听。
   Future<int> start() async {
     Object? lastError;
     for (var p = portStart; p <= portEnd; p++) {
       try {
-        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, p, shared: false);
+        final server = await HttpServer.bind(InternetAddress.anyIPv4, p, shared: false);
         _server = server;
         final token = resolveToken(
           stateDir: stateDir ?? '${_handlers.store.rootDir}${Platform.pathSeparator}.miao-state',

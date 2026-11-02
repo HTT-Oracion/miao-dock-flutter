@@ -122,6 +122,17 @@ void main(List<String> args) async {
   });
 
   group('D2 退出清理', () {
+    test('附着已有服务时不重复拉进程，退出也不停止服务', () async {
+      final sup = ServiceSupervisor.attached(port: 5180, token: 'token');
+      expect(await sup.start(), 5180);
+      expect(sup.state, ServiceProcessState.running);
+      expect(sup.pid, isNull);
+
+      await sup.dispose();
+      // 破坏点：附着服务也被 dispose 杀掉 → 多窗口/热重启会互相终止服务。
+      expect(sup.state, ServiceProcessState.running);
+    });
+
     test('停止后端口被释放（无僵尸）', () async {
       writeFake();
       final sup = ServiceSupervisor(plan: planFor('ready'));

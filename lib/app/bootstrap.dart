@@ -9,6 +9,7 @@ import '../../core/net/port_probe.dart';
 import '../../core/net/service_locator.dart';
 import '../../core/process/service_controller.dart';
 import '../../core/storage/shell_prefs.dart';
+import '../../core/storage/paths.dart';
 import '../../core/process/service_launch.dart';
 import '../../core/process/service_supervisor.dart';
 import '../../core/window/window_controller.dart';
@@ -39,18 +40,26 @@ Future<void> bootstrap(Widget app) async {
   // 指定了外部地址（联调）或非桌面端时不启动本地服务。
   ServiceSupervisor? supervisor;
   if (isDesktopPlatform && forcedBaseUrl.isEmpty) {
-    final plan = ServiceLaunchPlan.resolve(
-      forcedBin: serviceBin.isEmpty ? null : serviceBin,
-      overrideBin: Platform.environment['MIAO_SERVICE_BIN'],
-    );
-    if (plan != null) {
-      supervisor = ServiceSupervisor(plan: plan);
-      // 启动失败不阻塞进 UI：引导页会把「服务未就绪」如实画出来。
-      final port = await supervisor.start();
-      // 诊断输出：启动失败时日志里要能直接看到原因，而不是只留一个连不上的服务。
-      debugPrint('[bootstrap] mangasvc ${plan.origin} → ${port == null ? '失败：${supervisor.lastError}' : '端口 $port'}');
+    final existingBaseUrl = await const PortProbe().discover();
+    final existingToken = _readExistingServiceToken();
+    if (existingBaseUrl != null && existingToken != null) {
+      final port = Uri.parse(existingBaseUrl).port;
+      supervisor = ServiceSupervisor.attached(port: port, token: existingToken);
+      debugPrint('[bootstrap] reuse running mangasvc → port $port');
     } else {
-      debugPrint('[bootstrap] 未启动 mangasvc：${ServiceLaunchPlan.lastError}');
+      final plan = ServiceLaunchPlan.resolve(
+        forcedBin: serviceBin.isEmpty ? null : serviceBin,
+        overrideBin: Platform.environment['MIAO_SERVICE_BIN'],
+      );
+      if (plan != null) {
+        supervisor = ServiceSupervisor(plan: plan);
+        // 启动失败不阻塞进 UI：引导页会把「服务未就绪」如实画出来。
+        final port = await supervisor.start();
+        // 诊断输出：启动失败时日志里要能直接看到原因，而不是只留一个连不上的服务。
+        debugPrint('[bootstrap] mangasvc ${plan.origin} → ${port == null ? '失败：${supervisor.lastError}' : '端口 $port'}');
+      } else {
+        debugPrint('[bootstrap] 未启动 mangasvc：${ServiceLaunchPlan.lastError}');
+      }
     }
   }
 
@@ -81,7 +90,7 @@ Future<void> bootstrap(Widget app) async {
             // 一律走用户配置的远程地址（D-045）。
             supportsLocalEngine
                 ? locator
-                : RemoteServiceLocator(baseUrl: readRemoteBaseUrl() ?? '', token: readRemoteToken()),
+                : DynamicRemoteServiceLocator(readBaseUrl: () => readRemoteBaseUrl() ?? '', readToken: readRemoteToken),
           ),
         ),
         if (supervisor != null) serviceSupervisorProvider.overrideWithValue(supervisor),
@@ -89,6 +98,18 @@ Future<void> bootstrap(Widget app) async {
       child: EngineAutoStart(child: app),
     ),
   );
+}
+
+String? _readExistingServiceToken() {
+  final sep = Platform.pathSeparator;
+  final candidates = ['${mangaLibraryDir()}$sep.miao-state${sep}token', '${mangaStateDir()}${sep}token'];
+  for (final path in candidates) {
+    final file = File(path);
+    if (!file.existsSync()) continue;
+    final value = file.readAsStringSync().trim();
+    if (value.isNotEmpty) return value;
+  }
+  return null;
 }
 
 /// 移动端系统 UI（Android）：edge-to-edge 沉浸式。
