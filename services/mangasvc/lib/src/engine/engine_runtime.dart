@@ -200,20 +200,42 @@ class EngineRuntime {
   /// 不假装启动成功让用户等到翻译时才炸。
   /// 成功则记录 [_llmPort]/[_llmPid] 并把 `SAKURA_API_BASE` 指向它。
   Future<EngineSupervisor?> _startLlm() async {
-    final llama = File(
-      '$runtimeRoot${Platform.pathSeparator}bin${Platform.pathSeparator}llama'
-      '${Platform.pathSeparator}llama-b11417${Platform.pathSeparator}llama-server',
-    );
-    final modelDir = Directory('$runtimeRoot${Platform.pathSeparator}models${Platform.pathSeparator}sakura');
-    if (!llama.existsSync()) {
-      _log('[engine] L3 缺 llama-server：${llama.path}');
+    final sep = Platform.pathSeparator;
+    // 🔴 二进制与权重的候选路径要覆盖两种实际布局：
+    // - 安装器产物：`bin/llama/llama-b11417/llama-server` + `models/sakura/*.gguf`
+    // - 手动引擎目录（实测）：`bin/llama/llama-server` + `llm/*.gguf`
+    // 只认一种会让 L3 永远「缺文件」—— 即便用户的引擎是完整的（D-136 实锤）。
+    final llamaCandidates = [
+      '$runtimeRoot${sep}bin${sep}llama${sep}llama-b11417${sep}llama-server',
+      '$runtimeRoot${sep}bin${sep}llama${sep}llama-server',
+    ];
+    File? llama;
+    for (final path in llamaCandidates) {
+      final f = File(path);
+      if (f.existsSync()) {
+        llama = f;
+        break;
+      }
+    }
+    if (llama == null) {
+      _log('[engine] L3 缺 llama-server：试过 ${llamaCandidates.join(' , ')}');
       return null;
     }
-    final gguf = modelDir.existsSync()
-        ? modelDir.listSync().whereType<File>().where((f) => f.path.endsWith('.gguf')).firstOrNull
-        : null;
+    final modelCandidates = ['$runtimeRoot${sep}models${sep}sakura', '$runtimeRoot${sep}llm'];
+    File? gguf;
+    for (final dirPath in modelCandidates) {
+      final dir = Directory(dirPath);
+      if (!dir.existsSync()) continue;
+      for (final f in dir.listSync()) {
+        if (f is File && f.path.endsWith('.gguf')) {
+          gguf = f;
+          break;
+        }
+      }
+      if (gguf != null) break;
+    }
     if (gguf == null) {
-      _log('[engine] L3 缺 Sakura 权重：${modelDir.path}（到设置页「下载模型」补齐）');
+      _log('[engine] L3 缺 Sakura 权重：试过 ${modelCandidates.join(' , ')}（到设置页「下载模型」补齐）');
       return null;
     }
 

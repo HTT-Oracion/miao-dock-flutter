@@ -368,12 +368,18 @@ class _ServiceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
+    // 🔴 订阅轮询流（1.5s）：`engineStatusPollProvider` 是懒加载 StreamProvider，
+    // 没人 watch 就永远不会跑 —— 启动后状态不再同步，「点了启动还显示未启动」（实测踩过）。
+    ref.watch(engineStatusPollProvider);
     final view = ref.watch(notReadyViewProvider);
     final install = ref.watch(engineInstallProvider);
     // 🔴 必须直接看 engineStateProvider：`notReadyViewProvider` 传的是 `status: null`，
     // 其 `engine` 恒为 off —— 用它判断会导致按钮永远没有 loading 态。
     final engineState = ref.watch(engineStateProvider);
+    final llmState = ref.watch(llmStateProvider);
     final running = engineState.isReady;
+    // 引擎在跑但 LLM 缺 ⇒ 服务在、翻译不可用：圆点黄色 + 文字说明（不再是纯绿/纯灰两态）。
+    final llmMissing = running && !llmState.isReady;
 
     // 启动前置条件（D-062）：**装配齐全 且 校验通过**才允许点启动。
     // 没装好就点启动，只会得到一个语焉不详的失败；不如直接禁用并说明原因。
@@ -392,7 +398,7 @@ class _ServiceCard extends ConsumerWidget {
       (true, _) => l10n.nrTitleDownloading,
       (_, NotReadyState.degraded) => l10n.nrTitleDegraded,
       (_, NotReadyState.failed) => l10n.nrTitleFailed,
-      _ => running ? l10n.svcEngineReady : l10n.svcEngineOff,
+      _ => llmMissing ? l10n.svcLlmMissing : (running ? l10n.svcEngineReady : l10n.svcEngineOff),
     };
 
     return Container(
@@ -417,11 +423,16 @@ class _ServiceCard extends ConsumerWidget {
                       style: TextStyle(fontSize: AppFont.px11_5, fontWeight: FontWeight.w600, color: palette.ink),
                     ),
                     const SizedBox(width: 6),
-                    // 状态圆点：放在文字右侧、尺寸收小（8px）。
+                    // 状态圆点：绿=就绪（两进程都在跑）、黄=部分就绪、灰=停止。
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: BoxDecoration(color: running ? palette.good : palette.warn, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                        color: running
+                            ? (llmMissing ? palette.warn : palette.good)
+                            : (engineState == EngineRuntimeState.failed ? palette.bad : palette.divider),
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     _Pill(text: l10n.svcCardLocalService),

@@ -19,6 +19,10 @@ class EngineNotifier extends Notifier<EngineRuntimeState> {
   @override
   EngineRuntimeState build() => EngineRuntimeState.off;
 
+  /// 最近一次上报的 **LLM** 状态（与 [engineStateProvider] 平行；
+  /// 供 gate / 设置页圆点区分「引擎在跑但翻译不可用」）。
+  EngineRuntimeState buildLlm() => EngineRuntimeState.off;
+
   /// 启动引擎 + 大模型（共用一个开关，D-012）。
   ///
   /// 走 `POST /api/v1/engine/start`，用返回的 `EngineStatus` 推导状态 ——
@@ -63,12 +67,18 @@ class EngineNotifier extends Notifier<EngineRuntimeState> {
     if (status == null) return;
     final e = EngineRuntimeState.fromWire(status.engine.state);
     final l = EngineRuntimeState.fromWire(status.llm.state);
-    // 两个进程都 running 才算就绪（只判一个会把「LLM 没起」当成就绪）。
-    if (e == EngineRuntimeState.running && l == EngineRuntimeState.running) {
+    // 同步到平行 provider：gate / 设置页圆点用它区分「引擎在跑但翻译不可用」。
+    ref.read(llmStateProvider.notifier).set(l);
+    // 🔴 引擎组状态以 **L1 网关（engine）** 为准：
+    // L3 缺模型时服务端 engine=running / llm=off —— 这是「运行中但翻译不可用」，
+    // 合成成 off 会让用户看到「点了启动还是未启动」（实测踩过）；
+    // LLM 的缺失由 status.llm 与 lastError 单独表达，设置页黄点 + 提示文案。
+    // 但两进程都 running 才算「能翻译」——canTranslate 由 deriveNotReadyView 判。
+    if (e == EngineRuntimeState.running) {
       state = EngineRuntimeState.running;
     } else if (e == EngineRuntimeState.starting || l == EngineRuntimeState.starting) {
       state = EngineRuntimeState.starting;
-    } else if (e == EngineRuntimeState.failed || l == EngineRuntimeState.failed) {
+    } else if (e == EngineRuntimeState.failed) {
       state = EngineRuntimeState.failed;
     } else {
       state = EngineRuntimeState.off;
@@ -77,6 +87,16 @@ class EngineNotifier extends Notifier<EngineRuntimeState> {
 }
 
 final engineStateProvider = NotifierProvider<EngineNotifier, EngineRuntimeState>(EngineNotifier.new);
+
+/// LLM（Sakura / llama-server）的独立状态 —— 引擎 running 不代表 LLM 在跑。
+final llmStateProvider = NotifierProvider<LlmStateNotifier, EngineRuntimeState>(LlmStateNotifier.new);
+
+class LlmStateNotifier extends Notifier<EngineRuntimeState> {
+  @override
+  EngineRuntimeState build() => EngineRuntimeState.off;
+
+  void set(EngineRuntimeState value) => state = value;
+}
 
 /// 【大模型翻译】是否对用户开放。
 ///

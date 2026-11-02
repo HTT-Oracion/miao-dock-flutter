@@ -142,6 +142,7 @@ final mangaGateProvider = Provider<MangaGateState>((ref) {
   final presence = ref.watch(enginePresenceProvider);
   final install = ref.watch(engineInstallProvider);
   final engine = ref.watch(engineStateProvider);
+  final llm = ref.watch(llmStateProvider);
   final service = ref.watch(serviceStatusProvider);
 
   return deriveMangaGate(
@@ -150,7 +151,9 @@ final mangaGateProvider = Provider<MangaGateState>((ref) {
     installing: install.running,
     installError: install.error != null,
     serviceBroken: service.supported && service.state == ServiceProcessState.failed,
-    engineRunning: engine.isReady,
+    // 🔴 「就绪」= 网关在跑 **且** LLM 在跑：只判网关会让「LLM 没起」
+    // 被当成能翻译，点进去才炸（D-136）。
+    engineRunning: engine.isReady && llm.isReady,
     engineStarting: engine == EngineRuntimeState.starting,
     engineFailed: engine == EngineRuntimeState.failed,
     needsLocalEngine: source.requiresLocalRuntime,

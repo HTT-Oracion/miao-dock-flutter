@@ -2686,3 +2686,27 @@
 - **踩坑**：反证后的恢复脚本用 `'state': _state.wire` 做替换，
   **把 engine 行也误改了**（同字面量）—— 靠 engine_test 的既有断言当场抓住。
   批量替换后必须 grep 核对目标行，第二条教训（D-124 同类）。
+
+## D-136 「点了启动仍显示未启动」+ LLM 路径不匹配（实机修复）
+
+- **状态**：完成（2026-11-02）
+- **现场**（对运行中的 mangasvc 直接查询）：`engine=running / llm=off /
+  lastError=大模型后端未就绪` —— 但 UI 显示「未启动」。
+- **三个根因**：
+  1. **`applyStatus` 合成语义错**：`engine=running + llm=off` 落进 else 分支合成
+     **off** —— L1/L2 明明起来了，UI 却「未启动」。改为以 **L1 网关为准**
+     （engine running ⇒ 引擎组 running）；「能不能翻译」由 llm 状态单独表达。
+  2. **轮询从未运行**：`engineStatusPollProvider`（1.5s）定义了但**没有任何
+     watch**（懒加载 StreamProvider 不订阅不跑）⇒ 启动后状态永远停在旧值。
+     设置页 `build` 顶部补 `ref.watch(engineStatusPollProvider)` 激活。
+  3. **L3 候选路径与实际布局不符**：代码找 `bin/llama/llama-b11417/llama-server`
+     + `models/sakura/`，实测引擎目录是 `bin/llama/llama-server`（无版本层）
+     + `llm/*.gguf` ⇒ L3 永远「缺文件」。改为**多候选探测**（两种布局都覆盖）。
+- **连带修正**：
+  - 新增 `llmStateProvider`（与 engineState 平行）；`applyStatus` 同步它；
+  - `mangaGateProvider` 的 `engineRunning` = engine.isReady **且** llm.isReady
+    —— 否则侧栏「已就绪」但点翻译必炸；
+  - 设置页圆点三态：绿=两进程都跑 / 黄=引擎跑但 LLM 缺（副标
+    「引擎运行中，大模型未就绪——翻译不可用」）/ 红=failed / 灰=停止。
+- **验证**：对运行中服务查询确认 engine=running；服务 186 / 应用 160 全通过。
+- **注意**：需要 `flutter run -d macos` 重新编译打包的 mangasvc 才生效（D-109 教训）。

@@ -2193,5 +2193,9 @@
   "remoteChecking": "校验中…",
   "@remoteChecking": {
     "description": "远程配置探测进行中"
+  },
+  "svcLlmMissing": "引擎运行中，大模型未就绪 —— 翻译不可用",
+  "@svcLlmMissing": {
+    "description": "服务卡片：L3 缺失时的副标"
   }
 }
