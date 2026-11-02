@@ -61,6 +61,31 @@ void main(List<String> args) async {
     return p;
   }
 
+  Future<(HttpServer, HttpServer)> occupiedPortPair() async {
+    while (true) {
+      final port = await freePort();
+      if (port >= 65535) continue;
+      HttpServer? first;
+      try {
+        first = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+        final second = await HttpServer.bind(InternetAddress.loopbackIPv4, port + 1);
+        void serve(HttpServer server) {
+          server.listen((request) async {
+            request.response.statusCode = 200;
+            request.response.write('stale');
+            await request.response.close();
+          });
+        }
+
+        serve(first);
+        serve(second);
+        return (first, second);
+      } on SocketException {
+        await first?.close(force: true);
+      }
+    }
+  }
+
   void writeSpec({required String command, required int port, List<String> args = const []}) {
     File('$rt/launch.json')
         .writeAsStringSync(jsonEncode({'command': command, 'args': args, 'healthPath': '/health', 'port': port}));
@@ -171,6 +196,28 @@ void main(List<String> args) async {
       expect((s['engine'] as Map)['state'], 'error');
       // L1 / L2 的失败文案都含「就绪」，不绑定具体层。
       expect(s['lastError'], contains('就绪'));
+    });
+
+    test('规格端口被旧引擎占用 → 换空闲端口，不把旧进程当成本次就绪', () async {
+      final stale = await occupiedPortPair();
+      addTearDown(() async {
+        await stale.$1.close(force: true);
+        await stale.$2.close(force: true);
+      });
+      final occupiedPort = stale.$1.port;
+      final script = '${tmp.path}/fake.dart';
+      File(script).writeAsStringSync(fakeEngine);
+      writeSpec(command: Platform.resolvedExecutable, port: occupiedPort, args: ['run', script, '$occupiedPort']);
+
+      final facade = EngineFacade(runtimeRoot: rt, modelsDir: models, healthTimeout: const Duration(seconds: 10));
+      addTearDown(facade.dispose);
+      final status = await facade.startEngine();
+      final engine = status['engine'] as Map;
+
+      // 破坏点：只探测固定端口的 200 → 会接受锁死的旧 executor，投放后立即 429。
+      expect(engine['state'], 'running', reason: '${status['recentStageLog']}');
+      expect(engine['port'], isNot(occupiedPort));
+      expect(engine['pid'], isNotNull);
     });
   });
 

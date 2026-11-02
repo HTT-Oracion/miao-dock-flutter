@@ -37,6 +37,18 @@ class EngineLaunchSpec {
 
   String healthUrl() => 'http://127.0.0.1:$port$healthPath';
 
+  /// 启动时端口被占用可换到一组空闲端口；同步改写参数中原端口字面量。
+  EngineLaunchSpec withPort(int nextPort) => EngineLaunchSpec(
+    command: command,
+    args: [
+      for (final arg in args)
+        if (arg == '$port') '$nextPort' else arg,
+    ],
+    healthPath: healthPath,
+    port: nextPort,
+    env: env,
+  );
+
   /// 读规格。失败时返回**带原因**的错误，不返回 null 了事 ——
   /// 「起不来」时用户最需要知道的是缺什么。
   static LaunchSpecResult load(String runtimeRoot) {

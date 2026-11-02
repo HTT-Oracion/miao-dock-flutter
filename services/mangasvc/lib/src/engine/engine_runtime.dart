@@ -107,8 +107,8 @@ class EngineRuntime {
 
     // 启动规格是「怎么起」的唯一事实源；缺了就明确报缺，不猜参数。
     final specResult = EngineLaunchSpec.load(runtimeRoot);
-    final spec = specResult.spec;
-    if (spec == null) {
+    final configuredSpec = specResult.spec;
+    if (configuredSpec == null) {
       _state = EngineState.error;
       _phase = 'L1';
       _lastError = specResult.error;
@@ -116,12 +116,39 @@ class EngineRuntime {
       return;
     }
 
+    // 先启动 LLM，才能把它的真实动态端口注入 executor；否则 executor 会回退到
+    // keys.py 的 8080，连上另一个残留进程。引擎端口也必须在 LLM 已占端口后再选，
+    // 否则系统可能把 L1+1 分给 LLM，导致 executor 无法 bind。
+    _phase = 'L3';
+    final llm = await _startLlm();
+    final selectedPort = await _selectEnginePort(configuredSpec.port);
+    if (selectedPort == null) {
+      await _stopLlm();
+      _state = EngineState.error;
+      _phase = 'L1';
+      _lastError = '找不到连续两个空闲端口，无法启动翻译引擎';
+      _log('[engine] no free consecutive ports');
+      return;
+    }
+    final spec = configuredSpec.withPort(selectedPort);
+    if (selectedPort != configuredSpec.port) {
+      _log(
+        '[engine] configured ports ${configuredSpec.port}/${configuredSpec.port + 1} occupied; use $selectedPort/${selectedPort + 1}',
+      );
+    }
+    final engineEnvironment = Map<String, String>.of(spec.env);
+    final llmPort = _llmPort;
+    if (llm != null && llmPort != null) {
+      engineEnvironment['SAKURA_API_BASE'] = 'http://127.0.0.1:$llmPort/v1';
+    }
+    _phase = 'L1';
+
     final sup = EngineSupervisor(
       processPath: spec.command,
       processArgs: spec.args,
       healthUrl: spec.healthUrl(),
       workingDirectory: runtimeRoot,
-      environment: spec.env,
+      environment: engineEnvironment,
       healthTimeout: healthTimeout,
       // 🔴 引擎输出必须落盘：executor 崩溃的 traceback 只打在 stdout/stderr，
       // 没有文件现场，Broken pipe 这类问题永远查不到根因（D-133）。
@@ -137,6 +164,7 @@ class EngineRuntime {
       _log(line);
     }
     if (!healthy) {
+      await _stopLlm();
       _state = EngineState.error;
       _phase = 'L1';
       _lastError = '引擎未能在 ${healthTimeout.inSeconds}s 内就绪（健康检查 ${spec.healthUrl()}）';
@@ -149,6 +177,8 @@ class EngineRuntime {
     _phase = 'L2';
     final executorReady = await _waitExecutorReady(spec.port);
     if (!executorReady) {
+      await sup.stop();
+      await _stopLlm();
       _state = EngineState.error;
       _phase = 'L2';
       _lastError = '翻译执行器未就绪（${spec.port + 1}；进程可能仍在加载模型）';
@@ -157,9 +187,6 @@ class EngineRuntime {
     }
     _log('[engine] L2 executor ready on ${spec.port + 1}');
 
-    // ── L3：大模型后端（llama-server + Sakura 权重）───────────────────
-    _phase = 'L3';
-    final llm = await _startLlm();
     if (llm == null) {
       // LLM 没起来**不是**整个引擎失败：OCR/检测仍可用，
       // 但翻译会失败 —— 状态保持 running 并明确标注，让上层引导补模型。
@@ -184,6 +211,46 @@ class EngineRuntime {
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }
     return false;
+  }
+
+  /// L1 与 L2 固定使用相邻端口；启动前必须同时空闲，不能把旧进程的 200 当成本次就绪。
+  Future<int?> _selectEnginePort(int preferred) async {
+    if (await _portPairAvailable(preferred)) return preferred;
+    for (var i = 0; i < 30; i++) {
+      final first = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final candidate = first.port;
+      if (candidate >= 65535) {
+        await first.close();
+        continue;
+      }
+      ServerSocket? second;
+      try {
+        second = await ServerSocket.bind(InternetAddress.loopbackIPv4, candidate + 1);
+        return candidate;
+      } on SocketException {
+        // 下一轮重新让系统分配候选端口。
+      } finally {
+        await second?.close();
+        await first.close();
+      }
+    }
+    return null;
+  }
+
+  Future<bool> _portPairAvailable(int port) async {
+    if (port >= 65535) return false;
+    ServerSocket? first;
+    ServerSocket? second;
+    try {
+      first = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+      second = await ServerSocket.bind(InternetAddress.loopbackIPv4, port + 1);
+      return true;
+    } on SocketException {
+      return false;
+    } finally {
+      await second?.close();
+      await first?.close();
+    }
   }
 
   /// 挑一个系统分发的空闲端口（绑定后立即释放——存在竞态，可接受）。
@@ -251,13 +318,25 @@ class EngineRuntime {
     for (final line in sup.log) {
       _log('[llama] $line');
     }
-    if (!ok) return null;
+    if (!ok) {
+      await sup.stop();
+      return null;
+    }
     _llmSupervisor = sup;
     _llmPort = port;
     _llmPid = sup.pid;
     _llmModel = gguf.uri.pathSegments.last;
     _log('[engine] L3 llm ready on $port（$_llmModel）');
     return sup;
+  }
+
+  Future<void> _stopLlm() async {
+    final supervisor = _llmSupervisor;
+    if (supervisor != null) await supervisor.stop();
+    _llmSupervisor = null;
+    _llmPid = null;
+    _llmPort = null;
+    _llmModel = null;
   }
 
   /// 停止（主动停止：监督器不会把它当崩溃重启）。
@@ -273,12 +352,7 @@ class EngineRuntime {
       }
       _supervisor = null;
     }
-    final llmSup = _llmSupervisor;
-    if (llmSup != null) {
-      await llmSup.stop();
-      _llmSupervisor = null;
-    }
-    _llmModel = null;
+    await _stopLlm();
     _state = EngineState.stopped;
     _phase = null;
     _enginePid = null;
@@ -369,6 +443,7 @@ class EngineRuntime {
   Future<void> dispose() async {
     await _supervisor?.dispose();
     _supervisor = null;
+    await _stopLlm();
   }
 }
 
