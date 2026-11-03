@@ -40,7 +40,7 @@ class MobileBottomNav extends ConsumerWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 52,
+          height: 48,
           // 与设计稿一致：四项**均分铺满**整宽（不是居中扎堆）。
           // 用 LayoutBuilder 算每项宽度 = 可用宽 / 项数，超过最小宽度后可横滑。
           child: LayoutBuilder(
@@ -119,7 +119,7 @@ class _BottomItem extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 17, color: active ? palette.acc : palette.mut),
+                Icon(icon, size: 15, color: active ? palette.acc : palette.mut),
                 if (dot != null)
                   Positioned(
                     right: -3,
@@ -132,7 +132,7 @@ class _BottomItem extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
@@ -172,7 +172,7 @@ class MobileViewTabs extends StatelessWidget {
     final palette = AppPalette.of(context);
     if (items.isEmpty) return const SizedBox.shrink();
     return Container(
-      height: 42,
+      height: 40,
       decoration: BoxDecoration(
         color: palette.panel,
         border: Border(bottom: BorderSide(color: palette.line)),

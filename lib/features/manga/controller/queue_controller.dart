@@ -236,6 +236,14 @@ class QueueFilterNotifier extends Notifier<QueueFilterState> {
     ref.read(pagerProvider.notifier).goTo(1);
   }
 
+  /// 设置来源集合（**幂等**）：一次写入多个来源，避免「其他」这种聚合项
+  /// 用连续 toggle 表达时互相覆盖（实测：只有 unknown 被选中时点「其他」
+  /// 会打开 desktop 而不是全部取消）。
+  void setSources(Set<MangaTaskSource> sources) {
+    state = QueueFilterState(sources: {...sources}, statuses: state.statuses);
+    ref.read(pagerProvider.notifier).goTo(1);
+  }
+
   void clearSources() {
     state = QueueFilterState(sources: const {}, statuses: state.statuses);
     ref.read(pagerProvider.notifier).goTo(1);
