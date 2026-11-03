@@ -3083,3 +3083,33 @@
   - 现实评估：警告无害（当前构建不受影响），上游 0.9.2 已在做迁移准备。
 - **验证**：全量 198 通过 + 11 跳过；analyze 干净；pubspec 还原一致（0.8.4）。
 - **关联**：D-048（Web Platform._environment 先例）· D-044（Web 平台分层）· D-146（镜像引入）。
+
+## D-138 投放页按端拆分 + 移动端导航改底部一级/顶部二级
+
+- **状态**：完成（2026-11-03），**未提交**（用户验证后提交）
+- **① 投放页拆分（唯一一处密集分支）**：`drop_screen.dart` 原 521 行含 **26 处
+  `isMobile ?`**，改任何一端都要读完整段。按 `queue_mobile.dart` 的既有先例拆为：
+  - `ui/drop_screen.dart`：**壳**（取图 / 提交两类逻辑 + 断点分流）；
+  - `ui/drop/drop_desktop.dart`：拖拽区 + 并排按钮 + 720 卡片（桌面专属）；
+  - `ui/drop/drop_mobile.dart`：**无拖拽**、纵向单栏、密度紧凑（移动专属）。
+  拆分的判据不是「间距差几 px」而是**结构不同**——移动端没有 HTML5 拖拽，
+  画「拖入图片」虚线框会误导用户，移动端因此改为纯选图区。
+  标签字号同步对齐（移动 10.5/600，与队列、漫画库同级）。
+- **② 架构答复（用户提问"是否需要两套 layout"）**：**不需要**——布局层早已是
+  `_DesktopShell` / `_MobileShell` 两个独立类，`LayoutBuilder` 二选一。
+  真正要换的是移动端**导航形态**：抽屉（汉堡两次点击）→ 底部一级 + 顶部二级。
+- **③ 移动端导航改造**：
+  - 新增 `app/shell/mobile_nav.dart`：
+    `MobileBottomNav`（漫画/音乐/番剧/设置，52 高、横向 ListView 可滑、漫画项带
+    就绪度状态点）/ `MobileViewTabs`（模块内视图，42 高、acc 色下划线、可横滑、
+    右侧留 actions 位）；
+  - `_MobileShell` 去掉 `drawer` 与 `_MobileTopBar`，改挂 `bottomNavigationBar`
+    + 顶部 `MobileViewTabs`；`_MobileTopBar` / `_MobileDrawer` 一并删除；
+  - 路由与业务页面**零改动**（仍是 StatefulShellRoute + 既有路径）。
+- **设计稿口径修正（同轮）**：远程来源由胶囊改**纯文本**；「深色模式 / 侧栏标签」
+  归 **通用** tab（此前误放在翻译服务 tab）；标注 not_ready **仅桌面**（移动端
+  只有远程来源，门禁固定走 remoteBlocked）、门禁卡**已采纳**。
+- **验证**：`flutter analyze` 干净；全量 **201 通过 + 8 跳过**；新增
+  `mobile_nav_test` 3 条（四模块可滑 / 二级高亮回调 / 空列表不渲染）。
+- **关联**：D-134（移动端 IA 设计稿）· D-044（移动端只远程）· D-069（投放页原型）·
+  D-137（两端分开维护的判据）。

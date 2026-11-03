@@ -19,6 +19,7 @@ import '../../shared/widgets/app_title_bar.dart';
 import '../../shared/widgets/nav_rail.dart';
 import 'shell_controller.dart';
 import 'view_labels.dart';
+import 'mobile_nav.dart';
 
 /// 响应式应用壳（design.html §03）：
 /// 桌面 = 侧栏（208/68）+ 工具条（56）+ 内容区；
@@ -172,8 +173,12 @@ void _goModule(BuildContext context, int index) {
       context.go('/manga/drop');
     case 1:
       context.go('/music/discover');
-    default:
+    case 2:
       context.go('/anime');
+    default:
+      // -1 = 设置（底部导航第四项）。此前落到 default 会跳到番剧——
+      // 用户实测「点设置没跳到设置页」即此因。
+      context.go('/settings');
   }
 }
 
@@ -296,119 +301,34 @@ class _MobileShell extends ConsumerStatefulWidget {
 }
 
 class _MobileShellState extends ConsumerState<_MobileShell> {
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final labels = ref.watch(sidebarLabelsProvider);
-    final queueDepth = _queueDepth(ref.watch(queueProvider).value ?? const []);
-    final title = widget.location.crumbs.isEmpty ? AppLocalizations.of(context).brandName : widget.location.crumbs.last;
+    final location = widget.location;
 
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: palette.bg,
-      // 抽屉宽度固定展开态 208（design.html 移动端 `.sidebar{width:var(--sidebar-w)}`）。
-      drawer: _MobileDrawer(
-        width: AppMetrics.sidebarWidth,
-        location: widget.location,
-        labels: labels,
-        queueDepth: queueDepth,
+      // 一级导航在**底部**（漫画 / 音乐 / 番剧 / 设置）：手机上一级入口必须一次点击可达。
+      bottomNavigationBar: MobileBottomNav(
+        moduleIndex: location.moduleIndex,
+        onSelectModule: (i) => _goModule(context, i),
       ),
-      // 移动端安全区：刘海 / 挖孔由 SafeArea 让位；顶栏本身贴状态栏下沿（沉浸式）。
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            _MobileTopBar(title: title, onMenu: () => _scaffoldKey.currentState?.openDrawer()),
-            Container(height: 1, color: palette.line),
+            // 二级导航在**顶部**：当前模块内的视图（投放 / 队列 / 漫画库），可横向滑动。
+            MobileViewTabs(
+              items: [
+                for (final item in location.viewItems) (item.id, viewLabel(AppLocalizations.of(context), item.id)),
+              ],
+              activeId: location.viewId,
+              onSelect: (v) => _goView(context, location.moduleIndex, v),
+            ),
             Expanded(
-              child: MangaGate(enabled: widget.location.moduleIndex == 0, path: widget.path, child: widget.shell),
+              child: MangaGate(enabled: location.moduleIndex == 0, path: widget.path, child: widget.shell),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MobileTopBar extends StatelessWidget {
-  const _MobileTopBar({required this.title, required this.onMenu});
-
-  final String title;
-  final VoidCallback onMenu;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return SizedBox(
-      height: AppMetrics.toolbarHeight,
-      child: Row(
-        children: [
-          // app.css `.hamb`：34 方形、8 圆角。
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: IconButton(
-              icon: const Icon(LucideIcons.menu, size: 17),
-              color: palette.ink2,
-              tooltip: AppLocalizations.of(context).actionOpenNav,
-              onPressed: onMenu,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              title,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w700, color: palette.ink),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 移动端抽屉：复用同一 [NavRail]，走展开态；关抽屉由 AppShell 处理。
-class _MobileDrawer extends ConsumerWidget {
-  const _MobileDrawer({required this.width, required this.location, required this.labels, required this.queueDepth});
-
-  final double width;
-  final _ShellLocation location;
-  final bool labels;
-  final int queueDepth;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
-    return Drawer(
-      width: width,
-      backgroundColor: palette.panel,
-      shape: const RoundedRectangleBorder(),
-      child: SafeArea(
-        right: false,
-        child: NavRail(
-          collapsed: false,
-          labels: labels,
-          onToggleCollapse: () => Navigator.of(context).pop(),
-          moduleIndex: location.moduleIndex,
-          onSelectModule: (i) {
-            Navigator.of(context).pop();
-            _goModule(context, i);
-          },
-          viewGroupLabel: location.viewGroupLabel,
-          viewItems: location.viewItems,
-          activeViewId: location.viewId,
-          onSelectView: (v) {
-            Navigator.of(context).pop();
-            _goView(context, location.moduleIndex, v);
-          },
-          queueCount: queueDepth,
-          onOpenSettings: () {
-            Navigator.of(context).pop();
-            context.go('/settings');
-          },
-          readiness: ref.watch(shellReadinessProvider),
-          miniPlayer: SidebarMiniPlayer(collapsed: false),
         ),
       ),
     );

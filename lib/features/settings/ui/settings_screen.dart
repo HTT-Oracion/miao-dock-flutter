@@ -292,57 +292,62 @@ class _GeneralSection extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final collapsed = ref.watch(navCollapsedProvider);
 
+    final mobile = context.isMobile;
+    final rows = <Widget>[
+      SettingRow(
+        label: l10n.settingDarkMode,
+        why: l10n.settingDarkModeWhy,
+        def: themeMode == ThemeMode.dark ? l10n.settingDark : l10n.settingLight,
+        control: AppSwitch(
+          value: themeMode == ThemeMode.dark,
+          onChanged: (v) => ref.read(themeModeProvider.notifier).set(v ? ThemeMode.dark : ThemeMode.light),
+        ),
+      ),
+      SettingRow(
+        label: l10n.settingCloseBehavior,
+        why: l10n.settingTrayNotWired,
+        def: l10n.settingCloseToTray,
+        dimmed: true,
+        control: AppSelect<String>(
+          value: 'tray',
+          enabled: false,
+          items: [(('tray'), l10n.settingCloseToTray), (('quit'), l10n.settingCloseQuit)],
+          onChanged: null,
+        ),
+      ),
+      SettingRow(
+        label: l10n.settingSpecCheck,
+        why: l10n.settingSpecNotWired,
+        dimmed: true,
+        control: AppButton(
+          label: l10n.settingSpecCheckRun,
+          variant: AppButtonVariant.primary,
+          onTap: null,
+          clickable: false,
+        ),
+      ),
+      // 侧栏展开开关：与侧栏自身的收起/展开按钮**同一个状态**（navCollapsedProvider）。
+      // 移动端没有可折叠侧栏（用底部导航），因此不显示该设置。
+      if (MediaQuery.sizeOf(context).width > AppMetrics.breakpoint)
+        SettingRow(
+          label: l10n.settingSidebarLabels,
+          why: l10n.settingSidebarLabelsWhy,
+          def: collapsed ? l10n.settingSidebarCollapsed : l10n.settingSidebarExpanded,
+          control: AppSwitch(
+            // 开关「开」= 展开（不折叠），与用户直觉一致。
+            value: !collapsed,
+            onChanged: (v) => ref.read(navCollapsedProvider.notifier).set(!v),
+          ),
+        ),
+    ];
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
+      padding: EdgeInsets.fromLTRB(mobile ? 12 : 20, mobile ? 10 : 18, mobile ? 12 : 20, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _Head(title: l10n.settingsNavGeneral, blurb: l10n.settingsBlurbGeneral),
-          SettingRow(
-            label: l10n.settingDarkMode,
-            why: l10n.settingDarkModeWhy,
-            def: themeMode == ThemeMode.dark ? l10n.settingDark : l10n.settingLight,
-            control: AppSwitch(
-              value: themeMode == ThemeMode.dark,
-              onChanged: (v) => ref.read(themeModeProvider.notifier).set(v ? ThemeMode.dark : ThemeMode.light),
-            ),
-          ),
-          SettingRow(
-            label: l10n.settingCloseBehavior,
-            why: l10n.settingTrayNotWired,
-            def: l10n.settingCloseToTray,
-            dimmed: true,
-            control: AppSelect<String>(
-              value: 'tray',
-              enabled: false,
-              items: [(('tray'), l10n.settingCloseToTray), (('quit'), l10n.settingCloseQuit)],
-              onChanged: null,
-            ),
-          ),
-          SettingRow(
-            label: l10n.settingSpecCheck,
-            why: l10n.settingSpecNotWired,
-            dimmed: true,
-            control: AppButton(
-              label: l10n.settingSpecCheckRun,
-              variant: AppButtonVariant.primary,
-              onTap: null,
-              clickable: false,
-            ),
-          ),
-          // 侧栏展开开关：与侧栏自身的收起/展开按钮**同一个状态**（navCollapsedProvider）。
-          // 移动端没有可折叠侧栏（用底部导航），因此不显示该设置。
-          if (MediaQuery.sizeOf(context).width > AppMetrics.breakpoint)
-            SettingRow(
-              label: l10n.settingSidebarLabels,
-              why: l10n.settingSidebarLabelsWhy,
-              def: collapsed ? l10n.settingSidebarCollapsed : l10n.settingSidebarExpanded,
-              control: AppSwitch(
-                // 开关「开」= 展开（不折叠），与用户直觉一致。
-                value: !collapsed,
-                onChanged: (v) => ref.read(navCollapsedProvider.notifier).set(!v),
-              ),
-            ),
+          // 每行一张小卡（`.setrow`）：分组卡片方案实测观感更差，已回退。
+          ...rows,
         ],
       ),
     );
@@ -359,8 +364,10 @@ class _TranslateSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final source = ref.watch(translateSourceProvider);
 
+    final mobile = context.isMobile;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
+      // 移动端：左右 12（与队列/漫画库同口径），顶部 10；桌面保持原内距。
+      padding: EdgeInsets.fromLTRB(mobile ? 12 : 20, mobile ? 10 : 18, mobile ? 12 : 20, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -371,6 +378,7 @@ class _TranslateSection extends ConsumerWidget {
             const _RemoteOnlyNote(),
             SettingSubTitle(l10n.settingsSectionSource),
             const _SourceRow(),
+            const SizedBox(height: 6),
             const _RemoteSection(),
           ] else ...[
             // 「模型」放在首部：引擎目录 / 启动服务 / 校验 / 导入 —— 能不能翻译的前提。
@@ -871,7 +879,16 @@ class _SourceRow extends ConsumerWidget {
     final current = ref.watch(translateSourceProvider);
     // Web / 移动端：没有可选项，不画下拉（画了就是假的可交互控件）。
     if (!supportsLocalEngine) {
-      return SettingRow(label: l10n.settingSourceLabel, why: l10n.settingRemoteOnlyNote, def: l10n.sourceRemote);
+      // 移动端来源用**纯文本**展示（不用胶囊）：这里没有可选项，胶囊会暗示
+      // 「可切换」。用户裁定：直接显示文字。
+      return SettingRow(
+        label: l10n.settingSourceLabel,
+        why: l10n.settingRemoteOnlyNote,
+        control: Text(
+          l10n.sourceRemote,
+          style: TextStyle(fontSize: AppFont.px11_5, color: AppPalette.of(context).textPrimary),
+        ),
+      );
     }
     return SettingRow(
       label: l10n.settingSourceLabel,
