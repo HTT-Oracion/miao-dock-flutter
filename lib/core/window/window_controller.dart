@@ -8,10 +8,10 @@ import 'package:window_manager/window_manager.dart';
 final bool isDesktopPlatform = !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
 
 /// 是否渲染自绘窗控（设计稿 G Top 的 WinCtl）：Windows / Linux 自绘；macOS 保留原生红绿灯。
-final bool showWindowControls = isDesktopPlatform && !Platform.isMacOS;
+final bool showWindowControls = !kIsWeb && isDesktopPlatform && !Platform.isMacOS;
 
 /// macOS 原生红绿灯叠在自绘标题栏左侧，标题栏需为其预留宽度。
-final bool isMacosPlatform = isDesktopPlatform && Platform.isMacOS;
+final bool isMacosPlatform = !kIsWeb && isDesktopPlatform && Platform.isMacOS;
 
 /// 窗口标题 —— 系统窗口管理器在 `runApp` 之前就要用它，此时还没有 `BuildContext`，
 /// 因此不能走 ARB。应用内标题（`MaterialApp.onGenerateTitle`）仍走 l10n。

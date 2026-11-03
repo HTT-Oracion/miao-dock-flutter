@@ -3059,3 +3059,27 @@
 - **验证**：`flutter analyze` 干净；全量 198 通过 + 11 跳过（跳过数随桌面
   服务状态浮动，环境性）；l10n 棘轮通过。
 - **关联**：D-134（重排引入公共段归并）· D-109（胶囊点击断言）· D-085（单话封面回退）。
+
+## D-137 Web 白屏修复（实测渲染确认）+ KGP 警告结论
+
+- **状态**：白屏已修复并**浏览器实测渲染确认**；KGP 警告**暂不移除**（上游未就绪，用户拍板）；**未提交**
+- **① Web 白屏根因**：Web 启动路径上三处裸 `dart:io Platform` 访问——
+  1. `MobileMirrorStore` 构造器（`Platform.isAndroid`）——bootstrap 的非桌面分支
+     **必然构造**（`mirror: supportsLocalEngine ? null : MobileMirrorStore()`），
+     runApp 之前就抛 → 白屏（D-146 引入的新崩溃点）；
+  2. `_stopIncompatibleLocalService` / `_readExistingServiceToken`（桌面专用助手，
+     Web 上不可达但按约束加固）。**修法**：`kIsWeb` 最先短路（`MobileMirrorStore`
+     的 `_enabled`、两个助手）；`window_controller` 的顶层惰性求值
+     `showWindowControls` / `isMacosPlatform` 同步加固（首次访问在 Web 抛）。
+- **实测证据**：`flutter build web` + 本地起服务 + 内置浏览器（1440×900）打开
+  → 应用完整渲染（侧栏 / 投放页 / Web 正确显示「远程翻译」门禁卡——D-044 平台
+  分层生效），hash 路由 `#/manga/drop` 正常。截图留档。
+- **② KGP 警告（desktop_drop）**：实测结论——
+  - 最新 0.9.2 要求 **Dart ≥3.13.5**（项目锁 3.13.4，解析失败）；
+  - 且 0.9.2 只是**条件式迁移**（AGP ≥9 才免 KGP；本项目 AGP < 9 仍会 apply）——
+    升级后警告大概率仍在；
+  - Flutter 无官方豁免开关；唯一根治 = **vendor 插件并删除 KGP 自应用行**
+    （built-in Kotlin 会接管编译）——属依赖卫生决策，等用户拍板；
+  - 现实评估：警告无害（当前构建不受影响），上游 0.9.2 已在做迁移准备。
+- **验证**：全量 198 通过 + 11 跳过；analyze 干净；pubspec 还原一致（0.8.4）。
+- **关联**：D-048（Web Platform._environment 先例）· D-044（Web 平台分层）· D-146（镜像引入）。

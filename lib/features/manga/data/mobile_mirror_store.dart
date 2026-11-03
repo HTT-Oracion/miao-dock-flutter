@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:protocol/protocol.dart';
 
@@ -10,7 +11,9 @@ class MobileMirrorStore {
   MobileMirrorStore({MethodChannel channel = const MethodChannel('miao_dock/folder_picker'), bool forceEnabled = false})
     // ignore: prefer_initializing_formals
     : _channel = channel,
-      _enabled = forceEnabled || Platform.isAndroid || Platform.isIOS;
+      // 🔴 kIsWeb 必须最先短路：Web 上 dart:io Platform.isAndroid 直接抛
+      // （构造发生在 bootstrap 的非桌面分支——不守卫就是白屏）。
+      _enabled = forceEnabled || (!kIsWeb && (Platform.isAndroid || Platform.isIOS));
 
   final MethodChannel _channel;
   final bool _enabled;

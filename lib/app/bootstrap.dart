@@ -134,7 +134,8 @@ Future<bool> _existingServiceCompatible(String baseUrl, String token) async {
 }
 
 Future<void> _stopIncompatibleLocalService(int port) async {
-  if (!Platform.isMacOS && !Platform.isLinux) return;
+  // 🔴 Web 上 dart:io 的 Platform / Process 任何访问都会抛——桌面专用助手先短路。
+  if (kIsWeb || (!Platform.isMacOS && !Platform.isLinux)) return;
   try {
     final found = await Process.run('lsof', ['-tiTCP:$port', '-sTCP:LISTEN']);
     for (final line in '${found.stdout}'.split('\n')) {
@@ -156,6 +157,7 @@ Future<void> _stopIncompatibleLocalService(int port) async {
 }
 
 String? _readExistingServiceToken() {
+  if (kIsWeb) return null;
   final sep = Platform.pathSeparator;
   final candidates = ['${mangaLibraryDir()}$sep.miao-state${sep}token', '${mangaStateDir()}${sep}token'];
   for (final path in candidates) {
