@@ -44,7 +44,10 @@ class QueueScreen extends ConsumerWidget {
               ? const QueueEmpty()
               : (mobile ? QueueCardList(tasks: tasks) : _QueueContent(tasks: tasks));
         }
-        return Padding(padding: const EdgeInsets.fromLTRB(22, 18, 22, 0), child: body);
+        // 移动端不能用桌面内距：设计稿 `.pv` 左右只有 10（与卡片内距对齐），
+        // 22 会让卡片和底部选择栏都缩进，选择栏更没法定到屏幕边缘（用户实测）。
+        final pad = mobile ? const EdgeInsets.fromLTRB(10, 0, 10, 0) : const EdgeInsets.fromLTRB(22, 18, 22, 0);
+        return Padding(padding: pad, child: body);
       },
     );
   }

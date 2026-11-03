@@ -287,18 +287,27 @@ class _BookCardState extends ConsumerState<_BookCard> {
                         )
                       else
                         const SizedBox.shrink(),
+                      // 设计稿 `.libg .b .cv .cap`：h16 / padding 0 6 / radius 999 /
+                      // **背景 rgba(0,0,0,.5)**（不是 .4，太浅）+ 8.5 号字；
+                      // 「未归并」用 warn **只改文字色**，背景不变。
                       Positioned(
-                        left: 8,
-                        top: 8,
+                        left: 6,
+                        top: 6,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          height: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.4),
+                            // 用户实测 0.5 仍偏浅（设计稿 .5 在浅色封面上不够），改 0.7。
+                            color: Colors.black.withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
                             b.isBook ? l10n.bookChapterCount(b.chapterCount) : l10n.libUnmerged,
-                            style: const TextStyle(fontSize: AppFont.px9, color: Colors.white),
+                            style: TextStyle(
+                              fontSize: AppFont.px8_5,
+                              color: b.isBook ? Colors.white : AppPalette.of(context).warn,
+                            ),
                           ),
                         ),
                       ),
@@ -314,11 +323,14 @@ class _BookCardState extends ConsumerState<_BookCard> {
                 style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.textPrimary),
               ),
               const SizedBox(height: 2),
+              // 设计稿 `.libg .b .m`：`单本 · 22 页` / `单话 · 2 页`（8.5 号）。
               Text(
-                b.isBook ? '${b.hasAuthor ? b.author : l10n.bookUnnamedAuthor} · ${b.pageCount}' : '${b.pageCount}',
+                b.isBook
+                    ? '${l10n.libSegBook} · ${l10n.bookPageCount(b.pageCount)}'
+                    : '${l10n.libSegChapter} · ${l10n.bookPageCount(b.pageCount)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: AppFont.px9, color: palette.textSecondary),
+                style: TextStyle(fontSize: AppFont.px8_5, color: palette.textSecondary),
               ),
             ],
           ),

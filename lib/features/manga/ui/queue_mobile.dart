@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/app_checkbox.dart';
+import '../../../../shared/widgets/app_dropdown.dart';
 import '../../../../shared/widgets/buttons.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/toast.dart';
+import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
-import 'queue_table.dart';
 import '../domain/manga_status.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/manga_task.dart';
@@ -42,11 +45,17 @@ class QueueCardList extends ConsumerWidget {
           itemBuilder: (context, i) => i == 0
               ? _MobileHeader(
                   total: filtered.length,
+                  subtitle: _statusSummary(filtered, AppLocalizations.of(context)),
                   filter: filter,
                   selection: selection,
                   onFilter: () => _showFilterSheet(context, tasks),
                   onToggleSelect: () => ref.read(selectionProvider.notifier).toggleMode(),
                   onCancelSelect: () => ref.read(selectionProvider.notifier).toggleMode(),
+                  canSelect: rows.isNotEmpty,
+                  deletableOnPage: {
+                    for (final t in rows)
+                      if (t.deletable) t.id,
+                  },
                   onSelectAll: () {
                     final deletable = {
                       for (final t in rows)
@@ -65,7 +74,26 @@ class QueueCardList extends ConsumerWidget {
                   child: _TaskCard(task: rows[i - 1], selection: selection),
                 ),
         ),
-        if (selection.enabled) Positioned(left: 0, right: 0, bottom: 0, child: _MobileSelectionBar(tasks: rows)),
+        // 选择栏要**贴到屏幕左右边缘**：外层 QueueScreen 有 10px 内距，
+        // OverflowBox 向外扩 10 抵消，否则两侧各留一条缝（用户实测）。
+        if (selection.enabled) Positioned(left: -10, right: -10, bottom: 0, child: _MobileSelectionBar(tasks: rows)),
+        // 筛选后无结果：表格/列表区给**空状态**（不是空白页），
+        // 并提示可取消筛选（头部筛选图标此刻是橙色，点开即可取消）。
+        if (rows.isEmpty && filter.active)
+          Positioned.fill(
+            top: 44,
+            child: IgnorePointer(
+              ignoring: true,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: EmptyState(
+                  icon: LucideIcons.filterX,
+                  title: AppLocalizations.of(context).queueFilterEmpty,
+                  description: AppLocalizations.of(context).queueFilterEmptyHint,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -82,7 +110,8 @@ class QueueCardList extends ConsumerWidget {
           final palette = AppPalette.of(context);
           final l10n = AppLocalizations.of(context);
           final f = ref.watch(queueFilterProvider);
-          final count = applyQueueFilter(allTasks, f).length;
+          // 点 chip **只切换条件、不关闭面板**（用户要求：可以连续勾选多项）。
+          // 关闭靠面板外的点击 / 下滑手势。
           Widget chip(String label, bool on, VoidCallback onTap) => GestureDetector(
             onTap: onTap,
             child: Container(
@@ -139,15 +168,21 @@ class QueueCardList extends ConsumerWidget {
                         l10n.queueSrcOther,
                         f.sources.contains(MangaTaskSource.desktop) || f.sources.contains(MangaTaskSource.unknown),
                         () {
+                          // 「其他」= desktop + unknown 两个 wire 值的聚合。
+                          // 用 setSources **幂等**写入：开着就全关，关着就全开。
                           final n = ref.read(queueFilterProvider.notifier);
                           final on =
                               f.sources.contains(MangaTaskSource.desktop) ||
                               f.sources.contains(MangaTaskSource.unknown);
-                          n.toggleSource(MangaTaskSource.desktop);
-                          if (on) n.toggleSource(MangaTaskSource.unknown);
-                          if (!on && f.sources.contains(MangaTaskSource.unknown)) {
-                            n.toggleSource(MangaTaskSource.unknown);
+                          final next = {...f.sources}
+                            ..remove(MangaTaskSource.desktop)
+                            ..remove(MangaTaskSource.unknown);
+                          if (!on) {
+                            next
+                              ..add(MangaTaskSource.desktop)
+                              ..add(MangaTaskSource.unknown);
                           }
+                          n.setSources(next);
                         },
                       ),
                     ],
@@ -170,32 +205,6 @@ class QueueCardList extends ConsumerWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          label: l10n.queueFilterClear,
-                          onTap: () {
-                            final n = ref.read(queueFilterProvider.notifier);
-                            n.clearSources();
-                            n.clearStatuses();
-                          },
-                          variant: AppButtonVariant.secondary,
-                          height: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: AppButton(
-                          label: l10n.queueFilterShowResults(count),
-                          onTap: () => Navigator.of(context).pop(),
-                          variant: AppButtonVariant.primary,
-                          height: 32,
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -210,15 +219,19 @@ class QueueCardList extends ConsumerWidget {
 class _MobileHeader extends StatelessWidget {
   const _MobileHeader({
     required this.total,
+    required this.subtitle,
     required this.filter,
     required this.selection,
     required this.onFilter,
     required this.onToggleSelect,
     required this.onCancelSelect,
     required this.onSelectAll,
+    required this.deletableOnPage,
+    required this.canSelect,
   });
 
   final int total;
+  final String subtitle;
   final QueueFilterState filter;
   final SelectionState selection;
   final VoidCallback onFilter;
@@ -226,13 +239,20 @@ class _MobileHeader extends StatelessWidget {
   final VoidCallback onCancelSelect;
   final VoidCallback onSelectAll;
 
+  /// 当前页可删除的任务 id（多选头部「可删 N」用）。
+  final Set<String> deletableOnPage;
+
+  /// 列表是否有可显示任务（无任务时多选按钮置灰）。
+  final bool canSelect;
+
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final selecting = selection.enabled;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+      // 设计稿：上下 8 / 6、左右 10（与卡片同内距）。
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       child: Row(
         children: [
           if (selecting)
@@ -240,27 +260,45 @@ class _MobileHeader extends StatelessWidget {
               onTap: onCancelSelect,
               child: Text(
                 l10n.actionCancel,
-                style: TextStyle(fontSize: AppFont.px11, color: palette.ink2),
+                style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
               ),
             )
           else ...[
-            Text(
-              l10n.queueTitleCount(total),
-              style: TextStyle(fontSize: AppFont.px13_5, fontWeight: FontWeight.w700, color: palette.textPrimary),
+            // 标题 13/700 + 副标 9.5/mut；副标过长时**换行到下一行**（不截断）。
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.queueTaskCount(total),
+                    style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w700, color: palette.textPrimary),
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      softWrap: true,
+                      style: TextStyle(fontSize: AppFont.px9_5, height: 1.4, color: palette.mut),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
           const Spacer(),
           if (selecting) ...[
             Text(
-              l10n.queueSelectedCount(selection.ids.length),
-              style: TextStyle(fontSize: AppFont.px10_5, color: palette.textSecondary),
+              // 设计稿：`已选 2 / 可删 4`（可删 = 本页里 deletable 的数量）。
+              l10n.queueSelectedDeletable(selection.ids.length, deletableOnPage.whereType<String>().length),
+              style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
             ),
             const SizedBox(width: 10),
             GestureDetector(
               onTap: onSelectAll,
               child: Text(
                 l10n.queueSelectPage,
-                style: TextStyle(fontSize: AppFont.px11, color: palette.accent),
+                style: TextStyle(fontSize: AppFont.px10_5, color: palette.accent),
               ),
             ),
           ] else ...[
@@ -277,13 +315,21 @@ class _MobileHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            GestureDetector(
-              onTap: onToggleSelect,
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(color: palette.hi, borderRadius: BorderRadius.circular(6)),
-                child: Icon(LucideIcons.squareCheckBig, size: 12, color: palette.ink2),
+            // 没有可显示任务时多选无意义 → 置灰且不可点（用户要求）。
+            MouseRegion(
+              cursor: canSelect ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+              child: GestureDetector(
+                onTap: canSelect ? onToggleSelect : null,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(color: palette.hi, borderRadius: BorderRadius.circular(6)),
+                  child: Icon(
+                    LucideIcons.squareCheckBig,
+                    size: 12,
+                    color: canSelect ? palette.ink2 : palette.mut.withValues(alpha: 0.5),
+                  ),
+                ),
               ),
             ),
           ],
@@ -291,6 +337,36 @@ class _MobileHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 头部副标：只列非零状态（"1 翻译中 · 1 已完成"）；全为 0 返回空串。
+String _statusSummary(List<MangaTask> tasks, AppLocalizations l10n) {
+  const order = [
+    MangaTaskStatus.translating,
+    MangaTaskStatus.queued,
+    MangaTaskStatus.done,
+    MangaTaskStatus.partialFailed,
+    MangaTaskStatus.failed,
+    MangaTaskStatus.cancelled,
+  ];
+  final parts = <String>[];
+  for (final st in order) {
+    final c = tasks.where((t) => t.status == st).length;
+    if (c > 0) parts.add('$c ${st.label(l10n)}');
+  }
+  return parts.join(' · ');
+}
+
+/// 「查看」：先判漫画库还有没有这本（被删就不跳，只提示），再定位到该书。
+void _view(BuildContext context, WidgetRef ref, MangaTask task, AppLocalizations l10n) {
+  final books = ref.read(libraryProvider).value ?? ref.read(libraryProvider.notifier).lastGood;
+  final hit = books.where((b) => b.key == task.name || b.name == task.name).firstOrNull;
+  if (hit == null) {
+    showAppToast(context, l10n.queueViewMissing(task.name), tone: ToastTone.bad);
+    return;
+  }
+  ref.read(selectedBookProvider.notifier).select(hit.key);
+  context.go('/manga/library');
 }
 
 class _TaskCard extends ConsumerWidget {
@@ -304,20 +380,24 @@ class _TaskCard extends ConsumerWidget {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final selected = selection.ids.contains(task.id);
+    final selecting = selection.enabled;
+
+    // 设计稿 `.pcard`：内距 10×11 / 圆角 10 / card 底 + line 描边；
+    // 选中 = acc 描边 + accSoft 底。
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
       decoration: BoxDecoration(
-        color: palette.card,
+        color: selected ? palette.accSoft : palette.card,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: selected ? palette.accent : Colors.transparent),
+        border: Border.all(color: selected ? palette.accent : palette.line),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (selection.enabled)
+          if (selecting)
             Padding(
-              padding: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.only(right: 9),
               child: AppCheckbox(
                 value: selected,
                 enabled: task.deletable,
@@ -328,65 +408,176 @@ class _TaskCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 标题行：名称（限宽 + 省略号）+ 状态胶囊 + 右上角两个按钮。
                 Row(
                   children: [
                     Expanded(
                       child: Text(
                         task.name,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: AppFont.px13_5,
+                          fontSize: AppFont.px12,
                           fontWeight: FontWeight.w600,
                           color: palette.textPrimary,
                         ),
                       ),
                     ),
-                    _StatusBadge(status: task.status),
+                    // 多选态只留基本信息（设计稿 `.pcard.sel` 无胶囊/无按钮）。
+                    if (!selecting) ...[
+                      const SizedBox(width: 6),
+                      _StatusBadge(status: task.status),
+                      const SizedBox(width: 6),
+                      _MobileCardActions(task: task),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
+                // 副标：页数 · 批次 · 来源，末尾接完成时间（用户裁定）。
                 Text(
-                  l10n.queueTaskSubtitleWithSource(
-                    task.donePages,
-                    task.pageCount,
-                    task.batchNo,
-                    task.source.label(l10n),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
+                  _subtitleWithTime(task, l10n),
+                  softWrap: true,
+                  style: TextStyle(fontSize: AppFont.px9_5, height: 1.45, color: palette.mut),
                 ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: SizedBox(
-                    height: 4,
-                    child: LinearProgressIndicator(
-                      value: task.pageCount == 0 ? null : task.donePages / task.pageCount,
-                      backgroundColor: palette.progressTrack,
-                      valueColor: AlwaysStoppedAnimation(task.status.color),
+                // 多选态不画进度条（设计稿同）。
+                if (!selecting && task.pageCount > 0) ...[
+                  const SizedBox(height: 7),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: SizedBox(
+                      height: 3,
+                      child: LinearProgressIndicator(
+                        value: task.donePages / task.pageCount,
+                        backgroundColor: palette.line2,
+                        valueColor: AlwaysStoppedAnimation(palette.acc),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      task.completedAt == null
-                          ? AppLocalizations.of(context).queueBatchWithin(task.batchNo)
-                          : AppLocalizations.of(context)
-                                .queueFinishedAt(task.completedAt!.month, task.completedAt!.day),
-                      style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
-                    ),
-                    const Spacer(),
-                    QueueRowActions(task: task),
-                  ],
-                ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+/// 副标 + 完成时间（时间接在末尾，不新增一行）。
+String _subtitleWithTime(MangaTask task, AppLocalizations l10n) {
+  final base = l10n.queueTaskSubtitleWithSource(task.donePages, task.pageCount, task.batchNo, task.source.label(l10n));
+  final time = task.completedAt == null
+      ? l10n.queueBatchWithin(task.batchNo)
+      : l10n.queueFinishedAt(task.completedAt!.month, task.completedAt!.day);
+  return '$base · $time';
+}
+
+/// 卡片右上角：状态相关的主操作（查看/重试/取消/继续）+ 文本「...」更多菜单。
+///
+/// 与桌面 `QueueRowActions` 的区别：这里**不并排**（窄屏放不下），
+/// 主操作按状态切换，其余操作收进「...」下拉。
+class _MobileCardActions extends ConsumerStatefulWidget {
+  const _MobileCardActions({required this.task});
+
+  final MangaTask task;
+
+  @override
+  ConsumerState<_MobileCardActions> createState() => _MobileCardActionsState();
+}
+
+class _MobileCardActionsState extends ConsumerState<_MobileCardActions> {
+  bool _busy = false;
+
+  MangaTask get task => widget.task;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final st = task.status;
+
+    // 主操作文案随状态变化（查看 / 重试 / 取消）。
+    final (String label, VoidCallback? action) = switch (st) {
+      MangaTaskStatus.done => (l10n.actionView, () => _view(context, ref, task, l10n)),
+      MangaTaskStatus.failed ||
+      MangaTaskStatus.partialFailed => (_busy ? l10n.remoteChecking : l10n.actionRetry, _busy ? null : _retry),
+      MangaTaskStatus.cancelled => (_busy ? l10n.remoteChecking : l10n.actionContinue, _busy ? null : _retry),
+      _ => (l10n.actionCancel, _cancel),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppButton(
+          label: label,
+          onTap: action,
+          variant: AppButtonVariant.ghost,
+          border: true,
+          height: 22,
+          horizontalPadding: 8,
+          fontSize: AppFont.px10,
+        ),
+        const SizedBox(width: 4),
+        // 「...」是**文本按钮**（用户裁定），点开下拉给其余操作。
+        AppDropdownMenu(
+          minWidth: 150,
+          onSelected: (v) async {
+            switch (v) {
+              case 'open':
+                try {
+                  await ref.read(mangaSvcClientProvider).revealBook(task.name);
+                } catch (e) {
+                  if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+                }
+              case 'delete':
+                await ref.read(queueProvider.notifier).deleteTasks({task.id});
+                if (context.mounted) {
+                  showAppToast(context, l10n.queueDeletedToast(task.name), tone: ToastTone.info);
+                }
+            }
+          },
+          items: [
+            AppDropdownItem(value: 'open', label: l10n.queueOpenDir, icon: LucideIcons.folderUp),
+            const AppDropdownItem.divider(),
+            AppDropdownItem(value: 'delete', label: l10n.actionDelete, icon: LucideIcons.trash2, danger: true),
+          ],
+          child: AppButton(
+            label: '...',
+            onTap: null,
+            variant: AppButtonVariant.ghost,
+            height: 22,
+            horizontalPadding: 6,
+            fontSize: AppFont.px10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _retry() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context);
+    final messengerCtx = context;
+    try {
+      final blocked = await ref.read(queueProvider.notifier).retry(task.id, blockedReason: l10n.remoteConfigInvalid);
+      if (!messengerCtx.mounted) return;
+      showAppToast(
+        messengerCtx,
+        blocked ? l10n.remoteConfigInvalid : l10n.queueRetryOk(task.name),
+        tone: blocked ? ToastTone.bad : ToastTone.good,
+      );
+    } catch (e) {
+      if (messengerCtx.mounted) showAppToast(messengerCtx, l10n.queueRetryFailed('$e'), tone: ToastTone.bad);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _cancel() async {
+    final l10n = AppLocalizations.of(context);
+    final ctx = context;
+    final kept = await ref.read(queueProvider.notifier).cancelTask(task.id);
+    if (ctx.mounted) showAppToast(ctx, l10n.queueCancelledToast(task.name, kept));
   }
 }
 
@@ -398,12 +589,15 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // 设计稿 `.pill`：h19 / padding 0 8 / radius 999 / 字号 10。
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(color: status.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
+      height: 19,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: status.color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(999)),
       child: Text(
         status.label(l10n),
-        style: TextStyle(fontSize: AppFont.px11, color: status.color),
+        style: TextStyle(fontSize: AppFont.px10, color: status.color),
       ),
     );
   }
@@ -418,32 +612,25 @@ class _MobileSelectionBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final selection = ref.watch(selectionProvider);
+    // 设计稿 `.pselbar`：padding 10×12 / 计数 11(600) / 按钮 30 高 10.5 号；
+    // 删除按钮用 danger（设计稿 `.b.danger`）。
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: palette.navBg,
-        border: Border(top: BorderSide(color: palette.divider)),
+        color: palette.panel,
+        border: Border(top: BorderSide(color: palette.line2)),
       ),
       child: Row(
         children: [
           Text(
             AppLocalizations.of(context).queueSelectedCount(selection.ids.length),
-            style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600, color: palette.textPrimary),
+            style: TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600, color: palette.textPrimary),
           ),
           const Spacer(),
-          AppGhostButton(
-            label: AppLocalizations.of(context).queueSelectPage,
-            onTap: () {
-              final deletable = {
-                for (final t in tasks)
-                  if (t.deletable) t.id,
-              };
-              ref.read(selectionProvider.notifier).selectAllPage(deletable);
-            },
-          ),
-          const SizedBox(width: 10),
-          AppGhostButton(
-            label: AppLocalizations.of(context).queueDeleteSelected(selection.ids.length),
+          // 设计稿 `.pselbar` 只放「已选 N」+「删除选中」；
+          // 全选在**头部**（`queueSelectPage`），这里不再重复。
+          AppButton(
+            label: AppLocalizations.of(context).queueDeleteSelectedShort,
             onTap: selection.ids.isEmpty
                 ? null
                 : () async {
@@ -454,6 +641,10 @@ class _MobileSelectionBar extends ConsumerWidget {
                       showAppToast(context, AppLocalizations.of(context).queueDeletedToast(deleted));
                     }
                   },
+            variant: AppButtonVariant.danger,
+            height: 30,
+            horizontalPadding: 12,
+            fontSize: AppFont.px10_5,
           ),
         ],
       ),

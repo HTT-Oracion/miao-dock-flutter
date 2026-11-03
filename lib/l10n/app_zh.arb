@@ -166,18 +166,22 @@
   "@queueFilterApply": {
     "description": "队列筛选面板：关闭面板"
   },
-  "queueTitleCount": "队列 · {count} 条",
-  "@queueTitleCount": {
-    "description": "移动队列头部标题",
+  "queueTaskCount": "{count} 条任务",
+  "@queueTaskCount": {
+    "description": "移动队列头部标题（顶部标签已表明是队列，不再重复字样）",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "queueFilterShowResults": "显示 {count} 条结果",
   "@queueFilterShowResults": {
     "description": "移动端筛选抽屉：按当前勾选预估结果数",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "sourceDesktop": "本机投放",
@@ -255,6 +259,14 @@
   "dropSpec": "支持 png / jpg / jpeg / webp；服务端每批 20 张，超出的部分会自动排队（序号连续，不需要你分批）",
   "@dropSpec": {
     "description": "投放：规格说明"
+  },
+  "dropPickHintMobile": "选择图片或文件夹",
+  "@dropPickHintMobile": {
+    "description": "投放页移动端：选图区标题（手机无拖拽）"
+  },
+  "dropSpecMobile": "支持 png / jpg / webp · 每批 20 张自动排队",
+  "@dropSpecMobile": {
+    "description": "投放页移动端：格式与批次说明（短版）"
   },
   "dropSubmittedToast": "已提交 {count} 张，队内第 {position} 位",
   "@dropSubmittedToast": {
@@ -1742,18 +1754,34 @@
   "@libItemCount": {
     "description": "漫画库移动端头：全部条目计数",
     "placeholders": {
-      "count": { "type": "int" },
-      "pages": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "pages": {
+        "type": "int"
+      }
     }
   },
   "libSegAll": "全部",
-  "@libSegAll": { "description": "分段：全部", "placeholders": null },
+  "@libSegAll": {
+    "description": "分段：全部",
+    "placeholders": null
+  },
   "libSegBook": "单本",
-  "@libSegBook": { "description": "分段：单本", "placeholders": null },
+  "@libSegBook": {
+    "description": "分段：单本",
+    "placeholders": null
+  },
   "libSegChapter": "单话",
-  "@libSegChapter": { "description": "分段：单话", "placeholders": null },
+  "@libSegChapter": {
+    "description": "分段：单话",
+    "placeholders": null
+  },
   "libSegEmpty": "这个分段下没有内容",
-  "@libSegEmpty": { "description": "分段筛选后为空", "placeholders": null },
+  "@libSegEmpty": {
+    "description": "分段筛选后为空",
+    "placeholders": null
+  },
   "libRefresh": "刷新",
   "@libRefresh": {
     "description": "漫画库文案",
@@ -1852,8 +1880,12 @@
   "@libMergeSourceInfo": {
     "description": "归并弹窗：源单话信息",
     "placeholders": {
-      "name": { "type": "String" },
-      "pageCount": { "type": "int" }
+      "name": {
+        "type": "String"
+      },
+      "pageCount": {
+        "type": "int"
+      }
     }
   },
   "libMergeNoTaken": "该话号已存在，换一个",
@@ -2361,5 +2393,13 @@
   "remoteVerifyEngineNotReady": "远程端引擎未就绪",
   "@remoteVerifyEngineNotReady": {
     "description": "远程校验失败原因"
+  },
+  "queueSelectedDeletable": "已选 {selected} / 可删 {deletable}",
+  "@queueSelectedDeletable": {
+    "description": "移动端多选头部计数（设计稿「已选 2 / 可删 4」）"
+  },
+  "queueDeleteSelectedShort": "删除选中",
+  "@queueDeleteSelectedShort": {
+    "description": "移动端选择栏删除按钮（设计稿只写「删除选中」，不带数量）"
   }
 }

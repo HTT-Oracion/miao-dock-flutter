@@ -136,36 +136,47 @@ class LibraryHeaderActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    Future<void> refreshOnTap() async {
+      await ref.read(libraryProvider.notifier).refresh();
+    }
+
+    Future<void> createOnTap() async {
+      final name = await _CreateBookDialog.show(context);
+      if (name == null || !context.mounted) return;
+      try {
+        await ref.read(mangaSvcClientProvider).createBook(name);
+        await ref.read(libraryProvider.notifier).refresh();
+        if (context.mounted) showAppToast(context, l10n.libCreateBookOk(name), tone: ToastTone.good);
+      } catch (e) {
+        if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+      }
+    }
+
+    // 移动端：设计稿是**纯图标按钮** `.pico`（24×24 / radius 6 / hi 底），
+    // 不带文字（窄屏放不下「刷新」「新建漫画」两组文字）。
+    if (context.isMobile) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            _HeaderIconAction(icon: LucideIcons.refreshCw, onTap: refreshOnTap),
+            const SizedBox(width: 6),
+            _HeaderIconAction(icon: LucideIcons.plus, onTap: createOnTap),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       // 右侧留出边距：按钮不贴窗口边缘。
       padding: const EdgeInsets.only(right: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          _HeaderAction(
-            icon: LucideIcons.refreshCw,
-            label: l10n.libRefresh,
-            onTap: () async {
-              await ref.read(libraryProvider.notifier).refresh();
-            },
-          ),
+          _HeaderAction(icon: LucideIcons.refreshCw, label: l10n.libRefresh, onTap: refreshOnTap),
           const SizedBox(width: 8),
-          _HeaderAction(
-            icon: LucideIcons.folderPlus,
-            label: l10n.libCreateBook,
-            primary: true,
-            onTap: () async {
-              final name = await _CreateBookDialog.show(context);
-              if (name == null || !context.mounted) return;
-              try {
-                await ref.read(mangaSvcClientProvider).createBook(name);
-                await ref.read(libraryProvider.notifier).refresh();
-                if (context.mounted) showAppToast(context, l10n.libCreateBookOk(name), tone: ToastTone.good);
-              } catch (e) {
-                if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
-              }
-            },
-          ),
+          _HeaderAction(icon: LucideIcons.folderPlus, label: l10n.libCreateBook, primary: true, onTap: createOnTap),
         ],
       ),
     );
@@ -1322,6 +1333,31 @@ class _NoImagePlaceholder extends StatelessWidget {
             style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 移动端头部图标按钮（设计稿 `.pico`：24×24 / radius 6 / hi 底 / ink2 图标）。
+class _HeaderIconAction extends StatelessWidget {
+  const _HeaderIconAction({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(color: palette.hi, borderRadius: BorderRadius.circular(6)),
+          child: Icon(icon, size: 12, color: palette.ink2),
+        ),
       ),
     );
   }
