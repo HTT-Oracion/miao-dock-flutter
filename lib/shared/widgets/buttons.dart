@@ -243,48 +243,57 @@ class _AppButtonState extends State<AppButton> {
       child: Material(
         color: bg,
         borderRadius: BorderRadius.circular(kButtonRadius),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(kButtonRadius),
-          // 🔴 必须显式传：InkWell 默认用 `WidgetStateMouseCursor.adaptiveClickable`，
-          // 它在**桌面平台返回 basic**（只有 Web 才 click），且内层 MouseRegion
-          // 优先于外层 ⇒ 不传就永远没有手型。
-          mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
-          // 背景由外层 Material 控制，禁用 InkWell 的 hover 覆盖层（否则会盖住主色）。
-          hoverColor: Colors.transparent,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          // onTap 为 null 时 InkWell 不吸收手势，交给外层（如 MenuAnchor 的触发器）。
-          onTap: enabled ? widget.onTap : null,
-          child: Container(
-            width: widget.width,
-            height: widget.height,
-            padding: EdgeInsets.symmetric(horizontal: widget.width != null ? 0 : widget.horizontalPadding),
-            // 🔴 **不能用 alignment: center**：带 alignment 的 Container 会撑满
-            // 有界宽度——在 Row（无界）里没事，在 Wrap / 定宽格里每个按钮都被
-            // 撑成整行/整格（桌面详情按钮竖排、移动筛选 chip 独占一行同源）。
-            // 居中交给 Center(widthFactor: 1)：宽度收缩到内容、高度仍填满。
-            child: Center(
-              widthFactor: widget.width == null ? 1 : null,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.loading) ...[
-                    SizedBox(
-                      width: widget.fontSize + 2,
-                      height: widget.fontSize + 2,
-                      child: CircularProgressIndicator(strokeWidth: 1.6, color: fg),
-                    ),
-                    if (widget.label.isNotEmpty) const SizedBox(width: 6),
-                  ] else if (widget.icon != null) ...[
-                    Icon(widget.icon, size: widget.fontSize + 1, color: fg),
-                    if (widget.label.isNotEmpty) const SizedBox(width: 5),
+        // 🔴 固定/铺满宽度必须由 **SizedBox** 给：Material 的默认尺寸是 min，
+        // 只给内层 Container.width 时，外层会收缩到内容宽 →「width: infinity
+        // 的按钮不铺满、反而显示成居中纯文字」（移动投放页实测）。
+        child: SizedBox(
+          // width 为 null 时不约束宽度：交给父级（Expanded / Row 的 stretch /
+          // 内容自适应）。写死 width: null 会退化成「收缩到内容」。
+          width: widget.width,
+          height: widget.height,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(kButtonRadius),
+            // 🔴 必须显式传：InkWell 默认用 `WidgetStateMouseCursor.adaptiveClickable`，
+            // 它在**桌面平台返回 basic**（只有 Web 才 click），且内层 MouseRegion
+            // 优先于外层 ⇒ 不传就永远没有手型。
+            mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+            // 背景由外层 Material 控制，禁用 InkWell 的 hover 覆盖层（否则会盖住主色）。
+            hoverColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            // onTap 为 null 时 InkWell 不吸收手势，交给外层（如 MenuAnchor 的触发器）。
+            onTap: enabled ? widget.onTap : null,
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              padding: EdgeInsets.symmetric(horizontal: widget.width != null ? 0 : widget.horizontalPadding),
+              // 🔴 **不能用 alignment: center**：带 alignment 的 Container 会撑满
+              // 有界宽度——在 Row（无界）里没事，在 Wrap / 定宽格里每个按钮都被
+              // 撑成整行/整格（桌面详情按钮竖排、移动筛选 chip 独占一行同源）。
+              // 居中交给 Center(widthFactor: 1)：宽度收缩到内容、高度仍填满。
+              child: Center(
+                widthFactor: widget.width == null ? 1 : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.loading) ...[
+                      SizedBox(
+                        width: widget.fontSize + 2,
+                        height: widget.fontSize + 2,
+                        child: CircularProgressIndicator(strokeWidth: 1.6, color: fg),
+                      ),
+                      if (widget.label.isNotEmpty) const SizedBox(width: 6),
+                    ] else if (widget.icon != null) ...[
+                      Icon(widget.icon, size: widget.fontSize + 1, color: fg),
+                      if (widget.label.isNotEmpty) const SizedBox(width: 5),
+                    ],
+                    if (widget.label.isNotEmpty)
+                      Text(
+                        widget.label,
+                        style: TextStyle(fontSize: widget.fontSize, fontWeight: widget.fontWeight, color: fg),
+                      ),
                   ],
-                  if (widget.label.isNotEmpty)
-                    Text(
-                      widget.label,
-                      style: TextStyle(fontSize: widget.fontSize, fontWeight: widget.fontWeight, color: fg),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
