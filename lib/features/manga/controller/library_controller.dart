@@ -117,6 +117,16 @@ class LibModeNotifier extends Notifier<String> {
 /// 是否在书架里展示隐藏区。
 final showHiddenProvider = NotifierProvider<ShowHiddenNotifier, bool>(ShowHiddenNotifier.new);
 
+/// 书架「只看未归并单话」过滤开关（重设计稿：未归并组的配套入口）。
+final unmergedOnlyProvider = NotifierProvider<UnmergedOnlyNotifier, bool>(UnmergedOnlyNotifier.new);
+
+class UnmergedOnlyNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void toggle() => state = !state;
+}
+
 class ShowHiddenNotifier extends Notifier<bool> {
   @override
   bool build() => false;

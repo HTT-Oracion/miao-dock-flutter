@@ -30,30 +30,35 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('进库不选中第一本：显示网格，无「返回书架」', (tester) async {
+  testWidgets('进库默认选中第一本：显示详情（重设计 2026-11-07 用户裁定）', (tester) async {
     await pump(tester);
-    // 破坏点：兜底 books.first → 直接进详情，网格看不到。
-    expect(find.text('返回书架'), findsNothing);
-    // 左栏 + 网格各一处。
-    expect(find.text('某书'), findsAtLeastNWidgets(2));
+    // 破坏点：不自动选中 → 网格可见而非详情，本条失败。
+    expect(find.text('返回书架'), findsOneWidget);
   });
 
-  testWidgets('默认态：左栏与网格同时存在', (tester) async {
+  testWidgets('进库默认选中第一本 → 详情占满（左栏隐藏 + 返回书架）', (tester) async {
     await pump(tester);
-    // 左栏一项 + 网格一张卡。
-    expect(find.text('某书'), findsAtLeastNWidgets(2));
+    // 重设计裁定：进库自动选中第一本 → 详情态。
+    expect(find.text('返回书架'), findsOneWidget);
   });
 
-  testWidgets('选中某本：左栏消失并出现返回书架', (tester) async {
+  testWidgets('返回书架 → 左栏 + 网格同时存在', (tester) async {
     await pump(tester);
     final container = ProviderScope.containerOf(tester.element(find.byType(LibraryScreen)));
+    container.read(selectedBookProvider.notifier).select(null);
+    await tester.pumpAndSettle();
+    // 返回书架后：左栏行 + 网格卡（某书出现 ≥2 处）。
+    expect(find.text('某书'), findsAtLeastNWidgets(2));
+  });
+
+  testWidgets('选中某本 → 左栏消失 + 返回书架出现', (tester) async {
+    await pump(tester);
+    final container = ProviderScope.containerOf(tester.element(find.byType(LibraryScreen)));
+    container.read(selectedBookProvider.notifier).select(null);
+    await tester.pumpAndSettle();
     container.read(selectedBookProvider.notifier).select('某书');
     await tester.pumpAndSettle();
     expect(find.text('返回书架'), findsOneWidget);
-    // 返回后回到默认态。
-    container.read(selectedBookProvider.notifier).select(null);
-    await tester.pumpAndSettle();
-    expect(find.text('返回书架'), findsNothing);
   });
 }
 

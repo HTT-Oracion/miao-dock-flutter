@@ -122,7 +122,7 @@ class _ShelfBody extends ConsumerWidget {
     final hidden = ref.watch(hiddenComicsProvider);
     final l10n = AppLocalizations.of(context);
 
-    if (books.isEmpty && (!showHidden || hidden.isEmpty)) {
+    if (books.isEmpty && (!showHidden || hidden.isEmpty) && !ref.watch(unmergedOnlyProvider)) {
       return Center(
         child: Text(
           l10n.shelfNoMatch,
@@ -132,8 +132,10 @@ class _ShelfBody extends ConsumerWidget {
     }
 
     // 搜索态：按「每本书一组 + 未归并组」分组（miao-dock `groupSearchResults`）；
-    // 浏览态：平铺全部（单本 + 单话）。
+    // 浏览态（重设计稿 2026-11-07）：单本平铺，未归并单话归入【其他 · 未归并】组
+    // （脚注「未归并」开关可只看这一组）。
     final searching = ref.watch(shelfQueryProvider).trim().isNotEmpty;
+    final unmergedOnly = ref.watch(unmergedOnlyProvider);
     final merged = books.where((b) => b.isBook).toList();
     final unmerged = books.where((b) => !b.isBook).toList();
 
@@ -144,22 +146,42 @@ class _ShelfBody extends ConsumerWidget {
       onTap: () => ref.read(selectedBookProvider.notifier).select(b.key),
     );
 
-    Widget groupTitle(String text) => Padding(
+    Widget groupTitle(String text, {bool warn = false}) => Padding(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
       child: Text(
         text,
-        style: TextStyle(fontSize: AppFont.px9_5, fontWeight: FontWeight.w700, color: palette.textSecondary),
+        style: TextStyle(
+          fontSize: AppFont.px9_5,
+          fontWeight: FontWeight.w700,
+          color: warn ? palette.warn : palette.textSecondary,
+        ),
       ),
     );
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       children: [
-        if (searching) ...[
+        if (unmergedOnly) ...[
+          if (unmerged.isEmpty)
+            Text(
+              l10n.shelfNoMatch,
+              style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+            ),
+          groupTitle(l10n.shelfGroupUnmerged, warn: true),
+          for (final b in unmerged) rowFor(b),
+        ] else if (searching) ...[
           for (final b in merged) ...[groupTitle(l10n.shelfGroupBook(b.name)), rowFor(b)],
-          if (unmerged.isNotEmpty) ...[groupTitle(l10n.shelfGroupUnmerged), for (final b in unmerged) rowFor(b)],
-        ] else
-          for (final b in books) rowFor(b),
+          if (unmerged.isNotEmpty) ...[
+            groupTitle(l10n.shelfGroupUnmerged, warn: true),
+            for (final b in unmerged) rowFor(b),
+          ],
+        ] else ...[
+          for (final b in merged) rowFor(b),
+          if (unmerged.isNotEmpty) ...[
+            groupTitle(l10n.shelfGroupUnmerged, warn: true),
+            for (final b in unmerged) rowFor(b),
+          ],
+        ],
         if (showHidden && hidden.isNotEmpty) ...[
           const SizedBox(height: 10),
           Text(
@@ -232,7 +254,14 @@ class _BookRowState extends ConsumerState<_BookRow> {
             decoration: BoxDecoration(
               color: (active || _hover) ? palette.card : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: active ? palette.divider : Colors.transparent),
+              // 未归并单话（重设计稿）：warn 细边框区分单本（虚线需 painter，实线细框等义）。
+              border: Border.all(
+                color: active
+                    ? palette.divider
+                    : book.isBook
+                    ? Colors.transparent
+                    : palette.warn.withValues(alpha: 0.45),
+              ),
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(8),
@@ -242,7 +271,11 @@ class _BookRowState extends ConsumerState<_BookRow> {
                   Icon(
                     book.isBook ? LucideIcons.bookText : LucideIcons.fileText,
                     size: 13,
-                    color: active ? palette.accent : palette.textSecondary,
+                    color: active
+                        ? palette.accent
+                        : book.isBook
+                        ? palette.textSecondary
+                        : palette.warn,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -275,31 +308,50 @@ class _ShelfFoot extends ConsumerWidget {
 
   final List<LibBook> books;
 
+  int get unmergedCount => books.where((b) => !b.isBook).length;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final bytes = books.fold(0, (s, b) => s + b.totalBytes);
+    // 两行脚注（重设计稿加「未归并 N」后 260 宽一行放不下）：
+    // 第一行 = 容量 + 去投放；第二行 = 未归并 N + 显示已隐藏。
     return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            AppLocalizations.of(context).shelfUsedBytes(formatBytes(bytes)),
-            style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
+          Row(
+            children: [
+              Text(
+                AppLocalizations.of(context).shelfUsedBytes(formatBytes(bytes)),
+                style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
+              ),
+              const Spacer(),
+              _TextLink(
+                label: AppLocalizations.of(context).shelfGoDrop,
+                color: palette.accent,
+                onTap: () => context.go('/manga/drop'),
+              ),
+            ],
           ),
-          const Spacer(),
-          _TextLink(
-            label: AppLocalizations.of(context).shelfGoDrop,
-            color: palette.accent,
-            onTap: () => context.go('/manga/drop'),
-          ),
-          const SizedBox(width: 10),
-          // 「显示已隐藏」开关（miao-dock：隐藏清单在服务端，这里只做开关）。
-          _TextLink(
-            label: AppLocalizations.of(context).shelfShowHidden,
-            color: ref.watch(showHiddenProvider) ? palette.accent : palette.textSecondary,
-            onTap: () => ref.read(showHiddenProvider.notifier).toggle(),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              // 未归并单话过滤开关（重设计稿：左栏直接陈列未归并单话的配套入口）。
+              _TextLink(
+                label: AppLocalizations.of(context).shelfUnmergedFilter(unmergedCount),
+                color: ref.watch(unmergedOnlyProvider) ? palette.accent : palette.textSecondary,
+                onTap: () => ref.read(unmergedOnlyProvider.notifier).toggle(),
+              ),
+              const Spacer(),
+              // 「显示已隐藏」开关（miao-dock：隐藏清单在服务端，这里只做开关）。
+              _TextLink(
+                label: AppLocalizations.of(context).shelfShowHidden,
+                color: ref.watch(showHiddenProvider) ? palette.accent : palette.textSecondary,
+                onTap: () => ref.read(showHiddenProvider.notifier).toggle(),
+              ),
+            ],
           ),
         ],
       ),

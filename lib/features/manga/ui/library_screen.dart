@@ -14,15 +14,33 @@ import 'library_shelf.dart';
 /// - **点击某本后**：**左侧列表消失**，详情占满右侧（`.libDetail` 分支），顶部有「返回书架」。
 ///
 /// 进库时 `selectedBookProvider` 为 null ⇒ 停在默认态，**不自动选中第一本**。
-class LibraryScreen extends ConsumerWidget {
+class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends ConsumerState<LibraryScreen> {
+  bool _autoSelected = false;
+
+  @override
+  Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final selected = ref.watch(selectedBookProvider);
     final books = ref.watch(libraryProvider).value ?? ref.read(libraryProvider.notifier).lastGood;
     final hasSelection = selected != null && books.any((b) => b.key == selected);
+
+    // 默认选中第一本（用户裁定 2026-11-07）：仅**首次数据到位**时自动选中；
+    // 用户主动取消后不重新选中（否则「返回书架」无效）。
+    if (!_autoSelected && books.isNotEmpty) {
+      _autoSelected = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (ref.read(selectedBookProvider) == null) {
+          ref.read(selectedBookProvider.notifier).select(books.first.key);
+        }
+      });
+    }
 
     if (hasSelection) {
       // 详情态：左栏隐藏，详情占满（含「返回书架」）。

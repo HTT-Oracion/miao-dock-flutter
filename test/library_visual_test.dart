@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/manga/controller/queue_controller.dart';
+import 'package:miao_dock_flutter/features/manga/controller/library_controller.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_screen.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_shelf.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
@@ -26,6 +27,10 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+    // 重设计：进库自动选中第一本 ⇒ 先取消回到 grid+shelf 态再断言。
+    final c = ProviderScope.containerOf(tester.element(find.byType(LibraryScreen)));
+    c.read(selectedBookProvider.notifier).select(null);
     await tester.pumpAndSettle();
   }
 
