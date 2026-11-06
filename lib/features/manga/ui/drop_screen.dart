@@ -102,11 +102,14 @@ class _DropScreenState extends ConsumerState<DropScreen> {
     if (files.isNotEmpty) ref.read(dropController.notifier).addFiles(files);
   }
 
+  bool _submitting = false;
+
   Future<void> _submit() async {
     final state = ref.read(dropController);
-    if (state.name.isEmpty || state.files.isEmpty) return;
+    if (state.name.isEmpty || state.files.isEmpty || _submitting) return;
     final l10n = AppLocalizations.of(context);
     try {
+      setState(() => _submitting = true);
       final result = await ref
           .read(queueProvider.notifier)
           .submit(
@@ -123,12 +126,14 @@ class _DropScreenState extends ConsumerState<DropScreen> {
         context.go('/manga/queue');
         return;
       }
-      showAppToast(context, l10n.dropSubmittedToast(result.submitted, result.position), tone: ToastTone.good);
-      context.go('/manga/queue');
+      // 回执卡留在投放页（重设计稿）：提交结果可视 + 双出口，不再直接跳走。
+      ref.read(dropController.notifier).setReceipt(count: result.submitted, position: result.position);
     } catch (e) {
       // 提交失败必须给反馈：以前是静默抛异常，用户完全不知道发生了什么。
       if (!mounted) return;
       showAppToast(context, '${AppLocalizations.of(context).dropSubmitFailed}：$e', tone: ToastTone.bad);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -144,17 +149,19 @@ class _DropScreenState extends ConsumerState<DropScreen> {
         onPickFolder: _pickFolder,
         onNameChanged: (v) => ref.read(dropController.notifier).setName(v),
         onClear: () => ref.read(dropController.notifier).clear(),
-        onSubmit: canSubmit ? _submit : null,
+        onSubmit: canSubmit && !_submitting ? _submit : null,
       );
     }
 
     return DropDesktopBody(
       state: state,
       over: _over,
+      submitting: _submitting,
       onPickImages: _pickImages,
       onPickFolder: _pickFolder,
       onDragEnter: () => setState(() => _over = true),
       onDragExit: () => setState(() => _over = false),
+      onRemoveFile: (i) => ref.read(dropController.notifier).removeAt(i),
       onDrop: (paths) {
         setState(() => _over = false);
         ref.read(dropController.notifier).addFiles(paths);

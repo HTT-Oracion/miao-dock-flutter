@@ -12,13 +12,17 @@ bool isAllowedImage(String path) => _allowedExts.contains(path.split('.').last.t
 final dropController = NotifierProvider<DropNotifier, DropState>(DropNotifier.new);
 
 class DropState {
-  const DropState({this.name = '', this.files = const []});
+  const DropState({this.name = '', this.files = const [], this.receipt});
 
   final String name;
   final List<String> files;
 
-  DropState copyWith({String? name, List<String>? files}) =>
-      DropState(name: name ?? this.name, files: files ?? this.files);
+  /// 提交成功回执（重设计稿回执卡）：有值时投放卡上方渲染回执。
+  /// 只存 count / position——落盘路径要等服务端回执，当前契约没有就不猜。
+  final ({int count, int position})? receipt;
+
+  DropState copyWith({String? name, List<String>? files, ({int count, int position})? receipt}) =>
+      DropState(name: name ?? this.name, files: files ?? this.files, receipt: receipt ?? this.receipt);
 
   /// 文件按序号所属批次（1 起，每批 20 张）。
   int batchOf(int index) => index ~/ kServerBatchSize + 1;
@@ -47,6 +51,10 @@ class DropNotifier extends Notifier<DropState> {
   }
 
   void clear() => state = DropState(name: state.name);
+
+  /// 提交成功后记录回执（清单已清空，名字保留在输入框供继续投下一批）。
+  void setReceipt({required int count, required int position}) =>
+      state = DropState(name: state.name, receipt: (count: count, position: position));
 }
 
 /// 文件路径取展示名（桌面为完整路径，浏览器为文件名）。

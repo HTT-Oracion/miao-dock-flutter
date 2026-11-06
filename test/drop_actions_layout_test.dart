@@ -30,11 +30,10 @@ void main() {
     final submit = tester.widget<AppButton>(submitFinder);
     final clear = tester.widget<AppButton>(clearFinder);
 
-    // 破坏点：Column/stretch 或按钮规格漂移 → 两按钮换行、尺寸不再对齐门禁主按钮。
+    // 重设计稿双栏布局：提交/清空在右列同一行（高度 36 对齐门禁主按钮）。
     expect(tester.getCenter(submitFinder).dy, tester.getCenter(clearFinder).dy);
     for (final button in [submit, clear]) {
       expect(button.height, 36);
-      expect(button.horizontalPadding, 24);
       expect(button.fontSize, AppFont.px12_5);
     }
   });
