@@ -93,14 +93,19 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    // 装配时间线 active 段外环脉冲是无限动画（motion.html 1.8s），
+    // pumpAndSettle 永不收敛 ⇒ 定点 pump 推进两帧。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     // 破坏点：只画一个总百分比 → 与设计稿「一列文件 + 每行进度条」不符，本条失败。
     expect(find.text('python'), findsOneWidget);
     expect(find.text('src'), findsOneWidget);
     expect(find.text('llm'), findsOneWidget);
-    expect(find.text('已完成'), findsOneWidget);
-    expect(find.text('等待'), findsOneWidget);
+    // 「已完成」出现两次：下载行 chip + 装配时间线 done 段状态词（重设计稿新增时间线）。
+    expect(find.text('已完成'), findsNWidgets(2));
+    // 「等待」出现四次：llm 下载行 chip + 时间线 visual/llm/ready 三段状态词。
+    expect(find.text('等待'), findsNWidgets(4));
     expect(find.text('42%'), findsOneWidget);
   });
 
@@ -172,7 +177,9 @@ void main() {
     addTearDown(tester.view.reset);
     for (final st in NotReadyState.values) {
       await tester.pumpWidget(host(screen(st)));
-      await tester.pumpAndSettle();
+      // 同上：时间线 active 段（starting）无限脉冲，改定点 pump。
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       // 破坏点：加回「稍后再说」→ 点它会跳向同样需要引擎的队列，本条失败。
       expect(find.text('稍后再说'), findsNothing, reason: '$st 不应有稍后再说');
     }

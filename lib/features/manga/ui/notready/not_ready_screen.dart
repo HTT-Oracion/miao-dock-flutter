@@ -8,6 +8,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/log_box.dart';
 import '../../controller/engine_install_controller.dart';
 import '../../domain/not_ready_state.dart';
+import 'assembly_timeline.dart';
 
 /// 启动引导页（D-012）—— 取代设计稿原 `guide` / `download` 两个独立整屏。
 ///
@@ -173,8 +174,13 @@ class _NotReadyCard extends StatelessWidget {
           const SizedBox(height: 24),
           _LayerStrip(view: view),
           const SizedBox(height: 24),
-          if (view.state != NotReadyState.downloading) ...[
-            _StepsRow(remote: remoteBlocked),
+          // 五段装配时间线（重设计稿 guide.html）只在**本地来源**出现：
+          // 远程来源没有本地装配，仍走三步链（remoteGateStep1–3）。
+          if (!remoteBlocked) ...[
+            AssemblyTimeline(phases: assemblyPhases(l10n, view.state, downloadEntries)),
+            const SizedBox(height: 28),
+          ] else ...[
+            _StepsRow(remote: true),
             const SizedBox(height: 32),
           ],
           if (view.state == NotReadyState.downloading) ...[
@@ -548,6 +554,11 @@ class _DownloadSection extends StatelessWidget {
       );
     }
 
+    // 元信息行（重设计稿下载页）：整体百分比 / 已下载 MB —— 数值全部来自
+    // 条目聚合，不编造速度与 ETA（没有真实来源就显示「准备中」语义的占位）。
+    final doneMb = entries.where((e) => e.state == 'done').fold<double>(0, (a, e) => a + e.sizeMb);
+    final totalMb = entries.fold<double>(0, (a, e) => a + e.sizeMb);
+    final overall = totalMb <= 0 ? 0.0 : doneMb / totalMb;
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: palette.line),
@@ -555,6 +566,22 @@ class _DownloadSection extends StatelessWidget {
       ),
       child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: Row(
+              children: [
+                Text(
+                  '${l10n.nrDownloadOverall} ${(overall * 100).round()}%',
+                  style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.ink),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '${l10n.nrDownloadGot} ${doneMb.toStringAsFixed(0)} / ${totalMb.toStringAsFixed(0)} MB',
+                  style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                ),
+              ],
+            ),
+          ),
           for (final (i, e) in entries.indexed) ...[
             if (i > 0) Container(height: 1, color: palette.line),
             _DownloadRow(entry: e),
@@ -889,6 +916,20 @@ class _MobileNotReadyCard extends StatelessWidget {
             meta.desc,
             style: TextStyle(fontSize: AppFont.px11_5, height: 1.6, color: palette.ink2),
           ),
+          // 远程校验进行中：探测提示行（脉冲圆点承载「在动」，文字保持中性）。
+          if (remoteChecking) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _PulseDot(color: palette.blue),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.remoteProbeHint,
+                  style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
+                ),
+              ],
+            ),
+          ],
           // 远程校验失败：把**原因**摆出来（一行，截断），否则用户只会看到"失败"。
           if (view.remoteVerification == RemoteVerificationState.failed && view.remoteFailure != null) ...[
             const SizedBox(height: 8),
@@ -1033,3 +1074,41 @@ String _sourceSub(AppLocalizations l10n, TranslateSource source) => switch (sour
   TranslateSource.llm => l10n.sourceLlmSub,
   TranslateSource.remote => l10n.sourceRemoteSub,
 };
+
+/// 脉冲圆点（motion.html pulse 1.6s）：「它在动」的信号，色相只由圆点承载。
+class _PulseDot extends StatefulWidget {
+  const _PulseDot({required this.color});
+
+  final Color color;
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: AppMotion.nodePulse)..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 1, end: 0.3).animate(_c),
+      child: Container(
+        width: 7,
+        height: 7,
+        decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
+      ),
+    );
+  }
+}
