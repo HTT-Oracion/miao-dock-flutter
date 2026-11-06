@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../app/shell/shell_controller.dart';
-import '../../app/shell/view_labels.dart';
 import '../../core/theme/tokens.dart';
 import '../../features/manga/domain/not_ready_state.dart';
 import '../../l10n/app_localizations.dart';
 
-/// 应用侧栏（design.html §03 / `app.css .sidebar`）：
-/// 展开 208 / 收起 68；品牌 52 → 分隔线 → 模块 → 分隔线 → 视图组 → 弹性 → MiniPlayer → 设置脚。
+/// 应用侧栏（design.html §03 / 重设计稿 2026-11-07）：
+/// 展开 208 / 收起 68；品牌 → 模块组 → 弹性 → MiniPlayer → 设置脚。
+/// 视图组已迁到工具条页签（[ShellViewTabs]），侧栏只保留模块级导航。
 ///
 /// 纯展示件：路由状态与回调由 AppShell 注入；hover / 动效在本件内完成。
 /// 图标按 design.html §05 指定（`languages` / `music` / `clapperboard` /
@@ -22,10 +21,6 @@ class NavRail extends StatelessWidget {
     required this.onToggleCollapse,
     required this.moduleIndex,
     required this.onSelectModule,
-    required this.viewGroupLabel,
-    required this.viewItems,
-    required this.activeViewId,
-    required this.onSelectView,
     required this.queueCount,
     required this.onOpenSettings,
     this.readiness = ReadinessLevel.unconfigured,
@@ -45,17 +40,8 @@ class NavRail extends StatelessWidget {
   final int moduleIndex;
   final ValueChanged<int> onSelectModule;
 
-  /// 视图组标题（= 当前模块名，原项目 `grp-label`）。
-  final String viewGroupLabel;
-
-  /// 视图项（按模块注入，域常量见 [mangaViews] / [musicViews]）。
-  final List<SidebarViewItem> viewItems;
-
-  /// 当前视图 id（`drop` / `queue` / `library` / `discover` …）；null = 非模块页。
-  final String? activeViewId;
-  final ValueChanged<String> onSelectView;
-
   /// 队列视图的待办计数（原项目口径 `running + queued`，不是列表长度）。
+  /// 视图组迁去工具条页签后，徽标落在漫画模块项上（功能零删减）。
   final int queueCount;
 
   final VoidCallback onOpenSettings;
@@ -95,10 +81,6 @@ class NavRail extends StatelessWidget {
               moduleIndex: moduleIndex,
               onSelectModule: onSelectModule,
               readiness: readiness,
-              viewGroupLabel: viewGroupLabel,
-              viewItems: viewItems,
-              activeViewId: activeViewId,
-              onSelectView: onSelectView,
               queueCount: queueCount,
               onOpenSettings: onOpenSettings,
               miniPlayer: miniPlayer,
@@ -121,10 +103,6 @@ class _RailBody extends StatelessWidget {
     required this.moduleIndex,
     required this.readiness,
     required this.onSelectModule,
-    required this.viewGroupLabel,
-    required this.viewItems,
-    required this.activeViewId,
-    required this.onSelectView,
     required this.queueCount,
     required this.onOpenSettings,
     required this.miniPlayer,
@@ -137,11 +115,7 @@ class _RailBody extends StatelessWidget {
   final VoidCallback onToggleCollapse;
   final int moduleIndex;
   final ValueChanged<int> onSelectModule;
-  final String viewGroupLabel;
   final ReadinessLevel readiness;
-  final List<SidebarViewItem> viewItems;
-  final String? activeViewId;
-  final ValueChanged<String> onSelectView;
   final int queueCount;
   final VoidCallback onOpenSettings;
 
@@ -167,26 +141,20 @@ class _RailBody extends StatelessWidget {
               labels: labels,
               moduleIndex: moduleIndex,
               onSelectModule: onSelectModule,
+              queueCount: queueCount,
             ),
-            const _RailDivider(inset: 10),
-            if (!collapsed)
-              _ViewGroup(
-                label: viewGroupLabel,
-                labels: labels,
-                items: viewItems,
-                activeId: activeViewId,
-                queueCount: queueCount,
-                onSelect: onSelectView,
-              ),
             const Spacer(),
+            // 迷你播放器：有播放状态渲染真数据；无状态渲染空态占位（设计稿
+            // 「未在播放 · 迷你播放器」——不写死曲目，但让槽位在版面上可见）。
             ?miniPlayer,
+            if (miniPlayer == null && !collapsed) const _MiniPlayerStub(),
+            if (miniPlayer == null) const SizedBox(height: 8),
             _NavFoot(
               collapsed: collapsed,
               labels: labels,
               onOpenSettings: onOpenSettings,
               readiness: readiness,
-              // 视图组为空 ⇒ 当前就是设置页（设置页没有视图组）。
-              settingsActive: viewItems.isEmpty,
+              settingsActive: moduleIndex < 0,
             ),
           ],
         ),
@@ -362,12 +330,16 @@ class _ModuleGroup extends StatelessWidget {
     required this.labels,
     required this.moduleIndex,
     required this.onSelectModule,
+    required this.queueCount,
   });
 
   final bool collapsed;
   final bool labels;
   final int moduleIndex;
   final ValueChanged<int> onSelectModule;
+
+  /// 队列待办计数（原视图组徽标迁移：视图组去工具条后落在漫画模块项上）。
+  final int queueCount;
 
   /// 顺序即侧栏渲染顺序（design.html：漫画翻译 / 音乐 / 番剧）。
   /// 模块图标；顺序固定（design.html：漫画翻译 / 音乐 / 番剧）。
@@ -393,6 +365,7 @@ class _ModuleGroup extends StatelessWidget {
               active: moduleIndex == i,
               collapsed: collapsed,
               showLabel: labels,
+              count: i == 0 ? queueCount : null,
               onTap: () => onSelectModule(i),
             ),
         ],
@@ -409,6 +382,7 @@ class _ModuleItem extends StatefulWidget {
     required this.collapsed,
     required this.showLabel,
     required this.onTap,
+    this.count,
   });
 
   final IconData icon;
@@ -417,6 +391,9 @@ class _ModuleItem extends StatefulWidget {
   final bool collapsed;
   final bool showLabel;
   final VoidCallback onTap;
+
+  /// 待办徽标（仅漫画模块）：>0 才渲染，不显示 0。
+  final int? count;
 
   @override
   State<_ModuleItem> createState() => _ModuleItemState();
@@ -485,6 +462,15 @@ class _ModuleItemState extends State<_ModuleItem> {
                                     ),
                                   ),
                                 ),
+                                if ((widget.count ?? 0) > 0)
+                                  Text(
+                                    '${widget.count}',
+                                    style: TextStyle(
+                                      fontSize: AppFont.px9,
+                                      fontWeight: FontWeight.w600,
+                                      color: palette.acc,
+                                    ),
+                                  ),
                               ],
                             ),
                           )
@@ -500,144 +486,50 @@ class _ModuleItemState extends State<_ModuleItem> {
   }
 }
 
-// ── 视图组 ───────────────────────────────────────────────────────────────
+// ── 迷你播放器空态（重设计稿：未在播放 · 迷你播放器）──────────────────
 
-/// 视图组（`app.css .grp-label` + `.view-item`）：标题 8 号字距 1，项 34 高。
-class _ViewGroup extends StatelessWidget {
-  const _ViewGroup({
-    required this.label,
-    required this.labels,
-    required this.items,
-    required this.activeId,
-    required this.queueCount,
-    required this.onSelect,
-  });
-
-  final String label;
-  final bool labels;
-  final List<SidebarViewItem> items;
-  final String? activeId;
-  final int queueCount;
-  final ValueChanged<String> onSelect;
-
-  /// 视图 id → 图标（design.html §05 指定值）。
-  static const _icons = {
-    'drop': LucideIcons.folderUp,
-    'queue': LucideIcons.listMinus,
-    'library': LucideIcons.bookText,
-    'discover': LucideIcons.compass,
-    'playlist': LucideIcons.listMusic,
-    'local': LucideIcons.hardDrive,
-    'history': LucideIcons.history,
-  };
+/// 空态占位：不写死曲目，但让槽位可见 —— 用户不用猜「这块是干嘛的」。
+class _MiniPlayerStub extends StatelessWidget {
+  const _MiniPlayerStub();
 
   @override
   Widget build(BuildContext context) {
-    // 没有视图项时不画分组标题（设置页就是这种情况）：
-    // 那会变成「番剧」下方孤零零一行「设置」小字，纯噪音（design.html grp-label 只在有项时出现）。
-    if (items.isEmpty) return const SizedBox.shrink();
     final palette = AppPalette.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (labels)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 2),
-              child: Text(
-                label,
-                style: TextStyle(fontSize: AppFont.px8, letterSpacing: 1, color: palette.mut),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: palette.card,
+          border: Border.all(color: palette.line),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(color: palette.accSoft, borderRadius: BorderRadius.circular(6)),
+              child: Icon(LucideIcons.music, size: 14, color: palette.mut),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppLocalizations.of(context).miniPlayerIdle,
+                    style: TextStyle(fontSize: AppFont.px10, fontWeight: FontWeight.w600, color: palette.ink2),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    AppLocalizations.of(context).miniPlayerHint,
+                    style: TextStyle(fontSize: AppFont.px8_5, color: palette.mut),
+                  ),
+                ],
               ),
             ),
-          for (final item in items)
-            _ViewItem(
-              icon: _icons[item.id] ?? LucideIcons.listMinus,
-              label: viewLabel(AppLocalizations.of(context), item.id),
-              active: activeId == item.id,
-              showLabel: labels,
-              count: item.id == 'queue' ? queueCount : null,
-              onTap: () => onSelect(item.id),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ViewItem extends StatefulWidget {
-  const _ViewItem({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.showLabel,
-    required this.onTap,
-    this.count,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-  final bool showLabel;
-  final VoidCallback onTap;
-  final int? count;
-
-  @override
-  State<_ViewItem> createState() => _ViewItemState();
-}
-
-class _ViewItemState extends State<_ViewItem> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final Color background;
-    if (widget.active || _hover) {
-      background = palette.card; // `.view-item.active{background:var(--card)}`，hover 同值
-    } else {
-      background = Colors.transparent;
-    }
-    final fg = widget.active ? palette.ink : palette.ink2;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: AnimatedContainer(
-            duration: AppMotion.hover,
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(8)),
-            child: Row(
-              children: [
-                Icon(widget.icon, size: 13, color: widget.active ? palette.acc : palette.ink2),
-                if (widget.showLabel) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.label,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppFont.px11,
-                        fontWeight: widget.active ? FontWeight.w600 : FontWeight.w400,
-                        color: fg,
-                      ),
-                    ),
-                  ),
-                  if ((widget.count ?? 0) > 0)
-                    Text(
-                      '${widget.count}',
-                      style: TextStyle(fontSize: AppFont.px9, fontWeight: FontWeight.w600, color: palette.acc),
-                    ),
-                ],
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );

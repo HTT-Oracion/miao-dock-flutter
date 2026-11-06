@@ -195,3 +195,24 @@ bool persistRemoteToken(String token) => _writePref('miao.remote-token', token);
 bool readReaderShowOriginal() => _readPrefs()['miao.reader-show-original'] == 'true';
 
 void persistReaderShowOriginal(bool value) => _writePref('miao.reader-show-original', value ? 'true' : 'false');
+
+// ── 阅读器偏好（重设计稿：模式 / 夜间 / 亮度 / 自动滚动，D-149 续）──
+
+/// 阅读模式：paged = 单页翻页；webtoon = 条漫连续滚动。
+String readReaderMode() => _readPrefs()['miao.reader-mode'] ?? 'paged';
+
+void persistReaderMode(String mode) => _writePref('miao.reader-mode', mode);
+
+/// 夜间模式：off / warm（暖）/ black（纯黑）/ red（红）。
+String readReaderNight() => _readPrefs()['miao.reader-night'] ?? 'off';
+
+void persistReaderNight(String night) => _writePref('miao.reader-night', night);
+
+/// 屏幕亮度系数 0.2–1.0（1 = 不压暗）。
+double readReaderBrightness() {
+  final v = double.tryParse(_readPrefs()['miao.reader-brightness'] ?? '');
+  return v == null ? 1.0 : v.clamp(0.2, 1.0);
+}
+
+void persistReaderBrightness(double value) =>
+    _writePref('miao.reader-brightness', value.clamp(0.2, 1.0).toStringAsFixed(3));

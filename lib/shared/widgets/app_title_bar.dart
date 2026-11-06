@@ -12,10 +12,13 @@ import '../../core/window/window_controller.dart';
 /// 恰好压在侧栏 logo 的位置上。故 macOS 下侧栏品牌行与工具条都要整体下移
 /// [AppMetrics.macTrafficLightBand]，这条带子本身仍是拖拽区 —— 否则窗口没法拖动。
 class AppTitleBar extends StatelessWidget {
-  const AppTitleBar({super.key, this.breadcrumb, this.actions, this.topInset = 0});
+  const AppTitleBar({super.key, this.breadcrumb, this.tabs, this.actions, this.topInset = 0});
 
   /// 面包屑等左侧内容（design.html TopL），由调用方按当前路由装配。
   final Widget? breadcrumb;
+
+  /// 模块内视图页签（重设计稿：视图从侧栏迁到工具条右侧），面包屑与动作区之间。
+  final List<Widget>? tabs;
 
   /// 右侧动作区（窗控之前），如刷新、新建书架。
   final List<Widget>? actions;
@@ -43,6 +46,8 @@ class AppTitleBar extends StatelessWidget {
                   // 非 macOS 自绘窗控在右侧，左侧只留常规内边距；macOS 的红绿灯已由让位带避开。
                   const SizedBox(width: 22),
                   Expanded(child: breadcrumb ?? const SizedBox.shrink()),
+                  ...?tabs,
+                  const SizedBox(width: 8),
                   ...?actions,
                   const SizedBox(width: 12),
                   if (showWindowControls) const _WindowControls(),

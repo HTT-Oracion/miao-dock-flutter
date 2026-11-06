@@ -61,10 +61,10 @@ class AppTable extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 40,
+            height: 42,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: palette.divider)),
+              border: Border(bottom: BorderSide(color: palette.line2)),
             ),
             child: Row(
               children: [
@@ -76,7 +76,12 @@ class AppTable extends StatelessWidget {
                               c.headerWidget ??
                               Text(
                                 c.header,
-                                style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+                                style: TextStyle(
+                                  fontSize: AppFont.px10_5,
+                                  letterSpacing: 1.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: palette.accent,
+                                ),
                               ),
                         )
                       : SizedBox(
@@ -85,7 +90,12 @@ class AppTable extends StatelessWidget {
                               c.headerWidget ??
                               Text(
                                 c.header,
-                                style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+                                style: TextStyle(
+                                  fontSize: AppFont.px10_5,
+                                  letterSpacing: 1.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: palette.accent,
+                                ),
                               ),
                         ),
               ],

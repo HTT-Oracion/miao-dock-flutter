@@ -364,6 +364,18 @@ abstract final class AppMotion {
 
   /// hover / 背景过渡：app.css 的 `.18s`。
   static const Duration hover = Duration(milliseconds: 180);
+
+  /// 动效档位（manga-viewer/motion.html §00）：快 150 / 抽屉 380 / 强调 500。
+  /// 标准 300 = [pageSwitch]；形变 320 = [morph]。
+  static const Duration fast = Duration(milliseconds: 150);
+  static const Duration drawer = Duration(milliseconds: 380);
+  static const Duration emphasize = Duration(milliseconds: 500);
+
+  /// 主力曲线（motion.html：纯透明度与常规入场）。
+  static const Curve easeOutCubic = Cubic(0.215, 0.61, 0.355, 1);
+
+  /// 装配时间线 active 节点的外环脉冲周期（motion.html：1.8s ease-in-out）。
+  static const Duration nodePulse = Duration(milliseconds: 1800);
 }
 
 /// 静态色值别名 —— 兼容既有屏内引用。

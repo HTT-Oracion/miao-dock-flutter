@@ -20,6 +20,7 @@ import '../../shared/widgets/nav_rail.dart';
 import 'shell_controller.dart';
 import 'view_labels.dart';
 import 'mobile_nav.dart';
+import 'view_tabs.dart';
 
 /// 响应式应用壳（design.html §03）：
 /// 桌面 = 侧栏（208/68）+ 工具条（56）+ 内容区；
@@ -135,10 +136,6 @@ class _DesktopShell extends ConsumerWidget {
             onToggleCollapse: () => ref.read(navCollapsedProvider.notifier).toggle(),
             moduleIndex: location.moduleIndex,
             onSelectModule: (i) => _goModule(context, i),
-            viewGroupLabel: location.viewGroupLabel,
-            viewItems: location.viewItems,
-            activeViewId: location.viewId,
-            onSelectView: (v) => _goView(context, location.moduleIndex, v),
             queueCount: queueDepth,
             onOpenSettings: () => context.go('/settings'),
             readiness: ref.watch(shellReadinessProvider),
@@ -152,6 +149,19 @@ class _DesktopShell extends ConsumerWidget {
                 AppTitleBar(
                   topInset: topInset,
                   breadcrumb: _Crumbs(crumbs: location.crumbs),
+                  tabs: [
+                    // 模块内视图页签（重设计稿：视图从侧栏迁到工具条）。
+                    // 番剧无视图、设置是全局层 ⇒ 不渲染页签。
+                    if (location.moduleIndex >= 0 && location.viewItems.isNotEmpty)
+                      ShellViewTabs(
+                        items: [
+                          for (final item in location.viewItems)
+                            (item.id, viewLabel(AppLocalizations.of(context), item.id)),
+                        ],
+                        activeId: location.viewId,
+                        onSelect: (v) => _goView(context, location.moduleIndex, v),
+                      ),
+                  ],
                   actions: [if (location.moduleIndex == 0) const _TranslateStatusChips()],
                 ),
                 Container(height: 1, color: palette.line),
