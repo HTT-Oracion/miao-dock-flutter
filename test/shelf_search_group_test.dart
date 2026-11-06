@@ -30,10 +30,11 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('浏览态：不出现分组标题', (tester) async {
+  testWidgets('浏览态：未归并归入「其他 · 未归并」组（重设计 2026-11-07）', (tester) async {
     await pump(tester);
-    expect(find.text('未归并'), findsNothing);
+    // 搜索态的《书甲》书名分组不出现；未归并组标题出现。
     expect(find.text('《书甲》'), findsNothing);
+    expect(find.text('其他 · 未归并'), findsOneWidget);
   });
 
   testWidgets('搜索态：书分组 + 未归并分组，且未归并在最后', (tester) async {
@@ -43,10 +44,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('《书甲》'), findsOneWidget);
-    expect(find.text('未归并'), findsOneWidget);
+    expect(find.text('其他 · 未归并'), findsOneWidget);
 
     // 破坏点：未归并组排到书分组前面 → 与「单独分组显示在未归并下方」不符。
-    final unmergedY = tester.getTopLeft(find.text('未归并')).dy;
+    final unmergedY = tester.getTopLeft(find.text('其他 · 未归并')).dy;
     final bookY = tester.getTopLeft(find.text('《书甲》')).dy;
     expect(unmergedY, greaterThan(bookY));
   });
