@@ -33,7 +33,8 @@ void main() {
 
       final client = _FlakyClient();
       await tester.pumpWidget(host(const QueueScreen(), client: client));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       // 第一次成功：应看到任务
       expect(find.text('未来回归'), findsWidgets);
@@ -46,7 +47,8 @@ void main() {
       final ctx = tester.element(find.byType(QueueScreen));
       final container = ProviderScope.containerOf(ctx);
       await container.read(queueProvider.notifier).refresh();
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       // 破坏点：错误态直接清空数据 → 「未来回归」消失，本条失败。
       expect(find.text('未来回归'), findsWidgets, reason: '失败后旧数据必须仍在');
@@ -63,7 +65,8 @@ void main() {
 
       final client = _FlakyClient()..failing = true;
       await tester.pumpWidget(host(const QueueScreen(), client: client));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       // 破坏点：失败时画空态 → 用户以为「没有任务」，本条失败。
       expect(find.byType(ErrorState), findsOneWidget);
@@ -81,7 +84,8 @@ void main() {
         ..failing = true
         ..errorKind = MangaSvcErrorKind.unreachable;
       await tester.pumpWidget(host(const QueueScreen(), client: client));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       // 破坏点：直接把异常 toString 甩到界面 → 出现 MangaSvcException 字样，本条失败。
       expect(find.textContaining('MangaSvcException'), findsNothing);
@@ -97,7 +101,8 @@ void main() {
         ..failing = true
         ..errorKind = MangaSvcErrorKind.unauthorized;
       await tester.pumpWidget(host(const QueueScreen(), client: client));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       // 破坏点：所有错误都映射成同一句 → 用户不知道要去重新配对，本条失败。
       expect(find.text('配对令牌无效'), findsOneWidget);

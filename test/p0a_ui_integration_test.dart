@@ -50,7 +50,9 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle(const Duration(seconds: 2));
+      // 时间线脉冲/条纹等无限动画存在 ⇒ pumpAndSettle 不收敛，定点推进。
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(milliseconds: 400));
 
       // 破坏点：controller 不做 DTO→domain 转换 → 屏上出现的是原始字段，断言失败。
       expect(find.text('未来回归'), findsWidgets);

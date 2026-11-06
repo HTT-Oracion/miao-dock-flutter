@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
+import 'package:miao_dock_flutter/shared/widgets/buttons.dart';
 import 'package:miao_dock_flutter/features/manga/domain/manga_task.dart';
 import 'package:miao_dock_flutter/features/manga/ui/queue_table.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
@@ -69,17 +71,20 @@ void main() {
   testWidgets('主按钮与「更多」**尺寸完全一致**（只允许颜色不同）', (tester) async {
     await tester.pumpWidget(harness(make(MangaTaskStatus.done)));
     await tester.pumpAndSettle();
-    final view = tester.getSize(find.text('查看'));
-    final more = tester.getSize(find.text('更多'));
-    // 破坏点：主按钮用 padding 10×5/10.5 号 → 高度与「更多」不一致，同行错位。
-    expect(view.height, more.height);
+    // 重设计稿：主按钮 24 高；⋯ 触发器 24×24（图标 14）—— 两者同高（同行不错位）。
+    expect(tester.widget<AppButton>(find.widgetWithText(AppButton, '查看')).height, 24);
+    final more = tester.getSize(
+      find.ancestor(of: find.byIcon(LucideIcons.ellipsis), matching: find.byType(SizedBox)).first,
+    );
+    expect(more.height, 24);
+    expect(more.width, 24);
   });
 
   testWidgets('更多菜单含打开目录与删除', (tester) async {
     await tester.pumpWidget(harness(make(MangaTaskStatus.done)));
     await tester.pumpAndSettle();
     // 「更多」用 M3 MenuAnchor：点开后菜单在 Overlay 里，需多 pump 一帧。
-    await tester.tap(find.text('更多'));
+    await tester.tap(find.byIcon(LucideIcons.ellipsis));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('打开目录'), findsOneWidget);

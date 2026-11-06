@@ -6,7 +6,6 @@ import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/queue_controller.dart';
 import '../../../l10n/app_localizations.dart';
-import '../domain/manga_status.dart';
 
 import '../domain/manga_task.dart';
 
@@ -33,40 +32,60 @@ class _SummaryBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    final counts = {for (final s in MangaTaskStatus.values) s: tasks.where((t) => t.status == s).length};
-    return SizedBox(
-      height: 36,
+    // 图例四项恒显（设计稿 qt-head legend：进行中/等待中/需要处理/已完成，全量统计）。
+    final counts = {
+      'running': tasks.where((t) => t.status == MangaTaskStatus.translating).length,
+      'queued': tasks.where((t) => t.status == MangaTaskStatus.queued).length,
+      'need': tasks
+          .where((t) => t.status == MangaTaskStatus.failed || t.status == MangaTaskStatus.partialFailed)
+          .length,
+      'done': tasks.where((t) => t.status == MangaTaskStatus.done).length,
+    };
+    final legend = <(Color, String, int)>[
+      (palette.blue, l10n.legendRunning, counts['running']!),
+      (palette.mut, l10n.legendQueued, counts['queued']!),
+      (palette.bad, l10n.legendNeed, counts['need']!),
+      (palette.good, l10n.legendDone, counts['done']!),
+    ];
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
       child: Row(
         children: [
           Text(
             AppLocalizations.of(context).queueTotalCount(tasks.length),
-            style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w600, color: palette.textPrimary),
+            style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w700, color: palette.textPrimary),
           ),
-          const SizedBox(width: 14),
-          for (final status in MangaTaskStatus.values)
-            if (counts[status]! > 0)
-              Padding(
-                padding: const EdgeInsets.only(left: 14),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 5,
-                      height: 5,
-                      decoration: BoxDecoration(color: status.color, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      status.label(l10n),
-                      style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
+          const SizedBox(width: 6),
+          Text(
+            AppLocalizations.of(context).queueHeadHint,
+            style: TextStyle(fontSize: AppFont.px11, color: palette.mut),
+          ),
+          const SizedBox(width: 8),
+          // 图例（设计稿 .legend：gap 14、点 7、10.5px ink2）。
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Row(
+              children: [
+                for (final (i, l) in legend.indexed) ...[
+                  if (i > 0) const SizedBox(width: 14),
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(color: l.$1, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${l.$2} ${l.$3}',
+                    style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
+                  ),
+                ],
+              ],
+            ),
+          ),
           const Spacer(),
-          AppGhostButton(
-            label: AppLocalizations.of(context).queueMultiSelect,
-            onTap: () => ref.read(selectionProvider.notifier).toggleMode(),
+          Text(
+            AppLocalizations.of(context).queueSortNote,
+            style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
           ),
         ],
       ),

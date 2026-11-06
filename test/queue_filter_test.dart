@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:miao_dock_flutter/features/manga/controller/queue_controller.dart';
 import 'package:miao_dock_flutter/features/manga/domain/manga_task.dart';
 import 'package:miao_dock_flutter/features/manga/ui/queue_table.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 import 'package:protocol/protocol.dart';
 
@@ -83,9 +82,12 @@ void main() {
     // 只剩插件端那行；本地来源的行被过滤掉。
     expect(find.text('漫画-2'), findsOneWidget);
     expect(find.text('漫画-1'), findsNothing);
-    expect(find.text('插件端'), findsOneWidget);
+    // 「插件端」同时出现在筛选触发器（筛选词）与来源单元格——设计使然。
+    expect(find.text('插件端'), findsWidgets);
 
-    // 来源与状态两列的表头筛选触发器（Lucide filter 图标）都在。
-    expect(find.byWidgetPredicate((w) => w is Icon && w.icon == LucideIcons.filter), findsNWidgets(2));
+    // 重设计稿 hdmenu：触发器显示当前筛选词（来源已被筛成「插件端」）+ 状态列仍显列名；
+    // 两列各带 ▾（拆两个 Text）。
+    expect(find.text('状态'), findsOneWidget);
+    expect(find.text('▾'), findsNWidgets(2));
   });
 }

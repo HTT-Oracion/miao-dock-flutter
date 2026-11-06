@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/app_pager.dart';
 import '../controller/queue_controller.dart';
@@ -46,7 +47,9 @@ class QueueScreen extends ConsumerWidget {
         }
         // 移动端不能用桌面内距：设计稿 `.pv` 左右只有 10（与卡片内距对齐），
         // 22 会让卡片和底部选择栏都缩进，选择栏更没法定到屏幕边缘（用户实测）。
-        final pad = mobile ? const EdgeInsets.fromLTRB(10, 0, 10, 0) : const EdgeInsets.fromLTRB(22, 18, 22, 0);
+        // 桌面端重设计稿：qt-head 自带 10/20/6 内距、qt-scroll 左右 12、pager 左右 20
+        // ⇒ 外层内距归零，避免双层叠加（design.html §08 纪律）。
+        final pad = mobile ? const EdgeInsets.fromLTRB(10, 0, 10, 0) : EdgeInsets.zero;
         return Padding(padding: pad, child: body);
       },
     );
@@ -85,6 +88,7 @@ class _QueueContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
     final pager = ref.watch(pagerProvider);
     final filter = ref.watch(queueFilterProvider);
     // 汇总条始终看全量（它统计的是队列整体）；表格与分页只看筛选后的列表。
@@ -94,7 +98,12 @@ class _QueueContent extends ConsumerWidget {
       children: [
         QueueSumBar(tasks: tasks),
         const SizedBox(height: 10),
-        Expanded(child: QueueTable(tasks: filtered)),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: QueueTable(tasks: filtered),
+          ),
+        ),
         const SizedBox(height: 10),
         AppPager(
           total: filtered.length,
@@ -103,7 +112,19 @@ class _QueueContent extends ConsumerWidget {
           onPage: ref.read(pagerProvider.notifier).goTo,
           onPageSize: ref.read(pagerProvider.notifier).setPageSize,
         ),
-        const SizedBox(height: 12),
+        // 页脚说明（重设计稿 pager 右侧 caption）。
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
+          child: Row(
+            children: [
+              const Spacer(),
+              Text(
+                AppLocalizations.of(context).queueCaption,
+                style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
