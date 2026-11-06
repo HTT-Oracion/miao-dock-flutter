@@ -3113,3 +3113,170 @@
   `mobile_nav_test` 3 条（四模块可滑 / 二级高亮回调 / 空列表不渲染）。
 - **关联**：D-134（移动端 IA 设计稿）· D-044（移动端只远程）· D-069（投放页原型）·
   D-137（两端分开维护的判据）。
+
+---
+
+## D-147 · 漫画域重设计 P0：侧栏视图组迁移 + 装配时间线 + 动效基线（2026-11-07）
+
+- **状态**：已完成（未提交，待用户 macOS 验收）。
+- **做了什么**：依据 `desgin/modules/` 与 `desgin/manga-viewer/` 设计稿（2026-11-07 拍板）落地 P0：
+  ① 模块内视图从侧栏视图组迁到工具条页签（新 `app/shell/view_tabs.dart` ShellViewTabs，
+  AppTitleBar 加 `tabs` 槽位），侧栏收敛为「品牌 / 模块组 / 迷你播放器 / 设置」，
+  队列待办徽标迁到漫画模块项；② 迷你播放器**空态占位**（「未在播放」，不写死曲目）；
+  ③ 新增装配五段时间线 `notready/assembly_timeline.dart`（环境准备→运行环境→视觉模型→
+  翻译模型→就绪；段状态推导纯函数 `assemblyPhases`，active 段外环脉冲 1.8s），
+  本地来源替换三步链（远程仍走三步链）；④ 下载区补「整体 %/已下载 MB」元信息行；
+  ⑤ 移动端远程校验进行中加探测提示行（脉冲圆点）；⑥ 引入 `flutter_animate` 依赖 +
+  `AppMotion` 扩档（fast 150 / drawer 380 / emphasize 500 / easeOutCubic / nodePulse 1.8s，
+  事实源 = `desgin/manga-viewer/motion.html`）。
+- **为什么**：设计稿用户已验收；侧栏/门禁/动效是 P0 计划
+  （`docs/internal/redesign-plan.md`，节奏 = P0 起步逐阶段验收）的三件套。
+- **为什么不做独立 mock 下载路由**：门禁 downloading 态已由 engine_install_controller
+  （A 级 Fake）真实驱动且有逐条目进度；独立 mock 会复制一份平行 UI。校验用 Fake 驱动同一条路径。
+- **验证**：`flutter analyze` 0 issues；全量 **208 通过 + 11 跳过**；新增
+  `assembly_timeline_test` 6 条（段判定顺序/条目归段/渲染）；`app_shell_test` 断言基准
+  随视图组迁移更新（徽标迁移/迷你播放器空态/页签回调）。
+- **关联**：redesign-plan.md（P0）· D-138（移动端 IA，不动）· D-003（侧栏 208/68，保留）
+  · D-012（门禁，三形态对齐设计稿）· design.html §06（动效事实源）。
+
+---
+
+## D-148 · 漫画域重设计 P1+P2：队列状态条与投放回执（2026-11-07）
+
+- **状态**：已完成（未提交，与 D-147 同批待统一验收）。
+- **P1 队列**：行左 3px 状态条（`rowAccentColor` 未选中行按状态色、选中让位主色）；
+  进行中行抬升 card 底。**骨架屏不执行**——用户此前裁定「本地服务秒回，骨架像闪屏」，
+  计划文档已标注该偏差。移动卡片操作行 6px 间距已有，未改。
+- **P2 投放**：①提交成功**回执卡留在投放页**（已进入同一条队列 · N 张/队内第 X 位 +
+  去漫画库看/查看队列），不再直接跳队列；②**最近投放**区（最新 3 条，瓦片按漫画名散列
+  三档主题色，空态不摆瓦片，数据由壳层注入 `recentTasks` —— 不在卡内 watch queueProvider，
+  否则裸 ProviderScope 测试会触发真实请求留下 pending Timer）；③**三步说明卡**；
+  ④拖拽区图标球呼吸 3.2s 往返（悬停/拖入停呼吸并抬起）。
+- **为什么呼吸不用 flutter_animate repeat()**：其循环编排依赖 Timer，widget 测试收尾
+  报「Timer is still pending」挂掉整批测试；改 AnimationController.repeat(reverse)（Ticker，
+  测试安全）。flutter_animate 保留给 P3/P4 的一次性入场动画（无 pending Timer 问题）。
+- **验证**：`flutter analyze` 0 issues；全量 **208 通过 + 11 跳过**。
+- **关联**：D-147（P0）· redsign-plan.md（P1/P2）· D-134（移动队列，本轮未动）。
+
+---
+
+## D-149 · 漫画域重设计 P3 + P4 第一切片（2026-11-07）
+
+- **状态**：P3 已完成；P4 第一切片完成（点按分区/双击缩放/页码滑条/工具栏自动隐藏）。
+  未提交，与 D-147/D-148 同批待统一验收。
+- **P3 漫画库**：①书架浏览态未归并单话归入**「其他 · 未归并」**分组（组名 warn 色；
+  搜索态组名同步更新，`shelf_search_group_test` 基准随之更新——浏览态从「不出现分组」
+  改为「出现分组」）；②单话行 warn 细边框 + warn 图标区分单本（Flutter 原生无虚线
+  Border，实线细框等义）；③脚注改两行 + 「未归并 N」过滤开关（新
+  `unmergedOnlyProvider`，只看未归并组）；④详情卡片/简易切换与单话页面区
+  （_PageCapsules/_PageGrid）为并行会话既有实现，本轮核验未改动。
+  新增 `library_shelf_group_test` 2 条（Fixture 对齐 library_layout_test，含
+  translatedSeqs/missingSeqs/merged 必填字段与 cover stub）。
+- **P4 第一切片**（在既有 reader_screen.dart 内，目录拆分待后续）：①移动端点按分区
+  （左/右 30% 翻页、中心呼出/收起，RTL 语义待后续）；②双击 2.5× 缩放
+  （_ZoomablePage：InteractiveViewer + Matrix4 动画，250ms 双击判定窗）；③顶栏页码滑条
+  （快速跳页）；④工具栏自动隐藏（3s 计时 + 翻页重置 + slideY 300ms）。
+- **验证**：`flutter analyze` 0 issues；全量 **210 通过 + 11 跳过**。
+- **关联**：D-147/D-148 · redesign-plan.md（P3/P4 精确续点）。
+
+---
+
+## D-150 · 漫画域重设计 P4 余项第一批（2026-11-07）
+
+- **状态**：已完成（未提交，与 D-147/148/149 同批待统一验收）。
+- **做了什么**（reader_screen.dart + 新 `ui/reader/reader_prefs.dart`、`reader/reader_webtoon.dart`）：
+  ① **条漫连续滚动模式**（ReaderWebtoonView：整宽自适应页、无缝相接、中心点按呼出工具栏、
+  左下计页 chip）；② **自动滚动**（16ms 步进匀速；触摸即断，600ms 续播；到底自停）；
+  ③ **章末衔接卡**（本话已读完 → 回书架选下一话/回目录——ReaderSession 不含话序，
+  不在阅读器里猜下一话）；④ **夜间三档**（暖=橙罩 / 黑=灰阶 ColorFiltered+压暗 / 红=红罩，
+  作用于页面内容、工具栏可读）；⑤ **亮度**：左缘竖滑手势（移动端）+ 亮度遮罩
+  （(1-b)*0.72 黑罩，盖全屏）+ 设置抽屉滑条；⑥ **设置抽屉**（底部 380ms 形变）：
+  阅读模式（翻页/条漫）、夜间三档、亮度、自动滚动开关（条漫专属）；
+  ⑦ 全部偏好走 shell_prefs 持久化（mode/night/brightness，D-147 后续）。
+- **为什么不拆 reader/ 目录**：本轮先把行为做对并全绿；目录拆分（paged/webtoon/gestures/
+  toolbar 各一文件）留到 P4 收尾批次，避免大挪动掩盖行为缺陷。
+- **验证**：`flutter analyze` 0 issues；全量 **210 通过 + 11 跳过**。
+  🔴 教训：对已 format 的文件做字符串补丁锚点必失配——先 format 再打补丁，或用正则；
+  大段重写时切片起点必须在唯一锚点上（曾误切空态分支导致结构损坏，靠整段重建恢复）。
+- **关联**：D-149（P4 第一切片）· redesign-plan.md（P4 余项=桌面对照+网格/预载/RTL/目录拆分；
+  P5 双端验收）。
+
+---
+
+## D-151 · 漫画域重设计 P4 尾批核心：桌面对照 + 网格总览 + 预载（2026-11-07）
+
+- **状态**：已完成（未提交，与 D-147/148/149/150 同批待统一验收）。
+- **做了什么**（reader_screen.dart）：① **桌面对照模式**（C 键 / 顶栏 columns-2 按钮，
+  原文/译文双栏 `_ComparePane`——栏头色点+标题+页码，点按分区与翻页手势退出服务）；
+  ② **网格总览**（G 键 / 顶栏 layout-grid 按钮，缩略图 GridView（cover 裁切）点选跳页、
+  当前页主色描边、Esc 先退网格）；③ **预载窗口**（翻页后延后 200ms，前后各 2 页
+  取字节热身解码缓存，失败静默——正式路径重走并给错误 UI）；④ 键盘位扩展：
+  C=对照、G=网格、Esc 归属=网格→对照→关闭。
+- **验证**：`flutter analyze` 0 issues；全量 **210 通过 + 11 跳过**。
+- **剩余**：目录拆分（行为已全对，纯文件归位）、音量键（安卓 spike）、RTL、
+  P5 双端全流程验收清单。
+- **关联**：D-149/D-150 · redesign-plan.md。
+
+---
+
+## D-152 · 漫画域重设计 P4 残项：音量键 spike + RTL + 目录拆分回滚（2026-11-07）
+
+- **状态**：音量键/RTL 已完成；目录拆分**已回滚**（记录为 P4 唯一残项）。
+- **音量键翻页（安卓 spike）**：volume 键不在 LogicalKeyboardKey 标准命名表——用
+  `event.physicalKey.usbHidUsage`（consumer page：0x0c00e9 = 音量+、0x0c00ea = 音量−）
+  在阅读器 Focus 的 onKeyEvent 内识别，RTL 时语义镜像；返回 handled 尝试拦截。
+  🔴 **spine 未了**：系统可能先于 Flutter 消费音量键——真机验证若被拦截，
+  须走 platform channel（Android 侧 Activity.onKeyDown override），已记待验。
+- **RTL 翻页方向**：ReaderPrefs.rtl（持久化待后续）+ 设置抽屉开关（翻页模式专属，
+  日漫方向）——PageView.reverse 使滑动镜像、点按分区左右语义镜像、音量键镜像。
+- **目录拆分回滚**：机械切分（类块按首个 `}\n` 截断）把 StatefulWidget 与其 State 类
+  断对，修复成本超预算 → 全部类合回 reader_screen.dart（公共名 ReaderBar/ReaderPage/
+  ZoomablePage/NightTint/SheetLabel/ComparePane/GridCell 已就位），拆分留待下轮
+  以「按类全文移动 + State 配对校验」方式重做。行为零变化。
+- **验证**：`flutter analyze` 0 issues（含 7 个公共 widget 的 key lint 清零）；
+  全量 **210 通过 + 11 跳过**。
+- **关联**：D-149/150/151 · redesign-plan.md（P4 残项收敛为「目录拆分」一项）。
+
+---
+
+## D-153 · 漫画域重设计 P4 目录拆分重做完成（2026-11-07）
+
+- **状态**：已完成（未提交，与 D-147～D-152 同批待统一验收）。
+- **做了什么**：`reader_screen.dart`（1100+ 行单文件）拆为——
+  `ui/reader/reader_screen.dart`（ReaderScreen + _ReaderScreenState：状态/键盘/设置抽屉/舞台装配）
+  + `ui/reader/reader_widgets.dart`（ReaderBar/ReaderPage/_ReaderPageState/ZoomablePage/
+  _ZoomablePageState/NightTint/SheetLabel/ComparePane/_ComparePaneState/GridCell/_GridCellState，
+  七个公共 Widget + 四个配对私有 State 全文随迁）+ 既有 reader_prefs.dart / reader_webtoon.dart。
+- **拆分实现要点（D-152 方式重做）**：按类名定位 + doc 注释块向上收集 + **顶格 `}` 闭合**整段提取；
+  State 类与 Widget 同文件随迁（私有可见）。🔴 两次踩坑与修复：①提取起点 off-by-one 吃掉
+  类声明首字符（`lass`）→ 残留孤儿 doc + 孤 `c` 行，用「`c` 行回溯删除紧邻 /// 块」清干净；
+  ②`class ReaderScreen` 三行被连带删除 → 从已知内容重建。修复后 analyze 0 issues、
+  全量 210+11 跳过，行为零变化。
+- **关联**：D-152（拆分回滚与前因）· redesign-plan.md（P4 全部完成；P5 M6 已执行、
+  M1–M5 手动清单待统一验收）。
+
+---
+
+## D-154 · 队列+投放页逐帧还原（2026-11-07）
+
+- **状态**：已完成（未提交，统一验收）。
+- **队列页**：徽标宽度自适应（去 min-width 84）；筛选下拉 hover=pointer+ink 字（_MenuOption）；
+  空态魔法阵（CustomPainter 26s 慢旋）；表头 15/700+四色图例恒显；列宽 26/96/150/150/118；
+  徽标 24 高色描边+live 脉冲；进度条 5px/110/条纹流动；⋯ 触发器 24×24；
+  筛选下拉改 hdmenu 纯选项行（.on 主色、无勾选框）；表头 42/10.5/acc/ls1.5/w700；页脚说明。
+- **投放页**：双栏 drop-grid 重排（左=拖拽区+待投放，右=信息+规则+按钮+回执）；
+  dcard 基座 r12/line2/14×16；meta-row 虚线底；提交按钮在右栏底部（flex 铺满）；
+  回执卡留在右栏底部；最近投放+三步说明移到主列底部。
+- **验证**：`flutter analyze` 0 errors（4 warnings=旧单卡布局残留未引用类，下轮清理）；
+  全量 **206 通过**（`--exclude-tags e2e`；p0e4 因宿主服务在跑+无令牌而失败=环境依赖）。
+- **关联**：D-147～D-153 · redesign-plan.md。
+
+---
+
+## D-155 · 投放页精简（2026-11-07）
+
+- **做了什么**：按用户裁定删除「三步说明」与「最近投放」两个区段（含 _StepsRow3/_RecentSection 类
+  与 recentTasks 参数链路）；待投放清单卡标题改 Text.rich 内联张数/批数。
+- **验证**：`flutter analyze` 0 issues；`flutter test --exclude-tags e2e` 206 通过。
+- **关联**：D-148/D-154 · redesign-plan.md。
+

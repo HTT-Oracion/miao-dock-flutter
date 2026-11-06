@@ -2245,7 +2245,7 @@
   "@shelfBack": {
     "description": "返回书架按钮"
   },
-  "shelfGroupUnmerged": "未归并",
+  "shelfGroupUnmerged": "其他 · 未归并",
   "@shelfGroupUnmerged": {
     "description": "未归并分组标题"
   },
@@ -2401,5 +2401,375 @@
   "queueDeleteSelectedShort": "删除选中",
   "@queueDeleteSelectedShort": {
     "description": "移动端选择栏删除按钮（设计稿只写「删除选中」，不带数量）"
+  },
+  "miniPlayerIdle": "未在播放",
+  "@miniPlayerIdle": {
+    "description": "侧栏迷你播放器空态（设计稿：不写死曲目）"
+  },
+  "miniPlayerHint": "迷你播放器",
+  "@miniPlayerHint": {
+    "description": "侧栏迷你播放器空态副标"
+  },
+  "nrPhaseEnv": "环境准备",
+  "@nrPhaseEnv": {
+    "description": "装配五段时间线第 1 段"
+  },
+  "nrPhaseRuntime": "运行环境",
+  "@nrPhaseRuntime": {
+    "description": "装配五段时间线第 2 段"
+  },
+  "nrPhaseVisual": "视觉模型",
+  "@nrPhaseVisual": {
+    "description": "装配五段时间线第 3 段"
+  },
+  "nrPhaseLlm": "翻译模型",
+  "@nrPhaseLlm": {
+    "description": "装配五段时间线第 4 段"
+  },
+  "nrPhaseReady": "就绪",
+  "@nrPhaseReady": {
+    "description": "装配五段时间线第 5 段"
+  },
+  "nrPhaseActive": "进行中",
+  "@nrPhaseActive": {
+    "description": "时间线段状态：进行中"
+  },
+  "nrPhaseWaiting": "等待",
+  "@nrPhaseWaiting": {
+    "description": "时间线段状态：等待"
+  },
+  "nrDownloadOverall": "整体",
+  "@nrDownloadOverall": {
+    "description": "下载进度元信息：整体百分比"
+  },
+  "nrDownloadSpeed": "速度",
+  "@nrDownloadSpeed": {
+    "description": "下载进度元信息：速度"
+  },
+  "nrDownloadGot": "已下载",
+  "@nrDownloadGot": {
+    "description": "下载进度元信息：已下载/总量"
+  },
+  "remoteProbeHint": "正在探测桌面端服务…",
+  "@remoteProbeHint": {
+    "description": "移动端远程校验进行中的探测提示行"
+  },
+  "dropReceiptTitle": "已进入同一条队列",
+  "@dropReceiptTitle": {
+    "description": "投放回执卡标题"
+  },
+  "dropReceiptPos": "已提交 {count} 张，队内第 {position} 位",
+  "@dropReceiptPos": {
+    "description": "投放回执卡副标",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "position": {
+        "type": "int"
+      }
+    }
+  },
+  "dropReceiptLibrary": "去漫画库看",
+  "@dropReceiptLibrary": {
+    "description": "投放回执卡出口：漫画库"
+  },
+  "dropReceiptQueue": "查看队列",
+  "@dropReceiptQueue": {
+    "description": "投放回执卡出口：队列"
+  },
+  "dropRecent": "最近投放",
+  "@dropRecent": {
+    "description": "投放页最近投放区标题"
+  },
+  "dropRecentEmpty": "还没有投放记录",
+  "@dropRecentEmpty": {
+    "description": "最近投放空态标题"
+  },
+  "dropRecentEmptyHint": "把图片拖进上面的投放区，或点「选择图片」。",
+  "@dropRecentEmptyHint": {
+    "description": "最近投放空态说明"
+  },
+  "dropRecentRedeliver": "再次投放",
+  "@dropRecentRedeliver": {
+    "description": "最近投放行动作：再次打开选图"
+  },
+  "dropStep1Title": "01 · 自动分组",
+  "@dropStep1Title": {
+    "description": "投放三步说明 1"
+  },
+  "dropStep1": "按文件名自然排序，每 20 张一批；文字方向与命名规则都来自设置。",
+  "@dropStep1": {
+    "description": "投放三步说明 1 正文"
+  },
+  "dropStep2Title": "02 · 串行翻译",
+  "@dropStep2Title": {
+    "description": "投放三步说明 2"
+  },
+  "dropStep2": "本地引擎逐页检测气泡、修复背景并翻译。同一时刻只跑一个批次。",
+  "@dropStep2": {
+    "description": "投放三步说明 2 正文"
+  },
+  "dropStep3Title": "03 · 落盘到库",
+  "@dropStep3Title": {
+    "description": "投放三步说明 3"
+  },
+  "dropStep3": "译文写回原目录，作品按「本 → 话 → 页」出现在漫画库，随时可以对照。",
+  "@dropStep3": {
+    "description": "投放三步说明 3 正文"
+  },
+  "dropSubmitBusy": "提交中…",
+  "@dropSubmitBusy": {
+    "description": "提交请求在途时的按钮文案"
+  },
+  "dropRecentMeta": "{pages} 页 · {status}",
+  "@dropRecentMeta": {
+    "description": "最近投放行元信息（页数 + 状态词）",
+    "placeholders": {
+      "pages": {
+        "type": "int"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "shelfUnmergedFilter": "未归并 {count}",
+  "@shelfUnmergedFilter": {
+    "description": "书架脚注未归并过滤开关（带数量）",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readerModeTitle": "阅读模式",
+  "@readerModeTitle": {
+    "description": "阅读器设置抽屉：阅读模式行"
+  },
+  "readerModePaged": "翻页",
+  "@readerModePaged": {
+    "description": "阅读模式：单页翻页"
+  },
+  "readerModeWebtoon": "条漫",
+  "@readerModeWebtoon": {
+    "description": "阅读模式：条漫连续滚动"
+  },
+  "readerNightTitle": "夜间模式",
+  "@readerNightTitle": {
+    "description": "阅读器设置抽屉：夜间模式行"
+  },
+  "readerNightOff": "关",
+  "@readerNightOff": {
+    "description": "夜间模式：关"
+  },
+  "readerNightWarm": "暖",
+  "@readerNightWarm": {
+    "description": "夜间模式：暖"
+  },
+  "readerNightBlack": "黑",
+  "@readerNightBlack": {
+    "description": "夜间模式：黑"
+  },
+  "readerNightRed": "红",
+  "@readerNightRed": {
+    "description": "夜间模式：红"
+  },
+  "readerBrightnessTitle": "亮度",
+  "@readerBrightnessTitle": {
+    "description": "阅读器设置抽屉：亮度行"
+  },
+  "readerAutoScroll": "自动滚动",
+  "@readerAutoScroll": {
+    "description": "条漫自动滚动开关（设置抽屉与底栏共用）"
+  },
+  "readerAutoScrollHint": "匀速向下滚动；触摸即断，600ms 后续播",
+  "@readerAutoScrollHint": {
+    "description": "自动滚动开关说明"
+  },
+  "readerEndcardTitle": "本话已读完",
+  "@readerEndcardTitle": {
+    "description": "章末衔接卡标题"
+  },
+  "readerEndcardNext": "回书架选下一话",
+  "@readerEndcardNext": {
+    "description": "章末衔接卡主按钮"
+  },
+  "readerEndcardBack": "回目录",
+  "@readerEndcardBack": {
+    "description": "章末衔接卡次按钮"
+  },
+  "readerCompare": "对照",
+  "@readerCompare": {
+    "description": "桌面阅读器对照模式开关（原文/译文双栏）"
+  },
+  "readerGrid": "网格总览",
+  "@readerGrid": {
+    "description": "桌面阅读器网格总览（缩略图点选跳页）"
+  },
+  "readerPaneOriginal": "原图",
+  "@readerPaneOriginal": {
+    "description": "对照模式左栏标题"
+  },
+  "readerPaneTranslated": "译文",
+  "@readerPaneTranslated": {
+    "description": "对照模式右栏标题"
+  },
+  "readerRtl": "日漫方向（从右往左）",
+  "@readerRtl": {
+    "description": "翻页方向 RTL 开关（点按分区与音量键随之镜像）"
+  },
+  "queueHeadHint": "同一时刻只跑 1 个 · 翻译中不能删除",
+  "@queueHeadHint": {
+    "description": "队列表头主标题副注（设计稿 qt-head .n small）"
+  },
+  "legendRunning": "进行中",
+  "@legendRunning": {
+    "description": "汇总条图例：进行中"
+  },
+  "legendQueued": "等待中",
+  "@legendQueued": {
+    "description": "汇总条图例：等待中"
+  },
+  "legendNeed": "需要处理",
+  "@legendNeed": {
+    "description": "汇总条图例：需要处理"
+  },
+  "legendDone": "已完成",
+  "@legendDone": {
+    "description": "汇总条图例：已完成"
+  },
+  "queueSortNote": "按创建时间排序",
+  "@queueSortNote": {
+    "description": "队列表头右侧排序说明"
+  },
+  "queueCaption": "任务按创建顺序串行执行 · 换页不会影响进度",
+  "@queueCaption": {
+    "description": "队列分页条下方页脚说明"
+  },
+  "queueFilterAllSource": "全部来源",
+  "@queueFilterAllSource": {
+    "description": "来源筛选首项（清空来源筛选）"
+  },
+  "queueFilterAllStatus": "全部状态",
+  "@queueFilterAllStatus": {
+    "description": "状态筛选首项（清空状态筛选）"
+  },
+  "dropMetaSource": "来源",
+  "@dropMetaSource": {
+    "description": "漫画信息卡元信息行：来源"
+  },
+  "dropMetaSourceValue": "本机投放",
+  "@dropMetaSourceValue": {
+    "description": "漫画信息卡元信息行：来源值"
+  },
+  "dropMetaBatch": "批次",
+  "@dropMetaBatch": {
+    "description": "漫画信息卡元信息行：批次"
+  },
+  "dropMetaBatchEmpty": "尚未选择图片",
+  "@dropMetaBatchEmpty": {
+    "description": "批次行空态"
+  },
+  "dropPendingHint": "按文件名自然排序；移除任一文件后批号全部重算。",
+  "@dropPendingHint": {
+    "description": "待投放清单说明"
+  },
+  "dropPendingEmpty": "还没有选择图片 —— 拖入或点「选择图片」",
+  "@dropPendingEmpty": {
+    "description": "待投放清单空态"
+  },
+  "dropInfoCardTitle": "漫画信息",
+  "@dropInfoCardTitle": {
+    "description": "漫画信息卡标题"
+  },
+  "dropInfoCardHint": "译文会落在根目录下以漫画名命名的文件夹里；重名会被拦截。",
+  "@dropInfoCardHint": {
+    "description": "漫画信息卡说明"
+  },
+  "dropMetaRootDir": "落盘根目录",
+  "@dropMetaRootDir": {
+    "description": "漫画信息卡元信息行：落盘根目录"
+  },
+  "dropMetaRootDirValue": "（由服务端规范化，无回执不编路径）",
+  "@dropMetaRootDirValue": {
+    "description": "落盘根目录占位（无回执不编路径）"
+  },
+  "dropRulesTitle": "本次规则",
+  "@dropRulesTitle": {
+    "description": "本次规则卡标题"
+  },
+  "dropRulesNote": "同一时刻只翻译 1 个批次，其余会自动排队。翻译过程中可以关闭喵坞，任务状态会保存在本机。",
+  "@dropRulesNote": {
+    "description": "本次规则卡说明"
+  },
+  "dropFieldName": "漫画名 ",
+  "@dropFieldName": {
+    "description": "漫画名字段标签"
+  },
+  "dropMetaBatchValue": "{files} 张 · {batches} 批 · 每批最多 20 张",
+  "@dropMetaBatchValue": {
+    "description": "批次行值（有图时）"
+  },
+  "dropRulesDirection": "翻译方向",
+  "@dropRulesDirection": {
+    "description": "本次规则：翻译方向"
+  },
+  "dropRulesDirectionValue": "按任务方向",
+  "@dropRulesDirectionValue": {
+    "description": "本次规则：翻译方向值"
+  },
+  "dropRulesTier": "翻译档位",
+  "@dropRulesTier": {
+    "description": "本次规则：翻译档位"
+  },
+  "dropRulesTierValue": "Small · 均衡",
+  "@dropRulesTierValue": {
+    "description": "本次规则：翻译档位值"
+  },
+  "dropRulesSource": "翻译来源",
+  "@dropRulesSource": {
+    "description": "本次规则：翻译来源"
+  },
+  "dropRulesSourceValue": "本地引擎",
+  "@dropRulesSourceValue": {
+    "description": "本次规则：翻译来源值"
+  },
+  "dropRulesBatch": "批大小",
+  "@dropRulesBatch": {
+    "description": "本次规则：批大小"
+  },
+  "dropRulesBatchValue": "20 张",
+  "@dropRulesBatchValue": {
+    "description": "本次规则：批大小值"
+  },
+  "dropPendingTitle": "待投放 {count} 张{batchPart}",
+  "@dropPendingTitle": {
+    "description": "待投放清单标题",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "batchPart": {
+        "type": "String"
+      }
+    }
+  },
+  "dropPendingBatchSuffix": " · {batches} 批",
+  "@dropPendingBatchSuffix": {
+    "description": "待投放批数后缀",
+    "placeholders": {
+      "batches": {
+        "type": "int"
+      }
+    }
+  },
+  "dropPendingUnit": "张",
+  "@dropPendingUnit": {
+    "description": "投放页：张"
+  },
+  "dropPendingBatchUnit": "批",
+  "@dropPendingBatchUnit": {
+    "description": "投放页：批"
   }
 }
