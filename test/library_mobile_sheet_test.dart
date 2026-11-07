@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
+import 'package:miao_dock_flutter/features/manga/controller/library_controller.dart';
 import 'package:miao_dock_flutter/features/manga/controller/queue_controller.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_detail.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_grid.dart';
@@ -101,6 +102,36 @@ void main() {
     expect(cover.bottom - more.bottom, closeTo(5, 0.6));
   });
 
+  testWidgets('390×844：单本详情话卡与桌面同一套卡片（⋯ 常驻、无「查看」行）', (tester) async {
+    useSize(tester, const Size(390, 844));
+    final container = ProviderContainer(overrides: [mangaSvcClientProvider.overrideWithValue(_ChapterBooksClient())]);
+    addTearDown(container.dispose);
+    // 等价于点书架上的「某书」。
+    container.read(selectedBookProvider.notifier).select('某书');
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: LibraryDetail()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 破坏点：窄屏退回行列表（tcard）→ 出现「查看」按钮、且没有封面右上角的 ⋯。
+    expect(find.text('查看'), findsNothing);
+    expect(find.text('第 1 话'), findsOneWidget);
+    final more = find.byIcon(LucideIcons.ellipsis);
+    expect(more, findsOneWidget);
+    // 窄屏没有 hover：⋯ 必须常驻可见（否则手机上永远点不到话操作）。
+    final fade = tester.widget<AnimatedOpacity>(find.ancestor(of: more, matching: find.byType(AnimatedOpacity)).first);
+    expect(fade.opacity, 1);
+  });
+
   testWidgets('抽屉菜单文案走 ARB（无中文硬编码）', (tester) async {
     useSize(tester, const Size(390, 844));
     late AppLocalizations l10n;
@@ -161,6 +192,54 @@ class _BooksClient extends FakeMangaSvcClient {
         totalPages: 2,
         byteSize: 5,
         chapters: [],
+      ),
+    ],
+    others: const [],
+    hidden: const [],
+    hiddenCount: 0,
+    updatedAt: DateTime(2026, 1, 1),
+  );
+}
+
+/// 一本书 + 一话（话卡断言用）。
+class _ChapterBooksClient extends FakeMangaSvcClient {
+  @override
+  Future<List<int>?> getBookCover(String bookName) async => null;
+
+  @override
+  Future<List<int>> getChapterFile(String bookName, double chapterNo, int seq, {bool translated = false}) async =>
+      const [];
+
+  @override
+  Future<LibraryResponse> listLibrary() async => LibraryResponse(
+    root: '/tmp',
+    count: 1,
+    totalImages: 4,
+    totalBytes: 5,
+    comics: const [],
+    books: const [
+      BookEntry(
+        bookName: '某书',
+        dirName: '某书',
+        outputDir: '/tmp/某书',
+        title: '某书',
+        author: '作者',
+        chapterCount: 1,
+        totalPages: 4,
+        byteSize: 5,
+        chapters: [
+          ChapterEntry(
+            no: 1,
+            dirName: '第1话',
+            absDir: '/tmp/某书/第1话',
+            imageCount: 4,
+            translatedCount: 2,
+            seqMax: 4,
+            translatedSeqs: [1, 2],
+            missingSeqs: [],
+            merged: true,
+          ),
+        ],
       ),
     ],
     others: const [],

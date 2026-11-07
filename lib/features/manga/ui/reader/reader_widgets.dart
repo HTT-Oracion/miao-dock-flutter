@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -11,11 +10,13 @@ import '../../../../shared/responsive.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../controller/library_controller.dart';
 import '../../controller/queue_controller.dart';
+import 'reader_zoom.dart';
 
 /// 阅读器拆分件（重设计稿 P4 目录归位，D-152 方式重做）：
-/// ReaderBar（顶栏）/ ReaderPage（页图）/ ZoomablePage（双击缩放）/
-/// NightTint（夜间滤镜）/ SheetLabel（抽屉标签）/ ComparePane（对照双栏）/
-/// GridCell（网格总览单元）。状态装配与手势编排仍在 reader_screen.dart。
+/// ReaderBar（顶栏）/ ReaderPage（页图）/ NightTint（夜间滤镜）/ SheetLabel（抽屉标签）/
+/// ComparePane（对照双栏）/ GridCell（网格总览单元）。
+/// 缩放相关（ReaderZoom / ZoomablePage / PinchPage / ZoomChip / ZoomOsd）在 reader_zoom.dart；
+/// 状态装配与手势编排仍在 reader_screen.dart。
 class ReaderBar extends StatelessWidget {
   const ReaderBar({
     super.key,
@@ -32,6 +33,7 @@ class ReaderBar extends StatelessWidget {
     required this.onCompareActive,
     required this.onGrid,
     required this.onGridActive,
+    this.zoom,
   });
 
   final String title;
@@ -55,6 +57,9 @@ class ReaderBar extends StatelessWidget {
   /// 网格总览（桌面）：开关与激活态。
   final VoidCallback onGrid;
   final bool onGridActive;
+
+  /// 缩放调节器（桌面专属，D-164）：null = 不渲染（移动端靠双指捏合）。
+  final ReaderZoom? zoom;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +115,7 @@ class ReaderBar extends StatelessWidget {
             style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
           ),
           const SizedBox(width: 10),
+          if (zoom != null) ...[ZoomChip(zoom: zoom!), const SizedBox(width: 10)],
           AppButton(
             label: toggleLabel,
             onTap: onToggle,
@@ -225,71 +231,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             ),
           );
         }
-        return InteractiveViewer(
-          minScale: 1,
-          maxScale: 5,
-          child: Center(child: Image.memory(bytes, fit: BoxFit.contain, gaplessPlayback: true)),
-        );
+        // 缩放/平移由外层舞台页负责（桌面 ZoomablePage / 移动 PinchPage），
+        // 这里只画图 —— 两套缩放叠在一起会互相打架（D-164）。
+        return Center(child: Image.memory(bytes, fit: BoxFit.contain, gaplessPlayback: true));
       },
-    );
-  }
-}
-
-class ZoomablePage extends StatefulWidget {
-  const ZoomablePage({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  State<ZoomablePage> createState() => _ZoomablePageState();
-}
-
-class _ZoomablePageState extends State<ZoomablePage> with SingleTickerProviderStateMixin {
-  final _transformation = TransformationController();
-  Timer? _doubleTapTimer;
-  late final AnimationController _controller = AnimationController(vsync: this, duration: AppMotion.fast);
-
-  @override
-  void dispose() {
-    _doubleTapTimer?.cancel();
-    _transformation.dispose();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleTapUp(TapUpDetails d) {
-    // 250ms 内的第二次点按 = 双击（motion.html 时序纪律：260ms/28px）。
-    if (_doubleTapTimer != null) {
-      _doubleTapTimer?.cancel();
-      _doubleTapTimer = null;
-      final zoomed = _transformation.value.getMaxScaleOnAxis() > 1.05;
-      final target = zoomed
-          ? Matrix4.identity()
-          : (Matrix4.identity()
-              ..translateByDouble(-(d.localPosition.dx - 180) * 1.5, -(d.localPosition.dy - 320) * 1.5, 0, 1)
-              ..scaleByDouble(2.5, 2.5, 1, 1));
-      final anim = Matrix4Tween(
-        begin: _transformation.value,
-        end: target,
-      ).animate(CurvedAnimation(parent: _controller, curve: AppMotion.easeOutCubic));
-      void listener() {
-        _transformation.value = anim.value;
-        if (anim.status == AnimationStatus.completed) anim.removeListener(listener);
-      }
-
-      anim.addListener(listener);
-      _controller.forward(from: 0);
-    } else {
-      // 单击：中心区呼出/收起工具栏的职责在壳层点按分区，这里只起双击判定窗。
-      _doubleTapTimer = Timer(const Duration(milliseconds: 250), () {});
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapUp: _handleTapUp,
-      child: InteractiveViewer(transformationController: _transformation, maxScale: 5, child: widget.child),
     );
   }
 }

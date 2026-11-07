@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
@@ -455,7 +456,9 @@ class _MobileDetailState extends ConsumerState<_MobileDetail> {
                   ),
                   const SizedBox(height: 8),
                   if (book.isBook)
-                    mode == 'capsule' ? _ChapterCapsules(book: book) : _MobileChapterList(book: book)
+                    // 卡片模式与桌面同一套 `_ChapterCard`（用户口径：窄屏话卡样式跟桌面一致），
+                    // 只是格子更宽、窄屏两列。
+                    mode == 'capsule' ? _ChapterCapsules(book: book) : _ChapterGrid(book: book)
                   else
                     mode == 'capsule' ? _PageCapsules(book: book) : _MobilePageGrid(book: book),
                 ],
@@ -563,73 +566,6 @@ class _MobileHero extends ConsumerWidget {
             ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// 窄屏章节列表（`tcard` 一行式）：第 N 话 + 进度 + 进度条 + `查看`。
-class _MobileChapterList extends ConsumerWidget {
-  const _MobileChapterList({required this.book});
-
-  final LibBook book;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      children: [
-        for (final c in book.chapters)
-          Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-            decoration: BoxDecoration(
-              color: palette.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: palette.line),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.chapterTitle(jsNumStr(c.no)),
-                        style: TextStyle(fontSize: AppFont.px12, fontWeight: FontWeight.w600, color: palette.ink),
-                      ),
-                      Text(
-                        l10n.chapterProgress(c.donePages, c.pageCount),
-                        style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
-                      ),
-                      const SizedBox(height: 7),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: SizedBox(
-                          height: 3,
-                          child: LinearProgressIndicator(
-                            value: c.ratio,
-                            backgroundColor: palette.line,
-                            valueColor: AlwaysStoppedAnimation(c.done ? palette.good : palette.accent),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                AppButton(
-                  label: l10n.libView,
-                  onTap: () => _openChapter(context, ref, book, c),
-                  variant: AppButtonVariant.ghost,
-                  height: 24,
-                  horizontalPadding: 10,
-                  fontSize: AppFont.px10,
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
@@ -1666,24 +1602,43 @@ class _PageCapsules extends ConsumerWidget {
 }
 
 /// `.chgrid`：minmax(150,1fr) / gap 10 / 封面 4:5 + 卡片体。
+///
+/// 窄屏复用同一格 **只是放大格宽**（190 ⇒ 手机上两列）—— 话卡样式与桌面逐字一致
+/// （用户口径，D-164），不再维护一套窄屏行列表。
+///
+/// 高度按「封面 4:5 + 固定卡片体」算：格宽在不同断点下不同，写死 `childAspectRatio`
+/// 会让封面在手机上被压扁成方块（设计稿 `.cc-cover{aspect-ratio:4/5}`）。
 class _ChapterGrid extends StatelessWidget {
   const _ChapterGrid({required this.book});
 
   final LibBook book;
 
+  /// 卡片体（标题 + 进度 + 进度条 + 状态）的高度，与 [_ChapterCard] 的内距同源。
+  static const double _bodyHeight = 92;
+
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 150,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.62,
-      ),
-      itemCount: book.chapters.length,
-      itemBuilder: (context, i) => _ChapterCard(book: book, chapter: book.chapters[i]),
+    final maxExtent = context.isMobile ? 190.0 : 150.0;
+    return LayoutBuilder(
+      builder: (context, box) {
+        const gap = 10.0;
+        final width = box.maxWidth.isFinite ? box.maxWidth : maxExtent;
+        // 与 SliverGridDelegateWithMaxCrossAxisExtent 同一算式，只是要拿回真实格宽。
+        final cols = math.max(1, ((width + gap) / (maxExtent + gap)).ceil());
+        final cell = (width - gap * (cols - 1)) / cols;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: cols,
+            mainAxisSpacing: gap,
+            crossAxisSpacing: gap,
+            childAspectRatio: cell / (cell * 5 / 4 + _bodyHeight),
+          ),
+          itemCount: book.chapters.length,
+          itemBuilder: (context, i) => _ChapterCard(book: book, chapter: book.chapters[i]),
+        );
+      },
     );
   }
 }
@@ -1757,13 +1712,13 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
                           tone: tone,
                         ),
                       ),
-                      // 话卡「⋯」：hover 才显（`opacity:0 → 1`）。
+                      // 话卡「⋯」：桌面 hover 才显；窄屏没有 hover，常驻可见。
                       Positioned(
                         top: 6,
                         right: 6,
                         child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 150),
-                          opacity: _hover ? 1 : 0,
+                          opacity: hoverable && !_hover ? 0 : 1,
                           child: ChapterMenuButton(book: book, chapter: chapter),
                         ),
                       ),

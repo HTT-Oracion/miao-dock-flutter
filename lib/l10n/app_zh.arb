@@ -2619,6 +2619,23 @@
   "@readerRtl": {
     "description": "翻页方向 RTL 开关（点按分区与音量键随之镜像）"
   },
+  "readerZoomPercent": "{percent}%",
+  "@readerZoomPercent": {
+    "description": "桌面阅读器缩放比例（顶栏调节器中间的百分比与缩放 OSD）",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "readerZoomOut": "缩小",
+  "@readerZoomOut": {
+    "description": "桌面阅读器缩放调节器的缩小按钮"
+  },
+  "readerZoomIn": "放大",
+  "@readerZoomIn": {
+    "description": "桌面阅读器缩放调节器的放大按钮"
+  },
   "queueHeadHint": "同一时刻只跑 1 个 · 翻译中不能删除",
   "@queueHeadHint": {
     "description": "队列表头主标题副注（设计稿 qt-head .n small）"
