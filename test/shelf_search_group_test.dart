@@ -30,26 +30,32 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('浏览态：未归并归入「其他 · 未归并」组（重设计 2026-11-07）', (tester) async {
+  testWidgets('浏览态：未归并归入「其他 · 未归并」组', (tester) async {
     await pump(tester);
-    // 搜索态的《书甲》书名分组不出现；未归并组标题出现。
-    expect(find.text('《书甲》'), findsNothing);
     expect(find.text('其他 · 未归并'), findsOneWidget);
   });
 
-  testWidgets('搜索态：书分组 + 未归并分组，且未归并在最后', (tester) async {
+  testWidgets('搜索态：书架平铺过滤（设计稿 renderShelf，不再按书分组）', (tester) async {
     await pump(tester);
     final container = ProviderScope.containerOf(tester.element(find.byType(LibraryShelf)));
-    container.read(shelfQueryProvider.notifier).set('书');
+    container.read(shelfQueryProvider.notifier).set('书甲');
     await tester.pumpAndSettle();
 
-    expect(find.text('《书甲》'), findsOneWidget);
-    expect(find.text('其他 · 未归并'), findsOneWidget);
+    // 设计稿：书架搜索 = 行内过滤 + 命中高亮；分组聚合在右栏搜索结果页。
+    expect(find.text('书甲'), findsOneWidget);
+    // 未归并单话名不含「书甲」→ 整组不出现（组头随组走）。
+    expect(find.text('其他 · 未归并'), findsNothing);
+    expect(find.byKey(const ValueKey('shelf-row-未归并书乙')), findsNothing);
+  });
 
-    // 破坏点：未归并组排到书分组前面 → 与「单独分组显示在未归并下方」不符。
-    final unmergedY = tester.getTopLeft(find.text('其他 · 未归并')).dy;
-    final bookY = tester.getTopLeft(find.text('《书甲》')).dy;
-    expect(unmergedY, greaterThan(bookY));
+  testWidgets('搜索态：单话命中时未归并组仍在最后', (tester) async {
+    await pump(tester);
+    final container = ProviderScope.containerOf(tester.element(find.byType(LibraryShelf)));
+    container.read(shelfQueryProvider.notifier).set('未归并');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('shelf-row-未归并书乙')), findsOneWidget);
+    expect(find.text('其他 · 未归并'), findsOneWidget);
   });
 }
 

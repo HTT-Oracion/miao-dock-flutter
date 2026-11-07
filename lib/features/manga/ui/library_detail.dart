@@ -15,20 +15,19 @@ import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/toast.dart';
-import '../../../core/utils/format.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
 import '../controller/remote_guard.dart';
 import '../domain/lib_book.dart';
-import '../domain/manga_status.dart';
-import '../domain/manga_task.dart';
 import 'library_search_results.dart';
 import 'chapter_menu.dart';
 import 'shelf_menu.dart';
 
-/// 详情主区（设计稿 G Main）：
-/// 头部（本地漫画库 + 刷新 + 新建）→ Hero（封面 + 标题 + 元信息 + 动作）→
-/// 章节区（卡片 / 简易胶囊，`.view-seg` 切换）。
+/// 详情主区（设计稿 `.lib-main`）：工具栏（标题 + 章节）+ 可滚动区
+/// （Hero → 章节区 / 页面区）。
+///
+/// 宽屏：书架常驻左侧，点行只换这里的 book，**没有「返回书架」**；
+/// 窄屏：整屏从右侧滑入（`.mdetail`），头部是「‹ + 标题 + 刷新 + 视图切换」。
 class LibraryDetail extends ConsumerWidget {
   const LibraryDetail({super.key});
 
@@ -36,9 +35,7 @@ class LibraryDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final query = ref.watch(shelfQueryProvider).trim();
-    // 🔴 搜索结果页只在**桌面**接管：桌面搜索在左栏，选中命中项后聚合展示命中话；
-    // 移动端的搜索是网格页自己的，点卡片就该进详情——被这里劫持就永远到不了
-    // 详情（用户实测：搜索后点卡片跳到搜索聚合页）。
+    // 桌面：搜索态接管右栏（设计稿 `renderSearch`）。
     if (query.isNotEmpty && !context.isMobile) {
       return LibrarySearchResults(query: query);
     }
@@ -49,82 +46,680 @@ class LibraryDetail extends ConsumerWidget {
       return ErrorState(error: state.error, onRetry: () => ref.read(libraryProvider.notifier).refresh());
     }
     if (books.isEmpty) {
-      return Column(
-        children: [
-          // 「返回书架」（ver1.0 `#bk`）：清掉选中即回到默认态。
-          Row(
-            children: [
-              _BackToShelf(onTap: () => ref.read(selectedBookProvider.notifier).select(null)),
-              const Spacer(),
-              const LibraryHeaderActions(),
-            ],
-          ),
-          Expanded(
-            child: Center(
-              child: Text(
-                AppLocalizations.of(context).shelfEmpty,
-                style: TextStyle(fontSize: AppFont.px12_5, color: palette.textSecondary),
-              ),
-            ),
-          ),
-        ],
+      return Center(
+        child: Text(
+          AppLocalizations.of(context).shelfEmpty,
+          style: TextStyle(fontSize: AppFont.px12_5, color: palette.textSecondary),
+        ),
       );
     }
+
     final selected = ref.watch(selectedBookProvider);
-    // 🔴 不兜底 `books.first`：进库未选中时应停在网格（由 LibraryScreen 决定），
-    // 这里只在**确实选中**时渲染详情。
     final book = books.where((b) => b.key == selected).firstOrNull;
     if (book == null) {
-      return const SizedBox.shrink();
-    }
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-      children: [
-        // 「返回书架」（ver1.0 `#bk`）：清掉选中即回到默认态。
-        Row(
-          children: [
-            _BackToShelf(onTap: () => ref.read(selectedBookProvider.notifier).select(null)),
-            const Spacer(),
-            const LibraryHeaderActions(),
-          ],
+      // 未选中（书架空态 / 手动取消）：右栏给一句引导，不留白屏。
+      return Center(
+        child: Text(
+          AppLocalizations.of(context).libPickBookHint,
+          style: TextStyle(fontSize: AppFont.px12, color: palette.mut),
         ),
-        const SizedBox(height: 12),
-        _Hero(book: book),
-        if (!book.isBook) ...[
-          const SizedBox(height: 16),
-          const _PageSectionHeader(),
-          const SizedBox(height: 10),
-          ref.watch(libModeProvider) == 'capsule'
-              ? _PageCapsules(
-                  book: book,
-                  onTapPage: (seq) {
-                    ref
-                        .read(readerSessionProvider.notifier)
-                        .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
-                    context.go('/manga/reader');
-                  },
-                )
-              : _PageGrid(book: book),
+      );
+    }
+    return context.isMobile ? _MobileDetail(book: book) : _DesktopDetail(book: book);
+  }
+}
+
+/// 桌面详情：`.lib-toolbar`（标题 + `章节`）+ `.lib-scroll`（Hero → 章节 / 页面）。
+class _DesktopDetail extends ConsumerWidget {
+  const _DesktopDetail({required this.book});
+
+  final LibBook book;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(libModeProvider);
+    final openNo = ref.watch(libChapterOpenProvider);
+    // 设计稿 `showSingles()`：脚注入口 → 未归并单话陈列页（选中即退出）。
+    if (ref.watch(libSinglesViewProvider)) {
+      return const _SinglesPage();
+    }
+    final chapter = openNo == null ? null : book.chapters.where((c) => c.no == openNo).firstOrNull;
+
+    // `.lib-toolbar`：详情 = 标题 + `章节`；页网格 = `‹` + `第 N 话` + 计数 + 动作。
+    final toolbar = chapter == null
+        ? _LibToolbar(
+            title: book.name,
+            trailing: [
+              AppButton(
+                label: AppLocalizations.of(context).bookChapters,
+                // 设计稿 `openChapter(-2)`：回到章节列表（从页网格返回的兜底入口）。
+                onTap: () => ref.read(libChapterOpenProvider.notifier).open(null),
+                variant: AppButtonVariant.ghost,
+                height: 26,
+                horizontalPadding: 10,
+                fontSize: AppFont.px11,
+              ),
+            ],
+          )
+        : _ChapterPageToolbar(book: book, chapter: chapter);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        toolbar,
+        Expanded(
+          child: chapter != null
+              ? _ChapterPageView(book: book, chapter: chapter)
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                  children: [
+                    _Hero(book: book),
+                    if (book.isBook) ...[
+                      const SizedBox(height: 2),
+                      _SectionHeader(book: book),
+                      const SizedBox(height: 10),
+                      if (book.chapters.isEmpty)
+                        _EmptyHint(text: AppLocalizations.of(context).shelfEmpty)
+                      else
+                        mode == 'capsule' ? _ChapterCapsules(book: book) : _ChapterGrid(book: book),
+                      const SizedBox(height: 12),
+                      _FootHint(text: AppLocalizations.of(context).libFootHint),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      _PageSectionHeader(),
+                      const SizedBox(height: 10),
+                      mode == 'capsule' ? _PageCapsules(book: book) : _PageGrid(book: book),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 页网格工具栏（设计稿 `renderPages`）：`‹` + `第 N 话` + `N / N 页` tag
+/// + `续做本话`（有待译才显示）+ `重译本话`（有已译才显示）。
+class _ChapterPageToolbar extends ConsumerWidget {
+  const _ChapterPageToolbar({required this.book, required this.chapter});
+
+  final LibBook book;
+  final LibChapter chapter;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final pending = chapter.pageCount - chapter.donePages;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Row(
+        children: [
+          _IconAction(icon: LucideIcons.chevronLeft, onTap: () => ref.read(libChapterOpenProvider.notifier).open(null)),
+          const SizedBox(width: 8),
+          Text(
+            l10n.chapterTitle(jsNumStr(chapter.no)),
+            style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.ink),
+          ),
+          const SizedBox(width: 8),
+          _Tag(text: l10n.chapterProgress(chapter.donePages, chapter.pageCount)),
+          const Spacer(),
+          if (pending > 0) ...[
+            AppButton(
+              label: l10n.libResumeChapter,
+              onTap: () => _resumeChapter(context, ref, book, chapter),
+              variant: AppButtonVariant.primary,
+              height: 26,
+              horizontalPadding: 10,
+              fontSize: AppFont.px11,
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (chapter.donePages > 0)
+            AppButton(
+              label: l10n.libRetranslateChapter,
+              onTap: () => _retranslateChapter(context, ref, book, chapter),
+              variant: AppButtonVariant.ghost,
+              height: 26,
+              horizontalPadding: 10,
+              fontSize: AppFont.px11,
+            ),
         ],
-        if (book.isBook) ...[
-          const SizedBox(height: 16),
-          _SectionHeader(book: book),
-          const SizedBox(height: 10),
-          if (book.chapters.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
+      ),
+    );
+  }
+}
+
+Future<void> _resumeChapter(BuildContext context, WidgetRef ref, LibBook book, LibChapter chapter) async {
+  final l10n = AppLocalizations.of(context);
+  final guard = await ref.remoteGuard(l10n);
+  if (guard != null) {
+    if (context.mounted) showAppToast(context, guard, tone: ToastTone.bad);
+    return;
+  }
+  try {
+    await ref.read(mangaSvcClientProvider).resumeChapter(book.key, chapter.no);
+    if (context.mounted) showAppToast(context, l10n.chapterResumeOk(book.name), tone: ToastTone.good);
+  } catch (e) {
+    if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+  }
+}
+
+Future<void> _retranslateChapter(BuildContext context, WidgetRef ref, LibBook book, LibChapter chapter) async {
+  final l10n = AppLocalizations.of(context);
+  final guard = await ref.remoteGuard(l10n);
+  if (guard != null) {
+    if (context.mounted) showAppToast(context, guard, tone: ToastTone.bad);
+    return;
+  }
+  try {
+    await ref.read(mangaSvcClientProvider).retranslateChapter(book.key, chapter.no);
+    if (context.mounted) showAppToast(context, l10n.chapterRetranslateOk(book.name), tone: ToastTone.good);
+  } catch (e) {
+    if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+  }
+}
+
+/// 页网格（设计稿 `renderPages`）：minmax(104) / gap 10，底部脚注。
+class _ChapterPageView extends StatelessWidget {
+  const _ChapterPageView({required this.book, required this.chapter});
+
+  final LibBook book;
+  final LibChapter chapter;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+      children: [
+        _PageCells(book: book, chapter: chapter),
+        const SizedBox(height: 12),
+        _FootHint(text: l10n.libPageFootHint(chapter.pageCount)),
+      ],
+    );
+  }
+}
+
+/// 桌面「未归并单话」陈列页（设计稿 `renderSingles`）：
+/// 每行 = 34×46 虚线橙封面 + 名 + 进度说明 + `待归并` 徽标 + `归并` / `阅读`。
+class _SinglesPage extends ConsumerWidget {
+  const _SinglesPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final singles = ref.watch(libraryProvider).value?.where((b) => !b.isBook).toList() ?? const <LibBook>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: Row(
+            children: [
+              Text(
+                l10n.libUnmergedSingles,
+                style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.ink),
+              ),
+              const SizedBox(width: 8),
+              _Tag(text: '${singles.length}', tone: _TagTone.warn),
+              const SizedBox(width: 8),
+              Flexible(
                 child: Text(
-                  AppLocalizations.of(context).shelfEmpty,
-                  style: TextStyle(fontSize: AppFont.px12_5, color: palette.textSecondary),
+                  l10n.libUnmergedSinglesHint,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
                 ),
               ),
-            )
-          else
-            ref.watch(libModeProvider) == 'capsule' ? _ChapterCapsules(book: book) : _ChapterGrid(book: book),
-        ],
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+            children: [
+              for (final s in singles)
+                _SingleRow(
+                  single: s,
+                  onTap: () {
+                    // 选中即退出陈列页（设计稿 openSingleDetail 置 singlesView=false）。
+                    ref.read(libSinglesViewProvider.notifier).close();
+                    ref.read(selectedBookProvider.notifier).select(s.key);
+                  },
+                ),
+              const SizedBox(height: 12),
+              _FootHint(text: l10n.libSinglesFootHint),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _SingleRow extends ConsumerWidget {
+  const _SingleRow({required this.single, required this.onTap});
+
+  final LibBook single;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.line),
+      ),
+      child: Row(
+        children: [
+          // 34×46 虚线橙封面（第 1 页）。
+          Container(
+            width: 34,
+            height: 46,
+            decoration: BoxDecoration(
+              color: palette.cardCover,
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(color: palette.accent.withValues(alpha: 0.55), width: 1.5),
+            ),
+            alignment: Alignment.center,
+            child: Icon(LucideIcons.fileText, size: 14, color: palette.ink2),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  single.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w600, color: palette.ink),
+                ),
+                Text(
+                  l10n.libSingleNote(single.pageCount, single.directTranslated.length, single.pageCount),
+                  style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _Tag(text: l10n.libPendingMerge, tone: _TagTone.warn),
+          const SizedBox(width: 8),
+          AppButton(
+            label: l10n.libMerge,
+            onTap: () => _mergeBook(context, ref, single),
+            variant: AppButtonVariant.ghost,
+            height: 26,
+            horizontalPadding: 10,
+            fontSize: AppFont.px11,
+          ),
+          const SizedBox(width: 6),
+          AppButton(
+            label: l10n.libRead,
+            onTap: () => _openReader(ref, single),
+            variant: AppButtonVariant.ghost,
+            height: 26,
+            horizontalPadding: 10,
+            fontSize: AppFont.px11,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 窄屏详情（设计稿 `.mdetail`）：整屏从右侧滑入（380ms `c-morph` 曲线），
+/// 头部 = `‹` + 标题 + 刷新 + `卡片/简易` 切换；正文 = Hero 摘要 + 章节 / 页面区。
+///
+/// 卡片/简易是**跨详情保持**的全局状态（设计稿 `mDetailMode` 不在关闭时重置）。
+class _MobileDetail extends ConsumerStatefulWidget {
+  const _MobileDetail({required this.book});
+
+  final LibBook book;
+
+  @override
+  ConsumerState<_MobileDetail> createState() => _MobileDetailState();
+}
+
+class _MobileDetailState extends ConsumerState<_MobileDetail> {
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final book = widget.book;
+    final mode = ref.watch(libModeProvider);
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('mdetail-${book.key}'),
+      tween: Tween(begin: 1, end: 0),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) => FractionalTranslation(translation: Offset(value, 0), child: child),
+      child: ColoredBox(
+        color: palette.bg,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // `.mdetail .mh`：10/12 内距、底部 `line` 分隔。
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: palette.line)),
+              ),
+              child: Row(
+                children: [
+                  _IconAction(
+                    icon: LucideIcons.chevronLeft,
+                    onTap: () => ref.read(selectedBookProvider.notifier).select(null),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      book.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w700, color: palette.ink),
+                    ),
+                  ),
+                  _IconAction(icon: LucideIcons.refreshCw, onTap: () => _refresh(context, ref)),
+                  const SizedBox(width: 8),
+                  _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(14),
+                children: [
+                  _MobileHero(book: book),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Text(
+                        book.isBook
+                            ? (mode == 'capsule' ? l10n.libChaptersSimple : l10n.bookChapters)
+                            : (mode == 'capsule' ? l10n.libPagesSimple : l10n.readerPagesTitle),
+                        style: TextStyle(
+                          fontSize: AppFont.px10_5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                          color: palette.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (book.isBook)
+                    mode == 'capsule' ? _ChapterCapsules(book: book) : _MobileChapterList(book: book)
+                  else
+                    mode == 'capsule' ? _PageCapsules(book: book) : _MobilePageGrid(book: book),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// `.mdetail` Hero 摘要：单本 = 92 宽封面 + 标题 / 作者 / tag + 两个按钮；
+/// 单话 = 84 宽封面 + 标题 / 未归并说明 + `归并` `阅读`。
+class _MobileHero extends ConsumerWidget {
+  const _MobileHero({required this.book});
+
+  final LibBook book;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final coverWidth = book.isBook ? 92.0 : 84.0;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: coverWidth,
+          child: AspectRatio(
+            aspectRatio: 3 / 4.1,
+            child: _Cover(book: book),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                book.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w800, color: palette.ink),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                book.isBook
+                    ? l10n.shelfBookMeta(
+                        book.hasAuthor ? book.author : l10n.bookUnnamedAuthor,
+                        book.chapterCount,
+                        book.pageCount,
+                      )
+                    : l10n.libSingleMobileNote(book.pageCount),
+                style: TextStyle(fontSize: AppFont.px10_5, height: 1.7, color: palette.mut),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (book.isBook) ...[
+                    _Tag(
+                      text: l10n.libTranslatedPercent(_translatedPercent(book)),
+                      tone: _translatedPercent(book) >= 100 ? _TagTone.good : _TagTone.normal,
+                    ),
+                    _Tag(text: l10n.libOnShelf),
+                  ] else
+                    _Tag(text: l10n.libUnmergedTag, tone: _TagTone.warn),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // `.actions .btn{flex:1}`：两个按钮等分铺满。
+              Row(
+                children: [
+                  if (book.isBook) ...[
+                    Expanded(
+                      child: _HeroButton(
+                        label: l10n.bookContinueTranslate,
+                        primary: true,
+                        onTap: () => _resume(context, ref, book),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _HeroButton(label: l10n.libRefresh, onTap: () => _refresh(context, ref)),
+                    ),
+                  ] else ...[
+                    Expanded(
+                      child: _HeroButton(
+                        label: l10n.libMerge,
+                        primary: true,
+                        onTap: () => _mergeBook(context, ref, book),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _HeroButton(label: l10n.libRead, onTap: () => _openReader(ref, book)),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 窄屏章节列表（`tcard` 一行式）：第 N 话 + 进度 + 进度条 + `查看`。
+class _MobileChapterList extends ConsumerWidget {
+  const _MobileChapterList({required this.book});
+
+  final LibBook book;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      children: [
+        for (final c in book.chapters)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+            decoration: BoxDecoration(
+              color: palette.card,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: palette.line),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.chapterTitle(jsNumStr(c.no)),
+                        style: TextStyle(fontSize: AppFont.px12, fontWeight: FontWeight.w600, color: palette.ink),
+                      ),
+                      Text(
+                        l10n.chapterProgress(c.donePages, c.pageCount),
+                        style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                      ),
+                      const SizedBox(height: 7),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: SizedBox(
+                          height: 3,
+                          child: LinearProgressIndicator(
+                            value: c.ratio,
+                            backgroundColor: palette.line,
+                            valueColor: AlwaysStoppedAnimation(c.done ? palette.good : palette.accent),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                AppButton(
+                  label: l10n.libView,
+                  onTap: () => _openChapter(context, ref, book, c),
+                  variant: AppButtonVariant.ghost,
+                  height: 24,
+                  horizontalPadding: 10,
+                  fontSize: AppFont.px10,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// 窄屏页网格：minmax(88,1fr) / gap 10。
+class _MobilePageGrid extends StatelessWidget {
+  const _MobilePageGrid({required this.book});
+
+  final LibBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 110,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 3 / 4,
+      ),
+      itemCount: book.directPages,
+      itemBuilder: (context, i) => _PageCard(book: book, seq: i + 1),
+    );
+  }
+}
+
+/// `.mdetail .mh` 里的图标按钮（`ibtn`：34×34 / 8 圆角 / hover 变 hi）。
+class _IconAction extends StatefulWidget {
+  const _IconAction({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  State<_IconAction> createState() => _IconActionState();
+}
+
+class _IconActionState extends State<_IconAction> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: _hover ? palette.hi : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(widget.icon, size: 17, color: palette.ink2),
+        ),
+      ),
+    );
+  }
+}
+
+/// `.lib-toolbar`：12/20/8 内距、gap 8；标题 15 号 700，右侧 `章节` 小 ghost。
+class _LibToolbar extends StatelessWidget {
+  const _LibToolbar({required this.title, this.trailing = const []});
+
+  final String title;
+  final List<Widget> trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w700, color: palette.ink),
+            ),
+          ),
+          ...trailing,
+        ],
+      ),
     );
   }
 }
@@ -199,7 +794,6 @@ class _HeaderAction extends StatelessWidget {
       icon: icon,
       onTap: onTap,
       variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
-      border: !primary,
       height: 26,
       horizontalPadding: 10,
       fontSize: AppFont.px10_5,
@@ -207,6 +801,8 @@ class _HeaderAction extends StatelessWidget {
   }
 }
 
+/// `.bhero`：8/0/14 内距、gap 18；封面 clamp(96..118) × 3:4.1（含书脊竖排 4 字）
+/// + `.kicker`（9 号 2px 字距）→ 17px/800 标题 → 作者 → tag 胶囊行 → 路径 → 动作。
 class _Hero extends ConsumerWidget {
   const _Hero({required this.book});
 
@@ -216,165 +812,196 @@ class _Hero extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    // ver1.0 `.detail-hero`：纯排版（无卡片底），封面 96×126。
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _Cover(book: book),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                book.name,
-                style: TextStyle(fontSize: AppFont.px18, fontWeight: FontWeight.w700, color: palette.textPrimary),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  if (!book.isBook) _MetaChip(l10n.libUnmerged),
-                  if (book.isBook) _MetaChip(l10n.bookAuthorLabel(book.author)),
-                  _MetaChip(
-                    book.isBook ? l10n.bookChapterCount(book.chapterCount) : l10n.bookPageCount(book.pageCount),
+    final translated = _translatedPercent(book);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Cover(book: book),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  book.isBook ? 'BOOK / ${book.name.toUpperCase()}' : l10n.libSingleKicker,
+                  style: TextStyle(
+                    fontSize: AppFont.px9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2,
+                    color: palette.mut,
                   ),
-                  if (book.isBook) _MetaChip(l10n.bookPageCount(book.pageCount)),
-                  _MetaChip(formatBytes(book.totalBytes)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Wrap 而非 Row：移动端窄屏三个按钮放不下会溢出（用户实测黄黑条纹），
-              // 桌面端单行放得下时与 Row 视觉一致（spacing 8 等价于原手写间距）。
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (book.isBook) ...[
-                    _HeroButton(
-                      icon: LucideIcons.play,
-                      label: l10n.bookContinueTranslate,
-                      primary: true,
-                      onTap: () async {
-                        final client = ref.read(mangaSvcClientProvider);
-                        try {
-                          final plan = await client.getResumePlan(book.key);
-                          if (plan.pendingCount == 0) {
-                            if (context.mounted) {
-                              showAppToast(context, l10n.libAllTranslated, tone: ToastTone.info);
-                            }
-                            return;
-                          }
-                          final guardRes = await ref.remoteGuard(l10n);
-                          if (guardRes != null) {
-                            if (context.mounted) showAppToast(context, guardRes, tone: ToastTone.bad);
-                            return;
-                          }
-                          await client.resumeBook(book.key);
-                          if (context.mounted) {
-                            showAppToast(context, l10n.libResumeSubmitted, tone: ToastTone.good);
-                          }
-                        } catch (e) {
-                          if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
-                        }
-                      },
-                    ),
-                    _HeroButton(
-                      icon: LucideIcons.pencil,
-                      label: l10n.libEditInfo,
-                      onTap: () async {
-                        final r = await _EditBookDialog.show(context, book: book);
-                        if (r == null || !context.mounted) return;
-                        final client = ref.read(mangaSvcClientProvider);
-                        try {
-                          // 封面与文字**同一次保存**（miao-dock：拆开会有半落盘状态）。
-                          switch (r.cover) {
-                            case CoverIntent.keep:
-                              break;
-                            case CoverIntent.first:
-                              await client.setBookCoverFromFirstChapter(book.key);
-                            case CoverIntent.remove:
-                              await client.deleteBookCover(book.key);
-                            case CoverIntent.local:
-                              await client.setBookCover(
-                                book.key,
-                                bytes: r.coverBytes!,
-                                filename: r.coverFileName ?? 'cover.png',
-                              );
-                          }
-                          await client.setBookMeta(book.key, r.meta);
-                          await ref.read(libraryProvider.notifier).refresh();
-                          if (context.mounted) showAppToast(context, l10n.libEditInfoOk, tone: ToastTone.good);
-                        } catch (e) {
-                          if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
-                        }
-                      },
-                    ),
-                    // 🔴 打开目录 = 桌面端 reveal：移动端不显示（目录在桌面机器上，
-                    // 手机点了只会让桌面端弹资源管理器，容易误解；导出功能见 todo.md）。
-                    if (!context.isMobile)
-                      _HeroButton(
-                        icon: LucideIcons.folderOpen,
-                        label: l10n.actionOpenDir,
-                        onTap: () async {
-                          await ref.read(mangaSvcClientProvider).revealBook(book.key);
-                          if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
-                        },
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  book.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: AppFont.px17, fontWeight: FontWeight.w800, color: palette.ink),
+                ),
+                Text(
+                  book.isBook
+                      ? '${book.hasAuthor ? book.author : l10n.bookUnnamedAuthor} · ${l10n.libUpdatedRecently}'
+                      : l10n.libSingleNote(book.pageCount, book.directTranslated.length, book.pageCount),
+                  style: TextStyle(fontSize: AppFont.px11, color: palette.ink2),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (book.isBook) ...[
+                      _Tag(text: l10n.bookChapterCount(book.chapterCount)),
+                      _Tag(text: l10n.bookPageCount(book.pageCount)),
+                      _Tag(
+                        text: l10n.libTranslatedPercent(translated),
+                        tone: translated >= 100 ? _TagTone.good : _TagTone.normal,
                       ),
-                  ] else ...[
-                    _HeroButton(
-                      icon: LucideIcons.bookOpen,
-                      label: l10n.libViewComic,
-                      onTap: () {
-                        ref
-                            .read(readerSessionProvider.notifier)
-                            .open(
-                              ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated),
-                            );
-                        context.go('/manga/reader');
-                      },
-                    ),
-                    if (!context.isMobile)
-                      _HeroButton(
-                        icon: LucideIcons.folderOpen,
-                        label: l10n.actionOpenDir,
-                        onTap: () async {
-                          await ref.read(mangaSvcClientProvider).revealBook(book.key);
-                          if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
-                        },
-                      ),
-                    // 归并是「单话 → 书」的操作，**单本没有**；且殿后（用户裁定）。
-                    _HeroButton(
-                      icon: LucideIcons.gitMerge,
-                      label: l10n.libMerge,
-                      primary: true,
-                      onTap: () async {
-                        final result = await showMergeDialog(context, src: book.key);
-                        if (result == null || !context.mounted) return;
-                        try {
-                          await ref
-                              .read(mangaSvcClientProvider)
-                              .mergeChapter(book.key, targetBook: result.$1, no: result.$2);
-                          await ref.read(libraryProvider.notifier).refresh();
-                          if (context.mounted) showAppToast(context, l10n.libMergeOk, tone: ToastTone.good);
-                        } catch (e) {
-                          if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
-                        }
-                      },
-                    ),
+                      _Tag(text: l10n.libOnShelf),
+                    ] else
+                      _Tag(text: l10n.libUnmergedTag, tone: _TagTone.warn),
                   ],
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 8),
+                if (book.isBook)
+                  Text(
+                    _bookPath(book.key),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut, fontFamily: 'monospace'),
+                  ),
+                const SizedBox(height: 10),
+                _HeroActions(book: book),
+              ],
+            ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Hero 动作：`继续翻译`（32 高主按钮）+ `编辑信息` / `刷新`；
+/// 单话：`归并`（主）+ `阅读` + `打开目录`（设计稿 `.bactions`）。
+class _HeroActions extends ConsumerWidget {
+  const _HeroActions({required this.book});
+
+  final LibBook book;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    if (!book.isBook) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _HeroButton(label: l10n.libMerge, primary: true, onTap: () => _mergeBook(context, ref, book)),
+          _HeroButton(label: l10n.libRead, onTap: () => _openReader(ref, book)),
+          if (!context.isMobile) _HeroButton(label: l10n.actionOpenDir, onTap: () => _reveal(context, ref, book)),
+        ],
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _HeroButton(label: l10n.bookContinueTranslate, primary: true, onTap: () => _resume(context, ref, book)),
+        _HeroButton(label: l10n.libEditInfo, onTap: () => _edit(context, ref, book)),
+        _HeroButton(label: l10n.libRefresh, onTap: () => _refresh(context, ref)),
+        // 打开目录 = 桌面端 reveal；移动端不显示（目录在桌面机器上）。
+        if (!context.isMobile) _HeroButton(label: l10n.actionOpenDir, onTap: () => _reveal(context, ref, book)),
       ],
     );
   }
 }
 
-/// 封面：走 `/library/{name}/cover`；单话默认第一页（服务端回退）。
+String _bookPath(String key) => 'D:\\MiaoDock\\Mangas\\$key';
+
+int _translatedPercent(LibBook book) {
+  if (book.pageCount == 0) return 0;
+  final done = book.isBook ? book.chapters.fold<int>(0, (s, c) => s + c.donePages) : book.directTranslated.length;
+  return (done / book.pageCount * 100).round();
+}
+
+Future<void> _refresh(BuildContext context, WidgetRef ref) async {
+  await ref.read(libraryProvider.notifier).refresh();
+}
+
+Future<void> _resume(BuildContext context, WidgetRef ref, LibBook book) async {
+  final l10n = AppLocalizations.of(context);
+  final client = ref.read(mangaSvcClientProvider);
+  try {
+    final plan = await client.getResumePlan(book.key);
+    if (plan.pendingCount == 0) {
+      if (context.mounted) showAppToast(context, l10n.libAllTranslated, tone: ToastTone.info);
+      return;
+    }
+    final guardRes = await ref.remoteGuard(l10n);
+    if (guardRes != null) {
+      if (context.mounted) showAppToast(context, guardRes, tone: ToastTone.bad);
+      return;
+    }
+    await client.resumeBook(book.key);
+    if (context.mounted) showAppToast(context, l10n.libResumeSubmitted, tone: ToastTone.good);
+  } catch (e) {
+    if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+  }
+}
+
+Future<void> _reveal(BuildContext context, WidgetRef ref, LibBook book) async {
+  final l10n = AppLocalizations.of(context);
+  await ref.read(mangaSvcClientProvider).revealBook(book.key);
+  if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
+}
+
+void _openReader(WidgetRef ref, LibBook book) {
+  ref
+      .read(readerSessionProvider.notifier)
+      .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
+}
+
+Future<void> _mergeBook(BuildContext context, WidgetRef ref, LibBook book) async {
+  final l10n = AppLocalizations.of(context);
+  final result = await showMergeDialog(context, src: book.key);
+  if (result == null || !context.mounted) return;
+  try {
+    await ref.read(mangaSvcClientProvider).mergeChapter(book.key, targetBook: result.$1, no: result.$2);
+    await ref.read(libraryProvider.notifier).refresh();
+    if (context.mounted) showAppToast(context, l10n.libMergeOk, tone: ToastTone.good);
+  } catch (e) {
+    if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+  }
+}
+
+Future<void> _edit(BuildContext context, WidgetRef ref, LibBook book) async {
+  final l10n = AppLocalizations.of(context);
+  final r = await _EditBookDialog.show(context, book: book);
+  if (r == null || !context.mounted) return;
+  final client = ref.read(mangaSvcClientProvider);
+  try {
+    // 封面与文字**同一次保存**（拆开会有半落盘状态）。
+    switch (r.cover) {
+      case CoverIntent.keep:
+        break;
+      case CoverIntent.first:
+        await client.setBookCoverFromFirstChapter(book.key);
+      case CoverIntent.remove:
+        await client.deleteBookCover(book.key);
+      case CoverIntent.local:
+        await client.setBookCover(book.key, bytes: r.coverBytes!, filename: r.coverFileName ?? 'cover.png');
+    }
+    await client.setBookMeta(book.key, r.meta);
+    await ref.read(libraryProvider.notifier).refresh();
+    if (context.mounted) showAppToast(context, l10n.libEditInfoOk, tone: ToastTone.good);
+  } catch (e) {
+    if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+  }
+}
+
+/// `.bcover`：clamp(96..118) 宽 / 3:4.1 / 12 圆角 / 投影；
+/// 左侧 20 宽书脊（`rgba(10,12,15,.55)` + 竖排前 4 字 + 2px 字距）。
 class _Cover extends ConsumerStatefulWidget {
   const _Cover({required this.book});
 
@@ -398,110 +1025,146 @@ class _CoverState extends ConsumerState<_Cover> {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final book = widget.book;
+    final width = (MediaQuery.sizeOf(context).width * 0.1).clamp(96.0, 118.0);
     return Container(
-      width: 96,
-      height: 112,
-      decoration: BoxDecoration(color: palette.cardCover, borderRadius: BorderRadius.circular(8)),
+      width: width,
+      height: width * 4.1 / 3,
       clipBehavior: Clip.antiAlias,
-      alignment: Alignment.center,
-      child: FutureBuilder<List<int>?>(
-        future: _future,
-        builder: (context, snap) {
-          final bytes = snap.data;
-          if (bytes == null || bytes.isEmpty) {
-            return Icon(
-              book.isBook ? LucideIcons.bookOpen : LucideIcons.folder,
-              size: 24,
-              color: palette.textSecondary,
-            );
-          }
-          return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover, width: 96, height: 112);
-        },
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: palette.cardCover,
+        boxShadow: [BoxShadow(color: palette.shadow, blurRadius: 26, offset: const Offset(0, 8))],
+        // 单话：封面用虚线橙框（与单本的实心封面区分）。
+        border: book.isBook ? null : Border.all(color: palette.accent.withValues(alpha: 0.55), width: 1.5),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FutureBuilder<List<int>?>(
+            future: _future,
+            builder: (context, snap) {
+              final bytes = snap.data;
+              if (bytes == null || bytes.isEmpty) {
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [palette.cardCover, palette.bg],
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      book.isBook ? LucideIcons.bookOpen : LucideIcons.fileText,
+                      size: 24,
+                      color: palette.ink2,
+                    ),
+                  ),
+                );
+              }
+              return Image.memory(Uint8List.fromList(bytes), fit: BoxFit.cover);
+            },
+          ),
+          // `.obi`：书脊竖排书名前 4 字（设计稿写作 4 字）。
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: 20,
+              padding: const EdgeInsets.only(top: 8),
+              alignment: Alignment.center,
+              color: const Color(0x8C0A0C0F),
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: Text(
+                  book.name.length > 4 ? book.name.substring(0, 4) : book.name,
+                  maxLines: 1,
+                  style: TextStyle(fontSize: AppFont.px9, letterSpacing: 2, color: palette.ink2),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Hero 动作（继续翻译 / 编辑信息 / 归并 / 打开目录）：统一走 [AppButton]。
+/// `.bactions .btn`：32 高 / 12.5 号 / 左右 14 内距（设计稿按钮标准尺寸）。
 class _HeroButton extends StatelessWidget {
-  const _HeroButton({required this.icon, required this.label, this.primary = false, required this.onTap});
+  const _HeroButton({required this.label, this.primary = false, required this.onTap});
 
-  final IconData icon;
   final String label;
   final bool primary;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    // 移动端：一行纯图标（30×30，语义靠 Tooltip）；桌面：图文按钮。
-    if (context.isMobile) {
-      return Tooltip(
-        message: label,
-        child: AppButton(
-          icon: icon,
-          onTap: onTap,
-          variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
-          border: !primary,
-          width: 30,
-          height: 30,
-          fontSize: AppFont.px13,
-        ),
-      );
-    }
     return AppButton(
       label: label,
-      icon: icon,
       onTap: onTap,
       variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
-      border: !primary,
-      height: 26,
-      horizontalPadding: 10,
+      height: 32,
+      horizontalPadding: 14,
       fontSize: AppFont.px12_5,
+      fontWeight: primary ? FontWeight.w600 : null,
     );
   }
 }
 
-class _MetaChip extends StatelessWidget {
-  const _MetaChip(this.text);
+/// `.tag`：10 号、1/8 内距、999 圆角、card 底 + line2 描边。
+enum _TagTone { normal, good, warn }
+
+class _Tag extends StatelessWidget {
+  const _Tag({required this.text, this.tone = _TagTone.normal});
 
   final String text;
+  final _TagTone tone;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final (bg, border, fg) = switch (tone) {
+      _TagTone.normal => (palette.card, palette.line2, palette.ink2),
+      _TagTone.good => (palette.good.withValues(alpha: 0.12), Colors.transparent, palette.good),
+      _TagTone.warn => (palette.warn.withValues(alpha: 0.12), Colors.transparent, palette.warn),
+    };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: palette.navBg, borderRadius: BorderRadius.circular(5)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(kPillRadius),
+        border: Border.all(color: border),
+      ),
       child: Text(
         text,
-        style: TextStyle(fontSize: AppFont.px11_5, color: palette.textSecondary),
+        style: TextStyle(fontSize: AppFont.px10, color: fg),
       ),
     );
   }
 }
 
-/// 单话的「页面」区头：标题 + 页数 + 图例 + 卡片/简易切换（与章节区同一套控件）。
+/// 区头（`.lib-scroll` 里的 `h3 12.5/700` + `anno-note 10.5 mut` + 右侧视图切换）。
+///
+/// 章节区：`章节 · 共 N 话 · 封面取自本话第 1 页` + `重译整本`；
+/// 页面区：`页面` + `单话没有章节层级 · 封面即第 1 页`。
 class _PageSectionHeader extends ConsumerWidget {
   const _PageSectionHeader();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final mode = ref.watch(libModeProvider);
-    return Row(
-      children: [
-        Text(
-          l10n.readerPagesTitle,
-          style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w600, color: palette.textPrimary),
-        ),
-        const SizedBox(width: 10),
+    return _SectionRow(
+      title: l10n.readerPagesTitle,
+      note: l10n.libSinglePageHint,
+      trailing: [
         if (mode == 'capsule')
           Text(
             l10n.libCapsuleLegend,
-            style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
+            style: TextStyle(fontSize: AppFont.px9_5, color: AppPalette.of(context).mut),
           ),
-        const Spacer(),
         _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
       ],
     );
@@ -515,34 +1178,284 @@ class _SectionHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final mode = ref.watch(libModeProvider);
-    return Row(
-      children: [
-        Text(
-          l10n.bookChapters,
-          style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w600, color: palette.textPrimary),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          l10n.bookChapterCount(book.chapterCount),
-          style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
-        ),
-        const SizedBox(width: 10),
-        if (mode == 'capsule')
-          Text(
-            l10n.libCapsuleLegend,
-            style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
-          ),
-        const Spacer(),
+    return _SectionRow(
+      title: l10n.bookChapters,
+      note: l10n.libChapterPages(book.chapterCount),
+      trailing: [
         _ViewSeg(mode: mode, onSelect: (m) => ref.read(libModeProvider.notifier).set(m)),
+        // `.btn.ghost.sm`：26 高 / 10 内距 / 11 号
+        AppButton(
+          label: l10n.libRetranslateBook,
+          onTap: () => _retranslateBook(context, ref, book),
+          variant: AppButtonVariant.ghost,
+          height: 26,
+          horizontalPadding: 10,
+          fontSize: AppFont.px11,
+        ),
       ],
     );
   }
 }
 
-/// 单话「页面」区（卡片态）：每页一格，点开阅读器定位到该页。
+Future<void> _retranslateBook(BuildContext context, WidgetRef ref, LibBook book) async {
+  final l10n = AppLocalizations.of(context);
+  try {
+    await ref.read(mangaSvcClientProvider).retranslateBook(book.key);
+    if (context.mounted) showAppToast(context, l10n.shelfRetranslateOk(book.name), tone: ToastTone.good);
+  } catch (e) {
+    if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
+  }
+}
+
+/// `h3` + `anno-note` + 右侧动作的一行（章节区 / 页面区共用）。
+class _SectionRow extends StatelessWidget {
+  const _SectionRow({required this.title, required this.note, this.trailing = const []});
+
+  final String title;
+  final String note;
+  final List<Widget> trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Row(
+      children: [
+        Text(
+          title,
+          style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            note,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
+          ),
+        ),
+        const Spacer(),
+        for (final w in trailing) ...[const SizedBox(width: 8), w],
+      ],
+    );
+  }
+}
+
+/// `.foot-hint`：10 号、mut、行高 1.7。
+class _FootHint extends StatelessWidget {
+  const _FootHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(fontSize: AppFont.px10, height: 1.7, color: AppPalette.of(context).mut),
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  const _EmptyHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Center(
+        child: Text(
+          text,
+          style: TextStyle(fontSize: AppFont.px12_5, color: AppPalette.of(context).mut),
+        ),
+      ),
+    );
+  }
+}
+
+/// 话内页卡网格：minmax(104) / gap 10；缺页页 = 深底「缺页」格，不可点。
+class _PageCells extends StatelessWidget {
+  const _PageCells({required this.book, required this.chapter});
+
+  final LibBook book;
+  final LibChapter chapter;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 104,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 3 / 4,
+      ),
+      itemCount: chapter.pageCount,
+      itemBuilder: (context, i) => _ChapterPageCell(book: book, chapter: chapter, seq: i + 1),
+    );
+  }
+}
+
+/// `.pcard`：已译 / 待译 / 缺页三态。判定**只用逐页集合**。
+class _ChapterPageCell extends ConsumerStatefulWidget {
+  const _ChapterPageCell({required this.book, required this.chapter, required this.seq});
+
+  final LibBook book;
+  final LibChapter chapter;
+  final int seq;
+
+  @override
+  ConsumerState<_ChapterPageCell> createState() => _ChapterPageCellState();
+}
+
+class _ChapterPageCellState extends ConsumerState<_ChapterPageCell> {
+  bool _hover = false;
+  MemoryImage? _cover;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 🔴 缺页不拉原图（服务端 404 会刷日志）；直接落「缺页」格。
+    if (widget.chapter.isMissing(widget.seq)) {
+      _loaded = true;
+      return;
+    }
+    try {
+      ref
+          .read(mangaSvcClientProvider)
+          .getChapterFile(widget.book.key, widget.chapter.no, widget.seq)
+          .then((v) {
+            if (!mounted) return;
+            setState(() {
+              _cover = v.isEmpty ? null : MemoryImage(Uint8List.fromList(v));
+              _loaded = true;
+            });
+          })
+          .catchError((_) {
+            if (!mounted) return;
+            setState(() => _loaded = true);
+          });
+    } catch (_) {
+      if (mounted) setState(() => _loaded = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final seq = widget.seq;
+    final chapter = widget.chapter;
+    final missing = chapter.isMissing(seq);
+    final done = chapter.isTranslated(seq);
+    final hoverable = !context.isMobile && !missing;
+
+    final cell = Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: missing ? palette.card : palette.paperCard,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: hoverable && _hover ? palette.accent : Colors.transparent),
+      ),
+      child: missing
+          ? Center(
+              child: Text(
+                l10n.libChapterMissingPlaceholder,
+                style: TextStyle(fontSize: AppFont.px10, color: palette.mut),
+              ),
+            )
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                if (_cover != null)
+                  Image(image: _cover!, fit: BoxFit.cover)
+                else if (_loaded)
+                  _NoImagePlaceholder(palette: palette)
+                else
+                  const SizedBox.shrink(),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: done ? palette.good.withValues(alpha: 0.9) : palette.accent.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(kPillRadius),
+                    ),
+                    child: Text(
+                      done ? l10n.libChapterStatusDone : l10n.libChapterStatusPending,
+                      style: TextStyle(
+                        fontSize: AppFont.px8_5,
+                        fontWeight: FontWeight.w700,
+                        color: done ? palette.bg : palette.onAcc,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(5, 10, 5, 3),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0x8C000000)],
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            l10n.libPageLabel(seq),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: AppFont.px8_5, color: Colors.white),
+                          ),
+                        ),
+                        const Spacer(),
+                        Flexible(
+                          child: Text(
+                            _pageFileName(seq),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: AppFont.px8_5, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+
+    if (missing) return cell;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: () => _openReaderAtChapter(context, ref, widget.book, chapter),
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 150),
+          scale: hoverable && _hover ? 1.04 : 1,
+          child: cell,
+        ),
+      ),
+    );
+  }
+}
+
+/// `.pggrid`：minmax(104,1fr) / gap 10 / 3:4 卡片。
 class _PageGrid extends StatelessWidget {
   const _PageGrid({required this.book});
 
@@ -550,30 +1463,28 @@ class _PageGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = book.directPages;
-    // 与「漫画库右侧的单本卡片」同一套网格参数（maxExtent 170 / 比例 0.62）。
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 170,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.62,
+        maxCrossAxisExtent: 104,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 3 / 4,
       ),
-      itemCount: total,
-      itemBuilder: (context, i) => _PageCard(book: book, seq: i + 1, total: total),
+      itemCount: book.directPages,
+      itemBuilder: (context, i) => _PageCard(book: book, seq: i + 1),
     );
   }
 }
 
-/// 单页卡片：**以该页原图作封面**，左上角页码胶囊（与单本卡片的「N 话」同位）。
+/// `.pcard`：3:4 / 8 圆角 / `#f5f2ea` 纸底；hover 放大 1.04 + 主色描边。
+/// 右上角 `stamp`（已译绿 / 待译橙 / 缺页灰），底部渐变条给页码 + 文件名。
 class _PageCard extends ConsumerStatefulWidget {
-  const _PageCard({required this.book, required this.seq, required this.total});
+  const _PageCard({required this.book, required this.seq});
 
   final LibBook book;
   final int seq;
-  final int total;
 
   @override
   ConsumerState<_PageCard> createState() => _PageCardState();
@@ -582,163 +1493,171 @@ class _PageCard extends ConsumerStatefulWidget {
 class _PageCardState extends ConsumerState<_PageCard> {
   bool _hover = false;
   MemoryImage? _cover;
+  bool _loaded = false;
 
   @override
   void initState() {
     super.initState();
-    // 原图取封面（不带 variant），缺图时回退占位图标。
-    // 🔴 provider 必须缓存在 state：此前每次 build 都 Uint8List.fromList +
-    // 新 MemoryImage（identity 不等）→ hover setState 重建就重新解码 → 闪烁，
-    // 且每帧整图拷贝。同一实例喂给 Image 则 didUpdateWidget 判等、不重解析。
-    ref
-        .read(mangaSvcClientProvider)
-        .getBookFile(widget.book.key, widget.seq)
-        .then((v) {
-          if (!mounted) return;
-          setState(() => _cover = v.isEmpty ? null : MemoryImage(Uint8List.fromList(v)));
-        })
-        .catchError((_) {
-          if (!mounted) return;
-          setState(() => _cover = null);
-        });
+    // 🔴 provider 缓存在 state：否则每次 build 新建 MemoryImage 会重新解码（闪烁）。
+    // 🔴 A 级替身的取图方法**同步 throw**，必须 try/catch。
+    try {
+      ref
+          .read(mangaSvcClientProvider)
+          .getBookFile(widget.book.key, widget.seq)
+          .then((v) {
+            if (!mounted) return;
+            setState(() {
+              _cover = v.isEmpty ? null : MemoryImage(Uint8List.fromList(v));
+              _loaded = true;
+            });
+          })
+          .catchError((_) {
+            if (!mounted) return;
+            setState(() => _loaded = true);
+          });
+    } catch (_) {
+      if (mounted) setState(() => _loaded = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final book = widget.book;
     final seq = widget.seq;
-    final done = widget.book.directTranslated.contains(seq);
+    // 页卡三态判定**只用逐页集合**（张数推不出「译了哪几页」）。
+    final done = book.directTranslated.contains(seq);
+    final hoverable = !context.isMobile;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      onEnter: hoverable ? (_) => setState(() => _hover = true) : null,
+      onExit: hoverable ? (_) => setState(() => _hover = false) : null,
       child: GestureDetector(
         onTap: () {
           ref
               .read(readerSessionProvider.notifier)
-              .open(ReaderSession(key: widget.book.key, pages: widget.total, translated: widget.book.directTranslated));
+              .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
           context.go('/manga/reader');
         },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 3 / 4,
-              child: Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  // 单页卡：**不出现任何主色** —— 底色用中性层，无图时给专门的空状态。
-                  color: palette.card,
-                  border: Border.all(color: _hover ? palette.divider : palette.line),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (_cover != null)
-                      Image(image: _cover!, fit: BoxFit.cover)
-                    else
-                      _NoImagePlaceholder(palette: palette),
-                    // 页码胶囊在**左上角**（与单本卡片的「N 话」同位）。
-                    Positioned(
-                      left: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(kPillRadius),
-                        ),
-                        child: Text(
-                          '$seq',
-                          style: const TextStyle(fontSize: AppFont.px9, color: Colors.white),
-                        ),
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 150),
+          scale: hoverable && _hover ? 1.04 : 1,
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: palette.paperCard,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: hoverable && _hover ? palette.accent : Colors.transparent),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (_cover != null)
+                  Image(image: _cover!, fit: BoxFit.cover)
+                else if (_loaded)
+                  _NoImagePlaceholder(palette: palette)
+                else
+                  const SizedBox.shrink(),
+                // `stamp`：右上角 8.5 号 999 圆角胶囊。
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: done ? palette.good.withValues(alpha: 0.9) : palette.accent.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(kPillRadius),
+                    ),
+                    child: Text(
+                      done ? l10n.libChapterStatusDone : l10n.libChapterStatusPending,
+                      style: TextStyle(
+                        fontSize: AppFont.px8_5,
+                        fontWeight: FontWeight.w700,
+                        color: done ? palette.bg : palette.onAcc,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              AppLocalizations.of(context).readerPage(seq, widget.total),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.textPrimary),
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  // 状态圆点：已完成用 good，未完成用**中性灰**（主色留给主操作，不在卡片里出现）。
-                  decoration: BoxDecoration(
-                    color: done ? palette.success : palette.textSecondary,
-                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  done
-                      ? AppLocalizations.of(context).libChapterStatusDone
-                      : AppLocalizations.of(context).libChapterStatusPending,
-                  style: TextStyle(fontSize: AppFont.px9, color: palette.textSecondary),
+                // `.plabel`：底部渐变条（页码 + `001.png`）。
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(5, 10, 5, 3),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0x8C000000)],
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            l10n.libPageLabel(seq),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: AppFont.px8_5, color: Colors.white),
+                          ),
+                        ),
+                        const Spacer(),
+                        Flexible(
+                          child: Text(
+                            _pageFileName(seq),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: AppFont.px8_5, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// 单话「页面」区（简易态）：页码胶囊 + 状态圆点。
-class _PageCapsules extends StatelessWidget {
-  const _PageCapsules({required this.book, required this.onTapPage});
+String _pageFileName(int seq) => '${seq.toString().padLeft(3, '0')}.png';
+
+/// `.caps`：简易态页码胶囊（hover 主色描边 + 主色字）。
+class _PageCapsules extends ConsumerWidget {
+  const _PageCapsules({required this.book});
 
   final LibBook book;
-  final ValueChanged<int> onTapPage;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 4,
+      runSpacing: 4,
       children: [
         for (var seq = 1; seq <= book.directPages; seq++)
-          // 🔴 胶囊必须可点（D-109 曾断言过）：重构中丢了 onTap → 简易模式点击没反应。
-          GestureDetector(
-            onTap: () => onTapPage(seq),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(999)),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$seq',
-                    style: TextStyle(fontSize: AppFont.px11_5, color: palette.textPrimary),
-                  ),
-                  if (!book.directTranslated.contains(seq)) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(color: palette.accent, shape: BoxShape.circle),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+          _Cap(
+            label: l10n.libPageCapsule(seq),
+            onTap: () {
+              ref
+                  .read(readerSessionProvider.notifier)
+                  .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
+              context.go('/manga/reader');
+            },
           ),
       ],
     );
   }
 }
 
+/// `.chgrid`：minmax(150,1fr) / gap 10 / 封面 4:5 + 卡片体。
 class _ChapterGrid extends StatelessWidget {
   const _ChapterGrid({required this.book});
 
@@ -749,11 +1668,11 @@ class _ChapterGrid extends StatelessWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        mainAxisExtent: 100,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 150,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.62,
       ),
       itemCount: book.chapters.length,
       itemBuilder: (context, i) => _ChapterCard(book: book, chapter: book.chapters[i]),
@@ -761,6 +1680,8 @@ class _ChapterGrid extends StatelessWidget {
   }
 }
 
+/// `.ccard`：card 底 / 10 圆角 / `line` 描边（状态描边：done 绿、pending 琥珀、
+/// missing 虚线 + 0.75 透明）；hover 上浮 2px。封面 4:5，左上状态徽标，右上 hover ⋯。
 class _ChapterCard extends ConsumerStatefulWidget {
   const _ChapterCard({required this.book, required this.chapter});
 
@@ -777,86 +1698,248 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
     final book = widget.book;
     final chapter = widget.chapter;
-    final color = chapter.done ? MangaTaskStatus.done.color : MangaTaskStatus.translating.color;
+    final missing = chapter.missingSeqs.length;
+    final pending = chapter.pageCount - chapter.donePages - missing;
+    final tone = missing > 0 ? _ChapterTone.missing : (pending > 0 ? _ChapterTone.pending : _ChapterTone.done);
+    final borderColor = switch (tone) {
+      _ChapterTone.done => palette.good.withValues(alpha: 0.35),
+      _ChapterTone.pending => palette.warn.withValues(alpha: 0.4),
+      _ChapterTone.missing => palette.line,
+    };
+    final hoverable = !context.isMobile;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      onEnter: hoverable ? (_) => setState(() => _hover = true) : null,
+      onExit: hoverable ? (_) => setState(() => _hover = false) : null,
       child: GestureDetector(
-        onTap: () {
-          // 查看逻辑同 miao-dock：**未翻译完也能点进**（缺译文的页回退原图）。
-          ref
-              .read(readerSessionProvider.notifier)
-              .open(
-                ReaderSession(
-                  key: book.key,
-                  chapterNo: chapter.no,
-                  pages: chapter.pageCount,
-                  translated: chapter.translatedSeqs,
+        onTap: () => _openChapter(context, ref, book, chapter),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.translationValues(0, hoverable && _hover ? -2 : 0, 0),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: palette.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: borderColor),
+          ),
+          child: Opacity(
+            opacity: tone == _ChapterTone.missing ? 0.75 : 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // `.cc-cover`：本话第 1 页做封面（单话同源：`PageArt.page(1)`）。
+                      _ChapterCover(book: book, chapter: chapter),
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: _StatusBadge(
+                          label: switch (tone) {
+                            _ChapterTone.done => l10n.libChapterStatusDone,
+                            _ChapterTone.pending => l10n.libChapterStatusPending,
+                            _ChapterTone.missing => l10n.libChapterStatusMissing,
+                          },
+                          tone: tone,
+                        ),
+                      ),
+                      // 话卡「⋯」：hover 才显（`opacity:0 → 1`）。
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 150),
+                          opacity: _hover ? 1 : 0,
+                          child: ChapterMenuButton(book: book, chapter: chapter),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-          context.go('/manga/reader');
-        },
-        child: Stack(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n.chapterTitle(jsNumStr(chapter.no)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: AppFont.px11_5, fontWeight: FontWeight.w700, color: palette.ink),
+                      ),
+                      Text(
+                        l10n.chapterProgress(chapter.donePages, chapter.pageCount),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: SizedBox(
+                          height: 3,
+                          child: LinearProgressIndicator(
+                            value: chapter.ratio,
+                            backgroundColor: palette.line,
+                            valueColor: AlwaysStoppedAnimation(tone == _ChapterTone.done ? palette.good : palette.warn),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        // 状态优先级：缺页 > 待译，两个数都写出来（必须带「页」字）。
+                        missing > 0 && pending > 0
+                            ? l10n.libChapterBothState(missing, pending)
+                            : missing > 0
+                            ? l10n.chapterMissingPages(missing)
+                            : pending > 0
+                            ? l10n.chapterPendingPages(pending)
+                            : l10n.libUpdatedRecently,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _openChapter(BuildContext context, WidgetRef ref, LibBook book, LibChapter chapter) {
+  // 设计稿：桌面话卡点击进「页网格」，页卡点击才进阅读器。
+  // 窄屏没有页网格屏，`查看` 直接进该话阅读器。
+  if (context.isMobile) {
+    ref
+        .read(readerSessionProvider.notifier)
+        .open(
+          ReaderSession(
+            key: book.key,
+            chapterNo: chapter.no,
+            pages: chapter.pageCount,
+            translated: chapter.translatedSeqs,
+          ),
+        );
+    context.go('/manga/reader');
+    return;
+  }
+  ref.read(libChapterOpenProvider.notifier).open(chapter.no);
+}
+
+void _openReaderAtChapter(BuildContext context, WidgetRef ref, LibBook book, LibChapter chapter) {
+  // 未翻译完也能点进（缺译文的页回退原图）。
+  ref
+      .read(readerSessionProvider.notifier)
+      .open(
+        ReaderSession(
+          key: book.key,
+          chapterNo: chapter.no,
+          pages: chapter.pageCount,
+          translated: chapter.translatedSeqs,
+        ),
+      );
+  context.go('/manga/reader');
+}
+
+enum _ChapterTone { done, pending, missing }
+
+/// 话卡封面：取本话第 1 页原图（`.cc-cover` 4:5）。
+class _ChapterCover extends ConsumerStatefulWidget {
+  const _ChapterCover({required this.book, required this.chapter});
+
+  final LibBook book;
+  final LibChapter chapter;
+
+  @override
+  ConsumerState<_ChapterCover> createState() => _ChapterCoverState();
+}
+
+class _ChapterCoverState extends ConsumerState<_ChapterCover> {
+  MemoryImage? _cover;
+
+  @override
+  void initState() {
+    super.initState();
+    // 🔴 A 级替身的 getChapterFile 是**同步 throw**（不是失败 Future），
+    // 不用 try/catch 会直接炸出 build。
+    try {
+      ref
+          .read(mangaSvcClientProvider)
+          .getChapterFile(widget.book.key, widget.chapter.no, 1)
+          .then((v) {
+            if (!mounted || v.isEmpty) return;
+            setState(() => _cover = MemoryImage(Uint8List.fromList(v)));
+          })
+          .catchError((_) {});
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    if (_cover != null) return Image(image: _cover!, fit: BoxFit.cover);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [palette.cardCover, palette.bg],
+        ),
+      ),
+    );
+  }
+}
+
+/// `.badge`：24 高 / 9 内距 / 999 圆角 / 7px 圆点 / 10.5 号；三态描边配色。
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.label, required this.tone});
+
+  final String label;
+  final _ChapterTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final dot = switch (tone) {
+      _ChapterTone.done => palette.good,
+      _ChapterTone.pending => palette.warn,
+      _ChapterTone.missing => palette.bad,
+    };
+    return Transform.scale(
+      scale: 0.85,
+      alignment: Alignment.topLeft,
+      child: Container(
+        height: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        decoration: BoxDecoration(
+          color: palette.card,
+          borderRadius: BorderRadius.circular(kPillRadius),
+          border: Border.all(color: dot.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: palette.card,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _hover ? palette.accent : Colors.transparent),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 64,
-                    decoration: BoxDecoration(color: palette.cardCover, borderRadius: BorderRadius.circular(6)),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context).chapterTitle(jsNumStr(chapter.no)),
-                          style: TextStyle(
-                            fontSize: AppFont.px13_5,
-                            fontWeight: FontWeight.w600,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          AppLocalizations.of(context).chapterMeta(chapter.pageCount, chapter.donePages),
-                          style: TextStyle(fontSize: AppFont.px8_5, color: palette.textSecondary),
-                        ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: SizedBox(
-                            height: 4,
-                            child: LinearProgressIndicator(
-                              value: chapter.ratio,
-                              backgroundColor: palette.progressTrack,
-                              valueColor: AlwaysStoppedAnimation(color),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
             ),
-            // 悬浮菜单：点它不能顺带打开阅读器（miao-dock：stopPropagation）。
-            Positioned(
-              right: 0,
-              top: 0,
-              child: ChapterMenuButton(book: book, chapter: chapter),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink),
             ),
           ],
         ),
@@ -865,7 +1948,7 @@ class _ChapterCardState extends ConsumerState<_ChapterCard> {
   }
 }
 
-/// 简易（胶囊）态：名字 + 状态圆点（待译 蓝 · 缺页 黄 · 已译完不显示）。
+/// `.caps` 简易态：章节胶囊（点击直达页网格）。
 class _ChapterCapsules extends ConsumerWidget {
   const _ChapterCapsules({required this.book});
 
@@ -875,45 +1958,29 @@ class _ChapterCapsules extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 4,
+      runSpacing: 4,
       children: [
         for (final c in book.chapters)
-          _Capsule(
-            label: l10n.chapterTitle(jsNumStr(c.no)),
-            pending: !c.done,
-            pendingColor: c.translatedSeqs.isEmpty
-                ? MangaTaskStatus.translating.color
-                : MangaTaskStatus.partialFailed.color,
-            onTap: () {
-              // 简易态与卡片态**同样能点开阅读器**（此前胶囊不可点，是缺陷）。
-              ref
-                  .read(readerSessionProvider.notifier)
-                  .open(
-                    ReaderSession(key: book.key, chapterNo: c.no, pages: c.pageCount, translated: c.translatedSeqs),
-                  );
-              context.go('/manga/reader');
-            },
-          ),
+          _Cap(label: l10n.chapterTitle(jsNumStr(c.no)), onTap: () => _openChapter(context, ref, book, c)),
       ],
     );
   }
 }
 
-/// 单个胶囊（ver1.0 `.chapcap`：92×32、999 圆角、panel 底、hover 描边变主色）。
-class _Capsule extends StatefulWidget {
-  const _Capsule({required this.label, required this.onTap, this.pending = false, this.pendingColor});
+/// `.cap`：2/9 内距 / 999 圆角 / `hi` 底 + `line2` 描边 / 10 号 ink2；
+/// hover 描边与字转主色（设计稿 `.cap:hover`）。
+class _Cap extends StatefulWidget {
+  const _Cap({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
-  final bool pending;
-  final Color? pendingColor;
 
   @override
-  State<_Capsule> createState() => _CapsuleState();
+  State<_Cap> createState() => _CapState();
 }
 
-class _CapsuleState extends State<_Capsule> {
+class _CapState extends State<_Cap> {
   bool _hover = false;
 
   @override
@@ -926,29 +1993,15 @@ class _CapsuleState extends State<_Capsule> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
           decoration: BoxDecoration(
-            color: palette.navBg,
+            color: palette.hi,
             borderRadius: BorderRadius.circular(kPillRadius),
-            border: Border.all(color: _hover ? palette.accent : palette.divider),
+            border: Border.all(color: _hover ? palette.accent : palette.line2),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.label,
-                style: TextStyle(fontSize: AppFont.px11, color: palette.textMuted),
-              ),
-              if (widget.pending) ...[
-                const SizedBox(width: 6),
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(color: widget.pendingColor, shape: BoxShape.circle),
-                ),
-              ],
-            ],
+          child: Text(
+            widget.label,
+            style: TextStyle(fontSize: AppFont.px10, color: _hover ? palette.accent : palette.ink2),
           ),
         ),
       ),
@@ -977,24 +2030,60 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
+    final name = _controller.text.trim();
+    // 设计稿校验三层顺序 = 非法字符 → 同名 → 空名（同名由服务端拦截，这里先拦前一层）。
+    final invalid = RegExp(r'[\\/:*?"<>|]').hasMatch(name);
+    final hint = invalid
+        ? l10n.libCreateBookNameInvalid
+        : (name.isEmpty ? l10n.libCreateBookNameRequired : l10n.libCreateBookFolderHint);
     return AppDialog(
       title: l10n.libCreateBook,
+      kicker: 'NEW COMIC',
+      subtitle: l10n.libCreateBookSub,
       actions: [
         AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
         AppButton(
           label: l10n.libCreateBook,
           variant: AppButtonVariant.primary,
-          onTap: () => Navigator.of(context).pop(_controller.text.trim()),
+          onTap: name.isEmpty || invalid ? null : () => Navigator.of(context).pop(name),
         ),
       ],
       child: SizedBox(
         width: 300,
-        child: AppInput(
-          controller: _controller,
-          hint: l10n.libCreateBookNameHint,
-          autofocus: true,
-          onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.libChapterName,
+              style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.ink),
+            ),
+            const SizedBox(height: 5),
+            AppInput(
+              controller: _controller,
+              hint: l10n.libCreateBookNameHint,
+              errorText: invalid ? hint : null,
+              autofocus: true,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (v) {
+                if (v.trim().isNotEmpty && !invalid) Navigator.of(context).pop(v.trim());
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              hint,
+              style: TextStyle(fontSize: AppFont.px10, color: invalid ? palette.bad : palette.mut),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.bookAuthorLabel('').replaceAll(' · ', ''),
+              style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.ink),
+            ),
+            const SizedBox(height: 5),
+            AppInput(hint: l10n.libAuthorHint, onChanged: (_) {}),
+          ],
         ),
       ),
     );
@@ -1228,6 +2317,8 @@ class _CoverChoice extends StatelessWidget {
   }
 }
 
+/// `.vseg`（卡片 / 简易切换）：card 底 + line2 描边 + 8 圆角 + 2 内距；
+/// 按钮 30×26，选中 = accent 底 + onAcc 图标（设计稿网格 / 列表两个图标）。
 class _ViewSeg extends StatelessWidget {
   const _ViewSeg({required this.mode, required this.onSelect});
 
@@ -1237,53 +2328,32 @@ class _ViewSeg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(color: palette.navBg, borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: palette.line2),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final m in const ['card', 'capsule'])
-            _HoverTap(
+          for (final (m, icon) in const [('card', LucideIcons.layoutGrid), ('capsule', LucideIcons.list)])
+            GestureDetector(
               onTap: () => onSelect(m),
-              builder: (hover) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: Container(
+                width: 30,
+                height: 26,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: mode == m ? palette.card : (hover ? palette.card.withValues(alpha: 0.5) : Colors.transparent),
-                  borderRadius: BorderRadius.circular(kButtonRadius),
+                  color: mode == m ? palette.accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  m == 'card' ? l10n.libViewCard : l10n.libViewCapsule,
-                  style: TextStyle(
-                    fontSize: AppFont.px10_5,
-                    color: mode == m ? palette.textPrimary : palette.textSecondary,
-                  ),
-                ),
+                child: Icon(icon, size: 13, color: mode == m ? palette.onAcc : palette.ink2),
               ),
             ),
         ],
       ),
-    );
-  }
-}
-
-/// 「返回书架」：统一走 [AppButton]。
-class _BackToShelf extends StatelessWidget {
-  const _BackToShelf({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppButton(
-      label: AppLocalizations.of(context).shelfBack,
-      icon: LucideIcons.chevronLeft,
-      onTap: onTap,
-      variant: AppButtonVariant.ghost,
-      border: true,
-      height: 26,
-      horizontalPadding: 10,
-      fontSize: AppFont.px10_5,
     );
   }
 }

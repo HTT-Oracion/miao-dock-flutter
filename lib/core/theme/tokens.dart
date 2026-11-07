@@ -31,6 +31,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.shadow,
     required this.coverEnd,
     required this.coverEndDeep,
+    required this.paperCard,
   });
 
   /// 画布底。
@@ -90,6 +91,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// 书籍卡片封面渐变的尾色（设计稿 `#3A2C14`，比播放器封面的 [coverEnd] 更深）。
   final Color coverEndDeep;
 
+  /// 纸面底（设计稿 `.pcard{background:#f5f2ea}`）：页卡在看原图前的衬纸，
+  /// 深浅主题都不变——它是**图片的纸**，不是界面层级。
+  final Color paperCard;
+
   /// 深色主题（默认）。
   static const dark = AppPalette(
     bg: Color(0xFF0C0F12),
@@ -111,6 +116,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     shadow: Color(0x73000000),
     coverEnd: Color(0xFF6B4423),
     coverEndDeep: Color(0xFF3A2C14),
+    paperCard: Color(0xFFF5F2EA),
   );
 
   /// 浅色主题。
@@ -134,6 +140,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     shadow: Color(0x2E504015),
     coverEnd: Color(0xFF8A5A2E),
     coverEndDeep: Color(0xFF5C4420),
+    paperCard: Color(0xFFF5F2EA),
   );
 
   // ── 语义别名（与 AppTokens 同名，便于迁移时 1:1 替换）──────────────
@@ -187,6 +194,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? shadow,
     Color? coverEnd,
     Color? coverEndDeep,
+    Color? paperCard,
   }) {
     return AppPalette(
       bg: bg ?? this.bg,
@@ -208,6 +216,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       shadow: shadow ?? this.shadow,
       coverEnd: coverEnd ?? this.coverEnd,
       coverEndDeep: coverEndDeep ?? this.coverEndDeep,
+      paperCard: paperCard ?? this.paperCard,
     );
   }
 
@@ -234,6 +243,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       shadow: Color.lerp(shadow, other.shadow, t)!,
       coverEnd: Color.lerp(coverEnd, other.coverEnd, t)!,
       coverEndDeep: Color.lerp(coverEndDeep, other.coverEndDeep, t)!,
+      paperCard: Color.lerp(paperCard, other.paperCard, t)!,
     );
   }
 }

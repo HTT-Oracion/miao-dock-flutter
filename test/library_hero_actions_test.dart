@@ -49,18 +49,19 @@ void main() {
   testWidgets('桌面单话详情：三个动作按钮同一行且归并在最后', (tester) async {
     await pump(tester);
 
-    final view = rectOf(tester, '查看漫画');
-    final dir = rectOf(tester, '打开目录');
+    // 设计稿 `.bactions`：归并（主）→ 阅读 → 打开目录。
     final merge = rectOf(tester, '归并');
+    final read = rectOf(tester, '阅读');
+    final dir = rectOf(tester, '打开目录');
 
     // 一行：三者同一 y。
-    expect(view.top, dir.top);
-    expect(view.top, merge.top);
-    // 顺序：查看漫画 → 打开目录 → 归并（归并在最后）。
-    expect(view.left, lessThan(dir.left));
-    expect(dir.left, lessThan(merge.left));
+    expect(merge.top, read.top);
+    expect(merge.top, dir.top);
+    // 顺序：归并 → 阅读 → 打开目录。
+    expect(merge.left, lessThan(read.left));
+    expect(read.left, lessThan(dir.left));
     // 内容尺寸而非整行（用户实测整行 = 与代码不符的信号）。
-    expect(view.width, lessThan(400), reason: '查看漫画按钮宽度 ${view.width}');
+    expect(read.width, lessThan(400), reason: '阅读按钮宽度 ${read.width}');
     expect(merge.width, lessThan(400), reason: '归并按钮宽度 ${merge.width}');
   });
 }

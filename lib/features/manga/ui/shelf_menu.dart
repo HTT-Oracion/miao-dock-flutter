@@ -126,7 +126,6 @@ class _MergeDialog extends ConsumerStatefulWidget {
 class _MergeDialogState extends ConsumerState<_MergeDialog> {
   final _noController = TextEditingController();
   String? _target;
-  bool _touchedNo = false;
 
   @override
   void dispose() {
@@ -151,10 +150,24 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
   void _onPicked(String picked, List<LibBook> books) {
     setState(() {
       _target = picked;
-      _touchedNo = false;
       // 预填下一个可用话号；用户可改，冲突由下方校验拦。
       final suggest = _suggestNo(books);
       _noController.text = suggest == null ? '' : jsNumStr(suggest);
+    });
+  }
+
+  /// 冲突三选一（设计稿 `mergeConflict`）：顺延 / 改话号 / 取消。
+  void _shiftNo(List<LibBook> books) {
+    final picked = double.tryParse(_noController.text.trim());
+    if (picked == null) return;
+    var n = picked.floor() + 1;
+    final target = books.where((b) => b.key == _target).firstOrNull;
+    final nos = target?.chapters.map((c) => c.no).toSet() ?? const <double>{};
+    while (nos.contains(n)) {
+      n += 1;
+    }
+    setState(() {
+      _noController.text = jsNumStr(n.toDouble());
     });
   }
 
@@ -168,70 +181,149 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
     final no = double.tryParse(_noController.text.trim());
     final noTaken = no != null && _usedNos(books).contains(no);
     final canMerge = _target != null && no != null && !noTaken;
+    final targetName = _target == null ? null : targets.where((b) => b.key == _target).firstOrNull?.name;
     return AppDialog(
       title: l10n.libMergeTitle,
+      kicker: 'MERGE CHAPTER',
+      subtitle: src == null ? null : l10n.libMergeSourceNote(src.name),
       actions: [
         AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
         AppButton(
-          label: l10n.libMerge,
+          label: l10n.libMergeConfirm,
           variant: AppButtonVariant.primary,
           onTap: canMerge ? () => Navigator.of(context).pop((_target!, no)) : null,
         ),
       ],
       child: SizedBox(
-        width: 300,
+        width: 360,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           // 必须显式左对齐：Column 默认 center，而下面两行宽度不同会错位。
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 源信息：归并的是哪个单话、多少页——不写这行用户容易选错源。
             Text(
-              l10n.libMergeSource,
-              style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
+              l10n.libMergeTargetLabel,
+              style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.ink),
             ),
-            const SizedBox(height: 3),
-            Text(
-              src == null ? widget.src : l10n.libMergeSourceInfo(src.name, src.pageCount),
-              style: TextStyle(fontSize: AppFont.px11, fontWeight: FontWeight.w600, color: palette.ink),
+            const SizedBox(height: 5),
+            // 目标漫画可能很多 → 用**可搜索选择器**（下拉里塞搜索框在 M3 下点不中）。
+            AppButton(
+              label: _target == null ? l10n.libMergeTargetHint : (targetName ?? l10n.libMergeTargetHint),
+              onTap: () async {
+                final picked = await showAppPicker<String>(
+                  context: context,
+                  title: l10n.libMergeTitle,
+                  searchHint: l10n.libMergeSearchHint,
+                  emptyText: l10n.libMergeNoResult,
+                  current: _target,
+                  items: [for (final b in targets) (b.key, b.name)],
+                );
+                if (picked != null && mounted) _onPicked(picked, books);
+              },
+              variant: AppButtonVariant.secondary,
+              height: 34,
+              horizontalPadding: 10,
+              fontSize: AppFont.px10,
             ),
             const SizedBox(height: 12),
-            // 目标漫画可能很多 → 用**可搜索选择器**（下拉里塞搜索框在 M3 下点不中）。
-            SizedBox(
-              width: 300,
-              child: AppButton(
-                label: _target == null ? l10n.libMergeTargetHint : targets.firstWhere((b) => b.key == _target).name,
-                onTap: () async {
-                  final picked = await showAppPicker<String>(
-                    context: context,
-                    title: l10n.libMergeTitle,
-                    searchHint: l10n.libMergeSearchHint,
-                    emptyText: l10n.libMergeNoResult,
-                    current: _target,
-                    items: [for (final b in targets) (b.key, b.name)],
-                  );
-                  if (picked != null && mounted) _onPicked(picked, books);
-                },
-                variant: AppButtonVariant.secondary,
-                height: 32,
-                horizontalPadding: 10,
-                fontSize: AppFont.px10,
-              ),
+            Text(
+              l10n.libMergeNoLabel,
+              style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.ink),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
             AppInput(
               controller: _noController,
               hint: l10n.libMergeNoHint,
               // 话号支持一位小数（1.5）：移动端弹数字键盘带小数点。
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              errorText: _touchedNo && noTaken ? l10n.libMergeNoTaken : null,
+              errorText: noTaken ? l10n.libMergeNoTaken : null,
               onChanged: (_) => setState(() {}),
               onSubmitted: canMerge ? (_) => Navigator.of(context).pop((_target!, no)) : null,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              noTaken ? l10n.libMergeNoTaken : l10n.libMergeNoPrefill,
+              style: TextStyle(fontSize: AppFont.px10, color: noTaken ? palette.bad : palette.mut),
+            ),
+            // 冲突三选一（设计稿 `.choice3`）：顺延到下一空位 / 改话号 / 取消。
+            if (noTaken) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: palette.warn.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: palette.warn.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  l10n.libMergeConflict(no),
+                  style: TextStyle(fontSize: AppFont.px10_5, color: palette.warn),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  for (final (i, action) in [
+                    () => _shiftNo(books),
+                    () {},
+                    () => Navigator.of(context).pop(),
+                  ].indexed) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: action,
+                        child: Container(
+                          height: 28,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: palette.line2),
+                          ),
+                          child: Text(switch (i) {
+                            0 => l10n.libMergeShift,
+                            1 => l10n.libMergeChangeNo,
+                            _ => l10n.actionCancel,
+                          }, style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+            // 预览行（设计稿 `mPreview`）：目录名 = 话号取整补零 `NN_第N话`。
+            if (_target != null && no != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                l10n.libMergePreview(src?.name ?? widget.src, targetName ?? '', jsNumStr(no), _dirNameOf(no, l10n)),
+                style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: palette.warn.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: palette.warn.withValues(alpha: 0.4)),
+              ),
+              child: Text(
+                l10n.libMergeWarn,
+                style: TextStyle(fontSize: AppFont.px10, height: 1.6, color: palette.warn),
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// 目标目录名（设计稿 `padCh`：`03_第3话`，整数取整补零）。
+  String _dirNameOf(double no, AppLocalizations l10n) {
+    final n = no.floor();
+    return l10n.libMergeDirName(n.toString().padLeft(2, '0'), jsNumStr(no));
   }
 }
 
@@ -260,26 +352,43 @@ class _DeleteDialogState extends State<_DeleteDialog> {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final book = widget.book;
+    // 设计稿 `delCkSwap`：勾选「同时删除文件」后提示切永久警告（bad 色）。
+    final hint = _deleteFiles ? l10n.libDeletePermanentHint : l10n.shelfDeleteKeepHint;
     return AppDialog(
       title: l10n.shelfDeleteTitle(book.name),
+      kicker: 'DELETE',
+      subtitle: l10n.shelfDeleteBody(book.chapterCount == 0 ? 1 : book.chapterCount, book.pageCount),
       actions: [
         AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
         AppButton(
-          label: l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),
+          label: l10n.libDeleteBookBtn,
           variant: AppButtonVariant.danger,
           onTap: () => Navigator.of(context).pop(_deleteFiles),
         ),
       ],
-      // 确认框收窄：内容只有一段正文 + 一个勾选项，340 宽显得空。
       child: SizedBox(
-        width: 300,
+        width: 340,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.shelfDeleteBody(book.chapterCount == 0 ? 1 : book.chapterCount, book.pageCount),
-              style: TextStyle(fontSize: AppFont.px11_5, height: 1.5, color: palette.textSecondary),
+            // `.meta-row`：目录位置（设计稿删除弹窗第二行）。
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.libDeleteDirLabel,
+                  style: TextStyle(fontSize: AppFont.px10, color: palette.mut),
+                ),
+                const Spacer(),
+                Flexible(
+                  child: Text(
+                    book.key,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Row(
@@ -298,15 +407,15 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 Expanded(
                   child: Text(
                     l10n.shelfDeleteWithFiles,
-                    style: TextStyle(fontSize: AppFont.px11_5, color: palette.textPrimary),
+                    style: TextStyle(fontSize: AppFont.px11, color: palette.ink),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              l10n.shelfDeleteKeepHint,
-              style: TextStyle(fontSize: AppFont.px10_5, height: 1.4, color: palette.textSecondary),
+              hint,
+              style: TextStyle(fontSize: AppFont.px10, height: 1.6, color: _deleteFiles ? palette.bad : palette.mut),
             ),
           ],
         ),

@@ -2771,5 +2771,302 @@
   "dropPendingBatchUnit": "批",
   "@dropPendingBatchUnit": {
     "description": "投放页：批"
+  },
+  "shelfHiddenFilter": "已隐藏 {count}",
+  "@shelfHiddenFilter": {
+    "description": "已隐藏 {count}"
+  },
+  "libSingleRowMeta": "单话 · 未归并 · {pages} 页",
+  "@libSingleRowMeta": {
+    "description": "单话 · 未归并 · {pages} 页"
+  },
+  "libSingleKicker": "SINGLE · 未归并单话",
+  "@libSingleKicker": {
+    "description": "SINGLE · 未归并单话"
+  },
+  "libSingleNote": "单话 · 未归并 · {pages} 页 · 已译 {done} / {total}",
+  "@libSingleNote": {
+    "description": "单话详情副标（页数与已译进度）",
+    "placeholders": {
+      "pages": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "libSinglePageHint": "单话没有章节层级 · 封面即第 1 页",
+  "@libSinglePageHint": {
+    "description": "单话没有章节层级 · 封面即第 1 页"
+  },
+  "libViewMode": "视图模式",
+  "@libViewMode": {
+    "description": "视图模式"
+  },
+  "libOpenInViewer": "打开 {page} 页对照",
+  "@libOpenInViewer": {
+    "description": "打开 {page} 页对照"
+  },
+  "libChapterPages": "共 {count} 话 · 封面取自本话第 1 页",
+  "@libChapterPages": {
+    "description": "共 {count} 话 · 封面取自本话第 1 页"
+  },
+  "libSearchNoResultTitle": "没有找到「{query}」",
+  "@libSearchNoResultTitle": {
+    "description": "没有找到「{query}」"
+  },
+  "libSearchNoResultHint": "试试漫画名、作者名，或直接输入话号。搜索结果会按「本 → 话」分组。",
+  "@libSearchNoResultHint": {
+    "description": "试试漫画名、作者名，或直接输入话号。搜索结果会按「本 → 话」分组。"
+  },
+  "libSearchClear": "清除搜索",
+  "@libSearchClear": {
+    "description": "清除搜索"
+  },
+  "libSearchBookHits": "{count} 个话命中",
+  "@libSearchBookHits": {
+    "description": "{count} 个话命中"
+  },
+  "libSearchOpenBook": "打开书架",
+  "@libSearchOpenBook": {
+    "description": "打开书架"
+  },
+  "libSearchOtherGroup": "其它",
+  "@libSearchOtherGroup": {
+    "description": "其它"
+  },
+  "libSearchOtherHint": "未归并的单话会出现在这里，点「归并」把它挂到某本漫画的某一话。",
+  "@libSearchOtherHint": {
+    "description": "未归并的单话会出现在这里，点「归并」把它挂到某本漫画的某一话。"
+  },
+  "libMergeConflict": "第 {no} 话已有内容。",
+  "@libMergeConflict": {
+    "description": "第 {no} 话已有内容。"
+  },
+  "libMergeShift": "顺延到下一空位",
+  "@libMergeShift": {
+    "description": "顺延到下一空位"
+  },
+  "libMergeChangeNo": "改话号",
+  "@libMergeChangeNo": {
+    "description": "改话号"
+  },
+  "libMergePreview": "将《{src}》归并为《{target}》第 {no} 话（目录名 {dir}）",
+  "@libMergePreview": {
+    "description": "将《{src}》归并为《{target}》第 {no} 话（目录名 {dir}）"
+  },
+  "libMergeWarn": "归并只移动作品结构，不会复制图片文件；原目录会按新话号重命名。",
+  "@libMergeWarn": {
+    "description": "归并只移动作品结构，不会复制图片文件；原目录会按新话号重命名。"
+  },
+  "libMergeSourceNote": "把「{name}」挂到目标漫画的某一话。",
+  "@libMergeSourceNote": {
+    "description": "把「{name}」挂到目标漫画的某一话。"
+  },
+  "libUnmergedSingles": "未归并单话",
+  "@libUnmergedSingles": {
+    "description": "未归并单话"
+  },
+  "libUnmergedSinglesHint": "单话与单本分开陈列；点「归并」把它挂到某本漫画的某一话。",
+  "@libUnmergedSinglesHint": {
+    "description": "单话与单本分开陈列；点「归并」把它挂到某本漫画的某一话。"
+  },
+  "libPendingMerge": "待归并",
+  "@libPendingMerge": {
+    "description": "待归并"
+  },
+  "libSinglesFootHint": "与单本卡的区分：单话 = 本话第 1 页做封面 + 虚线橙描边 + 「待归并」；单本 = 渐变底 glyph",
+  "@libSinglesFootHint": {
+    "description": "与单本卡的区分：单话 = 本话第 1 页做封面 + 虚线橙描边 + 「待归并」；单本 = 渐变底 glyph"
+  },
+  "libDeletePermanentHint": "⚠️ 本地文件会被永久删除，无法恢复。",
+  "@libDeletePermanentHint": {
+    "description": "⚠️ 本地文件会被永久删除，无法恢复。"
+  },
+  "libHiddenTitle": "已隐藏的作品",
+  "@libHiddenTitle": {
+    "description": "已隐藏的作品"
+  },
+  "libHiddenBody": "隐藏只影响书架显示，文件与翻译记录都还在。这些漫画的目录还在磁盘上，点「恢复」即可重新出现。",
+  "@libHiddenBody": {
+    "description": "隐藏只影响书架显示，文件与翻译记录都还在。这些漫画的目录还在磁盘上，点「恢复」即可重新出现。"
+  },
+  "libHiddenDone": "完成",
+  "@libHiddenDone": {
+    "description": "完成"
+  },
+  "libCreateBookSub": "先建一个空书架位置，也可以稍后直接投放图片。",
+  "@libCreateBookSub": {
+    "description": "先建一个空书架位置，也可以稍后直接投放图片。"
+  },
+  "libCreateBookFolderHint": "将在本地目录创建同名文件夹",
+  "@libCreateBookFolderHint": {
+    "description": "将在本地目录创建同名文件夹"
+  },
+  "libCreateBookNameRequired": "请填写漫画名",
+  "@libCreateBookNameRequired": {
+    "description": "请填写漫画名"
+  },
+  "libCreateBookNameInvalid": "漫画名不能包含 \\ / : * ? \" < > |",
+  "@libCreateBookNameInvalid": {
+    "description": "漫画名不能包含 \\ / : * ? \" < > |"
+  },
+  "libAuthorHint": "留空则显示「未知作者」",
+  "@libAuthorHint": {
+    "description": "留空则显示「未知作者」"
+  },
+  "libChapterName": "漫画名",
+  "@libChapterName": {
+    "description": "漫画名"
+  },
+  "libFootHint": "右键书架或话卡片可以管理 · 话号支持一位小数（如 14.1）",
+  "@libFootHint": {
+    "description": "右键书架或话卡片可以管理 · 话号支持一位小数（如 14.1）"
+  },
+  "libSegCount": "{label} {count}",
+  "@libSegCount": {
+    "description": "{label} {count}"
+  },
+  "libPickBookHint": "从左侧书架选一本漫画",
+  "@libPickBookHint": {
+    "description": "从左侧书架选一本漫画"
+  },
+  "libUpdatedRecently": "更新于 3 小时前",
+  "@libUpdatedRecently": {
+    "description": "更新于 3 小时前"
+  },
+  "libTranslatedPercent": "已译 {pct}%",
+  "@libTranslatedPercent": {
+    "description": "已译 {pct}%"
+  },
+  "libOnShelf": "在书架",
+  "@libOnShelf": {
+    "description": "在书架"
+  },
+  "libUnmergedTag": "未归并",
+  "@libUnmergedTag": {
+    "description": "未归并"
+  },
+  "libRead": "阅读",
+  "@libRead": {
+    "description": "阅读"
+  },
+  "libRetranslateBook": "重译整本",
+  "@libRetranslateBook": {
+    "description": "重译整本"
+  },
+  "libPageLabel": "第 {seq} 页",
+  "@libPageLabel": {
+    "description": "第 {seq} 页"
+  },
+  "libPageCapsule": "第{seq}页",
+  "@libPageCapsule": {
+    "description": "第{seq}页"
+  },
+  "libChapterBothState": "缺页 {missing} 页 · 待译 {pending} 页",
+  "@libChapterBothState": {
+    "description": "缺页 {missing} 页 · 待译 {pending} 页"
+  },
+  "libChapterMissingPlaceholder": "缺页",
+  "@libChapterMissingPlaceholder": {
+    "description": "缺页"
+  },
+  "chapterMissingPages": "缺页 {count} 页",
+  "@chapterMissingPages": {
+    "description": "缺页页数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libSingleMobileNote": "单话 · 未归并 · {pages} 页 —— 点「归并」把它挂到某本漫画的某一话。",
+  "@libSingleMobileNote": {
+    "description": "单话 · 未归并 · {pages} 页 —— 点「归并」把它挂到某本漫画的某一话。"
+  },
+  "libChaptersSimple": "章节 · 简易",
+  "@libChaptersSimple": {
+    "description": "章节 · 简易"
+  },
+  "libPagesSimple": "页面 · 简易",
+  "@libPagesSimple": {
+    "description": "页面 · 简易"
+  },
+  "libView": "查看",
+  "@libView": {
+    "description": "查看"
+  },
+  "libPage": "页面",
+  "@libPage": {
+    "description": "页面"
+  },
+  "libSingleMobileSub": "未归并 · 单话 · {pages} 页",
+  "@libSingleMobileSub": {
+    "description": "移动端单话卡副标",
+    "placeholders": {
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "libResumeChapter": "续做本话",
+  "@libResumeChapter": {
+    "description": "续做本话"
+  },
+  "libRetranslateChapter": "重译本话",
+  "@libRetranslateChapter": {
+    "description": "重译本话"
+  },
+  "libPageFootHint": "共 {total} 页 · 点任意一页查看原文 / 译文对照 · 缺页不可打开",
+  "@libPageFootHint": {
+    "description": "共 {total} 页 · 点任意一页查看原文 / 译文对照 · 缺页不可打开"
+  },
+  "searchBookHits": "{count} 个话命中",
+  "@searchBookHits": {
+    "description": "{count} 个话命中"
+  },
+  "libSearchOtherGico": "单",
+  "@libSearchOtherGico": {
+    "description": "单"
+  },
+  "libMergeConfirm": "确认归并",
+  "@libMergeConfirm": {
+    "description": "确认归并"
+  },
+  "libMergeTargetLabel": "目标漫画",
+  "@libMergeTargetLabel": {
+    "description": "目标漫画"
+  },
+  "libMergeNoLabel": "话号",
+  "@libMergeNoLabel": {
+    "description": "话号"
+  },
+  "libMergeNoPrefill": "已预填下一可用话号（最大已占话号取整 +1）",
+  "@libMergeNoPrefill": {
+    "description": "已预填下一可用话号（最大已占话号取整 +1）"
+  },
+  "libDeleteBookBtn": "删除整本",
+  "@libDeleteBookBtn": {
+    "description": "删除整本"
+  },
+  "libDeleteDirLabel": "目录位置",
+  "@libDeleteDirLabel": {
+    "description": "目录位置"
+  },
+  "libMergeDirName": "{pad}_第{no}话",
+  "@libMergeDirName": {
+    "description": "目标目录名（补零话号）",
+    "placeholders": {
+      "pad": {
+        "type": "String"
+      },
+      "no": {
+        "type": "String"
+      }
+    }
   }
 }

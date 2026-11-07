@@ -83,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 按钮已统一到 shared/buttons 的 AppButton（不再有 FilledButton）。
-    final btn = tester.widget<AppButton>(find.widgetWithText(AppButton, '归并'));
+    final btn = tester.widget<AppButton>(find.widgetWithText(AppButton, '确认归并'));
     // 破坏点：允许空目标直接提交 → 服务端 404，用户看到无意义报错。
     expect(btn.onTap, isNull);
   });

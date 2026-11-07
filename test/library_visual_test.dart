@@ -6,6 +6,8 @@ import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/manga/controller/queue_controller.dart';
 import 'package:miao_dock_flutter/features/manga/controller/library_controller.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_screen.dart';
+import 'package:miao_dock_flutter/features/manga/ui/library_detail.dart';
+import 'package:miao_dock_flutter/features/manga/ui/library_grid.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_shelf.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 import 'package:protocol/protocol.dart';
@@ -34,38 +36,31 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('左栏固定 260 宽（ver1.0 .lib-shelf）', (tester) async {
+  testWidgets('左栏固定 250 宽（设计稿 .lib-wrap 250px + 1fr）', (tester) async {
     await pump(tester);
     final shelf = tester.getSize(find.byType(LibraryShelf));
-    expect(shelf.width, 260);
+    expect(shelf.width, 250);
   });
 
-  testWidgets('左侧列表行高 34、右侧网格卡片存在', (tester) async {
+  testWidgets('书架行：38×50 封面 + 两行文字；右侧详情 hero 常驻', (tester) async {
     await pump(tester);
-    // 破坏点：行高被改成 40+ → 与 .nav-item 不一致。
+    // 破坏点：行被改回 34 高的图标行 → 与设计稿 .srow（38×50 封面）不符。
     expect(find.byKey(const ValueKey('shelf-row-测试书')), findsOneWidget);
-    // 行本体 34 + 底部 4 间距 = 38（Padding 在 _BookRow 内部）。
-    final row = tester.getSize(find.byKey(const ValueKey('shelf-row-测试书')));
-    expect(row.height, 38);
-    expect(find.byKey(const ValueKey('grid-card-测试书')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shelf-cov-测试书')), findsOneWidget);
+    final cov = tester.getSize(find.byKey(const ValueKey('shelf-cov-测试书')));
+    expect(cov.width, 38);
+    expect(cov.height, 50);
+    // 设计稿右栏恒为详情（自动选中第一本）。
+    expect(find.byType(LibraryDetail), findsOneWidget);
   });
 
-  testWidgets('网格只显示单本；单话只在左栏', (tester) async {
+  testWidgets('未归并单话在左栏「其他 · 未归并」分组，右栏无网格', (tester) async {
     await pump(tester);
-    // 破坏点：网格把未归并单话也画出来 → 与「右侧只显示单本」不符。
-    expect(find.byKey(const ValueKey('grid-card-未归并单话')), findsNothing);
+    // 破坏点：桌面又把网格画出来 → 与「右栏恒为详情」不符。
+    expect(find.text('其他 · 未归并'), findsOneWidget);
     expect(find.byKey(const ValueKey('shelf-row-未归并单话')), findsOneWidget);
+    expect(find.byType(LibraryGrid), findsNothing);
   });
-}
-
-/// 探针：用 RepaintBoundary 标记左栏，便于读取尺寸。
-class LibraryShelfProbe extends StatelessWidget {
-  const LibraryShelfProbe({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => child;
 }
 
 class _Client extends FakeMangaSvcClient {

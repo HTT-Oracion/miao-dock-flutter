@@ -6,11 +6,13 @@ import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/manga/controller/queue_controller.dart';
 import 'package:miao_dock_flutter/features/manga/controller/library_controller.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_screen.dart';
+import 'package:miao_dock_flutter/features/manga/ui/library_shelf.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 import 'package:protocol/protocol.dart';
 
 /// 书架【其他 · 未归并】分组断言（重设计稿 2026-11-07）：
-/// 浏览态单话不再平铺，归入独立分组；脚注「未归并 N」开关只看这一组。
+/// 浏览态单话归入「其他 · 未归并」分组；脚注「未归并 N」= 打开右栏陈列页
+/// （设计稿 `showSingles()`，书架本身不再过滤）。
 /// Fixture 与 library_layout_test 同款（某书 + 某单话），断言可反证。
 void main() {
   Future<void> pump(WidgetTester tester) async {
@@ -40,20 +42,17 @@ void main() {
     expect(find.text('某单话'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('脚注「未归并 N」点击后只看未归并组（单本被过滤）', (tester) async {
+  testWidgets('脚注「未归并 N」点击 → 右栏陈列页开关翻转（书架不过滤）', (tester) async {
     await pump(tester);
-    // 脚注开关文案 = shelfUnmergedFilter(1) = 「未归并 1」。
+    final container = ProviderScope.containerOf(tester.element(find.byType(LibraryShelf)));
+    expect(container.read(libSinglesViewProvider), isFalse);
+    // 脚注文案 = shelfUnmergedFilter(1) = 「未归并 1」。
     await tester.tap(find.text('未归并 1'));
     await tester.pumpAndSettle();
-    // 破坏点：开关不过滤 → 单本行仍在（书架行 + 网格卡）。
-    expect(find.text('某单话'), findsAtLeastNWidgets(1));
+    // 设计稿 showSingles()：翻陈列页开关；书架两组都还在（不过滤）。
+    expect(container.read(libSinglesViewProvider), isTrue);
     expect(find.text('其他 · 未归并'), findsOneWidget);
-    // 单本条目：书架行被过滤掉，但网格卡仍在（网格不受该开关影响）——
-    // 故这里断言「书架行消失」用「开关文案转主色」替代可观测行为。
-    // 再点一次恢复。
-    await tester.tap(find.text('未归并 1'));
-    await tester.pumpAndSettle();
-    expect(find.text('其他 · 未归并'), findsOneWidget);
+    expect(find.byKey(const ValueKey('shelf-row-某单话')), findsOneWidget);
   });
 }
 

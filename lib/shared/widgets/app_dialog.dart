@@ -23,9 +23,17 @@ class AppDialog extends StatelessWidget {
     this.icon,
     this.width,
     this.onClose,
+    this.kicker,
+    this.subtitle,
   });
 
   final String title;
+
+  /// 眉标（设计稿 `.kick`：9 号 / 2px 字距 / 主色 / 700，如 `MERGE CHAPTER`）。
+  final String? kicker;
+
+  /// 副标（设计稿 `.msub`：11 号 ink2，弹窗正文的语义说明）。
+  final String? subtitle;
 
   /// 标题前缀图标（如引擎后端选择的 cpu）；null = 纯文字标题。
   final IconData? icon;
@@ -48,19 +56,32 @@ class AppDialog extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (kicker != null)
+          Text(
+            kicker!,
+            style: TextStyle(fontSize: AppFont.px9, fontWeight: FontWeight.w700, letterSpacing: 2, color: palette.acc),
+          ),
         Row(
           children: [
             if (icon != null) ...[Icon(icon, size: 16, color: palette.acc), const SizedBox(width: 8)],
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.textPrimary),
+                // 设计稿 `.modal h4`：15 号 / 800。
+                style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w800, color: palette.textPrimary),
               ),
             ),
             if (onClose != null)
               AppButton(icon: LucideIcons.x, width: 22, height: 22, variant: AppButtonVariant.ghost, onTap: onClose),
           ],
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle!,
+            style: TextStyle(fontSize: AppFont.px11, height: 1.7, color: palette.ink2),
+          ),
+        ],
         const SizedBox(height: 12),
         child,
         if (actions.isNotEmpty) ...[

@@ -8,13 +8,15 @@ import 'package:miao_dock_flutter/features/manga/controller/library_controller.d
 import 'package:miao_dock_flutter/features/manga/controller/queue_controller.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_screen.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:protocol/protocol.dart';
 
-/// D-109：**简易模式（胶囊）点击能打开阅读器**（目标第 1 条的行为验证）。
+/// 简易模式（胶囊）行为（设计稿 `renderMain` / `renderPages`）：
 ///
-/// 此前只有「代码里有 onTap」的静态检查，没有"点了之后真的会开"的断言。
+/// - 桌面：切简易 → 点「第 1 话」胶囊 → 打开**页网格**（`openChapter(i)`）；
+/// - 页网格里点页卡 → 进入阅读器会话。
 void main() {
-  testWidgets('简易模式下点胶囊 → 退出详情并进入阅读器会话', (tester) async {
+  testWidgets('简易模式点胶囊 → 打开该话页网格；点页卡 → 阅读器会话', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1440, 900));
     final container = ProviderContainer(overrides: [mangaSvcClientProvider.overrideWithValue(_C())]);
     addTearDown(container.dispose);
@@ -47,7 +49,8 @@ void main() {
     // 进某本书 → 切到简易模式。
     container.read(selectedBookProvider.notifier).select('书甲');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('简易'));
+    // 视图切换已改**图标式**（设计稿 .vseg）：点列表图标 = 简易。
+    await tester.tap(find.byIcon(LucideIcons.list));
     await tester.pumpAndSettle();
 
     // 胶囊上显示「第 1 话」。
@@ -57,7 +60,12 @@ void main() {
     await tester.tap(capsule);
     await tester.pumpAndSettle();
 
-    // 破坏点：胶囊没有 onTap → 阅读器会话仍为 null，用户点了没反应。
+    // 设计稿：桌面胶囊点击进该话「页网格」（openChapter）。
+    expect(container.read(libChapterOpenProvider), 1);
+
+    // 页网格里点页卡 → 阅读器会话（第 1 话）。
+    await tester.tap(find.text('001.png').first);
+    await tester.pumpAndSettle();
     final session = container.read(readerSessionProvider);
     expect(session, isNotNull);
     expect(session!.key, '书甲');

@@ -61,7 +61,12 @@ class SelectedBookNotifier extends Notifier<String?> {
   @override
   String? build() => null;
 
-  void select(String? key) => state = key;
+  void select(String? key) {
+    // 设计稿 selectBook：换书 / 取消选中都重置「话 → 页网格」层级并退出陈列页。
+    ref.read(libChapterOpenProvider.notifier).open(null);
+    ref.read(libSinglesViewProvider.notifier).close();
+    state = key;
+  }
 }
 
 /// 书架搜索词（收窄书架用；防抖随交互打磨补）。
@@ -104,6 +109,19 @@ class ReaderSessionNotifier extends Notifier<ReaderSession?> {
   void close() => state = null;
 }
 
+/// 桌面详情当前打开的话（null = 章节列表）。
+///
+/// 设计稿 `openChapter(i)`：话卡点击进**页网格**（不是阅读器），
+/// 「换书重置章节页码」——selectBook 时置回 null。
+final libChapterOpenProvider = NotifierProvider<LibChapterOpenNotifier, double?>(LibChapterOpenNotifier.new);
+
+class LibChapterOpenNotifier extends Notifier<double?> {
+  @override
+  double? build() => null;
+
+  void open(double? no) => state = no;
+}
+
 /// 详情视图模式：`card`（卡片）/ `capsule`（简易，ver1.0 `.view-seg`）。
 final libModeProvider = NotifierProvider<LibModeNotifier, String>(LibModeNotifier.new);
 
@@ -117,14 +135,22 @@ class LibModeNotifier extends Notifier<String> {
 /// 是否在书架里展示隐藏区。
 final showHiddenProvider = NotifierProvider<ShowHiddenNotifier, bool>(ShowHiddenNotifier.new);
 
-/// 书架「只看未归并单话」过滤开关（重设计稿：未归并组的配套入口）。
-final unmergedOnlyProvider = NotifierProvider<UnmergedOnlyNotifier, bool>(UnmergedOnlyNotifier.new);
+/// 桌面右栏「未归并单话」独立陈列页（设计稿 `showSingles()` 提案入口）。
+///
+/// 打开时右栏不再显示书籍详情；选中任一作品即退出该态。
+final libSinglesViewProvider = NotifierProvider<LibSinglesViewNotifier, bool>(LibSinglesViewNotifier.new);
 
-class UnmergedOnlyNotifier extends Notifier<bool> {
+class LibSinglesViewNotifier extends Notifier<bool> {
   @override
   bool build() => false;
 
-  void toggle() => state = !state;
+  void toggle() {
+    // 设计稿 showSingles()：进陈列页同时退出「话 → 页网格」层级。
+    if (!state) ref.read(libChapterOpenProvider.notifier).open(null);
+    state = !state;
+  }
+
+  void close() => state = false;
 }
 
 class ShowHiddenNotifier extends Notifier<bool> {
