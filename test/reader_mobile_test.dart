@@ -11,6 +11,7 @@ import 'package:miao_dock_flutter/features/manga/controller/queue_controller.dar
 import 'package:miao_dock_flutter/features/manga/domain/lib_book.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_image_cache.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_mobile.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_slider.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_widgets.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_mobile_stage.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_prefs.dart';
@@ -247,6 +248,8 @@ void main() {
     // 破坏点：滑条只画不接 → 页码不动。
     expect(container.read(readerPageProvider), 2);
     expect(barPageText('3 / 3'), findsOneWidget);
+    // 跳页也会预载相邻页（200ms 定时器），跑完再收尾，否则报 pending timer。
+    await tester.pump(const Duration(milliseconds: 250));
   });
 
   testWidgets('底栏上一话/下一话：按书架章节可点，单话直读时禁用', (tester) async {

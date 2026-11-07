@@ -115,20 +115,21 @@ void main() {
       expect(chipText('100%'), findsOneWidget);
     });
 
-    testWidgets('触控板捏合放大（两指张开）改百分比', (tester) async {
+    testWidgets('触控板捏合放大（pan-zoom 的 scale）改百分比', (tester) async {
       await pumpReader(tester);
       final center = tester.getCenter(find.byType(PageView));
 
-      final a = await tester.startGesture(center - const Offset(40, 0), pointer: 1);
-      final b = await tester.startGesture(center + const Offset(40, 0), pointer: 2);
-      await a.moveBy(const Offset(-70, 0));
-      await b.moveBy(const Offset(70, 0));
+      // macOS 触控板捏合 = PointerPanZoom（scale 累计值），不是两指触摸。
+      // 页面层不再挂 onScale*（那会把 pan-zoom 吃掉、害得横扫翻页失效），
+      // 捏合统一由舞台层 Listener 处理。
+      final g = await tester.createGesture(kind: PointerDeviceKind.trackpad);
+      await g.panZoomStart(center);
+      await g.panZoomUpdate(center, scale: 1.5);
       await tester.pump();
-      await a.up();
-      await b.up();
+      await g.panZoomEnd();
       await tester.pumpAndSettle();
 
-      // 破坏点：舞台不接 scale 手势 → 捏合毫无反应，永远 100%。
+      // 破坏点：舞台不接 pan-zoom → 捏合毫无反应，永远 100%。
       expect(chipText('100%'), findsNothing);
     });
 
