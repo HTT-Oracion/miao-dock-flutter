@@ -3832,3 +3832,330 @@
 - **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
   `flutter test --exclude-tags e2e` **279 通过**。
 - **关联**：D-163（阅读器保活 / 页码 provider）· D-166（移动端状态机）。
+
+---
+
+## D-173 · 桌面端阅读器按设计稿补齐（12 项）（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **键盘**：←/→ 在 RTL 下镜像；`KeyRepeatEvent` 也算翻页（按住连发），
+  但 C/G/O/F/? 只在 `KeyDownEvent` 处理 —— 否则连发会把开关点成风车。
+  `O` 原图⇄译文、`F` 全屏、`Shift+/`（?）速查卡。
+- **Esc 归属裁决**扩展成五层：速查卡 → 网格 → 对照 → 章末卡 → **全屏** → 关闭。
+  全屏开着时 Esc 只退全屏（设计稿明文），不然「想退全屏」会顺手把阅读器关了。
+- **翻页即时落位**：`_go` / `_jumpTo` 由 `animateToPage(180ms)` 改 `jumpToPage`
+  —— 2026-11-07 的裁定终于落到桌面（之前只有移动端跟随）。首末页翻不动时
+  改走 `_nudgeCtrl` 的 220ms 橡皮筋（sin 曲线，峰值 12px）。
+- **拖拽跟手翻页**：`PageView.physics` 按 `_zoom.zoomed` 切换 —— 100% 时交回
+  `PageScrollPhysics`（原生 1:1 跟手 + 松手落位），放大态换回 `NeverScrollable`
+  （此时拖动是平移）。这是 D-164 里「鼠标拖不了页」的正解：不是自己写拖拽，
+  而是把滚动还给它、只在放大时收回。
+- **原图⇄译文 250ms 交叉淡入**：舞台的 `ZoomablePage` key 去掉 variant，
+  改在内部套 `AnimatedSwitcher`（key 带 variant），否则外壳重建会带走淡入。
+- **对照点侧**：`ComparePane` 整块可点 → 退出对照并只显示该侧（并持久化选择）。
+- **页码滑条**：抽出 `reader_slider.dart`，桌面顶栏与移动端底栏共用同一颗
+  （6px 轨道 + 22px 拇指 + 拖动气泡 + 竖拖每 22px ±1 页）。
+- **顶栏玻璃化 48px**：42px 实色 → 48px `panel@0.92` + line2 底边；
+  新增 `?` 与全屏两个工具按钮（带 tooltip）。
+- **底部提示条** `ReaderFootBar`（34px）：随工具栏一起隐藏。
+- **网格总览**：hover 1.05 放大 + 当前页右下角「当前」角标。
+- **回归测试**：`test/reader_desktop_test.dart` 9 条（O 键 / RTL 镜像 / 连发 /
+  ? 速查卡与 Esc 层级 / 全屏 Esc / 网格角标 / 对照点侧 / 底部提示条 /
+  physics 随缩放切换）。
+  **反证三条都失败**：① O 不绑 → 找不到「显示翻译」；② 方向键不镜像 → RTL 下跳到第 4 页；
+  ③ 忽略 KeyRepeat → 按住只翻一页。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **288 通过**（原 279）。
+- **已知取舍**：① 全屏依赖 `window_manager`，测试里 `setFullScreen` 会被 try/catch 吞掉，
+  断言只覆盖「状态位 + Esc 层级」；② 拖动翻页由 PageView 接管后，拖到一半
+  再 Ctrl+滚轮缩放会同时触发两套手势（极端组合，未处理）；
+  ③ 底部提示条是纯文案，没有做点击跳转。
+- **关联**：D-164（桌面缩放）· D-166（移动端）· D-172（点页入口）。
+
+---
+
+## D-174 · 桌面抽屉改右侧滑入 + 全屏改成「专注模式」（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **口径**：
+  1. 桌面端的阅读设置要**从右往左滑入的抽屉**（贴底弹层在 1440 宽窗口里离鼠标太远）；
+  2. 全屏要的是「**应用放大 + 只显示阅读器**」，不是系统全屏。
+- **右侧抽屉**：`showAppSheet` 按宽度分流 —— 宽屏走 `showGeneralDialog` +
+  `SlideTransition(begin: Offset(1,0))`，窄屏仍走 `showModalBottomSheet`。
+  `AppSheet` 通过 `AppSheetPlacementScope`（InheritedWidget）知道自己贴哪：
+  贴右 = 380 宽、占满高度、左圆角 + 左投影、无 grabber；贴底 = 原样。
+  调用方（阅读设置 / 章节抽屉 / 书架菜单）一行没改。
+  🔴 踩了一个坑：右侧抽屉没有 BottomSheet 那层 `Material`，里面的 `Slider` 直接
+  断言 `No Material widget found` —— pageBuilder 外面补了一层透明 `Material`。
+- **专注模式**：新增 `readerFocusProvider`；`_DesktopShell` 在
+  「flag 为真 **且** 当前是阅读器路径」时只渲染 `shell`（无侧栏、无工具条、无页签）。
+  绑定路径是关键：离开阅读器自动还壳，不会留下一个没有侧栏的空窗口。
+  窗口侧只做 `windowManager.maximize()` / `unmaximize()`，并记录进入前是否已最大化
+  （已是最大化就不在退出时擅自还原）。
+  **不再用 `setFullScreen`**：macOS 的系统全屏会把窗口搬进独立 Space，有系统动画、
+  退出后尺寸也不保证还原。
+- **收尾**：`_close()` 与 `dispose()` 都走 `_exitFocus()`；dispose 里 `ref` 已失效，
+  所以 notifier 在 `initState` 就抓好，同时用本地 `_focusOn` / `_mobile` 镜像判状态。
+- **回归测试**：`test/reader_desktop_test.dart` 增至 11 条（新增
+  「宽屏设置抽屉贴右、380 宽、占满高」「专注模式：F 后壳层消失，Esc 还壳」）。
+  **反证两条都失败**：① 宽屏仍贴底 → 抽屉 rect 读到 920（不是 1200 贴边）；
+  ② 专注模式不隐藏壳层 → `NavRail` 仍在。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **290 通过**（原 288）。
+- **已知取舍**：① 抽屉宽度写死 380（未按窗口比例）；② 专注模式只处理最大化，
+  没有记忆「用户原来的窗口尺寸」（macOS 下 `unmaximize` 回到最大化前的大小）；
+  ③ 抽屉没有做 Esc 关闭（走遮罩 / × 关闭，与弹层一致）。
+- **关联**：D-161（AppSheet 统一抽屉）· D-173（桌面 12 项）。
+
+---
+
+## D-175 · macOS 触控板横扫翻页再次失效（scale 识别器吃掉了 pan-zoom）（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **现象**：D-173 开了「100% 交回 PageView 滚动」之后，macOS 触控板左右横扫又不翻页了。
+- **根因**：`ZoomablePage` 上挂着 `GestureDetector(onScaleStart/Update)`。
+  macOS 触控板的横扫是 `PointerPanZoom` 事件，`ScaleGestureRecognizer` **也会接**，
+  于是它先赢了，`PageView` 的 `Scrollable` 收不到 pan → 页面不动。
+  （D-164 那条「横滑」用例是给 `PointerScrollEvent` 打的假针：真实触控板根本不发这个，
+  所以它一直绿着，掩盖了真机失效。）
+- **修复**：
+  1. 页面层**彻底去掉 `onScale*`**，只留 `onTap`；放大态才注册 `onPanUpdate`
+     （那时 PageView 已经关滚动，拖动 = 平移，不会互抢）。
+  2. 触控板捏合改由**舞台层** `Listener.onPointerPanZoomUpdate` 处理
+     （`scale` 是累计值，按 `event.scale / 上次` 求增量后 `zoom.scaleAt`）；
+     纯平移不插手 —— 交给 PageView 做 1:1 跟手 + 吸附。
+     放大态时才用 `panDelta` 反推平移。
+- **界面语义不变**：桌面缩放入口 = Ctrl/⌘+滚轮 / `+ -` / 顶栏调节器 / 触控板捏合；
+  翻页入口 = 方向键 / 两侧热区 / 滚轮（`PointerScrollEvent`）/ 触控板横扫 / 鼠标拖拽。
+- **回归测试**：`test/reader_desktop_test.dart` 增至 13 条
+  （新增「macOS 触控板横扫翻页（PointerPanZoom）」「触控板捏合缩放」）；
+  `test/reader_zoom_test.dart` 的捏合用例从「两指触摸」改成 `PointerPanZoom`（scale 1.5）。
+  **反证**：把 `onScaleStart/Update` 挂回 `ZoomablePage` → 横扫用例停在 0（第 1 页）。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **292 通过**（原 290）。
+- **教训**：手势用例别拿「合成事件」当替身 —— `PointerScrollEvent` 能过，
+  不代表真触控板（`PointerPanZoom`）能过；反过来，页面层多挂一个 scale 识别器
+  就能把滚动悄悄吃掉，而单看代码完全不像有问题。
+- **关联**：D-164（桌面缩放）· D-173（桌面 12 项）。
+
+---
+
+## D-176 · 桌面快捷键不生效（焦点依赖）+ 对照模式翻不动页（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **现象**：① 桌面阅读器快捷键（←→ / C / G / O / F / ?）不生效；
+  ② 对照模式里按方向键翻不动，且要求「翻页后仍处于对照」。
+- **快捷键根因**：全部逻辑挂在 `Focus(autofocus: true).onKeyEvent` 上。
+  `autofocus` **只在首次挂载请求一次焦点**，而焦点会被这些东西拿走：
+  顶栏按钮（点击后按钮成为 primary focus）、抽屉（`showGeneralDialog` 是独立 route，
+  自带 FocusScope）、切模块（`StatefulShellRoute` 的 IndexedStack 把阅读器分支 offstage，
+  focus 被移出子树），回来时不会再请求 —— 表现就是「快捷键时好时不好 / 干脆全哑」。
+  widget test 里 `autofocus` 恒成立，所以 13 条键盘用例一直是绿的。
+- **改法**：改用 `HardwareKeyboard.instance.addHandler`（所有按键先过它，**与焦点无关**），
+  配三个守卫：
+  1. **可见**：`TickerMode.getValuesNotifier(context).value.enabled` —— go_router 用
+     `Offstage + TickerMode(enabled: isActive)` 包保活分支，此时 `ModalRoute.isCurrent`
+     仍是 true，不判可见性就会在设置页的输入框里把 C 当「切换对照」吃掉；
+  2. **当前路由**：抽屉 / 弹层打开时放行，方向键归弹层里的滑条；
+  3. **有会话**：无会话时按键无意义。
+  🔴 同时把 `Focus.onKeyEvent` **摘掉**：同一次按键会被 handler 和 Focus 各处理一遍，
+  G / C 这种开关翻转两次等于没反应（实测 `_gridOpen` 被设 true 后立刻翻回 false）。
+  另加一条：带 ⌘ / Ctrl / Alt 的组合键一律放行，否则 ⌘C 会被当成「C = 对照」；
+  Shift 不算（`?` 本身是 Shift+/）。`?` 还兼容 `LogicalKeyboardKey.question`。
+- **对照翻不动根因**：`_go` / `_jumpTo` 直接 `_controller.jumpToPage()`。对照模式渲染的是
+  两栏 `ComparePane`，树里没有 `PageView` → controller 没有 client →
+  `positions.isNotEmpty` 断言。异常发生在 key handler 里被框架 report，用户侧就是「按了没反应」。
+- **改法**：新增 `_commitPage` —— **先写 `readerPageProvider`（页码事实源），
+  `hasClients` 才 `jumpToPage`**，否则只预载。翻页不动 `_compare`，所以对照保持对照。
+  所有入口（键盘 / 两侧热区 / 滚轮 / 触控板 / 滑条 / 移动端）统一走它。
+- **两个连带修**：
+  1. `ComparePane.didUpdateWidget` 原来是 `setState(() => _future = _load())`，
+     闭包把 Future 当返回值交给框架 → 一旦 `seq` 真的变了就断言
+     `setState() callback argument returned a Future`（以前对照从不翻页，从没触发）。
+     改成先算 Future 再 `setState`；
+  2. 退出对照时 `PageView` 重新挂载，`PageController` 会按构造时的 `initialPage`
+     （进入阅读器那一页）重新 attach → 翻到第 5 页退出对照会跳回第 1 页。
+     新增 `_PageSync` 薄壳，首次挂载后把 controller 对齐 provider 页码。
+- **顺带**：`ComparePane` 改成同步命中页图缓存（与 D-167 同口径），
+  对照翻页不再先闪一帧加载圈；`_jumpMobile` 也走 `_commitPage`（跳页顺带预载）。
+- **回归测试**：`test/reader_desktop_test.dart` 增至 16 条，新增
+  ①「对照模式里能翻页，翻完仍在对照；退出对照停在同一页」；
+  ②「焦点不在阅读器时快捷键照样生效（不依赖 autofocus）」；
+  ③「切到别的模块后快捷键不在后台生效（保活分支不吃按键）」。
+  **反证四条都失败**：① 不注册 handler → 焦点一丢 G 就找不到网格；
+  ② 不看 `hasClients` 直接 jump → `positions.isNotEmpty` 断言；
+  ③ 去掉 `_PageSync` → 退出对照后页码读到 0；
+  ④ 不判 TickerMode → 设置页按 G 在后台打开网格（4 个 `GridCell`）。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **295 通过**（原 292）。
+- **教训**：键盘用例用 `sendKeyEvent` 只能证明「有焦点时能用」，
+  证明不了「焦点丢了还能用」—— 而后者才是真机上的常态。
+- **关联**：D-173（桌面 12 项）· D-174（专注模式）· D-175（触控板横扫）。
+
+---
+
+## D-177 · 对照里点「显示原图 / 显示翻译」= 退出对照并显示该侧（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **用户口径**：对照模式下点顶栏的「显示原文 / 显示翻译」，要**退出对照**。
+- **根因**：`_toggleOriginal` 只翻转 `_showOriginal`，不看 `_compare` ——
+  对照里点它，两栏还在（只是「单页的偏好」被改了，视觉上没有反应），
+  用户会以为按钮坏了。设计稿本来就是「对照中点『显示原图/译文』= 退出对照并显示该侧」，
+  之前只实现了「点某一栏」，漏了顶栏按钮这条入口。
+- **改法**：`_toggleOriginal` 直接复用 `_focusSide(original: !_showOriginal)` ——
+  与「点某一栏」同一条路径（退出对照 + 显示该侧 + 持久化）。
+  非对照时行为不变（等价于单纯的原图 ⇄ 译文）。
+  `O` 键与移动端顶栏按钮都走这个方法，所以「对照中按 O」也顺势退出对照。
+- **回归测试**：`test/reader_desktop_test.dart` 增至 17 条
+  （新增「对照里点『显示原图/显示翻译』= 退出对照并显示该侧」，
+  按按钮文案反推当前侧，避免依赖被前面用例写过的偏好）。
+  **反证**：改回「只切 `_showOriginal`」→ 用例读到 2 个 `ComparePane`，直接红。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **296 通过**（原 295）。
+- **关联**：D-173（对照点侧退出）· D-176（对照翻页）。
+
+---
+
+## D-178 · 对照里点图不再退出对照，改为三分区翻页（覆盖设计稿原案）（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **用户口径**：「对照的时候，点击漫画不要取消对照状态，需要支持直接翻页，
+  翻页后仍然处于对照状态」。
+- **被覆盖的旧案**：D-173 按设计稿 desktop.html 实现的是「点某一侧 = 退出对照并显示该侧」。
+  真用起来是反的 —— 对照里看两版图，最需要的就是「点一下接着看下一页」，
+  而点击却把对照拆了。**这条以用户裁定为准，设计稿口径作废**。
+- **改法**：`ComparePane` 的 `onTap`（无参）换成 `onTapAt(Offset localPosition)`，
+  只回传本栏内的坐标；分区由 `_desktopStage` 在 `LayoutBuilder` 里**按整舞台宽度**判断
+  （左 30% 上一页 / 右 30% 下一页 / 中间 40% 呼出工具栏）——
+  让每一栏自己判会得出「左栏右缘 = 下一页」这种怪区。
+  右栏的全局 x = `stageWidth / 2 + localX`（1px 分隔线忽略）。
+  翻页沿用 `_commitPage`，不动 `_compare`，所以**翻完仍在对照**。
+- **退出对照的入口**（都还在）：`C` 键、顶栏「对照」按钮、`Esc`、
+  顶栏「显示原图 / 显示翻译」（或 `O`，D-177）。
+- **回归测试**：`test/reader_desktop_test.dart` 的旧用例「点某一侧 = 退出对照」
+  改写为「对照里点图翻页，且不退出对照（右 30% 下一页 / 左 30% 上一页）」；
+  「对照翻页…退出对照」用例的退出动作从「点图」改成 `C` 键。
+  **反证**：`handleTap` 改回 `_focusSide` → 页码停在 0、用例直接红。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **296 通过**。
+- **关联**：D-173（原「点侧退出」实现，本条覆盖其点击口径）· D-176（对照翻页）· D-177（顶栏按钮退出对照）。
+
+---
+
+## D-179 · 对照模式丢了左右翻页热区与触控板横扫（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **现象**：对照模式下 ① 触控板左右横扫不翻页；② 两侧 56px 的翻页按钮（chevron）不见了。
+- **根因**：D-178 把对照做成了一套独立的 `Row`，**没有套单页那层 `Stack` 外壳** ——
+  `Listener`（滚轮 / `PointerPanZoom`）与两侧热区都在外壳里，于是对照模式整层丢失。
+  同类问题之前也踩过：只要舞台内容分叉、外壳没共用，交互就会整块消失。
+- **改法**：`_desktopStage` 拆成「共用外壳 + `_pagesBody` / `_compareBody`」。
+  对照也吃到：滚轮、触控板横扫、首末页轻推、底部提示条、**左右 56px 热区**。
+- **对照的横扫要自己接**：单页模式是 `PageView` 接管平移（1:1 跟手），
+  对照里没有 PageView，所以在 `_onPanZoom` 加分支 —— 纯平移按 `panDelta`
+  喂给 `_advanceByScroll(Offset(-dx, 0))`（方向取反：内容左移 = 下一页），
+  复用同一套「阈值 20 + 300ms 冷却」，一次挥动只翻一页。
+  捏合（scale 变化）不处理，交给每栏的 `InteractiveViewer`；
+  `_zoom` 在对照里完全不参与，避免把单页模式的缩放状态带脏。
+- **滚轮**：对照里一律翻页（`_onPointerSignal` 加分支），Ctrl/⌘+滚轮也不缩放。
+- **热区加 Key**（`reader-hotzone-prev` / `reader-hotzone-next`）：让「按钮在不在」
+  可以被断言，而不是靠图标计数。
+- **回归测试**：`test/reader_desktop_test.dart` 增至 18 条
+  （新增「对照模式保留左右翻页热区，且触控板横扫能翻页」：热区存在 → 点热区翻页 →
+  横扫再翻一页，全程 `ComparePane` 保持 2 个）。
+  **反证两条都失败**：① 对照提前 return `_compareBody`（不套外壳）→ 热区 key 找不到；
+  ② 去掉 `_onPanZoom` 的对照分支 → 横扫后页码停在 1。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **297 通过**（原 296）。
+- **关联**：D-176（对照翻页）· D-178（点图翻页，本条补回横扫与热区）。
+
+---
+
+## D-180 · 专注模式顶部让位：macOS 让红绿灯，Windows / Linux 不让（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **用户口径**：全屏（专注模式）后要**避开应用的标题栏**，并且要**兼容 Windows**。
+- **两端语义不同**（`TitleBarStyle.hidden`）：
+  - **macOS**：只隐藏标题栏，原生红绿灯仍然**叠在客户区左上角**。专注模式不渲染
+    自绘标题栏，于是红绿灯直接压在阅读器顶栏的标题 / 关闭键上。
+  - **Windows / Linux**：`WM_NCCALCSIZE` 把客户区铺满整个窗口；最大化时按显示器
+    **工作区**调平（`adjustNCCALCSIZE` 用 `rcWork`，自动避开任务栏）。
+    客户区里没有系统控件，不需要让位。
+- **改法**：新增 `readerFocusTopInset({required bool macos})`
+  （`lib/core/window/window_controller.dart`）—— macOS = `AppMetrics.macTrafficLightBand`
+  （28），其余 = 0；抽成按平台参数的纯函数，便于测试同时验两端（真机平台不可注入）。
+  `_DesktopShell` 专注分支由 `body: shell` 改成
+  `Column(让位带 + Expanded(shell))`，让位带本身是 `DragToMoveArea`
+  —— 否则窗口没法拖（macOS 最大化后拖动 = 退出最大化并移动窗口）。
+- **回归测试**：`test/reader_desktop_test.dart` 增至 19 条，新增
+  ①纯函数「macOS 28 / Windows-Linux 0」；②专注模式用例追加：macOS 下让位带存在，
+  且 `ReaderBar` 的 top ≥ 28（Windows 分支不渲染带子，断言自动跳过）。
+  **反证**：专注模式改回 `body: shell` → 让位带 key 找不到，用例红。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **298 通过**（原 297）。
+- **已知取舍**：① 让位高度固定 28（与壳层同一常量），不随系统缩放变化；
+  ② Windows 专注模式不渲染自绘窗控（最小化 / 关闭）—— 沉浸阅读的取舍，
+  `Esc` 退出专注再操作；如需窗控，可在让位带右侧补一套。
+- **关联**：D-174（专注模式本身）· D-173（桌面壳层与红绿灯带）。
+
+---
+
+## D-181 · 全屏改成真正的「应用级全屏」（maximize 其实是 zoom）（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **用户口径**：「全屏的时候应该是应用级别的全屏，目前好像不是」。
+- **根因**：D-174 的专注模式调的是 `windowManager.maximize()`。
+  翻 window_manager 的 macOS 源码（`WindowManager.swift:156`）：
+  ```swift
+  public func maximize() {
+      if (!isMaximized()) { mainWindow.zoom(nil) }   // ← NSWindow.zoom
+  }
+  ```
+  `zoom:` 只是把窗口切到「标准大小」——既不保证铺满屏幕，也不隐藏菜单栏 / Dock，
+  更不会盖住红绿灯。所以观感是「变大了，但不是全屏」。
+- **改法**：`_toggleFocus` 改调 `windowManager.setFullScreen(true)` / `false`：
+  - 进入前先 `isFullScreen()` 记下来（已经是全屏就**不**在退出时擅自还原）；
+  - 调用后再查一次 `isFullScreen()`，把**真实结果**写进
+    `readerFullscreenProvider`（`NotifierProvider<bool>`）——
+    「请求了全屏」和「真的全屏了」是两件事（Linux WM / 无窗口管理器会失败）。
+- **顶部让位随之修订 D-180**：`readerFocusTopInset({macos, fullscreen})` ——
+  真全屏时系统标题栏 / 红绿灯都隐藏，让位 **0**（否则顶部多一条 28px 空白）；
+  只有全屏失败退化成普通窗口时，才按平台让位（macOS 28，Windows / Linux 0）。
+- **退出路径**：`_exitFocus`（Esc / 关闭 / 切模块 / dispose）里 `setFullScreen(false)`，
+  并把 provider 复位。
+- **回归测试**：`test/reader_desktop_test.dart` 增至 20 条，新增
+  「专注模式走应用级全屏：调 `setFullScreen`，不是 `maximize`」——
+  用 `setMockMethodCallHandler` 拦 `window_manager` 通道记录方法名，
+  断言 `calls` 含 `setFullScreen`、不含 `maximize`，且 `readerFullscreenProvider == true`、
+  让位带不渲染。纯函数用例扩成四种组合（macos × fullscreen）。
+  **反证**：改回 `maximize` → `calls` 只有 `isMaximized`，用例红。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **299 通过**（原 298）。
+- **已知取舍**：① macOS 的 `setFullScreen` 会进入独立 Space（系统动画 ~0.3s），
+  这是系统全屏的固有行为，换来的是真正铺满屏幕；② 全屏动画期间让位带会消失，
+  内容有一次 28px 的位移（动画本身在动，观感可接受）。
+- **关联**：D-174（专注模式起源）· D-180（顶部让位，本条修订其触发条件）。
+
+---
+
+## D-182 · 系统退出全屏后阅读器没恢复顶部让位（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **现象**：专注模式全屏后，从窗口标题栏（macOS 绿色按钮 / 系统菜单 / `Ctrl+Cmd+F`）
+  退出全屏，阅读器顶栏又顶到 y=0，被红绿灯压住 —— 没有恢复 28px 让位。
+- **根因**：`readerFullscreenProvider` 只在 `_toggleFocus` 里写过一次。
+  系统侧的全屏切换（标题栏按钮、系统快捷键）**不经过我们的代码**，
+  provider 仍停在 `true`，`readerFocusTopInset` 就返回 0。
+- **改法**：`_ReaderScreenState` 混入 `WindowListener`，`initState` 里
+  `windowManager.addListener(this)`、`dispose` 里 `removeListener(this)`，
+  实现 `onWindowEnterFullScreen` / `onWindowLeaveFullScreen` 同步 provider。
+  这两个回调由 window_manager 的 `onEvent`（`enter-full-screen` / `leave-full-screen`）驱动，
+  与系统真实状态一致，不依赖我们发起的调用。
+- **回归测试**：在「专注模式走应用级全屏」用例里追加：
+  通过 `handlePlatformMessage('window_manager', onEvent{leave-full-screen})`
+  模拟系统退出全屏 → `readerFullscreenProvider == false` → 让位带重新出现，
+  且 `ReaderBar` 的 top ≥ 28（macOS）。
+  **反证**：把 `onWindowLeaveFullScreen` 置空 → provider 仍 `true`，用例红。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **299 通过**。
+- **关联**：D-180（让位）· D-181（应用级全屏，本条补「系统侧状态回传」）。
