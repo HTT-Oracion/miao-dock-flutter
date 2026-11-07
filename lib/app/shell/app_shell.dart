@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../core/storage/shell_prefs.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/window/window_controller.dart';
 import '../../features/manga/controller/queue_controller.dart';
+import '../../features/manga/controller/reader_focus.dart';
 import '../../features/manga/controller/engine_controller.dart';
 import '../../features/manga/controller/remote_controller.dart';
 import '../../features/manga/ui/manga_gate.dart';
@@ -125,6 +127,30 @@ class _DesktopShell extends ConsumerWidget {
     final collapsed = ref.watch(navCollapsedProvider);
     final labels = ref.watch(sidebarLabelsProvider);
     final queueDepth = _queueDepth(ref.watch(queueProvider).value ?? const []);
+    // 阅读器专注模式：只留阅读器，壳层（侧栏 / 工具条 / 页签）整体不渲染。
+    // 绑定 `isReaderPath` 是为了「离开阅读器就自动还壳」——否则从阅读器点到别处
+    // 会看到一个没有侧栏的空窗口。
+    if (ref.watch(readerFocusProvider) && isReaderPath(path)) {
+      // 专注模式顶部让位（D-180）：macOS 的原生红绿灯叠在客户区左上角，
+      // 不渲染自绘标题栏时会把阅读器顶栏压住；Windows / Linux 无此问题（让位 0）。
+      // 这条带子本身是拖拽区 —— 否则窗口没法拖（最大化后拖动会退出最大化并移动）。
+      // 真全屏时系统标题栏 / 红绿灯都已隐藏，不需要让位；全屏失败才按平台让。
+      final fullscreen = ref.watch(readerFullscreenProvider);
+      final focusInset = readerFocusTopInset(macos: isMacosPlatform, fullscreen: fullscreen);
+      return Scaffold(
+        backgroundColor: palette.bg,
+        body: Column(
+          children: [
+            if (focusInset > 0)
+              DragToMoveArea(
+                child: SizedBox(key: const Key('reader-focus-inset'), height: focusInset, width: double.infinity),
+              ),
+            Expanded(child: shell),
+          ],
+        ),
+      );
+    }
+
     // macOS 无边框窗口：原生红绿灯叠在客户区左上角，侧栏与工具条整体下移一条带子。
     final topInset = isMacosPlatform ? AppMetrics.macTrafficLightBand : 0.0;
 

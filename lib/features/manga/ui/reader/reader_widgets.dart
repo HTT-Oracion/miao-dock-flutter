@@ -12,6 +12,7 @@ import '../../../../shared/widgets/buttons.dart';
 import '../../controller/library_controller.dart';
 import '../../controller/queue_controller.dart';
 import 'reader_image_cache.dart';
+import 'reader_slider.dart';
 import 'reader_zoom.dart';
 
 /// 阅读器拆分件（重设计稿 P4 目录归位，D-152 方式重做）：
@@ -36,6 +37,8 @@ class ReaderBar extends StatelessWidget {
     required this.onGrid,
     required this.onGridActive,
     this.zoom,
+    this.onFullscreen,
+    this.onHelp,
   });
 
   final String title;
@@ -63,15 +66,21 @@ class ReaderBar extends StatelessWidget {
   /// 缩放调节器（桌面专属，D-164）：null = 不渲染（移动端靠双指捏合）。
   final ReaderZoom? zoom;
 
+  /// 全屏 / 快捷键速查（桌面专属）：null = 不渲染。
+  final VoidCallback? onFullscreen;
+  final VoidCallback? onHelp;
+
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
     return Container(
-      height: 42,
+      // 设计稿 `.rbar`：48px 玻璃工具带（原 42px 实色，和页面抢注意力）。
+      height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: palette.navBg,
-        border: Border(bottom: BorderSide(color: palette.divider)),
+        color: palette.panel.withValues(alpha: 0.92),
+        border: Border(bottom: BorderSide(color: palette.line2.withValues(alpha: 0.7))),
       ),
       child: Row(
         children: [
@@ -92,24 +101,10 @@ class ReaderBar extends StatelessWidget {
               style: TextStyle(fontSize: AppFont.px12_5, color: palette.textPrimary),
             ),
           ),
-          // 页码滑条（重设计稿顶栏）：快速跳页。
+          // 页码滑条：与移动端同一颗组件（拖动出气泡、竖拖微调）。
           SizedBox(
-            width: 120,
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                activeTrackColor: palette.accent,
-                inactiveTrackColor: palette.progressTrack,
-                thumbColor: palette.accent,
-              ),
-              child: Slider(
-                value: pageCount <= 1 ? 0 : pageValue / (pageCount - 1),
-                max: 1,
-                onChanged: (v) => onPageChanged((v * (pageCount - 1)).round()),
-              ),
-            ),
+            width: 168,
+            child: PageSlider(value: pageValue, count: pageCount, onChanged: onPageChanged),
           ),
           const SizedBox(width: 4),
           Text(
@@ -147,6 +142,14 @@ class ReaderBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
+          if (onHelp != null) ...[
+            _BarIcon(icon: LucideIcons.circleHelp, tooltip: l10n.readerHelp, onTap: onHelp!),
+            const SizedBox(width: 10),
+          ],
+          if (onFullscreen != null) ...[
+            _BarIcon(icon: LucideIcons.maximize, tooltip: l10n.readerFullscreen, onTap: onFullscreen!),
+            const SizedBox(width: 10),
+          ],
           GestureDetector(
             onTap: onSettings,
             child: Icon(LucideIcons.settings, size: 15, color: palette.textSecondary),
@@ -157,6 +160,27 @@ class ReaderBar extends StatelessWidget {
             child: Icon(LucideIcons.x, size: 15, color: palette.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BarIcon extends StatelessWidget {
+  const _BarIcon({required this.icon, required this.tooltip, required this.onTap});
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 400),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Icon(icon, size: 15, color: palette.textSecondary),
       ),
     );
   }
@@ -407,6 +431,7 @@ class ComparePane extends ConsumerStatefulWidget {
     required this.showOriginal,
     required this.session,
     required this.seq,
+    this.onTapAt,
   });
 
   final String title;
@@ -414,104 +439,133 @@ class ComparePane extends ConsumerStatefulWidget {
   final ReaderSession session;
   final int seq;
 
+  /// 点这一栏：参数是**本栏内**的局部坐标。
+  ///
+  /// 分区（上一页 / 下一页 / 呼出工具栏）由屏幕按整舞台宽度换算 ——
+  /// `ComparePane` 只占一半，自己判断会得出「左栏右缘 = 下一页」这种怪区。
+  final void Function(Offset localPosition)? onTapAt;
+
   @override
   ConsumerState<ComparePane> createState() => _ComparePaneState();
 }
 
 class _ComparePaneState extends ConsumerState<ComparePane> {
-  Future<Uint8List?>? _future;
+  Uint8List? _bytes;
+  bool _loading = true;
+
+  /// 请求代次：连续翻页时旧的请求不能覆盖新页。
+  int _token = 0;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _resolve();
   }
 
   @override
   void didUpdateWidget(covariant ComparePane oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.seq != widget.seq || oldWidget.showOriginal != widget.showOriginal) {
-      setState(() => _future = _load());
+      // `didUpdateWidget` 之后必有一次 build，这里直接改字段即可，不用 setState。
+      _resolve();
     }
   }
 
-  Future<Uint8List?> _load() async {
+  bool get _wantTranslated => !widget.showOriginal && widget.session.translated.contains(widget.seq);
+
+  String get _cacheKey => readerImageKey(
+    bookKey: widget.session.key,
+    chapterNo: widget.session.chapterNo,
+    seq: widget.seq,
+    translated: _wantTranslated,
+  );
+
+  /// 缓存命中就**同步**出图：对照里翻页不该先闪一帧加载圈（与 D-167 同口径）。
+  void _resolve() {
+    final cached = ReaderImageCache.get(_cacheKey);
+    _bytes = cached;
+    _loading = cached == null;
+    if (cached != null) return;
+    _fetch(++_token);
+  }
+
+  Future<void> _fetch(int token) async {
+    final key = _cacheKey;
     final client = ref.read(mangaSvcClientProvider);
     final s = widget.session;
-    final wantTranslated = !widget.showOriginal && s.translated.contains(widget.seq);
-    final key = readerImageKey(bookKey: s.key, chapterNo: s.chapterNo, seq: widget.seq, translated: wantTranslated);
-    final cached = ReaderImageCache.get(key);
-    if (cached != null) return cached;
+    final wantTranslated = _wantTranslated;
+    Uint8List? data;
     try {
       final bytes = s.chapterNo == null
           ? await client.getBookFile(s.key, widget.seq, translated: wantTranslated)
           : await client.getChapterFile(s.key, s.chapterNo!, widget.seq, translated: wantTranslated);
-      if (bytes.isEmpty) return null;
-      final data = Uint8List.fromList(bytes);
-      ReaderImageCache.put(key, data);
-      return data;
+      if (bytes.isNotEmpty) {
+        data = Uint8List.fromList(bytes);
+        ReaderImageCache.put(key, data);
+      }
     } catch (_) {
-      return null;
+      data = null;
     }
+    if (!mounted || token != _token) return;
+    setState(() {
+      _bytes = data;
+      _loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          height: 24,
-          color: palette.card,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Row(
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: widget.showOriginal ? palette.textSecondary : palette.accent,
-                  shape: BoxShape.circle,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: widget.onTapAt == null ? null : (d) => widget.onTapAt!(d.localPosition),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: 24,
+            color: palette.card,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: widget.showOriginal ? palette.textSecondary : palette.accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  widget.title,
+                  style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
+                ),
+                const Spacer(),
+                Text(
+                  '${widget.seq}',
+                  style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: switch ((_loading, _bytes)) {
+              (true, _) => Center(child: ReaderSpinner(color: palette.textSecondary)),
+              (false, null) => Center(
+                child: Text(
+                  AppLocalizations.of(context).shelfNoMatch,
+                  style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
                 ),
               ),
-              const SizedBox(width: 6),
-              Text(
-                widget.title,
-                style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
-              ),
-              const Spacer(),
-              Text(
-                '${widget.seq}',
-                style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<Uint8List?>(
-            future: _future,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return Center(child: ReaderSpinner(color: palette.textSecondary));
-              }
-              final bytes = snap.data;
-              if (bytes == null) {
-                return Center(
-                  child: Text(
-                    AppLocalizations.of(context).shelfNoMatch,
-                    style: TextStyle(fontSize: AppFont.px11, color: palette.textSecondary),
-                  ),
-                );
-              }
-              return InteractiveViewer(
+              (false, final bytes?) => InteractiveViewer(
                 maxScale: 5,
                 child: Center(child: ReaderPageImage(bytes: bytes)),
-              );
+              ),
             },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -565,27 +619,64 @@ class _GridCellState extends ConsumerState<GridCell> {
     }
   }
 
+  bool _hover = false;
+
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return InkWell(
-      onTap: widget.onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: widget.current ? palette.accent : palette.line2, width: widget.current ? 2 : 1),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedScale(
+        // 设计稿 `.gcell:hover`：1.05；当前页额外一圈主色描边 + 角标。
+        scale: _hover ? 1.05 : 1,
+        duration: AppMotion.fast,
+        curve: AppMotion.morphCurve,
+        child: InkWell(
+          onTap: widget.onTap,
           borderRadius: BorderRadius.circular(6),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(5),
-          child: FutureBuilder<Uint8List?>(
-            future: _future,
-            builder: (context, snap) {
-              if (snap.data == null) {
-                return ColoredBox(color: palette.card, child: const SizedBox.expand());
-              }
-              return ReaderPageImage(bytes: snap.data!, fit: BoxFit.cover);
-            },
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: widget.current ? palette.accent : (_hover ? palette.line2 : Colors.transparent),
+                width: widget.current ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(5),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  FutureBuilder<Uint8List?>(
+                    future: _future,
+                    builder: (context, snap) {
+                      if (snap.data == null) {
+                        return ColoredBox(color: palette.card, child: const SizedBox.expand());
+                      }
+                      return ReaderPageImage(bytes: snap.data!, fit: BoxFit.cover);
+                    },
+                  ),
+                  if (widget.current)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: palette.accent,
+                          borderRadius: const BorderRadius.only(topLeft: Radius.circular(5)),
+                        ),
+                        child: Text(
+                          AppLocalizations.of(context).readerGridCurrent,
+                          style: TextStyle(fontSize: AppFont.px8_5, fontWeight: FontWeight.w700, color: palette.onAcc),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -659,6 +750,120 @@ class ReaderEndCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// 桌面底部提示条（设计稿 `.foot`，34px）：把最常用的几组键摆在手边。
+class ReaderFootBar extends StatelessWidget {
+  const ReaderFootBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Container(
+      height: 34,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: palette.panel.withValues(alpha: 0.92),
+        border: Border(top: BorderSide(color: palette.line2.withValues(alpha: 0.7))),
+      ),
+      child: Text(
+        AppLocalizations.of(context).readerFootHint,
+        style: TextStyle(fontSize: AppFont.px10, color: palette.mut),
+      ),
+    );
+  }
+}
+
+/// 快捷键速查卡（设计稿 `.help`，`?` 呼出）：每行 = 键 + 说明。
+///
+/// 说明文案整句进 ARB（含键名），不做「键列 / 说明列」两段拼装 ——
+/// 键名里有「滚轮」这种中文，拆列就得为键名再造一批词条。
+class ReaderHelpCard extends StatelessWidget {
+  const ReaderHelpCard({super.key, required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final rows = [
+      l10n.readerHelpTurn,
+      l10n.readerHelpWheelZoom,
+      l10n.readerHelpWheelTurn,
+      l10n.readerHelpStepZoom,
+      l10n.readerHelpCompare,
+      l10n.readerHelpOriginal,
+      l10n.readerHelpGrid,
+      l10n.readerHelpFullscreen,
+      l10n.readerHelpTap,
+      l10n.readerHelpEsc,
+      l10n.readerHelpOpenHint,
+    ];
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onClose,
+      child: ColoredBox(
+        color: palette.shadow.withValues(alpha: 0.72),
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 520),
+              margin: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 22),
+              decoration: BoxDecoration(
+                color: palette.panel,
+                borderRadius: BorderRadius.circular(AppMetrics.radiusModal),
+                border: Border.all(color: palette.line2),
+                boxShadow: [BoxShadow(color: palette.shadow.withValues(alpha: 0.5), blurRadius: 40)],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.readerHelpTitle,
+                          style: TextStyle(fontSize: AppFont.px14, fontWeight: FontWeight.w700, color: palette.ink),
+                        ),
+                      ),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onClose,
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Icon(LucideIcons.x, size: 16, color: palette.mut),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  for (final row in rows)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              row,
+                              style: TextStyle(fontSize: AppFont.px12, color: palette.ink2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

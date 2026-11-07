@@ -2636,6 +2636,48 @@
   "@readerZoomIn": {
     "description": "桌面阅读器缩放调节器的放大按钮"
   },
+  "readerHelpTitle": "键盘快捷键",
+  "@readerHelpTitle": {
+    "description": "桌面阅读器快捷键速查卡标题"
+  },
+  "readerHelpTurn": "上一页 / 下一页（RTL 时镜像；可按住连发）",
+  "@readerHelpTurn": {"description": "速查卡：方向键翻页"},
+  "readerHelpWheelZoom": "Ctrl/⌘ + 滚轮：以光标为锚点缩放（50%–200%）",
+  "@readerHelpWheelZoom": {"description": "速查卡：滚轮缩放"},
+  "readerHelpWheelTurn": "裸滚轮：翻页（放大态下为平移）",
+  "@readerHelpWheelTurn": {"description": "速查卡：裸滚轮翻页"},
+  "readerHelpStepZoom": "+ / −：步进缩放 25%",
+  "@readerHelpStepZoom": {"description": "速查卡：步进缩放"},
+  "readerHelpCompare": "C：对照模式（原文 / 译文并排）",
+  "@readerHelpCompare": {"description": "速查卡：对照模式"},
+  "readerHelpOriginal": "O：原图 ⇄ 译文",
+  "@readerHelpOriginal": {"description": "速查卡：原图/译文"},
+  "readerHelpGrid": "G：网格总览（Esc 关闭）",
+  "@readerHelpGrid": {"description": "速查卡：网格总览"},
+  "readerHelpFullscreen": "F：全屏（全屏时 Esc 只退全屏）",
+  "@readerHelpFullscreen": {"description": "速查卡：全屏"},
+  "readerHelpTap": "单击图片：隐藏 / 显示工具栏",
+  "@readerHelpTap": {"description": "速查卡：单击图片"},
+  "readerHelpEsc": "Esc：关闭阅读器",
+  "@readerHelpEsc": {"description": "速查卡：Esc 关闭"},
+  "readerHelpOpenHint": "?：呼出这张速查卡",
+  "@readerHelpOpenHint": {"description": "速查卡：? 呼出"},
+  "readerFootHint": "←→ 翻页 · Ctrl+滚轮 缩放 · G 网格 · C 对照 · ? 快捷键",
+  "@readerFootHint": {
+    "description": "桌面阅读器底部提示条"
+  },
+  "readerGridCurrent": "当前",
+  "@readerGridCurrent": {
+    "description": "网格总览里当前页的角标"
+  },
+  "readerFullscreen": "全屏",
+  "@readerFullscreen": {
+    "description": "桌面阅读器顶栏全屏按钮 tooltip"
+  },
+  "readerHelp": "快捷键",
+  "@readerHelp": {
+    "description": "桌面阅读器顶栏速查卡按钮 tooltip"
+  },
   "readerPercent": "{percent}%",
   "@readerPercent": {
     "description": "百分比读数（亮度 OSD / 夜间强度）"

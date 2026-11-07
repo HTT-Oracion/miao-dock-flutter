@@ -110,9 +110,13 @@ class ReaderZoom extends ChangeNotifier {
   }
 }
 
-/// 桌面舞台页：锚点缩放 + 放大态平移。
+/// 桌面舞台页：**放大态平移** + 单击呼出工具栏。
 ///
-/// 单击**只**用于呼出/收起工具栏 —— D-164 明确去掉「点图直接放大」（双击缩放）。
+/// 🔴 这里**不挂 `onScale*`**：ScaleGestureRecognizer 会把触控板的
+/// `PointerPanZoom` 一并吃掉，导致 PageView 收不到横滑手势 ——
+/// 表现就是「macOS 触控板左右滑动翻页突然失效」。
+/// 桌面真正的缩放入口是 Ctrl/⌘+滚轮、`+/-`、顶栏调节器，
+/// 以及舞台层 `Listener.onPointerPanZoom*` 处理的触控板捏合。
 class ZoomablePage extends StatefulWidget {
   const ZoomablePage({super.key, required this.zoom, required this.child, this.onTap});
 
@@ -125,41 +129,32 @@ class ZoomablePage extends StatefulWidget {
 }
 
 class _ZoomablePageState extends State<ZoomablePage> {
-  double _startScale = 1;
-  Offset _startOffset = Offset.zero;
-  Offset _startFocal = Offset.zero;
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, box) {
         widget.zoom.viewport = box.biggest;
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          onScaleStart: (d) {
-            _startScale = widget.zoom.scale;
-            _startOffset = widget.zoom.offset;
-            _startFocal = d.localFocalPoint;
-          },
-          onScaleUpdate: (d) => widget.zoom.gestureTo(
-            startFocal: _startFocal,
-            startScale: _startScale,
-            startOffset: _startOffset,
-            focal: d.localFocalPoint,
-            spanScale: d.scale,
-          ),
-          child: AnimatedBuilder(
-            animation: widget.zoom,
-            builder: (context, child) => Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.identity()
-                ..translateByDouble(widget.zoom.offset.dx, widget.zoom.offset.dy, 0, 1)
-                ..scaleByDouble(widget.zoom.scale, widget.zoom.scale, 1, 1),
+        return ListenableBuilder(
+          listenable: widget.zoom,
+          builder: (context, child) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            // 只在放大态接拖动（那时 PageView 已关滚动，不会抢）；
+            // 未放大不注册 pan，把拖拽与触控板横扫留给 PageView。
+            onPanUpdate: widget.zoom.zoomed ? (d) => widget.zoom.panBy(d.delta) : null,
+            child: AnimatedBuilder(
+              animation: widget.zoom,
+              builder: (context, child) => Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()
+                  ..translateByDouble(widget.zoom.offset.dx, widget.zoom.offset.dy, 0, 1)
+                  ..scaleByDouble(widget.zoom.scale, widget.zoom.scale, 1, 1),
+                child: child,
+              ),
               child: child,
             ),
-            child: widget.child,
           ),
+          child: widget.child,
         );
       },
     );

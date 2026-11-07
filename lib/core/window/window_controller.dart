@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../theme/tokens.dart';
+
 /// 当前是否为桌面平台（自绘标题栏 / 本地服务进程的前提）；Web / 移动端为 false。
 final bool isDesktopPlatform = !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
 
@@ -36,4 +38,19 @@ Future<void> initDesktopWindow() async {
       await windowManager.show();
     },
   );
+}
+
+/// 阅读器专注模式（应用级全屏 + 不渲染壳层）的**顶部让位**高度。
+///
+/// - **已真全屏**（`setFullScreen` 成功）：系统标题栏 / 红绿灯全部隐藏，
+///   让位 0 —— 否则顶部会多一条 28px 空白。
+/// - **未全屏**（全屏失败退化成普通窗口 / 用户手动退出全屏）：
+///   - macOS：`TitleBarStyle.hidden` 只是隐藏标题栏，原生红绿灯仍**叠在客户区左上角**，
+///     必须让出 [AppMetrics.macTrafficLightBand]，否则会压住阅读器顶栏；
+///   - Windows / Linux：`WM_NCCALCSIZE` 把客户区铺满窗口，无系统控件叠在上面，让位 0。
+///
+/// 抽成「按平台 + 全屏状态」的纯函数：真机平台不可注入，测试里才能覆盖四种组合。
+double readerFocusTopInset({required bool macos, required bool fullscreen}) {
+  if (fullscreen) return 0;
+  return macos ? AppMetrics.macTrafficLightBand : 0;
 }

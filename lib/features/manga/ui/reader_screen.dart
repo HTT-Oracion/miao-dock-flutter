@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:protocol/protocol.dart' show jsNumStr;
+import 'package:window_manager/window_manager.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/storage/shell_prefs.dart';
@@ -19,6 +20,7 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_switch.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../controller/library_controller.dart';
+import '../controller/reader_focus.dart';
 import '../controller/queue_controller.dart';
 import '../domain/lib_book.dart';
 import 'reader/reader_image_cache.dart';
@@ -47,7 +49,7 @@ class ReaderScreen extends ConsumerStatefulWidget {
 }
 
 class _ReaderScreenState extends ConsumerState<ReaderScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver, WindowListener {
   late final PageController _controller;
 
   /// 当前页的**事实源是 [readerPageProvider]**，不是 State 字段。
@@ -70,6 +72,19 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           setState(() => _barVisible = false);
         }
       });
+    _nudgeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 220));
+    _focusNotifier = ref.read(readerFocusProvider.notifier);
+    _fullscreenNotifier = ref.read(readerFullscreenProvider.notifier);
+    // 🔴 桌面快捷键**不能只靠 Focus**：焦点会被顶栏按钮、抽屉弹层、以及
+    // 切模块时的 IndexedStack 拿走，而 `autofocus` 只在首次挂载请求一次，
+    // 回到阅读器不会再请求 —— 表现就是「快捷键时好时不好」。
+    // 注册到 HardwareKeyboard：所有按键先过这里，与焦点无关；
+    // 只在「桌面 + 阅读器是当前路由」时接管，弹层打开时自动放行。
+    HardwareKeyboard.instance.addHandler(_onHardwareKey);
+    // 系统全屏状态可能被「窗口标题栏 / 绿色按钮 / Ctrl+Cmd+F」改掉，
+    // 不能只在 `_toggleFocus` 里记一次 —— 否则用户手动退出全屏后，
+    // 阅读器仍以为自己在全屏，顶部不给红绿灯让位。
+    windowManager.addListener(this);
     _clockTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (!mounted) return;
       setState(() => _clock = _formatClock());
@@ -100,6 +115,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     }
   }
 
+  /// 系统全屏状态变化（用户从窗口标题栏 / 绿色按钮 / 系统快捷键切换）。
+  ///
+  /// 专注模式本身不变（壳层仍然隐藏），但「是否真全屏」变了 ——
+  /// 顶部让位依赖这个事实：退出全屏后必须重新给红绿灯让出 28px。
+  @override
+  void onWindowEnterFullScreen() => _fullscreenNotifier?.set(true);
+
+  @override
+  void onWindowLeaveFullScreen() => _fullscreenNotifier?.set(false);
+
   /// 工具栏可见性（重设计稿：点中心呼出/收起，3s 无操作自动隐藏）。
   bool _barVisible = true;
   Timer? _barTimer;
@@ -118,6 +143,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
 
   /// 滚轮与触摸板横滑的翻页累计：一次手势只翻一页（正 = 下一页）。
   double _scrollAcc = 0;
+
+  /// 触控板捏合的基准 scale（`PointerPanZoomUpdateEvent.scale` 是累计值）。
+  double _panZoomScale = 1;
   DateTime _lastScrollTurn = DateTime.fromMillisecondsSinceEpoch(0);
 
   // ── 移动端 OSD / 提示态 ──
@@ -137,6 +165,26 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
 
   String _clock = '';
   Timer? _clockTimer;
+
+  /// 桌面「翻不动时轻推一下」的橡皮筋（设计稿 `.nudge`，220ms）。
+  late final AnimationController _nudgeCtrl;
+  double _nudgeSign = 1;
+
+  /// 快捷键速查卡（`?`）。
+  bool _helpOpen = false;
+
+  /// 进入专注模式前窗口是否已经全屏：退出时按原样还原。
+  bool _wasFullScreen = false;
+
+  /// 提前抓住 notifier：dispose 里 `ref` 已不可用，但 notifier 仍属于常驻容器。
+  ReaderFocusNotifier? _focusNotifier;
+  ReaderFullscreenNotifier? _fullscreenNotifier;
+
+  /// 专注模式是否开着（本地镜像：dispose 里不能再 `ref.read` 判状态）。
+  bool _focusOn = false;
+
+  /// 最近一次 build 的窄/宽屏判定（dispose 里 `context` 已不可用）。
+  bool _mobile = false;
 
   /// 沉浸式状态栏是否已经应用（避免每帧重复下发）。
   bool? _immersiveApplied;
@@ -168,10 +216,41 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     _go(dir, total);
   }
 
+  /// 触控板（macOS）的平移 / 捏合。
+  ///
+  /// 纯平移**不在这里翻页** —— 那是 `PageView` 的本职（1:1 跟手 + 松手落位），
+  /// 我们只在两件事上插手：捏合缩放，以及「放大态时的平移」。
+  void _onPanZoom(PointerPanZoomUpdateEvent e) {
+    // 对照模式没有 PageView 接管平移：横扫自己翻页；
+    // 捏合（scale 变化）交给每栏的 InteractiveViewer，`_zoom` 不参与 ——
+    // 否则对照里捏一下会把单页模式的缩放状态带脏。
+    if (_compare) {
+      // 只认横向：纵向滑动不该翻页。
+      if (e.panDelta.dx.abs() <= e.panDelta.dy.abs()) return;
+      // `panDelta` 是**内容位移**（左滑为负 = 下一页），取反后交给同一套
+      // 阈值 + 300ms 冷却（与滚轮同源，避免一次挥动翻十页）。
+      _advanceByScroll(Offset(-e.panDelta.dx, 0));
+      return;
+    }
+    final factor = _panZoomScale == 0 ? 1.0 : e.scale / _panZoomScale;
+    if ((factor - 1).abs() > 0.005) {
+      _panZoomScale = e.scale;
+      _zoom.scaleAt(e.localPosition, factor);
+      return;
+    }
+    if (_zoom.zoomed) _zoom.panBy(-e.panDelta);
+  }
+
   /// 桌面滚轮三分支（设计稿 desktop.html 同口径）：
   /// Ctrl/⌘+滚轮 = 锚点缩放；放大态 = 平移；其余 = 翻页。
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
+    // 对照模式：没有舞台缩放（两栏各自 InteractiveViewer），滚轮一律翻页，
+    // Ctrl/⌘+滚轮也不缩放 —— 否则会污染单页模式的 `_zoom`。
+    if (_compare) {
+      _advanceByScroll(event.scrollDelta);
+      return;
+    }
     final keyboard = HardwareKeyboard.instance;
     if (keyboard.isControlPressed || keyboard.isMetaPressed) {
       _zoom.scaleAt(event.localPosition, math.exp(-event.scrollDelta.dy * 0.0015));
@@ -244,30 +323,31 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
 
   /// 滑条/页码跳页（重设计稿：跳页弹 OSD 级页码气泡——顶栏页码即 OSD）。
   void _jumpTo(int page, int total) {
-    final to = page.clamp(0, total - 1);
-    if (to == _index) return;
-    // 翻页即归位（用户口径）：不留上一页的放大/位移。
-    _zoom.reset();
-    _controller.animateToPage(to, duration: AppMotion.pageSwitch, curve: Curves.easeOut);
+    // 跳页同样即时落位：滑条拖到哪就是哪，不再补一段动画。
+    _commitPage(page, total);
   }
 
   /// 移动端跳页（不走 PageView 动画：舞台自己按动画档位收尾）。
   void _jumpMobile(int page, int total) {
     final to = page.clamp(0, total - 1);
     if (to == _index) return;
-    ref.read(readerPageProvider.notifier).set(to);
+    _commitPage(to, total);
     _showOsdForPage(to, total);
     _armBarTimer();
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onHardwareKey);
+    windowManager.removeListener(this);
     _barTimer?.cancel();
     _osdTimer?.cancel();
     _brightTimer?.cancel();
     _hintTimer?.cancel();
     _clockTimer?.cancel();
     _hideCtrl.dispose();
+    _nudgeCtrl.dispose();
+    _exitFocus();
     _controller.dispose();
     _zoom.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -280,16 +360,49 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   late bool _showOriginal = readReaderShowOriginal();
 
   void _toggleOriginal() {
-    setState(() => _showOriginal = !_showOriginal);
-    persistReaderShowOriginal(_showOriginal);
+    // 对照里点「显示原图 / 显示翻译」（或按 `O`）= **退出对照并只显示该侧**，
+    // 与「点某一栏」同一条设计稿口径；非对照时就是单纯的原图 ⇄ 译文。
+    _focusSide(original: !_showOriginal);
   }
 
   void _go(int delta, int total) {
     final next = (_index + delta).clamp(0, total - 1);
-    if (next == _index) return;
-    _zoom.reset();
-    _controller.animateToPage(next, duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
+    if (next == _index) {
+      // 首末页翻不动：轻推 3% 给个「到头了」的反馈（设计稿 `.nudge`）。
+      _nudge(delta);
+      return;
+    }
+    _commitPage(next, total);
   }
+
+  /// 翻页的唯一落点：**先写 provider（页码事实源），再同步 PageView**。
+  ///
+  /// 🔴 对照模式与条漫模式里没有 `PageView`，`_controller.hasClients == false`。
+  /// 之前直接 `jumpToPage()`，在对照模式下会断言「没有 client」——
+  /// 表现就是「对照时按方向键翻不动」。现在没有 client 也照样翻页，
+  /// 由 `index` 驱动 `ComparePane.seq` 重建。
+  void _commitPage(int next, int total) {
+    final to = next.clamp(0, total - 1);
+    if (to == _index) return;
+    // 翻页即归位（用户口径）：不留上一页的放大/位移。
+    _zoom.reset();
+    ref.read(readerPageProvider.notifier).set(to);
+    if (_controller.hasClients) {
+      // 翻页即时切换（2026-11-07 用户裁定，设计稿也写明「默认无动画」）。
+      // 预载交给 `onPageChanged`：jumpToPage 会触发它，这里再调一次就是双份。
+      _controller.jumpToPage(to);
+    } else {
+      _preload(to, total);
+    }
+  }
+
+  void _nudge(int dir) {
+    _nudgeSign = dir.toDouble();
+    _nudgeCtrl.forward(from: 0);
+  }
+
+  /// 轻推的横向位移：sin(0→π) 先出后回，峰值 12px。
+  double get _nudgeDx => math.sin(_nudgeCtrl.value * math.pi) * _nudgeSign * 12;
 
   // ────────────────────────── 移动端 OSD ──────────────────────────
 
@@ -476,6 +589,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       _clock = _formatClock();
     }
     final mobile = context.isMobile;
+    _mobile = mobile;
     // 上一话 / 下一话 / 章节抽屉都要靠书架数据：必须 watch，
     // 否则书架加载完这一帧拿到的仍是空列表，按钮永远灰着。
     final books = ref.watch(libraryProvider).value ?? const <LibBook>[];
@@ -489,9 +603,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _close();
       },
+      // 只保留 autofocus（让焦点留在阅读器里）；**不挂 onKeyEvent** ——
+      // 同一次按键会被 HardwareKeyboard handler 和 Focus 各处理一遍，
+      // G / C 这种开关翻转两次等于没反应。
       child: Focus(
         autofocus: true,
-        onKeyEvent: (node, event) => _onKey(event, total, prefs),
         child: Stack(
           children: [
             Positioned.fill(child: _nightWrap(prefs, _stage(context, session, prefs, index, total, book, siblings))),
@@ -635,6 +751,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
                   ),
                 ),
               ),
+            // 快捷键速查卡（`?`）：Esc / 点遮罩 / × 都能关。
+            if (_helpOpen) Positioned.fill(child: ReaderHelpCard(onClose: () => setState(() => _helpOpen = false))),
             // 亮度遮罩（物理亮度语义：盖住包括工具栏在内的一切）。
             Positioned.fill(
               child: IgnorePointer(
@@ -647,17 +765,58 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     );
   }
 
+  /// 全局键盘入口（`HardwareKeyboard` handler）。
+  ///
+  /// 三个守卫，缺一个都会出事：
+  /// - 阅读器**可见**：被别的模块保活时它 offstage，`isCurrent` 仍是 true；
+  /// - 阅读器必须是**当前路由**：抽屉（`showGeneralDialog` / bottom sheet）
+  ///   打开时它就不是 current，此时放行，方向键归弹层里的滑条；
+  /// - 必须有会话：无会话时按键无意义。
+  /// 端点差异交给 `_onKey`：桌面键只在桌面分支处理，移动端只会命中
+  /// 方向键 / Esc / 音量键。
+  bool _onHardwareKey(KeyEvent event) {
+    if (!mounted) return false;
+    // 被别的模块保活时（IndexedStack 里 offstage + TickerMode 关）：
+    // `ModalRoute.isCurrent` 依然是 true，但用户根本看不到阅读器 ——
+    // 不挡的话，在设置页的输入框里敲 C 会被当成「切换对照」。
+    if (!TickerMode.getValuesNotifier(context).value.enabled) return false;
+    final route = ModalRoute.of(context);
+    if (route == null || !route.isCurrent) return false;
+    final session = ref.read(readerSessionProvider);
+    if (session == null || session.pages <= 0) return false;
+    return _onKey(event, session.pages, ref.read(readerPrefsProvider)) == KeyEventResult.handled;
+  }
+
   KeyEventResult _onKey(KeyEvent event, int total, ReaderPrefs prefs) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final isDown = event is KeyDownEvent;
+    final isRepeat = event is KeyRepeatEvent;
+    if (!isDown && !isRepeat) return KeyEventResult.ignored;
+
+    // 带 ⌘ / Ctrl / Alt 的组合键一律放行：全局 handler 不看焦点，
+    // 不排除的话 ⌘C 会被当成「C = 对照」吃掉（复制 / 系统快捷键全哑）。
+    // Shift 不算：`?` 本身就是 Shift+/，`+` 需要 Shift+=。
+    final kb = HardwareKeyboard.instance;
+    if (kb.isControlPressed || kb.isMetaPressed || kb.isAltPressed) return KeyEventResult.ignored;
+
+    // 方向键：RTL 时镜像；按住可连发（KeyRepeatEvent 也走这条）。
+    final rtl = prefs.rtl;
     if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-      _go(1, total);
+      _go(rtl ? -1 : 1, total);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-      _go(-1, total);
+      _go(rtl ? 1 : -1, total);
       return KeyEventResult.handled;
     }
+    // 其余快捷键只在「按下」时处理：连发会把 C/G/O/F 这类开关连点成风车。
+    if (!isDown) return KeyEventResult.ignored;
+
     if (event.logicalKey == LogicalKeyboardKey.escape) {
+      // Esc 的归属裁决：先关最上面那层，全屏时只退全屏，最后才关阅读器。
+      if (_helpOpen) {
+        setState(() => _helpOpen = false);
+        return KeyEventResult.handled;
+      }
       if (_gridOpen) {
         setState(() => _gridOpen = false);
         return KeyEventResult.handled;
@@ -670,52 +829,120 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
         setState(() => _endOpen = false);
         return KeyEventResult.handled;
       }
+      if (_focusOn) {
+        unawaited(_toggleFocus());
+        return KeyEventResult.handled;
+      }
       _close();
       return KeyEventResult.handled;
     }
-    if (event.logicalKey == LogicalKeyboardKey.keyC && !context.isMobile) {
-      setState(() => _compare = !_compare);
-      return KeyEventResult.handled;
+
+    if (!context.isMobile) {
+      if (event.logicalKey == LogicalKeyboardKey.keyC) {
+        setState(() => _compare = !_compare);
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.keyG) {
+        setState(() => _gridOpen = !_gridOpen);
+        return KeyEventResult.handled;
+      }
+      // O：原图 ⇄ 译文（250ms 交叉淡入由舞台的 AnimatedSwitcher 负责）。
+      if (event.logicalKey == LogicalKeyboardKey.keyO) {
+        _toggleOriginal();
+        return KeyEventResult.handled;
+      }
+      // F：全屏（全屏时 Esc 只退全屏）。
+      if (event.logicalKey == LogicalKeyboardKey.keyF) {
+        unawaited(_toggleFocus());
+        return KeyEventResult.handled;
+      }
+      // ?：Shift + / —— 呼出快捷键速查卡。
+      if (event.logicalKey == LogicalKeyboardKey.question ||
+          (event.logicalKey == LogicalKeyboardKey.slash && HardwareKeyboard.instance.isShiftPressed)) {
+        setState(() => _helpOpen = !_helpOpen);
+        return KeyEventResult.handled;
+      }
+      // +/− 步进缩放（设计稿快捷键表，25% 一档，50–200%）。
+      if (event.logicalKey == LogicalKeyboardKey.equal || event.logicalKey == LogicalKeyboardKey.numpadAdd) {
+        _zoom.step(1);
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.minus || event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
+        _zoom.step(-1);
+        return KeyEventResult.handled;
+      }
     }
-    if (event.logicalKey == LogicalKeyboardKey.keyG && !context.isMobile) {
-      setState(() => _gridOpen = !_gridOpen);
-      return KeyEventResult.handled;
-    }
-    // +/− 步进缩放（设计稿快捷键表，桌面专属；25% 一档，50–200%）。
-    if (!context.isMobile &&
-        (event.logicalKey == LogicalKeyboardKey.equal || event.logicalKey == LogicalKeyboardKey.numpadAdd)) {
-      _zoom.step(1);
-      return KeyEventResult.handled;
-    }
-    if (!context.isMobile &&
-        (event.logicalKey == LogicalKeyboardKey.minus || event.logicalKey == LogicalKeyboardKey.numpadSubtract)) {
-      _zoom.step(-1);
-      return KeyEventResult.handled;
-    }
+
     // 音量键翻页（仅安卓，且设置里开着）：volumeUp = 下一页、volumeDown = 上一页。
     if (!context.isMobile || !prefs.volumeKeys) return KeyEventResult.ignored;
     if (defaultTargetPlatform == TargetPlatform.android) {
       // 音量键在 LogicalKeyboardKey 标准表里没有命名键 —— 用 USB HID 用法识别
       // （consumer page：0x0c00e9 = 音量+、0x0c00ea = 音量−）。
       const volumeUp = 0x000c00e9, volumeDown = 0x000c00ea;
-      final rtl = prefs.rtl;
       if (event.physicalKey.usbHidUsage == volumeUp) {
-        _mobileGo(rtl ? -1 : 1, total);
+        _mobileGo(prefs.rtl ? -1 : 1, total);
         return KeyEventResult.handled;
       }
       if (event.physicalKey.usbHidUsage == volumeDown) {
-        _mobileGo(rtl ? 1 : -1, total);
+        _mobileGo(prefs.rtl ? 1 : -1, total);
         return KeyEventResult.handled;
       }
     }
     return KeyEventResult.ignored;
   }
 
+  /// 对照里点某一侧 = 退出对照并只显示那一侧（设计稿口径）。
+  void _focusSide({required bool original}) {
+    setState(() {
+      _compare = false;
+      _showOriginal = original;
+    });
+    persistReaderShowOriginal(original);
+  }
+
+  /// 专注模式（F / 顶栏全屏按钮）：**应用级别全屏** + 隐藏壳层，只显示阅读器。
+  ///
+  /// 用 `setFullScreen` 而不是 `maximize`：macOS 的 `maximize` 实际是 `zoom:`
+  /// ——只把窗口切到「标准大小」，既不铺满屏幕、也不隐藏菜单栏，
+  /// 看起来就是「变大了但没全屏」。全屏必须走 `setFullScreen`。
+  Future<void> _toggleFocus() async {
+    final next = !_focusOn;
+    _focusOn = next;
+    _focusNotifier?.set(next);
+    if (_mobile || kIsWeb) return;
+    try {
+      if (next) {
+        _wasFullScreen = await windowManager.isFullScreen();
+        if (!_wasFullScreen) await windowManager.setFullScreen(true);
+      } else if (!_wasFullScreen) {
+        await windowManager.setFullScreen(false);
+      }
+      // 记「真的全屏了吗」：`setFullScreen` 是异步系统调用，可能失败
+      // （某些 Linux WM / 无窗口管理器）。顶部让位按真实结果决定。
+      _fullscreenNotifier?.set(await windowManager.isFullScreen());
+    } catch (_) {
+      // 没有窗口管理器（测试 / Web）时静默：专注模式的状态位照切，
+      // 让位仍按平台给（macOS 避免红绿灯压住顶栏）。
+      _fullscreenNotifier?.set(false);
+    }
+  }
+
+  /// 离开阅读器前还壳（关闭 / 切页 / 切模块都会走到）。
+  void _exitFocus() {
+    if (!_focusOn) return;
+    _focusOn = false;
+    _focusNotifier?.set(false);
+    _fullscreenNotifier?.set(false);
+    if (!_mobile && !kIsWeb && !_wasFullScreen) {
+      unawaited(windowManager.setFullScreen(false).catchError((_) {}));
+    }
+  }
+
   /// 移动端翻页（不走 PageView）。
   void _mobileGo(int delta, int total) {
     final next = (_index + delta).clamp(0, total - 1);
     if (next == _index) return;
-    ref.read(readerPageProvider.notifier).set(next);
+    _commitPage(next, total);
     _showOsdForPage(next, total);
   }
 
@@ -765,60 +992,43 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
 
   Widget _desktopStage(BuildContext context, ReaderSession session, ReaderPrefs prefs, int index, int total) {
     final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    // 对照模式（重设计稿桌面端）：原文/译文双栏，点按分区与翻页手势退出服务。
-    if (_compare) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: ComparePane(title: l10n.readerPaneOriginal, showOriginal: true, session: session, seq: index + 1),
-          ),
-          Container(width: 1, color: palette.divider),
-          Expanded(
-            child: ComparePane(title: l10n.readerPaneTranslated, showOriginal: false, session: session, seq: index + 1),
-          ),
-        ],
-      );
-    }
-    final pages = PageView.builder(
-      controller: _controller,
-      // 桌面翻页由键盘 / 滚轮 / 触摸板横滑 / 两侧热区驱动：PageView 自己滚会跟舞台
-      // 缩放抢手势（放大态拖动应当是平移），所以桌面关掉它（D-164）。
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: total,
-      onPageChanged: (i) {
-        _zoom.reset();
-        ref.read(readerPageProvider.notifier).set(i);
-        if (_barVisible) _armBarTimer();
-        _preload(i, total);
-      },
-      itemBuilder: (context, i) => ZoomablePage(
-        key: ValueKey('p-$i-$_showOriginal'),
-        zoom: _zoom,
-        onTap: _toggleBar,
-        child: ReaderPage(session: session, seq: i + 1, showOriginal: _showOriginal),
-      ),
-    );
+    // 舞台内容按模式分叉，**外壳共用**：滚轮 / 触控板横扫 / 轻推 /
+    // 两侧 56px 热区都要在对照里同样可用 —— 之前对照是另一套 Row，
+    // 结果「左右翻页按钮」和横扫一起丢了。
+    final body = _compare ? _compareBody(context, session, index, total) : _pagesBody(session, index, total);
+
     return Stack(
       children: [
         Positioned.fill(
-          child: Listener(onPointerSignal: _onPointerSignal, child: pages),
+          child: Listener(
+            onPointerSignal: _onPointerSignal,
+            onPointerPanZoomStart: (_) => _panZoomScale = 1,
+            onPointerPanZoomUpdate: _onPanZoom,
+            child: AnimatedBuilder(
+              animation: _nudgeCtrl,
+              builder: (context, child) => Transform.translate(offset: Offset(_nudgeDx, 0), child: child),
+              child: body,
+            ),
+          ),
         ),
-        // 缩放 OSD（桌面）：顶栏隐藏时捏合也看得到百分比。
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 8,
-          child: Center(child: ZoomOsd(zoom: _zoom)),
-        ),
-        // 桌面端点击两侧翻页。
+        // 底部提示条（设计稿 `.foot`）：随工具栏一起隐藏。
+        if (_barVisible) const Positioned(left: 0, right: 0, bottom: 0, child: ReaderFootBar()),
+        // 缩放 OSD 只在单页模式有意义：对照的两栏各自 InteractiveViewer，`_zoom` 不参与。
+        if (!_compare)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 8,
+            child: Center(child: ZoomOsd(zoom: _zoom)),
+          ),
+        // 点击两侧翻页（两种模式共用）：对照里也需要看得见的翻页入口。
         Positioned(
           left: 0,
           top: 0,
           bottom: 0,
           width: 56,
           child: GestureDetector(
+            key: const Key('reader-hotzone-prev'),
             behavior: HitTestBehavior.translucent,
             onTap: () => _go(-1, total),
             child: Align(
@@ -836,6 +1046,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           bottom: 0,
           width: 56,
           child: GestureDetector(
+            key: const Key('reader-hotzone-next'),
             behavior: HitTestBehavior.translucent,
             onTap: () => _go(1, total),
             child: Align(
@@ -848,6 +1059,94 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
           ),
         ),
       ],
+    );
+  }
+
+  /// 单页舞台：PageView + 页码同步。
+  Widget _pagesBody(ReaderSession session, int index, int total) {
+    final pages = ListenableBuilder(
+      listenable: _zoom,
+      builder: (context, _) => PageView.builder(
+        controller: _controller,
+        // 未放大：把滚动交回 PageView —— 鼠标横向拖拽就是 1:1 跟手 + 松手落位。
+        // 放大态必须关掉：那时拖动是平移，留着 PageView 会两头抢手势（D-164）。
+        physics: _zoom.zoomed ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
+        itemCount: total,
+        onPageChanged: (i) {
+          _zoom.reset();
+          ref.read(readerPageProvider.notifier).set(i);
+          if (_barVisible) _armBarTimer();
+          _preload(i, total);
+        },
+        itemBuilder: (context, i) => ZoomablePage(
+          key: ValueKey('p-$i'),
+          zoom: _zoom,
+          onTap: _toggleBar,
+          // 原图 ⇄ 译文走 250ms 交叉淡入，不再硬切（外壳 key 不带 variant，
+          // 否则 AnimatedSwitcher 会跟着重建，淡入失效）。
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: ReaderPage(
+              key: ValueKey('img-$i-$_showOriginal'),
+              session: session,
+              seq: i + 1,
+              showOriginal: _showOriginal,
+            ),
+          ),
+        ),
+      ),
+    );
+    return _PageSync(controller: _controller, index: index, child: pages);
+  }
+
+  /// 对照舞台：原文/译文双栏。
+  ///
+  /// 点击口径（2026-11-08 用户裁定，覆盖设计稿原案）：**点图不退出对照**，
+  /// 而是按整舞台宽度三分区翻页 / 呼出工具栏 —— 在对照里看两版图，
+  /// 恰恰是最需要「点一下继续翻」的场景，退出对照反而打断。
+  /// 退出对照仍走 C 键 / 顶栏对照按钮 / Esc / 「显示原图·显示翻译」。
+  Widget _compareBody(BuildContext context, ReaderSession session, int index, int total) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final stageWidth = box.maxWidth;
+        // 两栏各占一半（中间 1px 分隔线忽略不计）。
+        void handleTap(double globalX) {
+          if (globalX < stageWidth * 0.3) {
+            _go(-1, total);
+          } else if (globalX > stageWidth * 0.7) {
+            _go(1, total);
+          } else {
+            _toggleBar();
+          }
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ComparePane(
+                title: l10n.readerPaneOriginal,
+                showOriginal: true,
+                session: session,
+                seq: index + 1,
+                onTapAt: (p) => handleTap(p.dx),
+              ),
+            ),
+            Container(width: 1, color: palette.divider),
+            Expanded(
+              child: ComparePane(
+                title: l10n.readerPaneTranslated,
+                showOriginal: false,
+                session: session,
+                seq: index + 1,
+                onTapAt: (p) => handleTap(stageWidth / 2 + p.dx),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -882,6 +1181,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
       onCompareActive: _compare,
       onGrid: () => setState(() => _gridOpen = !_gridOpen),
       onGridActive: _gridOpen,
+      onFullscreen: context.isMobile ? null : () => unawaited(_toggleFocus()),
+      onHelp: context.isMobile ? null : () => setState(() => _helpOpen = true),
       zoom: context.isMobile ? null : _zoom,
     );
   }
@@ -1219,6 +1520,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
   }
 
   void _close() {
+    _exitFocus();
     ref.read(readerSessionProvider.notifier).close();
     if (context.mounted) context.go('/manga/library');
   }
@@ -1274,4 +1576,33 @@ class _Seg<T> extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 「PageView 重新挂载时对齐页码」的薄壳（见 `_desktopStage` 里的注释）。
+class _PageSync extends StatefulWidget {
+  const _PageSync({required this.controller, required this.index, required this.child});
+
+  final PageController controller;
+  final int index;
+  final Widget child;
+
+  @override
+  State<_PageSync> createState() => _PageSyncState();
+}
+
+class _PageSyncState extends State<_PageSync> {
+  @override
+  void initState() {
+    super.initState();
+    // 同一帧里 PageView 还没 attach，必须等首帧结束再 jump。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.controller.hasClients) return;
+      if (widget.controller.page?.round() != widget.index) {
+        widget.controller.jumpToPage(widget.index);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
