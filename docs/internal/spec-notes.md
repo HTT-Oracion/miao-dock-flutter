@@ -3438,3 +3438,176 @@
 - **验证**：`flutter analyze` 0 issues；漫画库相关 7 个测试文件 **25 通过**（含新增 4 条断言）；
   测试命令需绕开本机 `HTTP_PROXY`（见 D-160 的 tester WebSocket 报错即代理所致）。
 - **关联**：D-160（抽屉化）· D-137（窄屏断言）。
+
+---
+
+## D-162 · 模块保活：切走再回来停在原页面（2026-11-07）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **用户口径**：漫画 / 音乐 / 番剧三个模块，切走再回来要停在**最后一次浏览的页面**
+  （例如正在看漫画 → 切设置 → 点漫画，仍在阅读器原来那一页）；**设置页不保活**，
+  每次进入回到干净路由 + 「通用」分区。
+- **根因**：`app_shell.dart` 的 `_goModule` 写的是 `context.go('/manga/drop')` ——
+  「跳路径」会把该 branch 的导航栈重写成单页，`ReaderScreen` 被销毁、页码 `_index`
+  随之归零。而路由本就基于 `StatefulShellRoute.indexedStack`（`routes.dart`），
+  go_router 为每个 branch 保存上一次 matchList（`_matchListForBranch`），
+  `IndexedStack` 也只把非当前分支 offstage —— **保活机制一直存在，是切换方式在主动销毁它**。
+- **实现**：新增 `lib/app/shell/module_nav.dart`（`switchModule` / `goSettings`），侧栏、
+  移动底栏、工具条引擎徽标共用：
+  1. `index >= 0` → `shell.goBranch(index)`，走 `restore(上次 matchList)`，page/State 原样复用；
+  2. `index == shell.currentIndex` → 直接 return（点当前模块无操作）；
+  3. `index == -1` → `goSettings`：`settingsSectionProvider.reset()` + `context.go('/settings')`。
+- **设置分区**：`_sectionProvider` 从 `settings_screen.dart` 私有提到
+  `features/settings/controller/section_controller.dart`（公开 `settingsSectionProvider`
+  + `reset()`），否则壳层要反向依赖 UI 文件才能重置。深链 `?section=translate` 不走
+  `goSettings`，分区照常命中。
+- **视图归属**：抽出 `resolveViewId`（`shell_controller.dart`）承载「子页 → 视图」别名
+  `reader → library`、`notready/degraded → drop`。阅读器归到漫画库后页签高亮与面包屑
+  才不错乱（原先回落到 `drop`）；同时 `/manga/reader` 下不渲染「新建漫画」按钮。
+- **门禁一致性**：`gateBypassedFor` 增加 `/manga/reader` —— 阅读也是只读文件、不需要引擎。
+  原先只放行漫画库，会出现「作品在、引擎没起，点阅读被门禁拦住」，与阅览语义矛盾。
+  对应 `test/manga_gate_test.dart` 增一条断言。
+- **回归测试**：`test/branch_state_test.dart`（8 条）——真实 `switchModule` 驱动同构
+  `StatefulShellRoute`，假阅读器把页码放在 State 里。覆盖：切模块保活、点当前模块无操作、
+  设置分区归零、`resolveViewId` 五种输入。
+  **反证已做**：把 `goBranch` 换回 `context.go(首屏)` 后前两条立即失败（`reader-page-6`
+  找不到），即用户实测现象。
+- **副作用（已知，未处理）**：分支 offstage 后 widget 仍在树中 —— 队列 1 秒轮询
+  （`queue_controller.dart` 的 watch 驱动 provider）继续跑，阅读器图片解码缓存不释放；
+  切回不自动刷新（漫画库有手动刷新、队列靠轮询）。若需暂停后台轮询另立条目。
+- **验证**：`flutter analyze` 0 issues；`flutter test --exclude-tags e2e` **226 通过**。
+- **关联**：D-160（抽屉化）· D-161（抽屉关闭崩溃）。
+
+---
+
+## D-163 · 阅读器保活到「页」+ 移动端全屏阅读（2026-11-07）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **用户口径**：
+  1. 阅读器保活 —— **除非手动关闭阅读器**（顶栏 × / Esc / 系统返回），
+     否则点「漫画库」就直接回到阅读器**原来那一页**，而不是漫画库列表；
+  2. 移动端阅读时**全屏**：不显示顶部视图页签、不显示底部一级导航。
+- **阅读器是独立 screen 吗**：是。`/manga/reader` 是 `ReaderScreen`（`reader_screen.dart`），
+  住在漫画分支的 `StatefulShellRoute.indexedStack` 里 —— 所以它**一直是壳内页面**，
+  移动端此前会被上下两条导航夹住。这次不新建路由，只改「归属与外壳」。
+- **页码为什么要挪出 State**：切视图页签 / 切模块都会重建该 page，`_index` 连同 State
+  一起销毁 → 用户看到「回到第 1 页」。新增 `readerPageProvider`
+  （`library_controller.dart`）作为页码事实源：
+  `ReaderSessionNotifier.open()` 归零（换书 / 换话从头读）、`close()` 归零（手动关闭）；
+  `ReaderScreen` 用 `PageController(initialPage: 页码)` 起翻、`onPageChanged` 写回 provider。
+  🔴 `_openedSession` 的「回第一页」只在**同一份 State 内**会话变化时触发 —— 首次构建
+  （`null`）必须什么都不做，否则重建即被拽回第 1 页。
+- **漫画库入口 = 回阅读器**：`/manga/library` 加 redirect
+  （`readerResumeRedirect(session)`，`routes.dart`）：会话非空 → 跳 `/manga/reader`；
+  手动关闭后 `session == null` → 正常进漫画库。抽成纯函数便于单测。
+- **移动端全屏**：`_MobileShellState` 在 `isReaderPath(path)` 时只渲染
+  `Scaffold(body: MangaGate(...))` —— 不渲染 `MobileViewTabs` / `MobileBottomNav`、
+  也不套 `SafeArea`；顶栏改由 `ReaderScreen` 自己 `SafeArea(bottom:false)` 避让刘海
+  （设计稿 `.rtop{padding-top:30px}` 同口径）。新增 `isReaderPath` / `readerPath`
+  （`shell_controller.dart`），顺带收口原先两处 `path.startsWith('/manga/reader')`。
+- **系统返回**：全屏后没有导航可点，`ReaderScreen` 加 `PopScope(canPop:false)` →
+  返回手势 = `_close()`（清会话 + 回漫画库），不会把 App 退出或让 go_router 处理分支栈。
+- **回归测试**：`test/reader_keepalive_test.dart`（6 条）—— 翻到第 2 页 → 卸载再挂载
+  仍是第 2 页（同时断言 `PageView.controller.page == 1`，防「文案假通过」）；
+  手动关闭后会话与页码都归零；重定向纯函数两态；真实路由下「开着会话点漫画库回阅读器 /
+  关闭后回漫画库」；390×844 阅读器无上下导航、漫画库仍有。
+  **反证已做**：① `PageController()` 退回无参 → 第 1 条失败（`<1>` vs `<0>`）；
+  ② 删掉 redirect → 路由断言落到 `/manga/library`；③ 关掉全屏分支 → 又出现 `MobileBottomNav`。
+- **验证**：`flutter analyze` 0 issues；`flutter test --exclude-tags e2e` **237 通过**。
+- **已知取舍**：漫画库是「阅读器的宿主」—— 阅读器开着时点漫画库不会再出现列表，
+  要浏览书架请先关掉阅读器（这就是用户要的语义）；阅读器重建时只有**页码**续读，
+  `_barVisible`/对照模式/网格等瞬时 UI 态仍按默认值重置。
+- **关联**：D-162（模块保活）· D-161（抽屉关闭崩溃）。
+
+---
+
+## D-164 · 阅读器缩放（捏合 / 调节器 / 翻页归位）+ 触控板横滑翻页（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **用户口径**：
+  1. 去掉「点图直接放大」；
+  2. 设计稿里的**手势放大缩小**（触控板捏合 / Ctrl+滚轮）之前没实现；
+  3. 桌面要有**图片大小调节器**，翻页后调节**自动归位**；
+  4. 桌面阅读器支持 **macOS 触控板左右滑动翻页**；
+  5. 移动端单本详情里的**话卡样式与桌面一致**。
+- **桌面为什么不用 `InteractiveViewer`**：它的 `_matrixScale` 把 `totalScale` 下限钳到
+  `max(viewport/boundary)`，子件被约束成视口尺寸时该项恒为 1 ⇒ **缩不到 100% 以下**
+  （`interactive_viewer.dart:652-660`）；设计稿调节器要的 50% 档根本到不了。
+  故新增 `ui/reader/reader_zoom.dart`：`ReaderZoom`（ChangeNotifier）持 `scale 0.5–2.0`
+  + `offset`，`ZoomablePage` 用 `Transform`（`translate(off) · scale(s)`，中心为原点）渲染。
+  锚点缩放沿用设计稿算式 `off' = a − (a − off)·k`（a = 聚焦点相对中心，k = 新/旧比例），
+  一条公式同时覆盖捏合与拖动（单指时 `spanScale == 1` 退化成平移）。
+- **手势接入（桌面）**：`PageView` 改 `NeverScrollableScrollPhysics` —— 舞台缩放要吃掉
+  拖动（放大态 = 平移），留着 PageView 滚动就会两头抢手势；翻页改由
+  键盘 / 两侧 56px 热区 / 滚轮 / 触控板横滑驱动。滚轮三分支与设计稿同源：
+  `Ctrl/⌘+滚轮` = 光标锚点缩放、放大态 = 平移、其余 = 翻页。
+- **触控板横滑**：`Listener.onPointerSignal`（`PointerScrollEvent`）。阈值 20 + **300ms 冷却**：
+  触摸板惯性会连吐几十个 delta，不冷却一次挥动翻十来页。方向取「正 = 下一页」
+  （macOS 自然滚动下两指左滑 `deltaX > 0`），与移动端滑动手感同向。
+- **调节器**：顶栏 `ZoomChip`（`− / 100% / ＋`，25% 一档，50–200% 夹紧，中心锚点），
+  键盘 `+ / −` 同步；**翻页即 `reset()`**（键盘、热区、滚轮、滑条、网格跳页五条入口都过
+  `_go`/`_jumpTo`/`onPageChanged`）。`ZoomOsd` 顶栏隐藏时给百分比反馈（800ms 淡出）。
+- **去掉双击缩放**：原 `ZoomablePage._handleTapUp` 的 250ms 双击判定（100%⇄250%）整段删除；
+  桌面单击改为**呼出/收起工具栏**（设计稿口径）。顺带修掉一个既有死角：桌面顶栏 3s 自动
+  隐藏后**没有回来的入口**（`_toggleBar` 此前只挂在移动端点按分区上）。
+- **移动端**：`PinchPage` = `InteractiveViewer(1–5)`；`ReaderPage` **不再**自带
+  `InteractiveViewer` —— 两层缩放叠着会互相打架，缩放只由舞台页负责。
+- **窄屏话卡**：删掉 `_MobileChapterList`（`tcard` 行式 + 「查看」按钮），窄屏直接复用桌面的
+  `_ChapterGrid` / `_ChapterCard`，只把格宽从 150 抬到 190（390 屏 ⇒ 两列）。话卡「⋯」
+  在无 hover 环境（窄屏）**常驻可见**，否则手机上永远点不到话操作。
+  卡片高度改为按「封面 4:5 + 卡片体 92」由**真实格宽**反算（`LayoutBuilder`）——
+  写死 `childAspectRatio` 在格宽变大的手机上会把封面压成方块。
+- **回归测试**：`test/reader_zoom_test.dart`（10 条：`ReaderZoom` 五条纯逻辑 —— 步进夹紧、
+  归位清位移、锚点公式、放大态位移钳制、缩回 100% 清位移；五条桌面端 —— 调节器到 125%
+  且翻页归位、两指捏合改百分比、触摸板横滑翻页、Ctrl+滚轮只缩放不翻页、双击不再放大）；
+  `test/library_mobile_sheet_test.dart` 增一条窄屏话卡（无「查看」行、⋯ 常驻）。
+  **反证已做**：① 注释掉 `_zoom.reset()` → 「翻页后归位」失败（找不到 100%）；
+  ② `_onPointerSignal` 直接 return → 横滑停在 `1 / 3`；
+  ③ 删掉 `onScaleStart/Update` → 捏合后仍是 100%；
+  ④ 话卡 ⋯ 退回 `_hover ? 1 : 0` → 窄屏 opacity 读到 `0.0`。
+- **验证**：`flutter analyze` 0 issues；`flutter test --exclude-tags e2e` **248 通过**。
+- **已知取舍**：① 桌面失去「鼠标拖拽翻页」（与放大态拖动互斥，设计稿本就有拖拽翻页，
+  如需要可加「100% 时拖动过阈翻页」分支）；② 条漫模式没有缩放（设计稿未覆盖）；
+  ③ 位移钳制按舞台尺寸算，窄页图（竖图）放大后允许一点点空边；
+  ④ 触控板横滑若与直觉相反，只需翻转 `_advanceByScroll` 里的方向符号。
+- **关联**：D-162（模块保活）· D-163（阅读器保活 / 移动端全屏）。
+
+---
+
+## D-165 · 启动即校验远程配置 + 校验中 loader 旋转（2026-11-08）
+
+- **状态**：已实施（未提交，提交时机由用户指定）。
+- **用户口径**：① 移动端漫画翻译模块的【校验远程配置】在**启动时**就直接校验，
+  不再要求先点一次按钮；② 校验期间 `not_ready_screen` 里「正在校验远程配置」
+  左侧的 loading 图标要转起来。
+- **为什么挂在 App 外层**：与 `EngineAutoStart` 同源 —— 远程配置「本次会话能否翻译」
+  是启动后就要成立的事实，与用户先打开哪个页面无关。放进门禁卡会变成
+  「进漫画模块才校验」，而用户看到的仍是「请先校验 + 一个需要点的按钮」。
+  新增 `lib/app/remote_autostart.dart`（`RemoteAutoVerify`），bootstrap 里与
+  `EngineAutoStart` 叠套。
+- **自动校验的三个守卫**：
+  1. 只对 `TranslateSource.remote` 生效（本地来源没有「远程」这回事）；
+  2. 状态必须是 `unverified`（已 ready / failed 都不重复探测）；
+  3. 配置必须 `RemoteConfig.valid` —— 缺地址或缺令牌时**不探测**：`verify()` 会立刻落
+     `failed`，首启用户先看到一屏红色「远程连接失败」，而真正该做的是去设置填配置。
+  失败**不自动重试**（对面离线时每次重建都发一轮探测＝探测风暴），重试交给卡片按钮。
+- **loader 旋转**：新增 `lib/shared/widgets/spinning_icon.dart`（`SpinningIcon`，
+  0.9s/圈，`spinning == false` 时**停表**不空转）。`_Header`（桌面 36×36 图标块）与
+  `_MobileNotReadyCard` 头部都换成它；是否旋转由**画出来的图标**决定
+  （`_spins(icon) => icon == LucideIcons.loader`）—— `_metaOf` 只用 loader 表达「进行中」
+  （远程校验 / 引擎启动），这样「云断开」等图标不会被误转。
+  顺带补一处遗漏：窄屏主按钮此前只把文案换成「校验中…」却没有 `loading: true`，
+  按钮里没有 spinner（桌面端有），现在两端一致。
+- **回归测试**：`test/remote_autostart_test.dart`（3 条：远程 + 配置完整 → 首帧后
+  自动进入 `checking` 并落地 `ready`；本地来源不探测；配置不完整既不探测也不落 `failed`）；
+  `test/notready_mobile_test.dart` 增「校验中图标旋转」3 条（窄屏 / 桌面两轮角度读数必须
+  变化，失败态 `turns == 0` 不空转）。
+  **反证已做**：① 去掉 `_c.repeat()` → 窄屏与桌面两条旋转用例读到的角度都停在 `0.0`；
+  ② 删掉 `verify()` 调用 → 自动校验用例 `calls` 为 0；③ 去掉 `RemoteConfig.valid` 守卫 →
+  「配置不完整」用例落成 `failed`。
+- **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
+  `flutter test --exclude-tags e2e` **254 通过**（原 248）。
+- **已知取舍**：① 只在启动时跑一次 —— 会话中途在设置页改配置后仍由「测试连接」或
+  门禁按钮触发（避免逐键输入时反复探测）；② 校验中同时存在脉冲点与旋转两个无限动画，
+  相关 widget 用例只能定点 `pump`，不能 `pumpAndSettle`。
+- **关联**：D-037（门禁）· D-045（远程配置）· D-138（窄屏精简卡）· D-139（校验/设置双按钮）。
