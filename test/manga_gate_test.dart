@@ -61,9 +61,10 @@ void main() {
     expect(gate(running: true), MangaGateState.ready);
   });
 
-  test('漫画库不受门禁限制（引擎没起也能进）', () {
-    // 破坏点：把漫画库也拦住 → 作品明明在却进不去，本条失败。
+  test('漫画库与阅读器不受门禁限制（引擎没起也能看）', () {
+    // 破坏点：把漫画库/阅读器也拦住 → 作品明明在却进不去，本条失败。
     expect(gateBypassedFor('/manga/library'), isTrue);
+    expect(gateBypassedFor('/manga/reader'), isTrue);
     expect(gateBypassedFor('/manga/drop'), isFalse);
     expect(gateBypassedFor('/manga/queue'), isFalse);
   });

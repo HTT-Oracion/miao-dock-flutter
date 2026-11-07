@@ -104,9 +104,41 @@ class ReaderSessionNotifier extends Notifier<ReaderSession?> {
   @override
   ReaderSession? build() => null;
 
-  void open(ReaderSession session) => state = session;
+  /// 开新会话 = 从头读：顺手把页码归零。
+  ///
+  /// 页码存在 [readerPageProvider]（跨路由重建保留），所以「换书 / 换话」
+  /// 必须显式清，否则会停在上本书的第 N 页。
+  void open(ReaderSession session) {
+    state = session;
+    ref.read(readerPageProvider.notifier).reset();
+  }
 
-  void close() => state = null;
+  /// 手动关闭（顶栏 × / Esc / 系统返回）：会话与页码一起清。
+  void close() {
+    state = null;
+    ref.read(readerPageProvider.notifier).reset();
+  }
+}
+
+/// 阅读器当前页码（0 基）。
+///
+/// 🔴 页码**不放 ReaderScreen 的 State**：切换视图页签（投放 / 队列 / 漫画库）、
+/// 切换模块都会让阅读器这个 page 重建，State 连同页码一起丢 —— 用户看到的就是
+/// 「切走再回来回到第 1 页」。放 provider 后重建即续读同一页，
+/// 这是「阅读器保活」的实质；只有手动关闭才归零。
+final readerPageProvider = NotifierProvider<ReaderPageNotifier, int>(ReaderPageNotifier.new);
+
+class ReaderPageNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void set(int page) {
+    if (state != page) state = page;
+  }
+
+  void reset() {
+    if (state != 0) state = 0;
+  }
 }
 
 /// 桌面详情当前打开的话（null = 章节列表）。

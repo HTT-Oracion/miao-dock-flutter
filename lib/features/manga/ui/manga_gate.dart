@@ -24,8 +24,10 @@ import 'notready/runtime_picker.dart';
 /// 投放 / 队列 / 漫画库三处各写一遍，迟早漂移；而且新增视图时会忘记加。
 /// 门禁是否对该路径**放行**（纯函数，便于测试）。
 ///
-/// 目前只有漫画库：阅读已译作品只读文件，不需要引擎。
-bool gateBypassedFor(String path) => path.startsWith('/manga/library');
+/// 漫画库与阅读器都放行：读已落盘作品只读文件，不需要引擎。
+/// 阅读器漏在这里会出现「作品明明在、引擎没起来就点不进阅读」——
+/// 比不拦更糟，且与漫画库的语义不一致。
+bool gateBypassedFor(String path) => path.startsWith('/manga/library') || path.startsWith('/manga/reader');
 
 class MangaGate extends ConsumerWidget {
   const MangaGate({super.key, required this.enabled, required this.child, this.path = ''});

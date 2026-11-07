@@ -33,6 +33,7 @@ import '../controller/credential_controller.dart';
 import '../../manga/domain/platform_caps.dart';
 import '../controller/engine_dir_controller.dart';
 import '../controller/engine_settings_controller.dart';
+import '../controller/section_controller.dart';
 import 'engine_parts_view.dart';
 
 /// 设置屏 —— 按 `ver1.0` 的「通用 / 翻译服务」两组落地（D-040）。
@@ -69,15 +70,15 @@ class SettingsScreen extends ConsumerWidget {
     // 分组拽回 query 指定的那个（用户点不动其它分组）。
     final wanted = GoRouter.maybeOf(context)?.state.uri.queryParameters['section'];
     if (wanted != null && wanted.isNotEmpty) {
-      final current = ref.read(_sectionProvider);
+      final current = ref.read(settingsSectionProvider);
       if (current != wanted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) ref.read(_sectionProvider.notifier).jump(wanted);
+          if (context.mounted) ref.read(settingsSectionProvider.notifier).jump(wanted);
         });
       }
     }
 
-    final selected = ref.watch(_sectionProvider);
+    final selected = ref.watch(settingsSectionProvider);
 
     // 窄屏：左栏 208 会把内容区压到不足 200 —— 改成顶部横向滚动标签。
     if (context.isMobile) {
@@ -100,7 +101,7 @@ class SettingsScreen extends ConsumerWidget {
                     // 不同步的话点任何分组都会被拽回深链指定的那个（用户实测）。
                     // maybeOf：测试宿主没有路由，不抛错。
                     onTap: () {
-                      ref.read(_sectionProvider.notifier).select(id);
+                      ref.read(settingsSectionProvider.notifier).select(id);
                       GoRouter.maybeOf(context)?.go('/settings?section=$id');
                     },
                   ),
@@ -129,7 +130,7 @@ class SettingsScreen extends ConsumerWidget {
                   count: count,
                   active: selected == id,
                   onTap: () {
-                    ref.read(_sectionProvider.notifier).select(id);
+                    ref.read(settingsSectionProvider.notifier).select(id);
                     GoRouter.maybeOf(context)?.go('/settings?section=$id');
                   },
                 ),
@@ -165,20 +166,6 @@ class SettingsScreen extends ConsumerWidget {
     _ => l10n.settingsNavAbout,
   };
 }
-
-class _SectionNotifier extends Notifier<String> {
-  @override
-  String build() => 'general';
-
-  void select(String id) => state = id;
-
-  /// 外部跳转（如引导页「去设置远程配置」）指定分组。
-  void jump(String id) {
-    if (state != id) state = id;
-  }
-}
-
-final _sectionProvider = NotifierProvider<_SectionNotifier, String>(_SectionNotifier.new);
 
 class _NavItem extends StatefulWidget {
   const _NavItem({required this.label, required this.active, required this.onTap, this.count, this.icon});

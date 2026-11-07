@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/anime/ui/anime_screen.dart';
+import '../../features/manga/controller/library_controller.dart';
 import '../../features/manga/ui/drop_screen.dart';
 import '../../features/manga/ui/library_screen.dart';
 import '../../features/manga/ui/notready/not_ready_route_screen.dart';
@@ -11,6 +12,16 @@ import '../../features/music/ui/music_playlist_screen.dart';
 import '../../features/music/ui/music_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
 import '../shell/app_shell.dart';
+import '../shell/shell_controller.dart';
+
+/// 「阅读器保活」的路由规则：会话还开着时，进漫画库 = 回到阅读器。
+///
+/// 阅读器是**叠在漫画库上的会话**，不是并列视图 —— 只有手动关掉（顶栏 × /
+/// Esc / 系统返回）才清会话。清掉之后这里返回 `null`，漫画库才真正显示。
+/// 页码由 [readerPageProvider] 保存，所以回到的是**原来那一页**，不是第 1 页。
+///
+/// 抽成纯函数：重定向规则可单测，不必起整套 widget 树。
+String? readerResumeRedirect(ReaderSession? session) => session == null ? null : readerPath;
 
 /// 屏级路由事实源（AGENTS §3）：go_router + StatefulShellRoute。
 ///
@@ -38,7 +49,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(path: 'drop', builder: (_, _) => const DropScreen()),
                   GoRoute(path: 'queue', builder: (_, _) => const QueueScreen()),
-                  GoRoute(path: 'library', builder: (_, _) => const LibraryScreen()),
+                  GoRoute(
+                    path: 'library',
+                    // 阅读器开着 ⇒ 进漫画库就回到阅读器（续读同一页），见 [readerResumeRedirect]。
+                    redirect: (_, _) => readerResumeRedirect(ref.read(readerSessionProvider)),
+                    builder: (_, _) => const LibraryScreen(),
+                  ),
                   GoRoute(path: 'reader', builder: (_, _) => const ReaderScreen()),
                   // 启动引导（D-012）：住在主体区，侧栏保留。归属「投放」高亮。
                   GoRoute(path: 'notready', builder: (_, _) => const NotReadyRouteScreen()),

@@ -18,6 +18,7 @@ import '../../features/music/ui/sidebar_mini_player.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_title_bar.dart';
 import '../../shared/widgets/nav_rail.dart';
+import 'module_nav.dart';
 import 'shell_controller.dart';
 import 'view_labels.dart';
 import 'mobile_nav.dart';
@@ -93,7 +94,7 @@ class _ShellLocation {
     }
     final module = moduleLabel(l10n, index);
     final items = index == 0 ? mangaViews : (index == 1 ? musicViews : const <SidebarViewItem>[]);
-    final viewId = seg.length > 1 && items.any((v) => v.id == seg[1]) ? seg[1] : items.firstOrNull?.id;
+    final viewId = resolveViewId(seg.length > 1 ? seg[1] : null, items);
     final crumbs = <String>[module];
     if (viewId != null) crumbs.add(viewLabel(l10n, viewId));
     return _ShellLocation(moduleIndex: index, viewId: viewId, crumbs: crumbs, viewGroupLabel: module, viewItems: items);
@@ -136,9 +137,9 @@ class _DesktopShell extends ConsumerWidget {
             labels: labels,
             onToggleCollapse: () => ref.read(navCollapsedProvider.notifier).toggle(),
             moduleIndex: location.moduleIndex,
-            onSelectModule: (i) => _goModule(context, i),
+            onSelectModule: (i) => switchModule(context, ref, shell, i),
             queueCount: queueDepth,
-            onOpenSettings: () => context.go('/settings'),
+            onOpenSettings: () => goSettings(context, ref),
             readiness: ref.watch(shellReadinessProvider),
             miniPlayer: SidebarMiniPlayer(collapsed: collapsed),
             topInset: topInset,
@@ -166,7 +167,8 @@ class _DesktopShell extends ConsumerWidget {
                   actions: [
                     if (location.moduleIndex == 0) const _TranslateStatusChips(),
                     // 设计稿 `.apptool` 右端：漫画库视图专属「新建漫画」。
-                    if (location.viewId == 'library') const LibraryHeaderActions(),
+                    // 阅读器归到漫画库视图，但阅读时不该出现新建入口。
+                    if (location.viewId == 'library' && !isReaderPath(path)) const LibraryHeaderActions(),
                   ],
                 ),
                 Container(height: 1, color: palette.line),
@@ -179,21 +181,6 @@ class _DesktopShell extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-void _goModule(BuildContext context, int index) {
-  switch (index) {
-    case 0:
-      context.go('/manga/drop');
-    case 1:
-      context.go('/music/discover');
-    case 2:
-      context.go('/anime');
-    default:
-      // -1 = 设置（底部导航第四项）。此前落到 default 会跳到番剧——
-      // 用户实测「点设置没跳到设置页」即此因。
-      context.go('/settings');
   }
 }
 
@@ -321,12 +308,22 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
     final palette = AppPalette.of(context);
     final location = widget.location;
 
+    // 全屏阅读（移动端）：阅读器顶到屏幕边缘 —— 不渲染顶部视图页签、不渲染
+    // 底部一级导航，也不套 SafeArea（顶栏自己避让状态栏，内容才能满屏）。
+    // 退出只有两条路：顶栏 × 或系统返回，都由 ReaderScreen 处理。
+    if (isReaderPath(widget.path)) {
+      return Scaffold(
+        backgroundColor: palette.bg,
+        body: MangaGate(enabled: location.moduleIndex == 0, path: widget.path, child: widget.shell),
+      );
+    }
+
     return Scaffold(
       backgroundColor: palette.bg,
       // 一级导航在**底部**（漫画 / 音乐 / 番剧 / 设置）：手机上一级入口必须一次点击可达。
       bottomNavigationBar: MobileBottomNav(
         moduleIndex: location.moduleIndex,
-        onSelectModule: (i) => _goModule(context, i),
+        onSelectModule: (i) => switchModule(context, ref, widget.shell, i),
       ),
       body: SafeArea(
         bottom: false,
@@ -340,7 +337,8 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
               activeId: location.viewId,
               onSelect: (v) => _goView(context, location.moduleIndex, v),
               // 设计稿 `.vtabs .acts`：漫画库页签右侧「新建漫画」。
-              actions: [if (location.viewId == 'library') const LibraryHeaderActions()],
+              // 阅读器归到漫画库视图，但阅读时不该出现新建入口。
+              actions: [if (location.viewId == 'library' && !isReaderPath(widget.path)) const LibraryHeaderActions()],
             ),
             Expanded(
               child: MangaGate(enabled: location.moduleIndex == 0, path: widget.path, child: widget.shell),
@@ -384,7 +382,7 @@ class _TranslateStatusChips extends ConsumerWidget {
               ? null
               : () {
                   if (source == TranslateSource.remote) {
-                    context.go('/settings');
+                    goSettings(context, ref);
                   } else {
                     ref.read(engineStateProvider.notifier).start();
                   }

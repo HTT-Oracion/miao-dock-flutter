@@ -47,3 +47,27 @@ const List<SidebarViewItem> musicViews = [
   SidebarViewItem(id: 'local'),
   SidebarViewItem(id: 'history'),
 ];
+
+/// 阅读器路由（漫画模块的子页，不属于任何视图页签）。
+const String readerPath = '/manga/reader';
+
+/// 当前是否在阅读器。
+///
+/// 三处行为都靠它判定：移动端**全屏**（不渲染壳层导航）、隐藏「新建漫画」入口、
+/// 以及阅读器在漫画库视图下的高亮归属（见 [resolveViewId]）。
+bool isReaderPath(String path) => path.startsWith(readerPath);
+
+/// 子页 → 归属视图。阅读器从漫画库进入，归到「漫画库」——
+/// 否则切回来时页签跑到「投放」、面包屑也显示投放，看着像路由错乱。
+const Map<String, String> _viewAlias = {'reader': 'library', 'notready': 'drop', 'degraded': 'drop'};
+
+/// 路径段 → 视图 id（页签高亮 / 面包屑的事实源）。
+///
+/// 不在视图清单内的段（如 `reader`）按 [_viewAlias] 归到所属视图；
+/// 仍无法归属时回落到该模块首个视图。
+String? resolveViewId(String? segment, List<SidebarViewItem> items) {
+  if (items.isEmpty) return null;
+  final mapped = segment == null ? null : (_viewAlias[segment] ?? segment);
+  if (mapped != null && items.any((v) => v.id == mapped)) return mapped;
+  return items.first.id;
+}
