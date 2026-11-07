@@ -2,12 +2,13 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:protocol/protocol.dart' show fuzzyMatch;
 
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_input.dart';
-import '../../../shared/widgets/buttons.dart' show kPillRadius;
+import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
@@ -216,6 +217,8 @@ class _MobileCardState extends ConsumerState<_MobileCard> {
 
     return GestureDetector(
       onTap: () => ref.read(selectedBookProvider.notifier).select(b.key),
+      // 设计稿：长按卡片出操作抽屉（与点「⋯」同一份菜单）。
+      onLongPress: () => showMobileBookMenu(context, ref, b),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -270,9 +273,11 @@ class _MobileCardState extends ConsumerState<_MobileCard> {
                         ),
                       ),
                     ),
-                    // `归并` 快捷入口（右下）：点它不进详情。
+                    // `归并` 快捷入口（左下）：点它不进详情。
+                    // 🔴 必须在**左下**：右下被「⋯」占据（设计稿 `.mg-more` 恒在右下），
+                    // 两者挤在同一个角会互相遮挡。
                     Positioned(
-                      right: 4,
+                      left: 4,
                       bottom: 4,
                       child: GestureDetector(
                         onTap: () => showMergeDialog(context, src: b.key),
@@ -294,6 +299,14 @@ class _MobileCardState extends ConsumerState<_MobileCard> {
                       ),
                     ),
                   ],
+                  // 设计稿 `.mg-more`：卡片「⋯」（右下 20×20 / 6 圆角 / 半透明深底）。
+                  // 🔴 必须排在 Stack **最后一个**：放在封面 Image 之前会被图片整块盖住，
+                  // 卡片上看不到「⋯」（用户实测反馈）。
+                  Positioned(
+                    right: 4,
+                    bottom: 4,
+                    child: _CardMoreButton(tooltip: l10n.actionMore, onTap: () => showMobileBookMenu(context, ref, b)),
+                  ),
                 ],
               ),
             ),
@@ -316,5 +329,49 @@ class _MobileCardState extends ConsumerState<_MobileCard> {
         ],
       ),
     );
+  }
+}
+
+/// 卡片「⋯」（设计稿 `.mlib-card .mg-more`）：20×20 / 6 圆角 / 半透明深底 / `ink2` 图标。
+///
+/// 为什么不用 [AppButton]：设计要求**半透明深色底压在封面上**（`rgba(10,12,15,.55)`），
+/// AppButton 的 secondary/ghost 底都是不透明主题色，压在图上会变成一块实心方块。
+class _CardMoreButton extends StatefulWidget {
+  const _CardMoreButton({required this.onTap, this.tooltip});
+
+  final VoidCallback onTap;
+  final String? tooltip;
+
+  @override
+  State<_CardMoreButton> createState() => _CardMoreButtonState();
+}
+
+class _CardMoreButtonState extends State<_CardMoreButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final button = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        // 必须挡住卡片本身的点击：点「⋯」只出菜单，不进详情。
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            // 设计稿 rgba(10,12,15,.55)；hover 加深一档，给出可点反馈。
+            color: _hover ? const Color(0xCC0A0C0F) : const Color(0x8C0A0C0F),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(LucideIcons.ellipsis, size: 12, color: palette.ink2),
+        ),
+      ),
+    );
+    return widget.tooltip == null ? button : Tooltip(message: widget.tooltip!, child: button);
   }
 }

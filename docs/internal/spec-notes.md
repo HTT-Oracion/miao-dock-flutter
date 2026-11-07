@@ -3381,3 +3381,60 @@
   章节卡列数随窗口宽度自适应（1440 → 8 列，与 auto-fill 语义一致，非偏差）。
 - **验证**：`flutter analyze` 0 issues；`flutter test --exclude-tags e2e` **214 通过**；format 无 diff。
 - **关联**：D-157（第一批）· D-158（第二批）。
+
+---
+
+## D-160 · 漫画库样式/交互改造：移动弹窗抽屉化 + 新建入口 + 阅读起点 + 设计稿多选删除（2026-11-07）
+
+- **状态**：开发中（未提交；真机视觉复核待做）。
+- **共享抽屉**：新增 `lib/shared/widgets/app_sheet.dart`（`AppSheet` / `AppSheetAction` / `showAppSheet`），
+  顶圆角取 `AppMetrics.radiusSheetTop`、上滑取 `AppMotion.drawer`、键盘避让；`showAppDialog` 按
+  `context.isMobile` 分流，调用点零改动即让全部弹窗在窄屏变抽屉（AGENTS §4.10 第 3 级 M3 封装）。
+- **弹窗 kicker**：设计稿与 `AppDialog` 同步移除（桌面 4 处 `.kick` + 移动归并抽屉 1 处 + `frames.css` 规则）；
+  详情 hero 的 `.kicker` 属内容分区，保留。D-158 的「kicker 化」仅弹窗部分回退。
+- **新建漫画入口**：`LibraryHeaderActions` 收成单按钮（桌面 ghost 文字 / 移动纯加号 `AppButton`），
+  由 `app_shell.dart` 按 `viewId == 'library'` 注入 `AppTitleBar.actions` 与 `MobileViewTabs.actions`；
+  创建成功后补「清搜索 + 选中」（设计稿三步口径）。
+- **移动卡片菜单**：`LibraryGrid` 加「⋯」（封面右上，避开单话角标与归并胶囊）与长按 →
+  `showMobileBookMenu` 抽屉；动作复用 `ShelfContextMenu.run`（新增 `hide` = `deleteFiles:false`）。
+- **阅读起点**：`_openBookReader` 单本进最小话号第一页、`_openReader` 单话无话层第一页并补 `context.go`；
+  `ReaderScreen` 会话标识变化即 `jumpToPage(0)`（StatefulShellRoute 复用 State 会残留上次页码）。
+- **设计稿**（`desgin/`）：`modules/library.html` + `modules/assets/frames.css` + `modules/index.html`
+  增加漫画库多选删除（桌面工具条/书架行/选择栏，移动顶部图标/卡片复选框/底栏/删除确认抽屉），
+  口径 note 同步；长按仍出操作菜单，不被多选抢占。Flutter 侧多选删除尚未落地，待用户确认实施批次。
+- **验证**：`dart format` 无 diff、`flutter analyze` 0 issues、`flutter gen-l10n` 已跑、设计稿内联 JS
+  `node --check` 通过、`<div>` 配对 248/248 且无重复 id；`flutter test` 受本机 flutter_tester
+  WebSocket 限制未执行，新增 `test/library_mobile_sheet_test.dart` 待环境恢复后跑正向与反证。
+- **关联**：D-158（弹窗 kicker 化）· D-159 · D-137（窄屏断言）。
+
+---
+
+## D-161 · 抽屉关闭崩溃修复 + 移动卡片「⋯」可见性 + 区头右侧对齐（2026-11-07）
+
+- **状态**：已修复（未提交，按用户要求等其指定时机）。
+- **崩溃根因（go_router `currentConfiguration.isNotEmpty`）**：`showAppSheet` 上一版把自建的
+  `AnimationController` 作为 `transitionAnimationController` 传给 `showModalBottomSheet`。外部
+  controller 会让路由的退场动画收不到 `AnimationStatus.dismissed`：`pop()` 后 route 已 inactive，
+  **widget 仍留在 overlay 上（用户看起来没关上）**。再点一次 × 时该 Navigator 栈顶已是 page，
+  `NavigatorState.pop` 走进 `onPopPage` → `GoRouterDelegate._completeRouteMatch` → 断言崩溃
+  （连带 `navigator.dart` 的 `!_debugLocked`，因断言抛错后 `_debugLocked` 未复位）。
+- **修复两层**：
+  1. 时长改由 `sheetAnimationStyle: AnimationStyle(duration/reverseDuration: AppMotion.drawer)` 表达，
+     不再外传 controller；显式 `useRootNavigator: false`（跟着壳层分支走）。
+  2. `AppSheet` 的 × 加守卫：`ModalRoute.of(context)` 非 `isCurrent` 时**直接 return**，
+     重复点击/已被外部关闭后再点都是空操作 —— 绝不会 pop 到下面的页面。
+- **回归测试**：新增 `test/go_router_sheet_pop_test.dart`（`StatefulShellRoute` 分支内弹抽屉）：
+  关闭后抽屉必须消失、页面仍在、无异常；连点两次 × 也不许 pop 页面。去掉守卫后该用例会复现
+  用户贴的同一条断言（已实测反证）。
+- **移动卡片「⋯」**：原实现排在 Stack 中封面 `Image` **之前**，被图片整块盖住（用户实测看不到）。
+  改到 Stack 末位并按设计稿 `.mg-more` 重做：20×20 / 6 圆角 / `rgba(10,12,15,.55)` 底 / 右下 4px；
+  单话卡「归并」胶囊从右下改**左下**，避免与「⋯」抢同一个角。
+- **区头右侧对齐**：`_SectionRow` 原为 `Flexible(note) + Spacer()`，两者平分剩余宽度 —— 说明文字
+  短时它那半份用不完、Spacer 又只占一半，`卡片/简易` 与 `重译整本` 停在离页边约 280px 的半空。
+  改为 `Expanded(note)`，trailing 落到内容右边界（1440 窗下 1420）。
+- **弹窗 kicker**：复核为「已一致」——`AppDialog` 已无 `kicker` 字段（构造层不可能再渲染），
+  四个库内弹窗（新建/归并/删除/已隐藏）+ picker 的文本清单实测均以标题开场（如「新建漫画」），
+  设计稿 `desgin/` 亦无 `.kick` 残留（详情 hero 的 `BOOK / SINGLE` 属内容分区，保留）。
+- **验证**：`flutter analyze` 0 issues；漫画库相关 7 个测试文件 **25 通过**（含新增 4 条断言）；
+  测试命令需绕开本机 `HTTP_PROXY`（见 D-160 的 tester WebSocket 报错即代理所致）。
+- **关联**：D-160（抽屉化）· D-137（窄屏断言）。

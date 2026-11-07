@@ -122,8 +122,6 @@ class _DesktopDetail extends ConsumerWidget {
                         _EmptyHint(text: AppLocalizations.of(context).shelfEmpty)
                       else
                         mode == 'capsule' ? _ChapterCapsules(book: book) : _ChapterGrid(book: book),
-                      const SizedBox(height: 12),
-                      _FootHint(text: AppLocalizations.of(context).libFootHint),
                     ] else ...[
                       const SizedBox(height: 16),
                       _PageSectionHeader(),
@@ -363,7 +361,7 @@ class _SingleRow extends ConsumerWidget {
           const SizedBox(width: 6),
           AppButton(
             label: l10n.libRead,
-            onTap: () => _openReader(ref, single),
+            onTap: () => _openReader(context, ref, single),
             variant: AppButtonVariant.ghost,
             height: 26,
             horizontalPadding: 10,
@@ -470,7 +468,7 @@ class _MobileDetailState extends ConsumerState<_MobileDetail> {
   }
 }
 
-/// `.mdetail` Hero 摘要：单本 = 92 宽封面 + 标题 / 作者 / tag + 两个按钮；
+/// `.mdetail` Hero 摘要：单本 = 92 宽封面 + 标题 / 作者 / tag + `继续翻译` `阅读`；
 /// 单话 = 84 宽封面 + 标题 / 未归并说明 + `归并` `阅读`。
 class _MobileHero extends ConsumerWidget {
   const _MobileHero({required this.book});
@@ -542,9 +540,11 @@ class _MobileHero extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: _HeroButton(label: l10n.libRefresh, onTap: () => _refresh(context, ref)),
-                    ),
+                    // 头部已有刷新图标，这里让位给「阅读」（直达第一话第一页）。
+                    if (book.chapters.isNotEmpty)
+                      Expanded(
+                        child: _HeroButton(label: l10n.libRead, onTap: () => _openBookReader(context, ref, book)),
+                      ),
                   ] else ...[
                     Expanded(
                       child: _HeroButton(
@@ -555,7 +555,7 @@ class _MobileHero extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: _HeroButton(label: l10n.libRead, onTap: () => _openReader(ref, book)),
+                      child: _HeroButton(label: l10n.libRead, onTap: () => _openReader(context, ref, book)),
                     ),
                   ],
                 ],
@@ -724,16 +724,14 @@ class _LibToolbar extends StatelessWidget {
   }
 }
 
-/// 主区头部（ver1.0 `.lib-main` 头）：本地漫画库 + 计数 + 刷新 + 新建漫画。
+/// 漫画库视图级动作（设计稿 `.apptool` 右端 / 移动 `.vtabs .acts`）：
+/// 桌面 = ghost「新建漫画」，移动 = 纯加号图标。由壳层按当前视图注入顶栏。
 class LibraryHeaderActions extends ConsumerWidget {
   const LibraryHeaderActions({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    Future<void> refreshOnTap() async {
-      await ref.read(libraryProvider.notifier).refresh();
-    }
 
     Future<void> createOnTap() async {
       final name = await _CreateBookDialog.show(context);
@@ -741,50 +739,39 @@ class LibraryHeaderActions extends ConsumerWidget {
       try {
         await ref.read(mangaSvcClientProvider).createBook(name);
         await ref.read(libraryProvider.notifier).refresh();
+        // 设计稿「创建成功后关弹窗 + 清搜索 + 选中」：清搜索避免新书被旧关键词过滤掉。
+        ref.read(shelfQueryProvider.notifier).set('');
+        ref.read(selectedBookProvider.notifier).select(name);
         if (context.mounted) showAppToast(context, l10n.libCreateBookOk(name), tone: ToastTone.good);
       } catch (e) {
         if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
       }
     }
 
-    // 移动端：设计稿是**纯图标按钮** `.pico`（24×24 / radius 6 / hi 底），
-    // 不带文字（窄屏放不下「刷新」「新建漫画」两组文字）。
     if (context.isMobile) {
-      return Padding(
-        padding: const EdgeInsets.only(right: 4),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            _HeaderIconAction(icon: LucideIcons.refreshCw, onTap: refreshOnTap),
-            const SizedBox(width: 6),
-            _HeaderIconAction(icon: LucideIcons.plus, onTap: createOnTap),
-          ],
+      return Tooltip(
+        message: l10n.libCreateBook,
+        child: AppButton(
+          icon: LucideIcons.plus,
+          onTap: createOnTap,
+          variant: AppButtonVariant.ghost,
+          border: false,
+          width: 30,
+          height: 30,
+          fontSize: AppFont.px14,
         ),
       );
     }
-
-    return Padding(
-      // 右侧留出边距：按钮不贴窗口边缘。
-      padding: const EdgeInsets.only(right: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          _HeaderAction(icon: LucideIcons.refreshCw, label: l10n.libRefresh, onTap: refreshOnTap),
-          const SizedBox(width: 8),
-          _HeaderAction(icon: LucideIcons.folderPlus, label: l10n.libCreateBook, primary: true, onTap: createOnTap),
-        ],
-      ),
-    );
+    return _HeaderAction(icon: LucideIcons.folderPlus, label: l10n.libCreateBook, onTap: createOnTap);
   }
 }
 
-/// 头部动作（刷新 / 新建漫画）：统一走 [AppButton]。
+/// 头部动作（新建漫画）：统一走 [AppButton] 的 ghost 变体（设计稿 `.btn.ghost.sm`）。
 class _HeaderAction extends StatelessWidget {
-  const _HeaderAction({required this.icon, required this.label, this.primary = false, required this.onTap});
+  const _HeaderAction({required this.icon, required this.label, required this.onTap});
 
   final IconData icon;
   final String label;
-  final bool primary;
   final VoidCallback onTap;
 
   @override
@@ -793,7 +780,7 @@ class _HeaderAction extends StatelessWidget {
       label: label,
       icon: icon,
       onTap: onTap,
-      variant: primary ? AppButtonVariant.primary : AppButtonVariant.ghost,
+      variant: AppButtonVariant.ghost,
       height: 26,
       horizontalPadding: 10,
       fontSize: AppFont.px10_5,
@@ -898,7 +885,7 @@ class _HeroActions extends ConsumerWidget {
         runSpacing: 8,
         children: [
           _HeroButton(label: l10n.libMerge, primary: true, onTap: () => _mergeBook(context, ref, book)),
-          _HeroButton(label: l10n.libRead, onTap: () => _openReader(ref, book)),
+          _HeroButton(label: l10n.libRead, onTap: () => _openReader(context, ref, book)),
           if (!context.isMobile) _HeroButton(label: l10n.actionOpenDir, onTap: () => _reveal(context, ref, book)),
         ],
       );
@@ -908,6 +895,9 @@ class _HeroActions extends ConsumerWidget {
       runSpacing: 8,
       children: [
         _HeroButton(label: l10n.bookContinueTranslate, primary: true, onTap: () => _resume(context, ref, book)),
+        // 单本「阅读」直达第一话第一页（用户裁定：不做续读）。
+        if (book.chapters.isNotEmpty)
+          _HeroButton(label: l10n.libRead, onTap: () => _openBookReader(context, ref, book)),
         _HeroButton(label: l10n.libEditInfo, onTap: () => _edit(context, ref, book)),
         _HeroButton(label: l10n.libRefresh, onTap: () => _refresh(context, ref)),
         // 打开目录 = 桌面端 reveal；移动端不显示（目录在桌面机器上）。
@@ -956,10 +946,26 @@ Future<void> _reveal(BuildContext context, WidgetRef ref, LibBook book) async {
   if (context.mounted) showAppToast(context, l10n.libRevealDone, tone: ToastTone.info);
 }
 
-void _openReader(WidgetRef ref, LibBook book) {
+/// 单话「阅读」：无话层（`chapterNo` 留空），从第一页开始。
+void _openReader(BuildContext context, WidgetRef ref, LibBook book) {
   ref
       .read(readerSessionProvider.notifier)
       .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
+  context.go('/manga/reader');
+}
+
+/// 单本「阅读」：直接进**第一话第一页**，不做续读、不恢复上次页内位置。
+/// 话号取最小可用话（列表本身按目录名排序，这里再兜一次，避免脏数据）。
+void _openBookReader(BuildContext context, WidgetRef ref, LibBook book) {
+  final chapters = [...book.chapters]..sort((a, b) => a.no.compareTo(b.no));
+  if (chapters.isEmpty) return;
+  final first = chapters.first;
+  ref
+      .read(readerSessionProvider.notifier)
+      .open(
+        ReaderSession(key: book.key, chapterNo: first.no, pages: first.pageCount, translated: first.translatedSeqs),
+      );
+  context.go('/manga/reader');
 }
 
 Future<void> _mergeBook(BuildContext context, WidgetRef ref, LibBook book) async {
@@ -1227,7 +1233,10 @@ class _SectionRow extends StatelessWidget {
           style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
         ),
         const SizedBox(width: 10),
-        Flexible(
+        // 🔴 说明文字用 **Expanded** 吃掉全部剩余宽度，不能 `Flexible + Spacer`：
+        // 两者会平分剩余空间，说明短时它那半份用不完、Spacer 又只占另一半，
+        // 于是右侧动作（卡片/简易、重译整本）停在离页边 280px 的半空 —— 没有靠右对齐。
+        Expanded(
           child: Text(
             note,
             maxLines: 1,
@@ -1235,7 +1244,6 @@ class _SectionRow extends StatelessWidget {
             style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
           ),
         ),
-        const Spacer(),
         for (final w in trailing) ...[const SizedBox(width: 8), w],
       ],
     );
@@ -2040,7 +2048,6 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
         : (name.isEmpty ? l10n.libCreateBookNameRequired : l10n.libCreateBookFolderHint);
     return AppDialog(
       title: l10n.libCreateBook,
-      kicker: 'NEW COMIC',
       subtitle: l10n.libCreateBookSub,
       actions: [
         AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
@@ -2403,31 +2410,6 @@ class _NoImagePlaceholder extends StatelessWidget {
             style: TextStyle(fontSize: AppFont.px9_5, color: palette.textSecondary),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// 移动端头部图标按钮（设计稿 `.pico`：24×24 / radius 6 / hi 底 / ink2 图标）。
-class _HeaderIconAction extends StatelessWidget {
-  const _HeaderIconAction({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(color: palette.hi, borderRadius: BorderRadius.circular(6)),
-          child: Icon(icon, size: 12, color: palette.ink2),
-        ),
       ),
     );
   }

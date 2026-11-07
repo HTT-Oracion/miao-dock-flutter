@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_checkbox.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dropdown.dart';
 import '../../../shared/widgets/app_picker.dart';
 import '../../../shared/widgets/app_input.dart';
@@ -49,10 +50,11 @@ class ShelfContextMenu {
       ],
     );
     if (selected == null || !context.mounted) return;
-    await _run(context, ref, book, selected);
+    await run(context, ref, book, selected);
   }
 
-  static Future<void> _run(BuildContext context, WidgetRef ref, LibBook book, String action) async {
+  /// 动作执行（桌面右键与移动操作抽屉**共用同一份**，避免两套口径漂移）。
+  static Future<void> run(BuildContext context, WidgetRef ref, LibBook book, String action) async {
     final l10n = AppLocalizations.of(context);
     final client = ref.read(mangaSvcClientProvider);
     try {
@@ -100,11 +102,72 @@ class ShelfContextMenu {
               tone: ToastTone.info,
             );
           }
+        case 'hide':
+          // 隐藏 ≠ 删除：delete{deleteFiles:false} 只从书架移除，文件保留可恢复。
+          await client.deleteBook(book.key, deleteFiles: false);
+          await ref.read(libraryProvider.notifier).refresh();
+          if (context.mounted) showAppToast(context, l10n.shelfHiddenDone(book.name), tone: ToastTone.info);
       }
     } catch (e) {
       if (context.mounted) showAppToast(context, '$e', tone: ToastTone.bad);
     }
   }
+}
+
+/// 移动端漫画操作抽屉（设计稿 `#mMenuSheet`，长按卡片 / 点「⋯」触发）。
+///
+/// 四项与桌面右键菜单同口径，动作统一交给 [ShelfContextMenu.run]；
+/// 单本第二项给「重新翻译整本」，单话给「归并到…」（单话才有归并语义）。
+Future<void> showMobileBookMenu(BuildContext context, WidgetRef ref, LibBook book) async {
+  final l10n = AppLocalizations.of(context);
+  final action = await showAppSheet<String>(
+    context: context,
+    builder: (ctx) => AppSheet(
+      title: l10n.libSheetMenuTitle,
+      onClose: () => Navigator.of(ctx).pop(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppSheetAction(
+            icon: LucideIcons.play,
+            label: l10n.shelfMenuContinue,
+            subtitle: l10n.libSheetResumeSub,
+            onTap: () => Navigator.of(ctx).pop('resume'),
+          ),
+          if (book.isBook)
+            AppSheetAction(
+              icon: LucideIcons.rotateCcw,
+              label: l10n.shelfMenuRetranslate,
+              subtitle: l10n.libSheetRetranslateSub,
+              onTap: () => Navigator.of(ctx).pop('retranslate'),
+            )
+          else
+            AppSheetAction(
+              icon: LucideIcons.gitMerge,
+              label: l10n.shelfMenuMerge,
+              subtitle: l10n.libSheetMergeSub,
+              onTap: () => Navigator.of(ctx).pop('merge'),
+            ),
+          AppSheetAction(
+            icon: LucideIcons.eyeOff,
+            label: l10n.libSheetHide,
+            subtitle: l10n.libSheetHideSub,
+            onTap: () => Navigator.of(ctx).pop('hide'),
+          ),
+          const Divider(height: 1),
+          AppSheetAction(
+            icon: LucideIcons.trash2,
+            label: l10n.shelfMenuDelete(book.isBook ? l10n.kindBook : l10n.kindChapter),
+            subtitle: l10n.libSheetDeleteSub,
+            danger: true,
+            onTap: () => Navigator.of(ctx).pop('delete'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (action == null || !context.mounted) return;
+  await ShelfContextMenu.run(context, ref, book, action);
 }
 
 /// 归并对话框（书架菜单与详情页共用）。
@@ -184,7 +247,6 @@ class _MergeDialogState extends ConsumerState<_MergeDialog> {
     final targetName = _target == null ? null : targets.where((b) => b.key == _target).firstOrNull?.name;
     return AppDialog(
       title: l10n.libMergeTitle,
-      kicker: 'MERGE CHAPTER',
       subtitle: src == null ? null : l10n.libMergeSourceNote(src.name),
       actions: [
         AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),
@@ -356,7 +418,6 @@ class _DeleteDialogState extends State<_DeleteDialog> {
     final hint = _deleteFiles ? l10n.libDeletePermanentHint : l10n.shelfDeleteKeepHint;
     return AppDialog(
       title: l10n.shelfDeleteTitle(book.name),
-      kicker: 'DELETE',
       subtitle: l10n.shelfDeleteBody(book.chapterCount == 0 ? 1 : book.chapterCount, book.pageCount),
       actions: [
         AppButton(label: l10n.actionCancel, onTap: () => Navigator.of(context).pop()),

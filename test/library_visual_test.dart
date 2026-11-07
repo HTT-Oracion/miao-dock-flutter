@@ -10,6 +10,7 @@ import 'package:miao_dock_flutter/features/manga/ui/library_detail.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_grid.dart';
 import 'package:miao_dock_flutter/features/manga/ui/library_shelf.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
+import 'package:miao_dock_flutter/shared/widgets/buttons.dart';
 import 'package:protocol/protocol.dart';
 
 /// D-102：漫画库视觉度量断言（把设计稿数值钉在测试里）。
@@ -60,6 +61,18 @@ void main() {
     expect(find.text('其他 · 未归并'), findsOneWidget);
     expect(find.byKey(const ValueKey('shelf-row-未归并单话')), findsOneWidget);
     expect(find.byType(LibraryGrid), findsNothing);
+  });
+
+  testWidgets('区头右侧动作（卡片/简易、重译整本）与内容右边界齐平', (tester) async {
+    await pump(tester);
+    final c = ProviderScope.containerOf(tester.element(find.byType(LibraryScreen)));
+    c.read(selectedBookProvider.notifier).select('测试书');
+    await tester.pumpAndSettle();
+    // 详情 ListView 内距 20 ⇒ 内容右边界 = 1440 - 20 = 1420。
+    // 破坏点：说明文字用 `Flexible + Spacer` 平分剩余宽度 → trailing 停在离页边
+    // 约 280px 的半空（用户实测「没有靠右对齐」）。
+    final retranslate = tester.getRect(find.widgetWithText(AppButton, '重译整本'));
+    expect(retranslate.right, closeTo(1420, 0.6));
   });
 }
 

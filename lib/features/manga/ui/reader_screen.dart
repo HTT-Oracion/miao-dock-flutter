@@ -43,6 +43,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   final _controller = PageController();
   int _index = 0;
 
+  /// 上次打开的会话标识；换书 / 换话时强制回第一页（不做续读）。
+  String? _openedSession;
+
   /// 工具栏可见性（重设计稿：点中心呼出/收起，3s 无操作自动隐藏）。
   bool _barVisible = true;
   Timer? _barTimer;
@@ -143,6 +146,17 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           ],
         ),
       );
+    }
+
+    // StatefulShellRoute 会复用本屏 State：换书 / 换话不重置就会停在上次翻到的页。
+    // 会话标识一变就回第一页，保证「单本=第一话第一页、单话=第一页」。
+    final sessionTag = '${session.key}/${session.chapterNo ?? ''}/${session.pages}';
+    if (_openedSession != sessionTag) {
+      _openedSession = sessionTag;
+      _index = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.hasClients) _controller.jumpToPage(0);
+      });
     }
 
     final total = session.pages;

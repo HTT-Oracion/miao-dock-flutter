@@ -9,7 +9,7 @@ import '../../../shared/widgets/toast.dart';
 import '../controller/library_controller.dart';
 import '../controller/queue_controller.dart';
 
-/// 已隐藏作品弹窗（设计稿 `openHidden()`，kicker `HIDDEN BOOKS`）：
+/// 已隐藏作品浮层（设计稿 `openHidden()`）：
 /// 隐藏 ≠ 删除 —— 文件与翻译记录都还在，每行必配「恢复」（`unhideBook`）。
 Future<void> showHiddenBooksDialog(BuildContext context, List<String> hidden) => showAppDialog<void>(
   context: context,
@@ -27,7 +27,6 @@ class _HiddenBooksDialog extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     return AppDialog(
       title: l10n.libHiddenTitle,
-      kicker: 'HIDDEN BOOKS',
       subtitle: l10n.libHiddenBody,
       width: 420,
       actions: [

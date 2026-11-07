@@ -10,6 +10,7 @@ import '../../features/manga/controller/queue_controller.dart';
 import '../../features/manga/controller/engine_controller.dart';
 import '../../features/manga/controller/remote_controller.dart';
 import '../../features/manga/ui/manga_gate.dart';
+import '../../features/manga/ui/library_detail.dart';
 import 'readiness.dart';
 import '../../features/manga/domain/manga_task.dart';
 import '../../features/manga/domain/not_ready_state.dart';
@@ -162,7 +163,11 @@ class _DesktopShell extends ConsumerWidget {
                         onSelect: (v) => _goView(context, location.moduleIndex, v),
                       ),
                   ],
-                  actions: [if (location.moduleIndex == 0) const _TranslateStatusChips()],
+                  actions: [
+                    if (location.moduleIndex == 0) const _TranslateStatusChips(),
+                    // 设计稿 `.apptool` 右端：漫画库视图专属「新建漫画」。
+                    if (location.viewId == 'library') const LibraryHeaderActions(),
+                  ],
                 ),
                 Container(height: 1, color: palette.line),
                 Expanded(
@@ -334,6 +339,8 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
               ],
               activeId: location.viewId,
               onSelect: (v) => _goView(context, location.moduleIndex, v),
+              // 设计稿 `.vtabs .acts`：漫画库页签右侧「新建漫画」。
+              actions: [if (location.viewId == 'library') const LibraryHeaderActions()],
             ),
             Expanded(
               child: MangaGate(enabled: location.moduleIndex == 0, path: widget.path, child: widget.shell),

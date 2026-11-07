@@ -3068,5 +3068,33 @@
         "type": "String"
       }
     }
+  },
+  "libSheetMenuTitle": "漫画操作",
+  "@libSheetMenuTitle": {
+    "description": "移动端漫画操作抽屉标题"
+  },
+  "libSheetResumeSub": "只补缺少译文的页 · 不覆盖已有译文",
+  "@libSheetResumeSub": {
+    "description": "移动端操作抽屉：继续翻译副标"
+  },
+  "libSheetRetranslateSub": "覆盖已有译文 · 重新翻译整本",
+  "@libSheetRetranslateSub": {
+    "description": "移动端操作抽屉：重新翻译整本副标"
+  },
+  "libSheetMergeSub": "挂到某本漫画的某一话 · 物理移动",
+  "@libSheetMergeSub": {
+    "description": "移动端操作抽屉：归并到副标"
+  },
+  "libSheetHide": "隐藏作品",
+  "@libSheetHide": {
+    "description": "移动端操作抽屉：隐藏作品"
+  },
+  "libSheetHideSub": "从书架移除 · 文件保留 · 可恢复",
+  "@libSheetHideSub": {
+    "description": "移动端操作抽屉：隐藏作品副标"
+  },
+  "libSheetDeleteSub": "可选择是否连本地文件一起删除",
+  "@libSheetDeleteSub": {
+    "description": "移动端操作抽屉：删除副标"
   }
 }

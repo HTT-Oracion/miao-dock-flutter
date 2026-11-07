@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/theme/tokens.dart';
+import '../responsive.dart';
+import 'app_sheet.dart';
 import 'buttons.dart';
 
 /// 通用弹窗外壳（**项目唯一弹窗实现**）。
 ///
 /// 规格（取自 D-097 重排过的编辑弹窗 / runtime / backend 选择弹窗的交集）：
 /// - `card` 底 + [AppMetrics.radiusModal]（12）圆角，无描边（浮层靠阴影抬起）；
-/// - 内距 20/18/20/18；标题 14 / w700，可选前缀图标（如 backend 选择的 cpu）
+/// - 内距 20/18/20/18；标题 15 / w800，可选前缀图标（如 backend 选择的 cpu）
 ///   与右上角关闭钮（大弹窗用，如 runtime 选择）；
+/// - **窄屏自动改底部抽屉**：[AppSheet] 承接外壳，内容与动作区不变（设计稿：移动端弹窗即抽屉）；
 /// - 动作区**右对齐**、间距 8，主操作在最后（对照 ver1.0「取消 / 保存」布局）。
 ///
 /// 内容与动作由调用方组装；动作区的按钮**必须用 [AppButton]**
@@ -23,14 +26,10 @@ class AppDialog extends StatelessWidget {
     this.icon,
     this.width,
     this.onClose,
-    this.kicker,
     this.subtitle,
   });
 
   final String title;
-
-  /// 眉标（设计稿 `.kick`：9 号 / 2px 字距 / 主色 / 700，如 `MERGE CHAPTER`）。
-  final String? kicker;
 
   /// 副标（设计稿 `.msub`：11 号 ink2，弹窗正文的语义说明）。
   final String? subtitle;
@@ -52,15 +51,22 @@ class AppDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    // 窄屏：外壳换成底部抽屉（设计稿「移动端弹窗都变抽屉」），内容/动作区原样交给它。
+    // 关闭钮恒给一个：抽屉靠遮罩和 X 都能关，不必逼用户翻到底部动作区。
+    if (context.isMobile) {
+      return AppSheet(
+        title: title,
+        subtitle: subtitle,
+        icon: icon,
+        actions: actions,
+        onClose: onClose ?? () => Navigator.of(context).pop(),
+        child: child,
+      );
+    }
     final body = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (kicker != null)
-          Text(
-            kicker!,
-            style: TextStyle(fontSize: AppFont.px9, fontWeight: FontWeight.w700, letterSpacing: 2, color: palette.acc),
-          ),
         Row(
           children: [
             if (icon != null) ...[Icon(icon, size: 16, color: palette.acc), const SizedBox(width: 8)],
@@ -104,7 +110,9 @@ class AppDialog extends StatelessWidget {
   }
 }
 
-/// 弹窗统一入口：要调浮层样式（barrier / 内距 / 圆角）只改这里。
+/// 弹窗统一入口：宽屏 = 居中 Dialog，窄屏 = 底部抽屉（[AppSheet]）。
+/// 调用方只写一次 [AppDialog]，平台差异在这里收口。
 Future<T?> showAppDialog<T>({required BuildContext context, required WidgetBuilder builder}) {
+  if (context.isMobile) return showAppSheet<T>(context: context, builder: builder);
   return showDialog<T>(context: context, builder: builder);
 }
