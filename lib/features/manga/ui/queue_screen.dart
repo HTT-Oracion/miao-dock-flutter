@@ -12,6 +12,10 @@ import 'queue_sum_bar.dart';
 import 'queue_table.dart';
 import '../domain/manga_task.dart';
 
+/// 桌面队列内容区左右内距：表格卡片、分页器、页脚说明共用同一数值，
+/// 保证三者左右边缘齐平；调整对齐时只改这里，不要各处写魔数。
+const double _contentInset = 12;
+
 /// 队列屏（设计稿 H 帧）：默认 / 空 / 加载 / 异常四态。
 /// 数据未到 → 骨架；错误 → 横幅 + 上次成功数据仍在（H Note 07）；无数据 → 空态。
 class QueueScreen extends ConsumerWidget {
@@ -47,7 +51,8 @@ class QueueScreen extends ConsumerWidget {
         }
         // 移动端不能用桌面内距：设计稿 `.pv` 左右只有 10（与卡片内距对齐），
         // 22 会让卡片和底部选择栏都缩进，选择栏更没法定到屏幕边缘（用户实测）。
-        // 桌面端重设计稿：qt-head 自带 10/20/6 内距、qt-scroll 左右 12、pager 左右 20
+        // 桌面端重设计稿：qt-head 自带 10/20/6 内距、qt-scroll 左右 12；
+        // pager 与页脚说明跟表格卡片共用 12 内距（左右对齐）
         // ⇒ 外层内距归零，避免双层叠加（design.html §08 纪律）。
         final pad = mobile ? const EdgeInsets.fromLTRB(10, 0, 10, 0) : EdgeInsets.zero;
         return Padding(padding: pad, child: body);
@@ -100,21 +105,25 @@ class _QueueContent extends ConsumerWidget {
         const SizedBox(height: 10),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: _contentInset),
             child: QueueTable(tasks: filtered),
           ),
         ),
         const SizedBox(height: 10),
-        AppPager(
-          total: filtered.length,
-          page: pager.page,
-          pageSize: pager.pageSize,
-          onPage: ref.read(pagerProvider.notifier).goTo,
-          onPageSize: ref.read(pagerProvider.notifier).setPageSize,
-        ),
-        // 页脚说明（重设计稿 pager 右侧 caption）。
+        // 分页器与表格卡片共用左右内距，不再贴边（左「共 N 条」/右页码都与列表对齐）。
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
+          padding: const EdgeInsets.symmetric(horizontal: _contentInset),
+          child: AppPager(
+            total: filtered.length,
+            page: pager.page,
+            pageSize: pager.pageSize,
+            onPage: ref.read(pagerProvider.notifier).goTo,
+            onPageSize: ref.read(pagerProvider.notifier).setPageSize,
+          ),
+        ),
+        // 页脚说明（重设计稿 pager 右侧 caption）：右边缘与分页器一致。
+        Padding(
+          padding: const EdgeInsets.fromLTRB(_contentInset, 6, _contentInset, 12),
           child: Row(
             children: [
               const Spacer(),
