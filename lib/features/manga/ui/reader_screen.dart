@@ -276,7 +276,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                             label: l10n.readerClose,
                             onTap: () => setState(() => _gridOpen = false),
                             variant: AppButtonVariant.ghost,
-                            border: true,
                             height: 26,
                             horizontalPadding: 10,
                             fontSize: AppFont.px10_5,

@@ -159,7 +159,7 @@ class _PageButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 统一走 AppButton：当前页 = primary（hover 提亮 accHover，与主按钮一致），
-    // 其余 = ghost（透明底，hover 变 card）。此前裸 InkWell 吃了主题 hoverColor，
+    // 其余 = ghost（透明底 + line2 描边，hover 底色转 hi）。此前裸 InkWell 吃了主题 hoverColor，
     // 当前页 hover 被盖成 card 灰（D-120 同型 bug），与按钮体系不一致。
     return Padding(
       padding: const EdgeInsets.only(left: 4),

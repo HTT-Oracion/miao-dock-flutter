@@ -114,7 +114,6 @@ class ReaderBar extends StatelessWidget {
             label: toggleLabel,
             onTap: onToggle,
             variant: AppButtonVariant.ghost,
-            border: true,
             height: 24,
             horizontalPadding: 9,
             fontSize: AppFont.px10_5,

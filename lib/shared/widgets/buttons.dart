@@ -107,7 +107,8 @@ enum AppButtonVariant {
   /// 次级操作：divider 底 + textPrimary 字，hover 变 card（更多 / 取消 / 继续）。
   secondary,
 
-  /// 幽灵：无底色，hover 变 card（返回书架 / 弹窗取消）。
+  /// 幽灵：透明底 + `line2` 描边，常态字 `ink2`；
+  /// hover 底色转 `hi`、字转 `ink`（设计稿 `.btn.ghost` / `.btn.ghost:hover`）。
   ghost,
 
   /// **危险确认**：仅用于「不可逆操作」弹窗的确认按钮（删除整本 / 删除本话）。
@@ -138,7 +139,7 @@ class AppButton extends StatefulWidget {
     this.fontSize = AppFont.px12,
     this.fontWeight,
     this.color,
-    this.border = false,
+    this.border,
     this.width,
     this.clickable = true,
     this.loading = false,
@@ -159,8 +160,11 @@ class AppButton extends StatefulWidget {
   /// 覆盖文字色（如 danger 项）。
   final Color? color;
 
-  /// 是否描边（ghost 变体常用）。
-  final bool border;
+  /// 是否描边（1px `line2`）；**null = 按变体默认**：`ghost` 描边、其余不描边。
+  ///
+  /// `ghost` 默认描边是为了对齐设计稿 `.btn.ghost{border:1px solid var(--line2)}`；
+  /// 纯图标 ghost（设计稿对应 `.ibtn` / `.pg-n`，本身无边框）显式传 `false`。
+  final bool? border;
 
   /// 固定宽度（纯图标按钮用，如章节卡「⋯」22×22）。
   final double? width;
@@ -229,12 +233,18 @@ class _AppButtonState extends State<AppButton> {
         bg = showEnabled && _hover && enabled ? palette.line2 : palette.divider;
         fg = showEnabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
       case AppButtonVariant.ghost:
-        // 同上：提亮到 hi，避免在 card 底的弹窗里 hover 后看不见。
+        // 对齐设计稿 `.btn.ghost`：常态字 ink2、hover 底色 hi + 字 ink。
+        // 用 ink2 而不是 textPrimary —— ghost 是次级动作，常态不该和标题同权重。
         bg = showEnabled && _hover && enabled ? palette.hi : Colors.transparent;
-        fg = showEnabled ? (widget.color ?? palette.textPrimary) : palette.textSecondary;
+        fg = showEnabled ? (widget.color ?? (_hover && enabled ? palette.ink : palette.ink2)) : palette.textSecondary;
       case AppButtonVariant.link:
         throw StateError('link variant must be handled above');
     }
+
+    // 描边：ghost 默认开（设计稿 `.btn.ghost` 自带 1px line2），其余变体默认关。
+    // 禁用态描边降一档（design.html `.btn.off{border:1px solid var(--line)}`）。
+    final wantBorder = widget.border ?? (v == AppButtonVariant.ghost);
+    final side = wantBorder ? BorderSide(color: showEnabled ? palette.line2 : palette.line) : BorderSide.none;
 
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
@@ -242,7 +252,9 @@ class _AppButtonState extends State<AppButton> {
       onExit: (_) => setState(() => _hover = false),
       child: Material(
         color: bg,
-        borderRadius: BorderRadius.circular(kButtonRadius),
+        // 描边走 Material.shape 的 side：在底色边界内绘制，不改变按钮外框尺寸，
+        // 相邻按钮的间距与高度不受 border 影响。
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kButtonRadius), side: side),
         // 🔴 固定/铺满宽度必须由 **SizedBox** 给：Material 的默认尺寸是 min，
         // 只给内层 Container.width 时，外层会收缩到内容宽 →「width: infinity
         // 的按钮不铺满、反而显示成居中纯文字」（移动投放页实测）。

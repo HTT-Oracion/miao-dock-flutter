@@ -73,7 +73,6 @@ class _QueueEmptyState extends State<QueueEmpty> with SingleTickerProviderStateM
                 label: l10n.queueSourceLocal,
                 onTap: () => context.go('/manga/drop'),
                 variant: AppButtonVariant.ghost,
-                border: true,
                 height: 28,
                 horizontalPadding: 14,
               ),

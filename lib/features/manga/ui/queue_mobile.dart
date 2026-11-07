@@ -511,7 +511,6 @@ class _MobileCardActionsState extends ConsumerState<_MobileCardActions> {
           label: label,
           onTap: action,
           variant: AppButtonVariant.ghost,
-          border: true,
           height: 22,
           horizontalPadding: 8,
           fontSize: AppFont.px10,

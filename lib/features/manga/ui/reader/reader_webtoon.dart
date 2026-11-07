@@ -273,7 +273,6 @@ class _EndCard extends StatelessWidget {
             label: l10n.readerEndcardBack,
             onTap: () => context.go('/manga/library'),
             variant: AppButtonVariant.ghost,
-            border: true,
             height: 34,
             horizontalPadding: 18,
           ),
