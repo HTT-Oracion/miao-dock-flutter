@@ -3280,3 +3280,104 @@
 - **验证**：`flutter analyze` 0 issues；`flutter test --exclude-tags e2e` 206 通过。
 - **关联**：D-148/D-154 · redesign-plan.md。
 
+
+---
+
+## D-156 · AppButton ghost 变体对齐设计稿 `.btn.ghost`（2026-11-07）
+
+- **状态**：已完成（未提交，提交时机由用户定）。
+- **设计稿依据**：`desgin/manga-viewer/assets/tokens.css` §04 通用组件——
+  `.btn.ghost{color:var(--ink2);border:1px solid var(--line2)}`、
+  `.btn.ghost:hover{background:var(--hi);color:var(--ink)}`（`:hover` 不改 `border-color`）。
+- **为什么**：旧实现 ghost 常态字用 `textPrimary`、且**完全没有描边**——`border` 参数虽在
+  `AppButton` 上声明并渲染前被丢弃（空参），9 处调用点传了 `border: true` 却毫无效果。
+- **做了什么**：
+  - `border` 改为 `bool?`，**null = 按变体默认**：`ghost` 描边 1px `line2`，其余变体不描边；
+    显式 `false` 用于无边框的纯图标按钮（设计稿 `.ibtn` / `.pg-n`）。
+  - 描边走 `Material.shape` 的 `BorderSide`（不是外挂 `Container` border），
+    在底色边界内绘制，**不改变按钮外框尺寸**，高度与相邻间距不受影响。
+  - ghost 文字：常态 `ink2`，hover `ink`（`test` 判据同时钉住这两档）。
+  - 禁用态描边降一档 `line2` → `line`，对齐 design.html `.btn.off`。
+  - 清理 9 处调用点里**已冗余**的 `border: true` / `border: !primary`（行为等价，消第二真值）；
+    `drop_mobile` 的「清空」原来漏传，现自动获得描边。
+- **口径**：ghost 一律描边（用户裁定），因此 `AppPager` 页码、`AppDialog` 关闭钮、
+  章节卡「⋯」也带描边，与设计稿 `.ibtn` / `.pg-n` 的无边框略有出入——留待后续按屏核对。
+- **验证**：`test/app_button_ghost_test.dart` 5 条（默认态 / hover 态 / 非 ghost 不描边 /
+  `border:false` 可关 / 禁用态描边降档）；反证轮三次——
+  ①常态字改回 `textPrimary` → 默认态用例失败；②去掉 hover 底色 → hover 用例失败；
+  ③`wantBorder=false` → 默认态、hover、禁用三条同时失败。恢复后 5 条全绿。
+  全量 `flutter test --exclude-tags e2e` **212 通过**；`flutter analyze` 0 issues。
+- **关联**：D-113（按钮收敛）· D-120（hover 遮罩）· D-124（hover 一律提亮）。
+
+---
+
+## D-157 · 漫画库逐帧还原 library.html：布局重构 + 页网格层级（2026-11-07）
+
+- **状态**：已完成（未提交；桌面端主体 + 移动端网格/详情已落，弹窗 kicker 化与右栏搜索分组样式留待下轮）。
+- **方法**：先以 Playwright 逐帧实际点击 `desgin/modules/library.html`（桌面 9 态 / 移动 6 态 + 数值量测），再改实现，最后渲染 Flutter 截图比对。
+- **布局（桌面）**：`.lib-wrap` = **书架常驻 250** + 详情；旧「选中后左栏消失 + 返回书架」废除；
+  进库仍自动选中第一本（设计稿右栏恒有内容），移动端不自动选中（初始停在网格）。
+- **书架（`.shelf`）**：panel 底 + 右侧 line 分隔；头 = 书图标 + `我的书架` + `N 部`；
+  行 = **38×50 封面**（书名首字渐变底；单话 = 第 1 页封面 + 1.5px 虚线橙框）+ 名称 11.5/600 +
+  副标 `作者 · N 话 · N 页`（单话 `单话 · 未归并 · N 页`）+ hover 显 `⋯`（与右键同一份菜单）；
+  `其他 · 未归并` 分组头（9 号/2px 字距/warn + 分隔线）；脚注一行 = 已用容量 + 未归并 N + 已隐藏 N（点击开已隐藏弹窗）。
+- **详情（`.lib-main`）**：工具栏 = 标题 15/700 + `章节`；Hero = kicker（9 号 2px 字距）+ 17px/800 标题 +
+  作者行 + `.tag` 胶囊（话/页/已译 N%/在书架）+ mono 路径 + **32 高按钮**（继续翻译主色）；
+  封面 clamp(96..118)/3:4.1/12 圆角 + 书脊竖排 4 字。
+- **新增「话 → 页网格」层级**（设计稿 `openChapter`）：话卡/胶囊点击进页网格（不直接开阅读器），
+  页网格工具栏 = `‹` + `第 N 话` + `N/N 页` tag + 续做本话/重译本话；页卡三态 = 已译绿/待译橙/缺页灰（不可点），
+  底部 `第 N 页 + NNN.png` 渐变条；**换书重置层级**（select 时清 `libChapterOpenProvider`）。
+- **视图切换**：`_ViewSeg` 改图标式（网格/列表，30×26，选中 accent 底）——设计稿 `.vseg`。
+- **移动端**：`LibraryGrid` 重写为 `.mlib`（mseg 三段带计数、选中 accent 底 + 常驻搜索 + minmax(110) 网格；
+  单话卡 = `单话` 角标 + `归并` 快捷（右下））；选中卡片 → `.mdetail` 滑入覆盖（380ms 滑入 + 头部
+  `‹`/标题/刷新/视图切换），卡片/简易跨详情保持。
+- **新增调色板**：`AppPalette.paperCard`（页卡纸底 `#F5F2EA`，深浅主题同值——它是图片的纸不是界面层级）。
+- **踩坑**：①A级替身 `getBookFile/getChapterFile` 是**同步 throw**，不用 try/catch 会炸 build（四处取图点已包）；
+  ②l10n 棘轮把文档注释里的 `'书名'` 当字符串字面量——注释引用改用「」；③测试字体 Ahem 等宽放大，
+  页卡底部文件名需 Flexible+ellipsis 防溢出。
+- **验证**：新增/改写断言（书架 250 宽、38×50 封面、右栏无网格、mseg 计数与选中色、单话过滤、
+  布局三态、胶囊→页网格→阅读器链路）；反证轮——书架 260/封面 40×52 → visual 两条失败；
+  mseg 选中色改 card → 色值断言失败（补钉后复验）。`flutter analyze` 0 issues；
+  `flutter test --exclude-tags e2e` **214 通过**；format 无 diff。真机（用户 flutter run）视觉待复核。
+- **留待下轮**：右栏搜索分组视图按设计稿重写（`grp/hitrow/归并` 胶囊行）、六个弹窗的 kicker 版式
+  （MERGE CHAPTER/DELETE 等眉标 + msub）、归并弹窗冲突三选一、已隐藏弹窗接恢复动作、
+  桌面「未归并单话」独立陈列页、AppGhostButton（26 高旧组件）并入新规格。
+- **关联**：D-098（两态布局，已被设计稿取代）· D-103（搜索分组， shelf 侧改为平铺过滤）·
+  D-147～D-155（重设计前情）。
+
+---
+
+## D-158 · 漫画库逐帧还原第二批：搜索分组 / 弹窗 kicker 化 / 未归并陈列页（2026-11-07）
+
+- **状态**：已完成（未提交；D-157 留项清零，剩真机视觉复核）。
+- **右栏搜索分组**（`renderSearch`）：工具栏 = `搜索「词」` + 命中统计 + `清除搜索`；
+  组头 = gico + **命中高亮**（accent 22% 底）+ `N 个话命中` + `打开书架`；命中行 = 文件图标 +
+  `第 N 话` + `N / N 页`，点击 = 清搜索 + 选中 + 直达该话页网格；`其它` 组（未归并单话）恒置底
+  带 warn 提示与**归并胶囊**（已归并话的归并仍走章节菜单，不在此处）；空态 = 没有找到 + 清除/去投放。
+- **AppDialog 扩展**（共享件加参，不另起）：`kicker`（9 号/2px 字距/主色眉标）+ `subtitle`（msub），
+  标题升为 15/800（设计稿 `.modal h4`）——四个弹窗同步：
+  新建（NEW COMIC + 非法字符校验三层口径 + 作者行）/ 归并（MERGE CHAPTER + 冲突**三选一**
+  顺延·改话号·取消 + 预览行 `NN_第N话` + warnbar）/ 删除（DELETE + 目录位置 + 勾选切永久警告）/
+  已隐藏（HIDDEN BOOKS + `恢复`接真 `unhideBook`）。
+- **未归并陈列页**（`renderSingles`）：脚注 `未归并 N` → 右栏陈列页（`libSinglesViewProvider` 取代
+  旧 shelf 过滤开关 `unmergedOnlyProvider`——书架恒显示两组，不再过滤）；行 = 34×46 虚线封面 +
+  `待归并` 徽标 + 归并/阅读；选中即退出陈列页。
+- **验证**：`flutter analyze` 0 issues；`flutter test --exclude-tags e2e` **214 通过**
+  （含归并确认文案「确认归并」同步）；format 无 diff。
+- **关联**：D-157（第一批）· D-103（搜索分组）· D-097（AppDialog 规格，标题升级）。
+
+---
+
+## D-159 · 漫画库还原收尾：行为接线补全 + 移动网格列数（2026-11-07）
+
+- **状态**：已完成（未提交；D-157/D-158 全部留项清零，实现侧验收完毕，待真机视觉复核）。
+- **行为接线**（对齐设计稿原型语义）：
+  - `select()` 同步退出「未归并陈列页」（`selectBook` 置 `singlesView=false` 的等义）；
+  - `showSingles()` 进陈列页同时退出「话 → 页网格」层级（原型 `inChapter = -1`）；
+  - 详情工具栏 `章节` 按钮接活 = 重置话页层级（原型 `openChapter(-2)`，从页网格返回的兜底入口）。
+- **移动网格列数**：设计稿 `.mlib-grid` = `minmax(96px,1fr)` ⇒ 390 宽 3 列；`maxCrossAxisExtent`
+  取 110 会算出 **4 列**（Flutter 的 ceil 公式），改 122 修正，并钉卡宽 100..125 断言。
+- **并排比对**：设计稿（980 窗 / 390 屏）× 实现（1440 窗 / 390 屏）截图逐帧核对，结构/配色/字号/描边一致；
+  章节卡列数随窗口宽度自适应（1440 → 8 列，与 auto-fill 语义一致，非偏差）。
+- **验证**：`flutter analyze` 0 issues；`flutter test --exclude-tags e2e` **214 通过**；format 无 diff。
+- **关联**：D-157（第一批）· D-158（第二批）。
