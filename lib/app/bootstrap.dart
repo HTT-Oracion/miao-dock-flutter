@@ -19,6 +19,7 @@ import '../../features/manga/domain/platform_caps.dart';
 import '../../features/manga/data/http_manga_svc_client.dart';
 import '../../features/manga/data/mobile_mirror_store.dart';
 import 'engine_autostart.dart';
+import 'remote_autostart.dart';
 
 /// 启动装配收口（AGENTS §3）：桌面 / 移动平台分支与 Fake / 真客户端注入只在这里发生，
 /// 业务层不感知平台差异。
@@ -118,7 +119,7 @@ Future<void> bootstrap(Widget app) async {
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: EngineAutoStart(child: app),
+      child: EngineAutoStart(child: RemoteAutoVerify(child: app)),
     ),
   );
 }

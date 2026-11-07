@@ -6,6 +6,7 @@ import '../../../../shared/responsive.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/log_box.dart';
+import '../../../../shared/widgets/spinning_icon.dart';
 import '../../controller/engine_install_controller.dart';
 import '../../domain/not_ready_state.dart';
 import 'assembly_timeline.dart';
@@ -170,7 +171,14 @@ class _NotReadyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Header(icon: meta.icon, title: meta.title, chip: meta.chip, chipTone: meta.tone, desc: meta.desc),
+          _Header(
+            icon: meta.icon,
+            title: meta.title,
+            chip: meta.chip,
+            chipTone: meta.tone,
+            desc: meta.desc,
+            spinning: _spins(meta.icon),
+          ),
           const SizedBox(height: 24),
           _LayerStrip(view: view),
           const SizedBox(height: 24),
@@ -293,6 +301,12 @@ class _NotReadyCard extends StatelessWidget {
 
 enum _Tone { warn, bad }
 
+/// 这个图标是否该转。
+///
+/// 只有 `loader` 会转 —— `_metaOf` 用它表达「进行中」（远程校验 / 引擎启动）；
+/// 云断开、警告三角这些转起来只会像故障。
+bool _spins(IconData icon) => icon == LucideIcons.loader;
+
 /// 头部：插画 + 标题 + 状态胶囊 + 说明。
 class _Header extends StatelessWidget {
   const _Header({
@@ -301,6 +315,7 @@ class _Header extends StatelessWidget {
     required this.desc,
     required this.chip,
     required this.chipTone,
+    required this.spinning,
   });
 
   final IconData icon;
@@ -308,6 +323,9 @@ class _Header extends StatelessWidget {
   final String desc;
   final String chip;
   final _Tone chipTone;
+
+  /// loader 语义的图标（校验中 / 启动中）是否旋转。
+  final bool spinning;
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +342,7 @@ class _Header extends StatelessWidget {
             color: chipTone == _Tone.bad ? tone.withValues(alpha: 0.12) : palette.accSoft,
             borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
           ),
-          child: Icon(icon, size: 20, color: chipTone == _Tone.bad ? tone : palette.acc),
+          child: SpinningIcon(icon, size: 20, color: chipTone == _Tone.bad ? tone : palette.acc, spinning: spinning),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -901,7 +919,13 @@ class _MobileNotReadyCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(meta.icon, size: 22, color: meta.tone == _Tone.bad ? palette.bad : palette.acc),
+              // 与桌面头部同一个 loader：校验中 / 启动中必须转（否则像卡住）。
+              SpinningIcon(
+                meta.icon,
+                size: 22,
+                color: meta.tone == _Tone.bad ? palette.bad : palette.acc,
+                spinning: _spins(meta.icon),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -964,6 +988,8 @@ class _MobileNotReadyCard extends StatelessWidget {
           // 主按钮**占满整行**：窄屏上并排会窄成一条，单手也难点中。
           AppButton(
             label: primary,
+            // 与桌面同一套：校验中给按钮内 spinner（此前窄屏只有文案，看不出在跑）。
+            loading: remoteChecking,
             onTap: busy
                 ? null
                 : (remoteBlocked
