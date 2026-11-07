@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/tokens.dart';
+
 /// 持续旋转的图标（loader 语义的「正在进行」提示）。
 ///
 /// lucide 的 `loader` 是静态字形：不转就会被读成「卡住了」而不是「在跑」。
@@ -20,9 +22,9 @@ class SpinningIcon extends StatefulWidget {
 }
 
 class _SpinningIconState extends State<SpinningIcon> with SingleTickerProviderStateMixin {
-  /// 0.9s / 圈：比 Material 自带 spinner（约 1.3s）快一档，与 `_PulseDot`
-  /// 的脉冲同量级 —— 能看出在动，又不抢主内容的注意力。
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+  /// 1.6s / 圈（D-167）：原来的 0.9s 转得太急，读起来像「卡住后猛转」；
+  /// 与阅读器 loading 用同一个 [AppMotion.spinner] 档位，两端观感一致。
+  late final AnimationController _c = AnimationController(vsync: this, duration: AppMotion.spinner);
 
   @override
   void initState() {

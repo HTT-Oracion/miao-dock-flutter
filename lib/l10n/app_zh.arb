@@ -2636,6 +2636,154 @@
   "@readerZoomIn": {
     "description": "桌面阅读器缩放调节器的放大按钮"
   },
+  "readerPercent": "{percent}%",
+  "@readerPercent": {
+    "description": "百分比读数（亮度 OSD / 夜间强度）"
+  },
+  "readerPrevChapter": "上一话",
+  "@readerPrevChapter": {
+    "description": "移动端阅读器底栏：上一话"
+  },
+  "readerNextChapter": "下一话",
+  "@readerNextChapter": {
+    "description": "移动端阅读器底栏：下一话"
+  },
+  "readerActionNight": "夜间",
+  "@readerActionNight": {
+    "description": "移动端阅读器底栏动作：夜间"
+  },
+  "readerActionMode": "条漫",
+  "@readerActionMode": {
+    "description": "移动端阅读器底栏动作：切条漫"
+  },
+  "readerActionPaged": "翻页",
+  "@readerActionPaged": {
+    "description": "移动端阅读器底栏动作：切回翻页"
+  },
+  "readerActionBrightness": "亮度",
+  "@readerActionBrightness": {
+    "description": "移动端阅读器底栏动作：亮度"
+  },
+  "readerActionChapters": "章节",
+  "@readerActionChapters": {
+    "description": "移动端阅读器底栏动作：章节"
+  },
+  "readerActionSettings": "设置",
+  "@readerActionSettings": {
+    "description": "移动端阅读器底栏动作：设置"
+  },
+  "readerSettingsTitle": "阅读设置",
+  "@readerSettingsTitle": {
+    "description": "设置抽屉标题"
+  },
+  "readerChaptersTitle": "章节目录",
+  "@readerChaptersTitle": {
+    "description": "移动端章节抽屉标题"
+  },
+  "readerTapHintPrev": "上一页",
+  "@readerTapHintPrev": {
+    "description": "点按分区可视化：左侧"
+  },
+  "readerTapHintNext": "下一页",
+  "@readerTapHintNext": {
+    "description": "点按分区可视化：右侧"
+  },
+  "readerTapHintCenter": "呼出工具栏",
+  "@readerTapHintCenter": {
+    "description": "点按分区可视化：中心"
+  },
+  "readerUntranslated": "未翻译 · 正在显示原图",
+  "@readerUntranslated": {
+    "description": "页内角标：该页没有译文，回退原图"
+  },
+  "readerTurnAnimTitle": "翻页动画",
+  "@readerTurnAnimTitle": {
+    "description": "设置抽屉：翻页动画（只作用于点按翻页）"
+  },
+  "readerTurnAnimPush": "推挤",
+  "@readerTurnAnimPush": {
+    "description": "翻页动画档位：推挤"
+  },
+  "readerTurnAnimFade": "淡化",
+  "@readerTurnAnimFade": {
+    "description": "翻页动画档位：淡化"
+  },
+  "readerTurnAnimNone": "无",
+  "@readerTurnAnimNone": {
+    "description": "翻页动画档位：无（默认，即时落位）"
+  },
+  "readerNightIntensity": "夜间强度",
+  "@readerNightIntensity": {
+    "description": "设置抽屉：夜间滤镜强度"
+  },
+  "readerStageBg": "舞台背景",
+  "@readerStageBg": {
+    "description": "设置抽屉：页间留白颜色"
+  },
+  "readerStageBgHint": "页间留白颜色（黑色更省电）",
+  "@readerStageBgHint": {
+    "description": "设置抽屉：舞台背景副注"
+  },
+  "readerPageNum": "显示页码",
+  "@readerPageNum": {
+    "description": "设置抽屉：翻页 OSD 与自绘状态栏"
+  },
+  "readerPageNumHint": "翻页时显示页码气泡与自绘时钟",
+  "@readerPageNumHint": {
+    "description": "设置抽屉：显示页码副注"
+  },
+  "readerAwake": "保持常亮",
+  "@readerAwake": {
+    "description": "设置抽屉：阅读时保持屏幕常亮"
+  },
+  "readerAwakeHint": "进入阅读器后申请屏幕常亮，退出即释放",
+  "@readerAwakeHint": {
+    "description": "设置抽屉：保持常亮副注"
+  },
+  "readerImmersive": "沉浸式状态栏",
+  "@readerImmersive": {
+    "description": "设置抽屉：隐藏系统状态栏，阅读器自绘时钟"
+  },
+  "readerImmersiveHint": "隐藏系统状态栏，由阅读器自绘时钟",
+  "@readerImmersiveHint": {
+    "description": "设置抽屉：沉浸式状态栏副注"
+  },
+  "readerPreload": "预载页数",
+  "@readerPreload": {
+    "description": "设置抽屉：前后各预载页数"
+  },
+  "readerPreloadHint": "前后各预载 N 页，解码窗口延后 200ms",
+  "@readerPreloadHint": {
+    "description": "设置抽屉：预载页数副注"
+  },
+  "readerPreloadUnit": "{n} 页",
+  "@readerPreloadUnit": {
+    "description": "预载页数读数"
+  },
+  "readerVolumeKeys": "音量键翻页",
+  "@readerVolumeKeys": {
+    "description": "设置抽屉：音量键翻页开关"
+  },
+  "readerVolumeKeysHint": "仅安卓端生效；iOS 无此系统接口",
+  "@readerVolumeKeysHint": {
+    "description": "设置抽屉：音量键翻页副注"
+  },
+  "readerTapTurn": "点按翻页",
+  "@readerTapTurn": {
+    "description": "设置抽屉：左右 30% 点按翻页开关"
+  },
+  "readerTapTurnHint": "左右 30% 区域点按翻页（中心呼出工具栏）",
+  "@readerTapTurnHint": {
+    "description": "设置抽屉：点按翻页副注"
+  },
+  "readerEndcardBackShelf": "回书架",
+  "@readerEndcardBackShelf": {
+    "description": "章末卡：未归并单话读完后回书架（不是回目录）"
+  },
+  "readerEndcardOver": "本话已读完",
+  "@readerEndcardOver": {
+    "description": "章末衔接卡主标题（翻页模式拖到末页）"
+  },
   "queueHeadHint": "同一时刻只跑 1 个 · 翻译中不能删除",
   "@queueHeadHint": {
     "description": "队列表头主标题副注（设计稿 qt-head .n small）"

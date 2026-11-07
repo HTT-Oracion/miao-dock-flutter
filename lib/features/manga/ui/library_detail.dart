@@ -1388,7 +1388,7 @@ class _ChapterPageCellState extends ConsumerState<_ChapterPageCell> {
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
-        onTap: () => _openReaderAtChapter(context, ref, widget.book, chapter),
+        onTap: () => _openReaderAtChapterPage(context, ref, widget.book, chapter, widget.seq),
         child: AnimatedScale(
           duration: const Duration(milliseconds: 150),
           scale: hoverable && _hover ? 1.04 : 1,
@@ -1479,12 +1479,7 @@ class _PageCardState extends ConsumerState<_PageCard> {
       onEnter: hoverable ? (_) => setState(() => _hover = true) : null,
       onExit: hoverable ? (_) => setState(() => _hover = false) : null,
       child: GestureDetector(
-        onTap: () {
-          ref
-              .read(readerSessionProvider.notifier)
-              .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
-          context.go('/manga/reader');
-        },
+        onTap: () => _openReaderAtPage(context, ref, book, widget.seq),
         child: AnimatedScale(
           duration: const Duration(milliseconds: 150),
           scale: hoverable && _hover ? 1.04 : 1,
@@ -1587,15 +1582,7 @@ class _PageCapsules extends ConsumerWidget {
       runSpacing: 4,
       children: [
         for (var seq = 1; seq <= book.directPages; seq++)
-          _Cap(
-            label: l10n.libPageCapsule(seq),
-            onTap: () {
-              ref
-                  .read(readerSessionProvider.notifier)
-                  .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
-              context.go('/manga/reader');
-            },
-          ),
+          _Cap(label: l10n.libPageCapsule(seq), onTap: () => _openReaderAtPage(context, ref, book, seq)),
       ],
     );
   }
@@ -1801,8 +1788,26 @@ void _openChapter(BuildContext context, WidgetRef ref, LibBook book, LibChapter 
   ref.read(libChapterOpenProvider.notifier).open(chapter.no);
 }
 
-void _openReaderAtChapter(BuildContext context, WidgetRef ref, LibBook book, LibChapter chapter) {
-  // 未翻译完也能点进（缺译文的页回退原图）。
+/// 打开阅读器并落到**指定页**（1 基）。
+///
+/// 🔴 `open()` 的语义是「换话/换书 = 从头读」，它会把页码归零，
+/// 所以点某页进去必须**在 open 之后再设页码**，顺序反了会被重置回第 1 页。
+void _seekReaderPage(WidgetRef ref, int seq, int total) {
+  if (total <= 0) return;
+  ref.read(readerPageProvider.notifier).set((seq - 1).clamp(0, total - 1));
+}
+
+/// 单话直读：点第 [seq] 页进阅读器。
+void _openReaderAtPage(BuildContext context, WidgetRef ref, LibBook book, int seq) {
+  ref
+      .read(readerSessionProvider.notifier)
+      .open(ReaderSession(key: book.key, pages: book.directPages, translated: book.directTranslated));
+  _seekReaderPage(ref, seq, book.directPages);
+  context.go('/manga/reader');
+}
+
+/// 单本某话：点该话第 [seq] 页进阅读器（不是第 1 页）。
+void _openReaderAtChapterPage(BuildContext context, WidgetRef ref, LibBook book, LibChapter chapter, int seq) {
   ref
       .read(readerSessionProvider.notifier)
       .open(
@@ -1813,6 +1818,7 @@ void _openReaderAtChapter(BuildContext context, WidgetRef ref, LibBook book, Lib
           translated: chapter.translatedSeqs,
         ),
       );
+  _seekReaderPage(ref, seq, chapter.pageCount);
   context.go('/manga/reader');
 }
 

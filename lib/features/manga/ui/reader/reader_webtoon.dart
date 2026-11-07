@@ -3,25 +3,34 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../shared/widgets/buttons.dart';
 import '../../controller/library_controller.dart';
 import '../../controller/queue_controller.dart';
+import 'reader_image_cache.dart';
 import 'reader_prefs.dart';
+import 'reader_widgets.dart';
 
 /// 条漫（webtoon）连续滚动视图（重设计稿 mobile.html 条漫语义）：
 /// 纵向无缝滚动 · 中心点按呼出/收起工具栏 · 自动滚动（触摸即断 600ms 续播）·
 /// 左下角计页 chip · 滚到底出章末衔接卡。
 class ReaderWebtoonView extends ConsumerStatefulWidget {
-  const ReaderWebtoonView({super.key, required this.session, required this.showOriginal, required this.onCenterTap});
+  const ReaderWebtoonView({
+    super.key,
+    required this.session,
+    required this.showOriginal,
+    required this.onCenterTap,
+    this.endCard,
+  });
 
   final ReaderSession session;
   final bool showOriginal;
   final VoidCallback onCenterTap;
+
+  /// 末尾衔接卡（由屏幕装配：文案与去向要跟翻页模式一致）。
+  final Widget? endCard;
 
   @override
   ConsumerState<ReaderWebtoonView> createState() => _ReaderWebtoonViewState();
@@ -105,7 +114,9 @@ class _ReaderWebtoonViewState extends ConsumerState<ReaderWebtoonView> {
             controller: _scroll,
             itemCount: total + 1, // 末尾 = 章末衔接卡
             itemBuilder: (context, i) {
-              if (i == total) return _EndCard(session: widget.session);
+              if (i == total) {
+                return SizedBox(height: 320, child: widget.endCard ?? const SizedBox.shrink());
+              }
               return _WebtoonPage(session: widget.session, seq: i + 1, showOriginal: widget.showOriginal);
             },
           ),
@@ -190,12 +201,17 @@ class _WebtoonPageState extends ConsumerState<_WebtoonPage> {
     final s = widget.session;
     // 🔴 显示原图时不请求译文；显示译文时按该页是否有译文取（与翻页模式同语义）。
     final wantTranslated = !widget.showOriginal && s.translated.contains(widget.seq);
+    final key = readerImageKey(bookKey: s.key, chapterNo: s.chapterNo, seq: widget.seq, translated: wantTranslated);
+    final cached = ReaderImageCache.get(key);
+    if (cached != null) return cached;
     try {
       final bytes = s.chapterNo == null
           ? await client.getBookFile(s.key, widget.seq, translated: wantTranslated)
           : await client.getChapterFile(s.key, s.chapterNo!, widget.seq, translated: wantTranslated);
       if (bytes.isEmpty) return null;
-      return Uint8List.fromList(bytes);
+      final data = Uint8List.fromList(bytes);
+      ReaderImageCache.put(key, data);
+      return data;
     } catch (_) {
       return null;
     }
@@ -212,11 +228,7 @@ class _WebtoonPageState extends ConsumerState<_WebtoonPage> {
             height: 420,
             color: palette.card,
             alignment: Alignment.center,
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 1.6, color: palette.textSecondary),
-            ),
+            child: ReaderSpinner(color: palette.textSecondary),
           );
         }
         final bytes = snap.data;
@@ -231,53 +243,8 @@ class _WebtoonPageState extends ConsumerState<_WebtoonPage> {
             ),
           );
         }
-        return Image.memory(bytes, fit: BoxFit.fitWidth, width: double.infinity, gaplessPlayback: true);
+        return ReaderPageImage(bytes: bytes, fit: BoxFit.fitWidth, width: double.infinity);
       },
-    );
-  }
-}
-
-/// 章末衔接卡（重设计稿）：明确动作才进入下一话；回目录随时可走。
-class _EndCard extends StatelessWidget {
-  const _EndCard({required this.session});
-
-  final ReaderSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      height: 320,
-      color: palette.bg,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            l10n.readerEndcardTitle,
-            style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w700, color: palette.ink),
-          ),
-          const SizedBox(height: 14),
-          // 下一话：ReaderSession 不含话序信息，这里只给入口语义——
-          // 返回书架选下一话（避免在阅读器里猜「下一话是什么」，与服务端职责冲突）。
-          AppButton(
-            label: l10n.readerEndcardNext,
-            onTap: () => context.go('/manga/library'),
-            variant: AppButtonVariant.primary,
-            height: 34,
-            horizontalPadding: 18,
-          ),
-          const SizedBox(height: 8),
-          AppButton(
-            label: l10n.readerEndcardBack,
-            onTap: () => context.go('/manga/library'),
-            variant: AppButtonVariant.ghost,
-            height: 34,
-            horizontalPadding: 18,
-          ),
-        ],
-      ),
     );
   }
 }

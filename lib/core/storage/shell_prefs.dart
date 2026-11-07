@@ -216,3 +216,66 @@ double readReaderBrightness() {
 
 void persistReaderBrightness(double value) =>
     _writePref('miao.reader-brightness', value.clamp(0.2, 1.0).toStringAsFixed(3));
+
+// ── 阅读器显示 / 交互偏好（重设计稿 mobile.html 设置抽屉，D-166 补）──
+
+bool _readBool(String key, {required bool fallback}) {
+  final v = _readPrefs()[key];
+  if (v == null) return fallback;
+  return v == 'true';
+}
+
+/// 左右 30% 点按翻页（关掉后只有中心点按呼出工具栏）。
+bool readReaderTapTurn() => _readBool('miao.reader-tap-turn', fallback: true);
+
+void persistReaderTapTurn(bool value) => _writePref('miao.reader-tap-turn', value ? 'true' : 'false');
+
+/// 点按翻页收尾动画：`push`（推挤，**默认**）/ `fade`（淡化）/ `none`（即时落位）。
+///
+/// 只作用于**点按**翻页；拖拽跟手永远是 1:1，不受它影响（设计稿口径）。
+/// 2026-11-08 用户口径：默认「无」会被当成翻页闪一下没有动画，故默认改推挤。
+String readReaderTurnAnim() => _readPrefs()['miao.reader-turn-anim'] ?? 'push';
+
+void persistReaderTurnAnim(String value) => _writePref('miao.reader-turn-anim', value);
+
+/// 夜间滤镜强度 0.2–1.0（默认 0.4）。
+double readReaderNightIntensity() {
+  final v = double.tryParse(_readPrefs()['miao.reader-night-intensity'] ?? '');
+  return v == null ? 0.4 : v.clamp(0.2, 1.0);
+}
+
+void persistReaderNightIntensity(double value) =>
+    _writePref('miao.reader-night-intensity', value.clamp(0.2, 1.0).toStringAsFixed(3));
+
+/// 舞台背景：`black` / `dark` / `paper` / `cream`（页间留白颜色）。
+String readReaderStageBg() => _readPrefs()['miao.reader-stage-bg'] ?? 'black';
+
+void persistReaderStageBg(String value) => _writePref('miao.reader-stage-bg', value);
+
+/// 翻页时是否显示页码 OSD / 自绘状态栏。
+bool readReaderPageNum() => _readBool('miao.reader-page-num', fallback: true);
+
+void persistReaderPageNum(bool value) => _writePref('miao.reader-page-num', value ? 'true' : 'false');
+
+/// 音量键翻页（仅安卓生效；iOS 系统无此接口，开关不渲染）。
+bool readReaderVolumeKeys() => _readBool('miao.reader-volume-keys', fallback: true);
+
+void persistReaderVolumeKeys(bool value) => _writePref('miao.reader-volume-keys', value ? 'true' : 'false');
+
+/// 阅读中保持屏幕常亮（退出 / 退后台释放）。
+bool readReaderAwake() => _readBool('miao.reader-awake', fallback: false);
+
+void persistReaderAwake(bool value) => _writePref('miao.reader-awake', value ? 'true' : 'false');
+
+/// 沉浸式状态栏（隐藏系统状态栏，由阅读器自绘时钟）。
+bool readReaderImmersive() => _readBool('miao.reader-immersive', fallback: true);
+
+void persistReaderImmersive(bool value) => _writePref('miao.reader-immersive', value ? 'true' : 'false');
+
+/// 前后各预载页数 1–6（默认 2）。
+int readReaderPreload() {
+  final v = int.tryParse(_readPrefs()['miao.reader-preload'] ?? '');
+  return (v ?? 2).clamp(1, 6);
+}
+
+void persistReaderPreload(int value) => _writePref('miao.reader-preload', '${value.clamp(1, 6)}');

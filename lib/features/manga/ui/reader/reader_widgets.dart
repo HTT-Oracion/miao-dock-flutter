@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import '../../../../shared/responsive.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../controller/library_controller.dart';
 import '../../controller/queue_controller.dart';
+import 'reader_image_cache.dart';
 import 'reader_zoom.dart';
 
 /// 阅读器拆分件（重设计稿 P4 目录归位，D-152 方式重做）：
@@ -174,69 +176,180 @@ class ReaderPage extends ConsumerStatefulWidget {
 }
 
 class _ReaderPageState extends ConsumerState<ReaderPage> {
-  Future<Uint8List?>? _future;
+  Uint8List? _bytes;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _resolve();
   }
 
   @override
   void didUpdateWidget(covariant ReaderPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 切换原图/译文后必须重新取图，否则画面不变。
-    if (oldWidget.showOriginal != widget.showOriginal) {
-      setState(() => _future = _load());
+    if (oldWidget.showOriginal != widget.showOriginal || oldWidget.seq != widget.seq) {
+      setState(() {
+        _bytes = null;
+        _loading = true;
+      });
+      _resolve();
     }
   }
 
-  Future<Uint8List?> _load() async {
+  String get _cacheKey => readerImageKey(
+    bookKey: widget.session.key,
+    chapterNo: widget.session.chapterNo,
+    seq: widget.seq,
+    translated: _wantTranslated,
+  );
+
+  /// 显示原图时**不请求译文**；显示译文时按该页是否有译文取。
+  bool get _wantTranslated => !widget.showOriginal && widget.session.translated.contains(widget.seq);
+
+  void _resolve() {
+    // 缓存命中就**同步**出图：翻页那一帧不再先画 loading（用户看到的「闪一下」）。
+    final cached = ReaderImageCache.get(_cacheKey);
+    if (cached != null) {
+      _bytes = cached;
+      _loading = false;
+      return;
+    }
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    final key = _cacheKey;
     final client = ref.read(mangaSvcClientProvider);
     final s = widget.session;
-    // 🔴 显示原图时**不请求译文**；显示译文时按该页是否有译文取。
-    final wantTranslated = !widget.showOriginal && s.translated.contains(widget.seq);
     try {
       final bytes = s.chapterNo == null
-          ? await client.getBookFile(s.key, widget.seq, translated: wantTranslated)
-          : await client.getChapterFile(s.key, s.chapterNo!, widget.seq, translated: wantTranslated);
-      if (bytes.isEmpty) return null;
-      return Uint8List.fromList(bytes);
+          ? await client.getBookFile(s.key, widget.seq, translated: _wantTranslated)
+          : await client.getChapterFile(s.key, s.chapterNo!, widget.seq, translated: _wantTranslated);
+      if (bytes.isEmpty) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+      final data = Uint8List.fromList(bytes);
+      ReaderImageCache.put(key, data);
+      if (!mounted) return;
+      setState(() {
+        _bytes = data;
+        _loading = false;
+      });
     } catch (_) {
-      return null;
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return FutureBuilder<Uint8List?>(
-      future: _future,
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return Center(
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 1.6, color: palette.textSecondary),
-            ),
-          );
-        }
-        final bytes = snap.data;
-        if (bytes == null) {
-          return Center(
-            child: Text(
-              AppLocalizations.of(context).shelfNoMatch,
-              style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
-            ),
-          );
-        }
-        // 缩放/平移由外层舞台页负责（桌面 ZoomablePage / 移动 PinchPage），
-        // 这里只画图 —— 两套缩放叠在一起会互相打架（D-164）。
-        return Center(child: Image.memory(bytes, fit: BoxFit.contain, gaplessPlayback: true));
+    final bytes = _bytes;
+    if (bytes != null) {
+      // 缩放/平移由外层舞台页负责（桌面 ZoomablePage / 移动 MobileReaderStage），
+      // 这里只画图 —— 两套缩放叠在一起会互相打架（D-164）。
+      return Center(child: ReaderPageImage(bytes: bytes));
+    }
+    if (_loading) {
+      return Center(child: ReaderSpinner(color: palette.textSecondary));
+    }
+    return Center(
+      child: Text(
+        AppLocalizations.of(context).shelfNoMatch,
+        style: TextStyle(fontSize: AppFont.px12, color: palette.textSecondary),
+      ),
+    );
+  }
+}
+
+/// 页图：`contain` 铺满舞台，首帧淡入（120ms）避免解码那一下硬跳。
+class ReaderPageImage extends StatelessWidget {
+  const ReaderPageImage({super.key, required this.bytes, this.fit = BoxFit.contain, this.width, this.height});
+
+  final Uint8List bytes;
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.memory(
+      bytes,
+      fit: fit,
+      width: width,
+      height: height,
+      gaplessPlayback: true,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded) return child;
+        return AnimatedOpacity(
+          opacity: frame == null ? 0 : 1,
+          duration: AppMotion.fast,
+          curve: AppMotion.easeOutCubic,
+          child: child,
+        );
       },
     );
   }
+}
+
+/// 阅读器 loading：自绘 260° 圆弧，1.6s 一圈匀速转。
+///
+/// 不用 [CircularProgressIndicator]：它自带「伸长—缩短」的四段相位，
+/// 视觉上是猛转一圈再顿一下，页图这种「等一两百毫秒」的场景显得很急。
+class ReaderSpinner extends StatefulWidget {
+  const ReaderSpinner({super.key, required this.color, this.size = 20, this.strokeWidth = 2});
+
+  final Color color;
+  final double size;
+  final double strokeWidth;
+
+  @override
+  State<ReaderSpinner> createState() => _ReaderSpinnerState();
+}
+
+class _ReaderSpinnerState extends State<ReaderSpinner> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: AppMotion.spinner)..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RotationTransition(
+      turns: _c,
+      child: CustomPaint(
+        size: Size.square(widget.size),
+        painter: _ArcPainter(color: widget.color, strokeWidth: widget.strokeWidth),
+      ),
+    );
+  }
+}
+
+class _ArcPainter extends CustomPainter {
+  const _ArcPainter({required this.color, required this.strokeWidth});
+
+  final Color color;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset(strokeWidth / 2, strokeWidth / 2) & Size(size.width - strokeWidth, size.height - strokeWidth);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    // 260° 留一个缺口，转起来才看得出方向。
+    canvas.drawArc(rect, 0, 260 * math.pi / 180, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArcPainter old) => old.color != color || old.strokeWidth != strokeWidth;
 }
 
 class NightTint extends StatelessWidget {
@@ -326,12 +439,17 @@ class _ComparePaneState extends ConsumerState<ComparePane> {
     final client = ref.read(mangaSvcClientProvider);
     final s = widget.session;
     final wantTranslated = !widget.showOriginal && s.translated.contains(widget.seq);
+    final key = readerImageKey(bookKey: s.key, chapterNo: s.chapterNo, seq: widget.seq, translated: wantTranslated);
+    final cached = ReaderImageCache.get(key);
+    if (cached != null) return cached;
     try {
       final bytes = s.chapterNo == null
           ? await client.getBookFile(s.key, widget.seq, translated: wantTranslated)
           : await client.getChapterFile(s.key, s.chapterNo!, widget.seq, translated: wantTranslated);
       if (bytes.isEmpty) return null;
-      return Uint8List.fromList(bytes);
+      final data = Uint8List.fromList(bytes);
+      ReaderImageCache.put(key, data);
+      return data;
     } catch (_) {
       return null;
     }
@@ -375,13 +493,7 @@ class _ComparePaneState extends ConsumerState<ComparePane> {
             future: _future,
             builder: (context, snap) {
               if (snap.connectionState != ConnectionState.done) {
-                return Center(
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 1.6, color: palette.textSecondary),
-                  ),
-                );
+                return Center(child: ReaderSpinner(color: palette.textSecondary));
               }
               final bytes = snap.data;
               if (bytes == null) {
@@ -394,7 +506,7 @@ class _ComparePaneState extends ConsumerState<ComparePane> {
               }
               return InteractiveViewer(
                 maxScale: 5,
-                child: Center(child: Image.memory(bytes, fit: BoxFit.contain, gaplessPlayback: true)),
+                child: Center(child: ReaderPageImage(bytes: bytes)),
               );
             },
           ),
@@ -437,12 +549,17 @@ class _GridCellState extends ConsumerState<GridCell> {
     final client = ref.read(mangaSvcClientProvider);
     final s = widget.session;
     final wantTranslated = !widget.showOriginal && s.translated.contains(widget.seq);
+    final key = readerImageKey(bookKey: s.key, chapterNo: s.chapterNo, seq: widget.seq, translated: wantTranslated);
+    final cached = ReaderImageCache.get(key);
+    if (cached != null) return cached;
     try {
       final bytes = s.chapterNo == null
           ? await client.getBookFile(s.key, widget.seq, translated: wantTranslated)
           : await client.getChapterFile(s.key, s.chapterNo!, widget.seq, translated: wantTranslated);
       if (bytes.isEmpty) return null;
-      return Uint8List.fromList(bytes);
+      final data = Uint8List.fromList(bytes);
+      ReaderImageCache.put(key, data);
+      return data;
     } catch (_) {
       return null;
     }
@@ -467,10 +584,81 @@ class _GridCellState extends ConsumerState<GridCell> {
               if (snap.data == null) {
                 return ColoredBox(color: palette.card, child: const SizedBox.expand());
               }
-              return Image.memory(snap.data!, fit: BoxFit.cover, gaplessPlayback: true);
+              return ReaderPageImage(bytes: snap.data!, fit: BoxFit.cover);
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 章末衔接卡（翻页模式拖到末页继续拖 / 条漫滚到底）。
+///
+/// 两个平台共用：`onClose` 为 null 时不出 ×（条漫里卡片是列表尾巴，
+/// 没有「关掉」这回事）；翻页模式是浮层，必须有 ×，点遮罩也能关。
+class ReaderEndCard extends StatelessWidget {
+  const ReaderEndCard({super.key, required this.onNext, this.onBack, this.onClose, this.nextLabel, this.backLabel});
+
+  final VoidCallback onNext;
+
+  /// 副按钮；null = 不渲染（例如单话里它和主按钮同为「回书架」，重复没意义）。
+  final VoidCallback? onBack;
+  final VoidCallback? onClose;
+  final String? nextLabel;
+  final String? backLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 280),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+      decoration: BoxDecoration(
+        color: palette.panel.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: palette.line2),
+        boxShadow: [BoxShadow(color: palette.shadow.withValues(alpha: 0.45), blurRadius: 30)],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.readerEndcardOver,
+                  style: TextStyle(fontSize: AppFont.px13, fontWeight: FontWeight.w700, color: palette.ink),
+                ),
+              ),
+              if (onClose != null)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onClose,
+                  child: SizedBox(width: 26, height: 26, child: Icon(LucideIcons.x, size: 15, color: palette.mut)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          AppButton(
+            label: nextLabel ?? l10n.readerEndcardNext,
+            onTap: onNext,
+            variant: AppButtonVariant.primary,
+            height: 34,
+            horizontalPadding: 18,
+          ),
+          if (onBack != null) ...[
+            const SizedBox(height: 8),
+            AppButton(
+              label: backLabel ?? l10n.readerEndcardBack,
+              onTap: onBack!,
+              variant: AppButtonVariant.ghost,
+              height: 34,
+              horizontalPadding: 18,
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -386,6 +386,10 @@ abstract final class AppMotion {
 
   /// 装配时间线 active 节点的外环脉冲周期（motion.html：1.8s ease-in-out）。
   static const Duration nodePulse = Duration(milliseconds: 1800);
+
+  /// 阅读器 loading 一圈（D-167：1.6s 匀速，比 Material 默认的
+  /// 「伸长—缩短」四段相位慢一档，页图这种短等待不该显得急）。
+  static const Duration spinner = Duration(milliseconds: 1600);
 }
 
 /// 静态色值别名 —— 兼容既有屏内引用。
