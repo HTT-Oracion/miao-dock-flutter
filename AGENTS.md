@@ -96,7 +96,7 @@
    - 改动点描述
    ```
 
-   - 类型共九个，**模块名必填**：
+   - 类型共十个，**模块名必填**：
      - `feat`：新增功能；**不确定归类时一律用 `feat`**
      - `fix`：修复缺陷
      - `docs`：仅修改文档（README、API 文档、台账）
@@ -105,12 +105,12 @@
      - `perf`：性能优化
      - `test`：新增或修改测试用例
      - `build`：构建系统或依赖变更（升级依赖、修改构建脚本）
+     - `chore`：非业务性杂项维护（如 .gitignore、工具配置）
      - `ci`：持续集成配置或脚本（如 GitHub Actions）
    - 模块名取改动所属范围：
      - `lib/features/` 模块 `manga` / `music` / `anime` / `lyrics` / `settings`，可细到子域 `reader` / `library` / `queue` / `drop`；
      - 共享层 `core` / `shared` / `app` / `l10n`；服务端与协议 `service` / `protocol`；
      - 跨模块或仓库级改动（文档、依赖、CI）统一用 `repo`。
-   - 原 `chore` 停用，按性质归入 `build` / `ci` / `refactor` / `docs`。
    - 标题**只能为中文**；正文分点描述本次改动，**每条不超过 50 字符**；不加 emoji、句号或文件清单。
    - **改动了自测脚本必须在正文同步声明**（如「- 自测脚本：新增 xx 反证用例」）。
 
