@@ -211,4 +211,4 @@ fvm flutter build macos    # windows / linux / apk / ipa 同理
 
 ## 贡献
 
-先读 [`CONTRIBUTING.md`](CONTRIBUTING.md)。提交信息遵循仓库规范（类型 + 中文标题 + 分点描述，每条 ≤ 50 字符）；改动自测脚本必须在提交正文中声明。行为准则见 [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)。
+先读 [`CONTRIBUTING.md`](CONTRIBUTING.md)。提交信息遵循仓库规范（`类型(模块名): 中文标题` + 分点描述，每条 ≤ 50 字符，不确定类型用 `feat`）；改动自测脚本必须在提交正文中声明。行为准则见 [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)。
