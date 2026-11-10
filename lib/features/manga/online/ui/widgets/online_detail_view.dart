@@ -158,6 +158,7 @@ class _DesktopHero extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
+    final translateEnabled = ref.watch(activeOnlineSourceProvider)?.translationEnabled ?? false;
     final comic = detail.comic;
     final progress = _progressFor(ref, comic.id);
     final firstChapter = detail.chapters.isNotEmpty ? detail.chapters.first : null;
@@ -250,15 +251,16 @@ class _DesktopHero extends ConsumerWidget {
                     horizontalPadding: 13,
                     fontSize: AppFont.px12,
                   ),
-                  AppButton(
-                    label: l10n.onlineTranslateAndDownload,
-                    icon: LucideIcons.languages,
-                    onTap: readChapter == null ? null : () => onDownload(detail, readChapter, true),
-                    variant: AppButtonVariant.ghost,
-                    height: 32,
-                    horizontalPadding: 13,
-                    fontSize: AppFont.px12,
-                  ),
+                  if (translateEnabled)
+                    AppButton(
+                      label: l10n.onlineTranslateAndDownload,
+                      icon: LucideIcons.languages,
+                      onTap: readChapter == null ? null : () => onDownload(detail, readChapter, true),
+                      variant: AppButtonVariant.ghost,
+                      height: 32,
+                      horizontalPadding: 13,
+                      fontSize: AppFont.px12,
+                    ),
                 ],
               ),
             ],
@@ -432,6 +434,7 @@ class _MobileHero extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
+    final translateEnabled = ref.watch(activeOnlineSourceProvider)?.translationEnabled ?? false;
     final comic = detail.comic;
     final firstChapter = detail.chapters.isNotEmpty ? detail.chapters.first : null;
     final readChapter = progress == null
@@ -532,18 +535,20 @@ class _MobileHero extends ConsumerWidget {
                 fontSize: AppFont.px11_5,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: AppButton(
-                label: l10n.onlineReaderTranslationOfChapter,
-                icon: LucideIcons.languages,
-                onTap: readChapter == null ? null : () => onTranslate(detail, readChapter, true),
-                variant: AppButtonVariant.ghost,
-                height: 44,
-                horizontalPadding: 8,
-                fontSize: AppFont.px11_5,
+            if (translateEnabled) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppButton(
+                  label: l10n.onlineReaderTranslationOfChapter,
+                  icon: LucideIcons.languages,
+                  onTap: readChapter == null ? null : () => onTranslate(detail, readChapter, true),
+                  variant: AppButtonVariant.ghost,
+                  height: 44,
+                  horizontalPadding: 8,
+                  fontSize: AppFont.px11_5,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ],

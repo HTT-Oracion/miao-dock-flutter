@@ -43,14 +43,14 @@ class ReaderTopBar extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.toggleLabel,
-    required this.onToggle,
+    this.onToggle,
     required this.onClose,
   });
 
   final String title;
   final String subtitle;
   final String toggleLabel;
-  final VoidCallback onToggle;
+  final VoidCallback? onToggle;
   final VoidCallback onClose;
 
   @override
@@ -89,21 +89,22 @@ class ReaderTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onToggle,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: palette.accSoft,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: palette.acc.withValues(alpha: 0.45)),
-              ),
-              child: Text(
-                toggleLabel,
-                style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.acc),
+          if (onToggle != null)
+            GestureDetector(
+              onTap: onToggle!,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: palette.accSoft,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: palette.acc.withValues(alpha: 0.45)),
+                ),
+                child: Text(
+                  toggleLabel,
+                  style: TextStyle(fontSize: AppFont.px10_5, fontWeight: FontWeight.w600, color: palette.acc),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -164,7 +165,7 @@ class ReaderBottomBar extends StatefulWidget {
     required this.brightness,
     required this.onBrightness,
     required this.onChapters,
-    required this.onSettings,
+    this.onSettings,
     required this.hideProgress,
     this.onPrevChapter,
     this.onNextChapter,
@@ -183,7 +184,7 @@ class ReaderBottomBar extends StatefulWidget {
 
   /// 章节目录入口；null = 这本没有目录层级（未归并单话 / 书架未加载）→ 置灰。
   final VoidCallback? onChapters;
-  final VoidCallback onSettings;
+  final VoidCallback? onSettings;
 
   /// 0→1 的自动隐藏倒计时（设计稿 `.hidebar`）。
   final double hideProgress;
@@ -383,15 +384,16 @@ class _ReaderBottomBarState extends State<ReaderBottomBar> {
                         widget.onChapters!();
                       },
               ),
-              _BarAction(
-                icon: LucideIcons.settings,
-                label: l10n.readerActionSettings,
-                onTap: () {
-                  widget.onInteract?.call();
-                  _closePops();
-                  widget.onSettings();
-                },
-              ),
+              if (widget.onSettings != null)
+                _BarAction(
+                  icon: LucideIcons.settings,
+                  label: l10n.readerActionSettings,
+                  onTap: () {
+                    widget.onInteract?.call();
+                    _closePops();
+                    widget.onSettings!();
+                  },
+                ),
             ],
           ),
         ],

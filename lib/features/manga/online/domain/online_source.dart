@@ -15,6 +15,7 @@ class OnlineSource {
     this.glyphOverride,
     this.sourceUrl,
     this.libraryId,
+    this.sourceLanguage,
   });
 
   final SourceManifest manifest;
@@ -33,10 +34,19 @@ class OnlineSource {
   /// 来源仓库 id；文件导入时为空。
   final String? libraryId;
 
+  /// 用户为该源显式配置的源语言（zh/ja/en）；null = 未配置，关闭翻译入口。
+  final String? sourceLanguage;
+
   String get id => manifest.id;
   String get name => manifest.name;
   String get version => manifest.version;
   bool get isAbnormal => consecutiveFailures >= 3;
+
+  /// 只有显式配置了源语言才启用翻译；未配置默认中文只用于展示。
+  bool get translationEnabled => switch (sourceLanguage) {
+    'zh' || 'ja' || 'en' => true,
+    _ => false,
+  };
   bool get isAvailable => enabled && !isAbnormal;
 
   /// 平台行图标字（取源名首字 / 首字母组合）。
@@ -66,6 +76,7 @@ class OnlineSource {
     String? glyphOverride,
     String? sourceUrl,
     String? libraryId,
+    String? sourceLanguage,
   }) => OnlineSource(
     manifest: manifest ?? this.manifest,
     capabilities: capabilities ?? this.capabilities,
@@ -76,6 +87,7 @@ class OnlineSource {
     glyphOverride: glyphOverride ?? this.glyphOverride,
     sourceUrl: sourceUrl ?? this.sourceUrl,
     libraryId: libraryId ?? this.libraryId,
+    sourceLanguage: sourceLanguage ?? this.sourceLanguage,
   );
 
   Map<String, Object?> toJson() => {
@@ -88,6 +100,7 @@ class OnlineSource {
     if (glyphOverride != null) 'glyph': glyphOverride,
     if (sourceUrl != null) 'sourceUrl': sourceUrl,
     if (libraryId != null) 'libraryId': libraryId,
+    if (sourceLanguage != null) 'sourceLanguage': sourceLanguage,
   };
 
   static OnlineSource? fromJson(Map<String, Object?> json) {
@@ -105,6 +118,7 @@ class OnlineSource {
       glyphOverride: json['glyph'] is String ? '${json['glyph']}' : null,
       sourceUrl: json['sourceUrl'] is String ? '${json['sourceUrl']}' : null,
       libraryId: json['libraryId'] is String ? '${json['libraryId']}' : null,
+      sourceLanguage: json['sourceLanguage'] is String ? '${json['sourceLanguage']}' : null,
     );
   }
 }

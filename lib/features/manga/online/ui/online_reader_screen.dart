@@ -99,7 +99,9 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
       startPage: launch.page,
     );
     if (!mounted) return;
-    if (launch.autoTranslate) await notifier.startTranslation();
+    if (launch.autoTranslate && ref.read(onlineReaderProvider)?.translationEnabled == true) {
+      await notifier.startTranslation();
+    }
     if (!mounted) return;
     if (launch.page != null && launch.page! > 1) {
       final l10n = AppLocalizations.of(context);
@@ -288,7 +290,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
             height: 32,
           ),
         ],
-        child: const OnlineReaderHelpContent(),
+        child: OnlineReaderHelpContent(translationEnabled: ref.read(onlineReaderProvider)?.translationEnabled ?? false),
       ),
     );
   }
@@ -349,6 +351,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.keyT || key == LogicalKeyboardKey.keyO) {
+      if (!state.translationEnabled) return KeyEventResult.ignored;
       _toggleTranslated();
       return KeyEventResult.handled;
     }
@@ -361,6 +364,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.keyC) {
+      if (!state.translationEnabled) return KeyEventResult.ignored;
       _compare();
       return KeyEventResult.handled;
     }
@@ -421,74 +425,86 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
           focusNode: _focus,
           autofocus: true,
           onKeyEvent: (event) => _onKey(_focus, event),
-          child: Column(
+          child: Stack(
             children: [
-              if (!context.isMobile || visible)
-                _SlideBar(
-                  visible: visible,
-                  offset: const Offset(0, -0.35),
-                  child: SafeArea(
-                    bottom: false,
-                    child: context.isMobile
-                        ? ReaderTopBar(
-                            title: state.comic.title,
-                            subtitle: '${state.chapter.title} · ${l10n.readerPage(state.page, state.pageCount)}',
-                            toggleLabel: state.showOriginal ? l10n.readerShowTranslated : l10n.readerShowOriginal,
-                            onToggle: _toggleTranslated,
-                            onClose: _close,
-                          )
-                        : ReaderBar(
-                            title: '${state.comic.title} · ${state.chapter.title}',
-                            pageText: l10n.readerPage(state.page, state.pageCount),
-                            toggleLabel: state.showOriginal ? l10n.readerShowTranslated : l10n.readerShowOriginal,
-                            onToggle: _toggleTranslated,
-                            onClose: _close,
-                            pageValue: state.page - 1,
-                            pageCount: state.pageCount,
-                            onPageChanged: (page) {
-                              ref.read(onlineReaderProvider.notifier).goToPage(page + 1);
-                              _interact();
-                            },
-                            onSettings: () => _showSettings(state),
-                            onCompare: _compare,
-                            onCompareActive: false,
-                            onGrid: () => _showGrid(state),
-                            onGridActive: false,
-                            onFullscreen: _toggleFocus,
-                            onHelp: _showHelp,
-                            zoom: _zoom,
-                            extra: GestureDetector(
-                              onTap: () => _showChapters(state),
-                              child: Icon(LucideIcons.list, size: 15, color: palette.textSecondary),
-                            ),
-                          ),
-                  ),
+              Positioned.fill(child: _stageArea(context, state, prefs, palette, l10n)),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _SlideBar(
+                      visible: visible,
+                      offset: const Offset(0, -0.35),
+                      child: SafeArea(
+                        bottom: false,
+                        child: context.isMobile
+                            ? ReaderTopBar(
+                                title: state.comic.title,
+                                subtitle: '${state.chapter.title} · ${l10n.readerPage(state.page, state.pageCount)}',
+                                toggleLabel: state.showOriginal ? l10n.readerShowTranslated : l10n.readerShowOriginal,
+                                onToggle: state.translationEnabled ? _toggleTranslated : null,
+                                onClose: _close,
+                              )
+                            : ReaderBar(
+                                title: '${state.comic.title} · ${state.chapter.title}',
+                                pageText: l10n.readerPage(state.page, state.pageCount),
+                                toggleLabel: state.showOriginal ? l10n.readerShowTranslated : l10n.readerShowOriginal,
+                                onToggle: state.translationEnabled ? _toggleTranslated : null,
+                                onClose: _close,
+                                pageValue: state.page - 1,
+                                pageCount: state.pageCount,
+                                onPageChanged: (page) {
+                                  ref.read(onlineReaderProvider.notifier).goToPage(page + 1);
+                                  _interact();
+                                },
+                                onSettings: state.translationEnabled ? () => _showSettings(state) : null,
+                                onCompare: state.translationEnabled ? _compare : null,
+                                onCompareActive: false,
+                                onGrid: () => _showGrid(state),
+                                onGridActive: false,
+                                onFullscreen: _toggleFocus,
+                                onHelp: _showHelp,
+                                zoom: _zoom,
+                                extra: GestureDetector(
+                                  onTap: () => _showChapters(state),
+                                  child: Icon(LucideIcons.list, size: 15, color: palette.textSecondary),
+                                ),
+                              ),
+                      ),
+                    ),
+                    if (state.translationEnabled)
+                      _SlideBar(
+                        visible: visible,
+                        offset: const Offset(0, -0.35),
+                        child: OnlineTranslationBar(
+                          state: state,
+                          mobile: context.isMobile,
+                          onTranslate: () {
+                            ref.read(onlineReaderProvider.notifier).startTranslation();
+                            _interact();
+                          },
+                          onRetry: () {
+                            ref.read(onlineReaderProvider.notifier).retryTranslation();
+                            _interact();
+                          },
+                          onOriginal: () {
+                            ref.read(onlineReaderProvider.notifier).onlyOriginal();
+                            _interact();
+                          },
+                          onSettings: () => _showSettings(state),
+                        ),
+                      ),
+                  ],
                 ),
-              if (!context.isMobile || visible)
-                _SlideBar(
-                  visible: visible,
-                  offset: const Offset(0, -0.35),
-                  child: OnlineTranslationBar(
-                    state: state,
-                    mobile: context.isMobile,
-                    onTranslate: () {
-                      ref.read(onlineReaderProvider.notifier).startTranslation();
-                      _interact();
-                    },
-                    onRetry: () {
-                      ref.read(onlineReaderProvider.notifier).retryTranslation();
-                      _interact();
-                    },
-                    onOriginal: () {
-                      ref.read(onlineReaderProvider.notifier).onlyOriginal();
-                      _interact();
-                    },
-                    onSettings: () => _showSettings(state),
-                  ),
-                ),
-              Expanded(child: _stageArea(context, state, prefs, palette, l10n)),
-              if (!context.isMobile || visible)
-                _SlideBar(
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _SlideBar(
                   visible: visible,
                   offset: const Offset(0, 0.35),
                   child: context.isMobile
@@ -517,7 +533,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                             _interact();
                           },
                           onChapters: () => _showChapters(state),
-                          onSettings: () => _showSettings(state),
+                          onSettings: state.translationEnabled ? () => _showSettings(state) : null,
                           hideProgress: 0,
                           onPrevChapter: state.prevChapter == null
                               ? null
@@ -533,8 +549,11 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                                 },
                           onInteract: _interact,
                         )
-                      : const OnlineReaderFootBar(),
+                      : state.translationEnabled
+                      ? const OnlineReaderFootBar()
+                      : const ReaderFootBar(),
                 ),
+              ),
             ],
           ),
         ),
@@ -605,7 +624,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                     zoom: _zoom,
                     pageCount: state.pageCount,
                     index: state.page - 1,
-                    onTap: _interact,
+                    onTap: _toggleControls,
                     onPageChanged: (index) {
                       ref.read(onlineReaderProvider.notifier).goToPage(index + 1);
                       _interact();
@@ -680,11 +699,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
 
   Widget _stageBody(BuildContext context, OnlineReaderState state, ReaderPrefs prefs) {
     if (state.loadingPages) {
-      return OnlineReaderStageStatus(
-        icon: LucideIcons.image,
-        title: AppLocalizations.of(context).onlineReaderLoading,
-        hint: AppLocalizations.of(context).onlineReaderLoadingHint,
-      );
+      return _OnlineLoadingStage(text: AppLocalizations.of(context).onlineReaderLoading);
     }
     if (state.pagesError != null) {
       return OnlineReaderStageStatus(
@@ -708,7 +723,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
     if (prefs.mode == ReaderMode.webtoon) {
       return ReaderWebtoonStage(
         pageCount: state.pageCount,
-        onCenterTap: _interact,
+        onCenterTap: _toggleControls,
         pageBuilder: (context, seq) => _OnlineWebtoonPage(
           page: seq,
           config: seq <= state.pageConfigs.length ? state.pageConfigs[seq - 1] : null,
@@ -719,28 +734,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
       );
     }
     if (state.pageLoading) {
-      final l10n = AppLocalizations.of(context);
-      return ColoredBox(
-        color: onlineReaderStageColor(),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const OnlineReaderSpinner(),
-              const SizedBox(height: 12),
-              Text(
-                l10n.onlineReaderLoading,
-                style: TextStyle(fontSize: AppFont.px11_5, color: AppPalette.of(context).ink2),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.onlineReaderLoadingHint,
-                style: TextStyle(fontSize: AppFont.px10, color: AppPalette.of(context).mut),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _OnlineLoadingStage(text: AppLocalizations.of(context).onlineReaderLoading);
     }
     if (state.pageError != null) {
       final l10n = AppLocalizations.of(context);
@@ -825,6 +819,32 @@ class _SlideBar extends StatelessWidget {
   }
 }
 
+class _OnlineLoadingStage extends StatelessWidget {
+  const _OnlineLoadingStage({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: onlineReaderStageColor(),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const OnlineReaderSpinner(),
+            const SizedBox(height: 12),
+            Text(
+              text,
+              style: TextStyle(fontSize: AppFont.px11_5, color: AppPalette.of(context).ink2),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _OnlinePageView extends ConsumerStatefulWidget {
   const _OnlinePageView({
     required this.page,
@@ -884,7 +904,19 @@ class _OnlinePageViewState extends ConsumerState<_OnlinePageView> {
     if (bytes == null) {
       return ColoredBox(
         color: onlineReaderStageColor(),
-        child: const Center(child: OnlineReaderSpinner()),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const OnlineReaderSpinner(),
+              const SizedBox(height: 10),
+              Text(
+                AppLocalizations.of(context).onlineReaderLoading,
+                style: TextStyle(fontSize: AppFont.px11, color: AppPalette.of(context).ink2),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return OnlinePageImage(page: widget.page, bytes: bytes, translated: widget.translated, scanning: widget.scanning);
@@ -1034,7 +1066,17 @@ class _OnlineWebtoonPageState extends ConsumerState<_OnlineWebtoonPage> {
         height: 420,
         color: onlineReaderStageColor(),
         alignment: Alignment.center,
-        child: const OnlineReaderSpinner(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const OnlineReaderSpinner(),
+            const SizedBox(height: 10),
+            Text(
+              AppLocalizations.of(context).onlineReaderLoading,
+              style: TextStyle(fontSize: AppFont.px11, color: AppPalette.of(context).ink2),
+            ),
+          ],
+        ),
       );
     }
     return Stack(

@@ -3498,6 +3498,36 @@
   "@onlineSourceAbnormal": {
     "description": "源异常标签"
   },
+  "onlineSourceLanguageEdit": "编辑源语言",
+  "@onlineSourceLanguageEdit": {
+    "description": "已导入源菜单：编辑源语言"
+  },
+  "onlineSourceLanguageTitle": "源语言 · {name}",
+  "@onlineSourceLanguageTitle": {
+    "description": "编辑源语言弹窗标题",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSourceLanguageHint": "配置后才启用翻译入口；未配置时默认按中文展示，并关闭该源的全部翻译按钮、提示与快捷键。",
+  "@onlineSourceLanguageHint": {
+    "description": "源语言配置说明"
+  },
+  "onlineSave": "保存",
+  "@onlineSave": {
+    "description": "通用保存按钮"
+  },
+  "onlineSourceLanguageZh": "中文",
+  "onlineSourceLanguageJa": "日文",
+  "onlineSourceLanguageEn": "英文",
+  "onlineSourceLanguageUnset": "未配置（默认中文）",
+  "onlineSourceLanguageSaved": "源语言已更新",
+  "onlineSourceLanguageNoTranslation": "未配置源语言，翻译入口已关闭",
+  "@onlineSourceLanguageNoTranslation": {
+    "description": "未配置源语言时的提示"
+  },
   "onlineSourceDetail": "源详情",
   "@onlineSourceDetail": {
     "description": "源操作：查看详情"
@@ -4514,11 +4544,11 @@
   "@onlineReaderTapNext": {
     "description": "三分区提示"
   },
-  "onlineReaderLoading": "正在取图 · 已带 Referer 头",
+  "onlineReaderLoading": "玩命加载中...",
   "@onlineReaderLoading": {
     "description": "页图加载"
   },
-  "onlineReaderLoadingHint": "getImageLoadingConfig → fetchBytes → Image.memory",
+  "onlineReaderLoadingHint": "",
   "@onlineReaderLoadingHint": {
     "description": "页图加载流程"
   },

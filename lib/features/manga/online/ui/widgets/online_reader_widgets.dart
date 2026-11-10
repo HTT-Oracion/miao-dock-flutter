@@ -148,7 +148,8 @@ class OnlineTranslationBar extends StatelessWidget {
         AppButton(
           label: l10n.onlineReaderTranslationOfChapter,
           onTap: onTranslate,
-          variant: AppButtonVariant.soft,
+          variant: AppButtonVariant.ghost,
+          border: false,
           height: 26,
           horizontalPadding: 10,
           fontSize: AppFont.px10_5,
@@ -257,8 +258,8 @@ class OnlineReaderFootBar extends StatelessWidget {
     return Container(
       height: 34,
       decoration: BoxDecoration(
-        color: palette.panel,
-        border: Border(top: BorderSide(color: palette.line2)),
+        color: palette.panel.withValues(alpha: 0.92),
+        border: Border(top: BorderSide(color: palette.line2.withValues(alpha: 0.7))),
       ),
       alignment: Alignment.center,
       child: FittedBox(
@@ -703,7 +704,9 @@ class _ReaderSwitch extends StatelessWidget {
 
 /// 亮度面板内容。
 class OnlineReaderHelpContent extends StatelessWidget {
-  const OnlineReaderHelpContent({super.key});
+  const OnlineReaderHelpContent({super.key, this.translationEnabled = false});
+
+  final bool translationEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -711,7 +714,7 @@ class OnlineReaderHelpContent extends StatelessWidget {
     final palette = AppPalette.of(context);
     final rows = [
       ('← / →', l10n.onlineReaderHelpPages),
-      ('T', l10n.onlineReaderHelpLang),
+      if (translationEnabled) ('T', l10n.onlineReaderHelpLang),
       (l10n.onlineReaderShortcutZoom, l10n.onlineReaderHelpZoom),
       ('G', l10n.onlineReaderHelpGrid),
       ('F', l10n.onlineReaderHelpFullscreen),

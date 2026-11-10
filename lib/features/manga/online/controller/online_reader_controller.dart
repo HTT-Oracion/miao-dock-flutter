@@ -33,6 +33,7 @@ class OnlineReaderState {
     this.pageError,
     this.loadingPages = false,
     this.pagesError,
+    this.translationEnabled = false,
     this.translation = const TranslationStatus(),
     this.showOriginal = true,
     this.controlsVisible = true,
@@ -57,6 +58,7 @@ class OnlineReaderState {
   final Object? pageError;
   final bool loadingPages;
   final Object? pagesError;
+  final bool translationEnabled;
   final TranslationStatus translation;
   final bool showOriginal;
   final bool controlsVisible;
@@ -103,6 +105,7 @@ class OnlineReaderState {
     bool? loadingPages,
     Object? pagesError,
     bool clearPagesError = false,
+    bool? translationEnabled,
     TranslationStatus? translation,
     bool? showOriginal,
     bool? controlsVisible,
@@ -124,6 +127,7 @@ class OnlineReaderState {
     pageError: clearPageError ? null : (pageError ?? this.pageError),
     loadingPages: loadingPages ?? this.loadingPages,
     pagesError: clearPagesError ? null : (pagesError ?? this.pagesError),
+    translationEnabled: translationEnabled ?? this.translationEnabled,
     translation: translation ?? this.translation,
     showOriginal: showOriginal ?? this.showOriginal,
     controlsVisible: controlsVisible ?? this.controlsVisible,
@@ -166,6 +170,7 @@ class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
       sourceId: source.id,
       sourceName: source.name,
       sourceHosts: source.manifest.hosts,
+      translationEnabled: source.translationEnabled,
       comic: comic,
       chapter: chapter,
       chapters: chapters.isEmpty ? [chapter] : chapters,

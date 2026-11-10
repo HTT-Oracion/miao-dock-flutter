@@ -316,10 +316,20 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
     );
   }
 
+  void _showLanguage(OnlineSource source) {
+    showAppDialog<void>(
+      context: context,
+      builder: (_) => _SourceLanguageDialog(source: source),
+    );
+  }
+
   void _handleAction(String action, OnlineSource source) {
     switch (action) {
       case 'detail':
         _showDetail(source);
+        break;
+      case 'language':
+        _showLanguage(source);
         break;
       case 'copy':
         _copyId(source);
@@ -606,6 +616,7 @@ class _SourceRow extends StatelessWidget {
         : l10n.onlineSourceSummary(source.version, source.capabilities.length);
     final actions = [
       AppDropdownItem(value: 'detail', label: l10n.onlineSourceDetail, icon: LucideIcons.info),
+      AppDropdownItem(value: 'language', label: l10n.onlineSourceLanguageEdit, icon: LucideIcons.languages),
       AppDropdownItem(value: 'copy', label: l10n.onlineCopyId, icon: LucideIcons.copy),
       AppDropdownItem(value: 'export', label: l10n.onlineExportSource, icon: LucideIcons.externalLink),
       AppDropdownItem(value: 'reimport', label: l10n.onlineOverwrite, icon: LucideIcons.refreshCw),
@@ -683,6 +694,13 @@ class _SourceRow extends StatelessWidget {
   }
 }
 
+String _sourceLanguageLabel(AppLocalizations l10n, String? language) => switch (language) {
+  'zh' => l10n.onlineSourceLanguageZh,
+  'ja' => l10n.onlineSourceLanguageJa,
+  'en' => l10n.onlineSourceLanguageEn,
+  _ => l10n.onlineSourceLanguageUnset,
+};
+
 class _SourceDetail extends StatelessWidget {
   const _SourceDetail({required this.source});
 
@@ -696,7 +714,7 @@ class _SourceDetail extends StatelessWidget {
       (l10n.onlineFieldSpecVersion, '${manifest.specVersion}'),
       (l10n.onlineFieldId, manifest.id),
       (l10n.onlineFieldVersion, manifest.version),
-      (l10n.onlineFieldLang, manifest.lang),
+      (l10n.onlineFieldLang, _sourceLanguageLabel(l10n, source.sourceLanguage)),
       (l10n.onlineFieldBaseUrl, manifest.baseUrl),
       (l10n.onlineFieldEntryClass, manifest.entryClass),
       (l10n.onlineFieldSourceFile, manifest.sourceFile),
@@ -847,6 +865,86 @@ class OnlineSourceSectionHeader extends StatelessWidget {
               style: TextStyle(fontSize: AppFont.px11, height: 1.7, color: palette.mut),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceLanguageDialog extends ConsumerStatefulWidget {
+  const _SourceLanguageDialog({required this.source});
+
+  final OnlineSource source;
+
+  @override
+  ConsumerState<_SourceLanguageDialog> createState() => _SourceLanguageDialogState();
+}
+
+class _SourceLanguageDialogState extends ConsumerState<_SourceLanguageDialog> {
+  late String _selected = widget.source.sourceLanguage ?? 'zh';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final options = <String, String>{
+      'zh': l10n.onlineSourceLanguageZh,
+      'ja': l10n.onlineSourceLanguageJa,
+      'en': l10n.onlineSourceLanguageEn,
+    };
+    return AppDialog(
+      title: l10n.onlineSourceLanguageTitle(widget.source.name),
+      icon: LucideIcons.languages,
+      width: 420,
+      onClose: () => Navigator.of(context).pop(),
+      actions: [
+        AppButton(
+          label: l10n.onlineCancel,
+          onTap: () => Navigator.of(context).pop(),
+          variant: AppButtonVariant.secondary,
+          height: 32,
+        ),
+        AppButton(
+          label: l10n.onlineSave,
+          onTap: () {
+            ref.read(onlineSourcesProvider.notifier).setLanguage(widget.source.id, _selected);
+            showAppToast(context, l10n.onlineSourceLanguageSaved, tone: ToastTone.good);
+            Navigator.of(context).pop();
+          },
+          variant: AppButtonVariant.primary,
+          height: 32,
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.onlineSourceLanguageHint,
+            style: TextStyle(fontSize: AppFont.px11, height: 1.7, color: AppPalette.of(context).ink2),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entry in options.entries)
+                AppButton(
+                  label: entry.value,
+                  onTap: () => setState(() => _selected = entry.key),
+                  variant: _selected == entry.key ? AppButtonVariant.primary : AppButtonVariant.ghost,
+                  height: 34,
+                  horizontalPadding: 16,
+                  fontSize: AppFont.px12,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.source.sourceLanguage == null
+                ? l10n.onlineSourceLanguageNoTranslation
+                : _sourceLanguageLabel(l10n, widget.source.sourceLanguage),
+            style: TextStyle(fontSize: AppFont.px10_5, color: AppPalette.of(context).mut),
+          ),
         ],
       ),
     );

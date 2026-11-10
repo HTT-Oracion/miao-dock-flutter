@@ -25,15 +25,15 @@ class ReaderBar extends StatelessWidget {
     super.key,
     required this.title,
     required this.pageText,
-    required this.toggleLabel,
-    required this.onToggle,
+    this.toggleLabel = '',
+    this.onToggle,
     required this.onClose,
     required this.pageValue,
     required this.pageCount,
     required this.onPageChanged,
-    required this.onSettings,
-    required this.onCompare,
-    required this.onCompareActive,
+    this.onSettings,
+    this.onCompare,
+    this.onCompareActive = false,
     required this.onGrid,
     required this.onGridActive,
     this.zoom,
@@ -45,7 +45,7 @@ class ReaderBar extends StatelessWidget {
   final String title;
   final String pageText;
   final String toggleLabel;
-  final VoidCallback onToggle;
+  final VoidCallback? onToggle;
   final VoidCallback onClose;
 
   /// 页码滑条（重设计稿顶栏：快速跳页）。
@@ -54,10 +54,10 @@ class ReaderBar extends StatelessWidget {
   final ValueChanged<int> onPageChanged;
 
   /// 设置抽屉入口（重设计稿顶栏齿轮）。
-  final VoidCallback onSettings;
+  final VoidCallback? onSettings;
 
   /// 对照模式（桌面）：开关与激活态。
-  final VoidCallback onCompare;
+  final VoidCallback? onCompare;
   final bool onCompareActive;
 
   /// 网格总览（桌面）：开关与激活态。
@@ -117,25 +117,28 @@ class ReaderBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           if (zoom != null) ...[ZoomChip(zoom: zoom!), const SizedBox(width: 10)],
-          AppButton(
-            label: toggleLabel,
-            onTap: onToggle,
-            variant: AppButtonVariant.ghost,
-            height: 24,
-            horizontalPadding: 9,
-            fontSize: AppFont.px10_5,
-          ),
+          if (onToggle != null)
+            AppButton(
+              label: toggleLabel,
+              onTap: onToggle,
+              variant: AppButtonVariant.ghost,
+              height: 24,
+              horizontalPadding: 9,
+              fontSize: AppFont.px10_5,
+            ),
           const SizedBox(width: 10),
           if (!context.isMobile) ...[
-            GestureDetector(
-              onTap: onCompare,
-              child: Icon(
-                LucideIcons.columns2,
-                size: 15,
-                color: onCompareActive ? palette.accent : palette.textSecondary,
+            if (onCompare != null) ...[
+              GestureDetector(
+                onTap: onCompare,
+                child: Icon(
+                  LucideIcons.columns2,
+                  size: 15,
+                  color: onCompareActive ? palette.accent : palette.textSecondary,
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
+              const SizedBox(width: 10),
+            ],
             GestureDetector(
               onTap: onGrid,
               child: Icon(
@@ -155,11 +158,13 @@ class ReaderBar extends StatelessWidget {
             const SizedBox(width: 10),
           ],
           if (extra != null) ...[extra!, const SizedBox(width: 10)],
-          GestureDetector(
-            onTap: onSettings,
-            child: Icon(LucideIcons.settings, size: 15, color: palette.textSecondary),
-          ),
-          const SizedBox(width: 10),
+          if (onSettings != null) ...[
+            GestureDetector(
+              onTap: onSettings,
+              child: Icon(LucideIcons.settings, size: 15, color: palette.textSecondary),
+            ),
+            const SizedBox(width: 10),
+          ],
           GestureDetector(
             onTap: onClose,
             child: Icon(LucideIcons.x, size: 15, color: palette.textSecondary),

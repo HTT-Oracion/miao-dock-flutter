@@ -36,7 +36,11 @@ class OnlineSourcesNotifier extends AsyncNotifier<List<OnlineSource>> {
   Future<OnlineSource> addOrReplace(OnlineSource source) async {
     final next = [..._value];
     final index = next.indexWhere((item) => item.id == source.id);
-    final withTimestamp = source.copyWith(importedAt: DateTime.now());
+    final existingLanguage = index >= 0 ? next[index].sourceLanguage : null;
+    final withTimestamp = source.copyWith(
+      importedAt: DateTime.now(),
+      sourceLanguage: source.sourceLanguage ?? existingLanguage,
+    );
     if (index >= 0) {
       next[index] = withTimestamp;
     } else {
@@ -67,6 +71,15 @@ class OnlineSourcesNotifier extends AsyncNotifier<List<OnlineSource>> {
     if (ref.read(onlineSourceSelectionProvider) == id) {
       ref.read(onlineSourceSelectionProvider.notifier).select(null);
     }
+  }
+
+  /// 已导入源编辑源语言；只影响翻译入口，不重载脚本。
+  void setLanguage(String id, String language) {
+    if (language != 'zh' && language != 'ja' && language != 'en') return;
+    _commit([
+      for (final source in _value)
+        if (source.id == id) source.copyWith(sourceLanguage: language) else source,
+    ]);
   }
 
   void markUsed(String id) {
