@@ -761,7 +761,7 @@ class _RemoteSectionState extends ConsumerState<_RemoteSection> {
       onTap: _testing ? null : _test,
       clickable: !_testing,
       variant: AppButtonVariant.primary,
-      height: 26,
+      height: 32,
       horizontalPadding: 18,
       fontSize: AppFont.px9_5,
       fontWeight: FontWeight.w600,
