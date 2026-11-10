@@ -42,9 +42,9 @@ class OnlineSource {
   String get version => manifest.version;
   bool get isAbnormal => consecutiveFailures >= 3;
 
-  /// 只有显式配置了源语言才启用翻译；未配置默认中文只用于展示。
-  bool get translationEnabled => switch (sourceLanguage) {
-    'zh' || 'ja' || 'en' => true,
+  /// 只有日文 / 英文源需要翻译；中文（含默认中文）与未配置均关闭翻译入口。
+  bool get translationEnabled => switch (sourceLanguage?.toLowerCase()) {
+    'ja' || 'en' => true,
     _ => false,
   };
   bool get isAvailable => enabled && !isAbnormal;

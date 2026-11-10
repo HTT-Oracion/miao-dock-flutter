@@ -27,6 +27,16 @@ Future<void> pump([int steps = 8]) async {
 }
 
 void main() {
+  test('只有日文 / 英文源启用翻译，中文与未配置关闭', () {
+    final base = OnlineTestData.seedSources(DateTime.now()).first;
+    OnlineSource withLanguage(String? language) =>
+        OnlineSource(manifest: base.manifest, capabilities: base.capabilities, sourceLanguage: language);
+    expect(withLanguage(null).translationEnabled, isFalse);
+    expect(withLanguage('zh').translationEnabled, isFalse);
+    expect(withLanguage('ja').translationEnabled, isTrue);
+    expect(withLanguage('en').translationEnabled, isTrue);
+  });
+
   testWidgets('未配置源语言：隐藏翻译入口、翻译条与 T 快捷键；配置后恢复', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1440, 900);

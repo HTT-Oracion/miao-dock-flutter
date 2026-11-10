@@ -4320,11 +4320,11 @@
   spinner + 「玩命加载中...」。
 - **源语言**：`OnlineSource` 新增可持久化 `sourceLanguage`（zh/ja/en）。已导入源
   菜单可编辑；编辑弹窗未配置时默认选中中文，但只有显式保存后才启用该源翻译。
-- **门控**：未配置源语言时，详情翻译按钮、阅读器翻译条、语言切换、对照/设置
-  翻译入口、帮助中的 T 提示、T/O/C 快捷键全部关闭；阅读器仅保留普通浏览。
+- **门控**：中文源与未配置源语言都关闭翻译；只有日文/英文源启用。详情翻译按钮、
+  阅读器翻译条、语言切换、对照/设置翻译入口、帮助中的 T 提示及 T/O/C 快捷键全部关闭。
   重新导入同 id 源保留已配置语言。
-- **验证**：`flutter test test/online` 13 passed；`flutter test --exclude-tags e2e`
-  312 passed；源语言 UI 与门控均有回归。
+- **验证**：`flutter test test/online` 14 passed；`flutter test --exclude-tags e2e`
+  315 passed；源语言 UI 与门控均有回归。
 
 
 ## D-199 · 阅读设置常驻与 250% 缩放（2026-11-10）
@@ -4335,4 +4335,4 @@
 - **缩放**：`ReaderZoom` 上限从 200% 调整到 250%；桌面 `ZoomablePage` 放大后关闭
   PageView 滚动并支持拖拽平移；移动 `ReaderStage` 捏合上限同步为 250%，放大态平移。
 - **验证**：漫画阅读器缩放单测覆盖 250% 夹紧与平移；在线设置抽屉覆盖未配置/已配置
-  翻译两种形态；`flutter test test/online` 13 passed，`--exclude-tags e2e` 314 passed。
+  翻译两种形态；`flutter test test/online` 14 passed，`--exclude-tags e2e` 315 passed。

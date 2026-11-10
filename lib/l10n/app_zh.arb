@@ -3511,7 +3511,7 @@
       }
     }
   },
-  "onlineSourceLanguageHint": "配置后才启用翻译入口；未配置时默认按中文展示，并关闭该源的全部翻译按钮、提示与快捷键。",
+  "onlineSourceLanguageHint": "仅日文 / 英文源启用翻译入口；中文或未配置默认按中文展示，并关闭该源的全部翻译按钮、提示与快捷键。",
   "@onlineSourceLanguageHint": {
     "description": "源语言配置说明"
   },
