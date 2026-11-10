@@ -4278,3 +4278,17 @@
   QuickJS 真实源取数。演示源、进度与下载只保留在 `test/online/test_data.dart` /
   `fake_engine.dart`，用 `sourceEngineProvider` 注入，不进入构建。
 - **验证**：`flutter analyze` 0；在线测试无生产 demo 依赖；全量测试后续跑。
+
+## D-196 · 在线交互修复：链接/路由/顶栏/移动阅读（2026-11-10）
+
+- **状态**：已实施。
+- **链接**：GitHub `blob` 页面统一归一为 `raw.githubusercontent.com`，仓库和单 JS
+  都支持直接粘贴浏览器地址；目录/清单/脚本的相对路径仍以 raw 地址为基准。
+- **桌面**：详情内点「发现 / 分类 / 最近 / 下载」或切平台时退出详情路由；顶栏
+  面包屑改为 `Expanded`，搜索框与「管理源」贴右并保持 10px 间距；链接导入输入框
+  与按钮统一 36 高；移动端搜索行去掉独立按钮，输入框铺满。
+- **阅读**：主「开始阅读」按钮与章节行共用 `_openReader`，源列表加载中会等待后重试；
+  移动端左右热区只翻页并收起工具栏，横滑同样不叫出工具栏；页图容器铺满舞台，
+  隐藏工具栏时移除顶/底栏占位，页角不再画「原文 / 译文」标记。
+- **验证**：`flutter test` 313 passed / 11 skipped；`test/online` 10 passed；
+  macOS debug 与 Android debug 构建通过；iOS 仍受本机签名 / Simulator runtime 限制。

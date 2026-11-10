@@ -3,6 +3,9 @@
 > 应用不内置源仓库。用户可在「设置 › 漫画源」粘贴仓库 `index.json` 地址，
 > 也可以直接粘贴单个 `.js` 源或旧版 `source.json` 地址。仓库由用户自行维护、
 > 自行托管；安装第三方脚本前请确认来源可信。
+>
+> GitHub 的 `github.com/<owner>/<repo>/blob/<branch>/<path>` 页面链接会自动
+> 归一为对应 `raw.githubusercontent.com` 文件地址；raw 链接也可直接使用。
 
 ## 一、推荐：社区单文件源仓库
 

@@ -21,7 +21,7 @@
 | 设置 | `lib/features/settings/ui/settings_screen.dart` | 新增「漫画源」分区 |
 | 国际化 | `lib/l10n/app_zh.arb` | 新增在线漫画词条，UI 零中文硬编码 |
 | 主题 | `lib/core/theme/tokens.dart` | `onBtn` / `accInk` 对比度别名；字体族常量 |
-| 断言 | `test/online/`（3 个行为测试 + 测试夹具） | 路由 / 浏览 / 阅读器 / 下载 / 翻译；数据源相关测试按要求不提交 |
+| 断言 | `test/online/`（4 个行为测试 + 测试夹具） | 路由 / 浏览 / 阅读器 / 下载 / 翻译；数据源相关测试按要求不提交 |
 | 台账 | `docs/internal/spec-notes.md` D-183..D-190 | 架构与取舍 |
 
 ## 二、功能覆盖对照表（plan → 实现）
@@ -194,8 +194,8 @@ flutter test test/online
 
 - `dart format --set-exit-if-changed lib test`：**0 changed**。
 - `flutter analyze`：**0 issues**。
-- `flutter test test/online`：**9 passed**（3 个行为测试文件）。
-- `flutter test`：**312 passed / 11 skipped**（跳过项为项目原有的条件用例）。
+- `flutter test test/online`：**10 passed**（4 个行为测试文件）。
+- `flutter test`：**313 passed / 11 skipped**（跳过项为项目原有的条件用例）。
 - 数据源专用测试（仓库解析 / 单文件源 / QuickJS 快照）在开发期本地运行通过后已删除，按要求不进入提交。
 - `flutter build macos --debug`：**✓ Built** `build/macos/Build/Products/Debug/miao_dock_flutter.app`。
 - `flutter build apk --debug`：**✓ Built** `build/app/outputs/flutter-apk/app-debug.apk`。
