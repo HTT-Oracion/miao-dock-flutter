@@ -21,7 +21,7 @@
 | 设置 | `lib/features/settings/ui/settings_screen.dart` | 新增「漫画源」分区 |
 | 国际化 | `lib/l10n/app_zh.arb` | 新增在线漫画词条，UI 零中文硬编码 |
 | 主题 | `lib/core/theme/tokens.dart` | `onBtn` / `accInk` 对比度别名；字体族常量 |
-| 断言 | `test/online/`（4 个行为测试 + 测试夹具） | 路由 / 浏览 / 阅读器 / 下载 / 翻译；数据源相关测试按要求不提交 |
+| 断言 | `test/online/`（5 个行为测试 + 测试夹具） | 路由 / 浏览 / 阅读器 / 下载 / 翻译；数据源相关测试按要求不提交 |
 | 台账 | `docs/internal/spec-notes.md` D-183..D-190 | 架构与取舍 |
 
 ## 二、功能覆盖对照表（plan → 实现）
@@ -46,7 +46,7 @@
 | 原文 / 译文切换、未完成页回退 | `OnlineReaderState.showingTranslated/pageHasTranslation`、`OnlinePageImage` | 完成；页角徽标已移除 |
 | 翻译 7 态 + 重试 / 仅看原文 / 去设置 | `OnlineTranslationBar`、`OnlineReaderNotifier.startTranslation/retryTranslation` | UI/状态机完成；翻译服务仍是演示网关 |
 | 章节目录 / 网格 / 帮助 / 亮度 / 夜间 / 条漫 / 全屏 | `_showChapters/_showGrid/_showHelp`、`readerPrefsProvider`、共享 ReaderBar/BottomBar | 完成；夜间/亮度/模式走漫画库阅读器偏好 |
-| 翻译语言沿用设置 / 源语言只读 | `OnlineReaderSettingsContent`、`_showSettings` | 完成；语言显示日本語 / 简体中文 |
+| 源语言配置 / 翻译门控 | `OnlineSource.sourceLanguage`、`online_source_panel.dart`、`OnlineReaderState.translationEnabled` | 完成：中文/日文/英文；未配置时不渲染翻译入口与快捷键，详情/阅读器均生效 |
 | 进度记忆（sourceId+comicId+chapterId+page） | `OnlineReaderNotifier._commitProgress`、`OnlineRecentNotifier`、`online_store.dart` | 完成；跨进程持久化 |
 | 下载 / 下载并翻译 / 暂停 / 继续 / 取消 / 部分成功 | `online_download_controller.dart`、`OnlineDownloadPanel/OnlineDownloadRow` | 完成（模拟进度）；移动端「离线缓存」 |
 | 离线缓存 sheet / 移动端源 sheet | `online_screen.dart:_showCacheSheet/_openSourceSheet`、`AppSheet` | 完成 |
@@ -194,8 +194,8 @@ flutter test test/online
 
 - `dart format --set-exit-if-changed lib test`：**0 changed**。
 - `flutter analyze`：**0 issues**。
-- `flutter test test/online`：**10 passed**（4 个行为测试文件）。
-- `flutter test --exclude-tags e2e`：**309 passed**。
+- `flutter test test/online`：**13 passed**（5 个行为测试文件）。
+- `flutter test --exclude-tags e2e`：**312 passed**。
 - 普通 `flutter test` 的 e2e 用例需要带令牌的 mangasvc，当前本机服务令牌不匹配会报 403；
   非 e2e 用例全部通过。
 - 数据源专用测试（仓库解析 / 单文件源 / QuickJS 快照）在开发期本地运行通过后已删除，按要求不进入提交。
