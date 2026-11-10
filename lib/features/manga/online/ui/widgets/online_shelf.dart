@@ -158,6 +158,13 @@ class OnlineShelf extends ConsumerWidget {
                   active: nav.view == OnlineView.categories && nav.query.isEmpty,
                   onTap: () => selectView(OnlineView.categories),
                 ),
+                if (active?.hasRank == true)
+                  _BrowseRow(
+                    icon: LucideIcons.trophy,
+                    label: l10n.onlineRanking,
+                    active: nav.view == OnlineView.ranking,
+                    onTap: () => selectView(OnlineView.ranking),
+                  ),
                 _BrowseRow(
                   icon: LucideIcons.history,
                   label: l10n.onlineRecent,

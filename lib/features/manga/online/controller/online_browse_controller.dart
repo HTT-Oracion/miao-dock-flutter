@@ -10,7 +10,7 @@ import '../domain/online_source.dart';
 import 'online_sources_controller.dart';
 
 /// 在线视图的四个二级入口（设计稿侧栏「浏览」）。
-enum OnlineView { discover, categories, recent, downloads }
+enum OnlineView { discover, categories, ranking, recent, downloads }
 
 class OnlineNavState {
   const OnlineNavState({
@@ -327,3 +327,123 @@ OnlineErrorCode errorCodeOf(Object? error) {
 }
 
 String errorWireName(Object? error) => errorCodeOf(error).wireName;
+
+// ── 排行 ────────────────────────────────────────────────────────────────
+
+/// 排行 tabs 与具体列表分开加载：tabs 先显示，列表区域再显示骨架/错误。
+final onlineRankTabsProvider = AsyncNotifierProvider<OnlineRankTabsNotifier, List<RankTab>>(
+  OnlineRankTabsNotifier.new,
+  retry: (_, _) => null,
+);
+
+class OnlineRankTabsNotifier extends AsyncNotifier<List<RankTab>> {
+  @override
+  Future<List<RankTab>> build() async {
+    final source = _activeSource(ref);
+    if (source == null || !source.hasRank) return const [];
+    try {
+      final tabs = await ref.read(onlineRepositoryProvider).rankTabs(source);
+      ref.read(onlineSourcesProvider.notifier).markSuccess(source.id);
+      return tabs;
+    } catch (_) {
+      ref.read(onlineSourcesProvider.notifier).markFailure(source.id);
+      rethrow;
+    }
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(build);
+  }
+}
+
+final onlineRankTabProvider = NotifierProvider<OnlineRankTabNotifier, String?>(OnlineRankTabNotifier.new);
+
+class OnlineRankTabNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void select(String id) => state = id;
+}
+
+class RankBrowseState {
+  const RankBrowseState({
+    required this.tabs,
+    required this.selected,
+    required this.page,
+    this.loadingMore = false,
+    this.loadMoreError,
+  });
+
+  final List<RankTab> tabs;
+  final String selected;
+  final PagedComics page;
+  final bool loadingMore;
+  final Object? loadMoreError;
+
+  RankBrowseState copyWith({
+    List<RankTab>? tabs,
+    String? selected,
+    PagedComics? page,
+    bool? loadingMore,
+    Object? loadMoreError,
+    bool clearError = false,
+  }) => RankBrowseState(
+    tabs: tabs ?? this.tabs,
+    selected: selected ?? this.selected,
+    page: page ?? this.page,
+    loadingMore: loadingMore ?? this.loadingMore,
+    loadMoreError: clearError ? null : (loadMoreError ?? this.loadMoreError),
+  );
+}
+
+final onlineRankProvider = AsyncNotifierProvider<OnlineRankNotifier, RankBrowseState>(
+  OnlineRankNotifier.new,
+  retry: (_, _) => null,
+);
+
+class OnlineRankNotifier extends AsyncNotifier<RankBrowseState> {
+  static const _emptyPage = PagedComics(items: [], page: 1, hasMore: false);
+
+  static RankBrowseState _empty() => const RankBrowseState(tabs: [], selected: '', page: _emptyPage);
+
+  @override
+  Future<RankBrowseState> build() async {
+    final source = _activeSource(ref);
+    if (source == null || !source.hasRank) return _empty();
+    final tabs = await ref.watch(onlineRankTabsProvider.future);
+    if (tabs.isEmpty) return _empty().copyWith(tabs: tabs);
+    final wanted = ref.watch(onlineRankTabProvider);
+    final selected = wanted != null && tabs.any((tab) => tab.id == wanted) ? wanted : tabs.first.id;
+    try {
+      final page = await ref.read(onlineRepositoryProvider).rank(source, selected, 1);
+      ref.read(onlineSourcesProvider.notifier).markSuccess(source.id);
+      return RankBrowseState(tabs: tabs, selected: selected, page: page);
+    } catch (_) {
+      ref.read(onlineSourcesProvider.notifier).markFailure(source.id);
+      rethrow;
+    }
+  }
+
+  void selectTab(String id) => ref.read(onlineRankTabProvider.notifier).select(id);
+
+  void refresh() {
+    if (ref.read(onlineRankTabsProvider).hasError) ref.invalidate(onlineRankTabsProvider);
+    ref.invalidateSelf();
+  }
+
+  Future<void> loadMore() async {
+    final current = state.value;
+    final source = _activeSource(ref);
+    if (current == null || source == null || current.loadingMore || !current.page.hasMore) return;
+    state = AsyncData(current.copyWith(loadingMore: true, clearError: true));
+    try {
+      final next = await ref.read(onlineRepositoryProvider).rank(source, current.selected, current.page.page + 1);
+      ref.read(onlineSourcesProvider.notifier).markSuccess(source.id);
+      state = AsyncData(current.copyWith(page: current.page.append(next), loadingMore: false));
+    } catch (e) {
+      ref.read(onlineSourcesProvider.notifier).markFailure(source.id);
+      state = AsyncData(current.copyWith(loadingMore: false, loadMoreError: e));
+    }
+  }
+}

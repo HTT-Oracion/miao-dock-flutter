@@ -310,9 +310,11 @@ class OnlineMobileSubTabs extends ConsumerWidget {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final nav = ref.watch(onlineNavProvider);
+    final source = ref.watch(activeOnlineSourceProvider);
     final items = [
       (OnlineView.discover, l10n.onlineDiscover),
       (OnlineView.categories, l10n.onlineCategories),
+      if (source?.hasRank == true) (OnlineView.ranking, l10n.onlineRanking),
       (OnlineView.recent, l10n.onlineRecentShort),
     ];
     return Container(

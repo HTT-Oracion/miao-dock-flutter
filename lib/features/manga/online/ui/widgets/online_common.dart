@@ -365,7 +365,14 @@ class _OnlineBookCardState extends State<OnlineBookCard> {
                       ? [BoxShadow(color: palette.shadow, blurRadius: 24, offset: const Offset(0, 8))]
                       : const [],
                 ),
-                child: OnlineCover(comic: widget.comic, showBadge: widget.showBadge),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    OnlineCover(comic: widget.comic, showBadge: widget.showBadge),
+                    if (widget.comic.rank != null)
+                      Positioned(left: 6, top: 6, child: _OnlineRankBadge(rank: widget.comic.rank!)),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 7),
@@ -394,6 +401,44 @@ class _OnlineBookCardState extends State<OnlineBookCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _OnlineRankBadge extends StatelessWidget {
+  const _OnlineRankBadge({required this.rank});
+
+  final int rank;
+
+  static const _topColors = <Color>[
+    Color(0xFFE7B84B),
+    Color(0xFFC9D1DF),
+    Color(0xFFC98252),
+    Color(0xFF5B8FD6),
+    Color(0xFF8C6BC8),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final index = rank - 1;
+    final bg = index >= 0 && index < _topColors.length ? _topColors[index] : palette.ink2.withValues(alpha: 0.82);
+    final fg = index >= 0 && index < 3 ? const Color(0xFF241A08) : Colors.white;
+    return Container(
+      height: 22,
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(5),
+        boxShadow: [
+          BoxShadow(color: palette.shadow.withValues(alpha: 0.45), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Text(
+        'No.$rank',
+        style: TextStyle(fontSize: AppFont.px11, height: 1, fontWeight: FontWeight.w800, color: fg, letterSpacing: 0.2),
       ),
     );
   }

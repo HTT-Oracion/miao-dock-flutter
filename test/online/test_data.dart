@@ -20,6 +20,7 @@ abstract final class OnlineTestData {
       status: ComicStatus.ongoing,
       chapterCount: 235,
       latestChapter: '第206话',
+      updatedAt: '2026-11-10',
       badge: '更新',
     ),
     OnlineComic(
@@ -227,6 +228,25 @@ abstract final class OnlineTestData {
     'init',
   };
 
+  static List<OnlineComic> rankedComics(String tabId, {int page = 1}) {
+    if (page > 1) return const [];
+    return [
+      for (final (index, comic) in longStripComics.take(12).indexed)
+        OnlineComic(
+          id: '${comic.id}-$tabId',
+          title: comic.title,
+          coverTone: comic.coverTone,
+          author: comic.author,
+          tags: comic.tags,
+          status: comic.status,
+          chapterCount: comic.chapterCount,
+          latestChapter: comic.latestChapter,
+          updatedAt: '2026-11-${(index + 1).toString().padLeft(2, '0')}',
+          rank: index + 1,
+        ),
+    ];
+  }
+
   static List<OnlineSource> seedSources(DateTime now) => [
     OnlineSource(
       manifest: const SourceManifest(
@@ -241,6 +261,7 @@ abstract final class OnlineTestData {
         hosts: ['manhuagui.com', 'www.manhuagui.com', 'cf.mhgui.com'],
         description: '漫画柜示例源（真实站点结构，演示数据离线回放）。',
         headers: {'Referer': 'https://www.manhuagui.com/'},
+        hasRank: true,
       ),
       capabilities: _sourceCaps,
       sourceLanguage: 'ja',

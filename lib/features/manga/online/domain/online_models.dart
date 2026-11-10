@@ -31,7 +31,9 @@ class OnlineComic {
     this.status = ComicStatus.unknown,
     this.chapterCount = 0,
     this.latestChapter,
+    this.updatedAt,
     this.badge,
+    this.rank,
   });
 
   final String id;
@@ -57,8 +59,22 @@ class OnlineComic {
   /// 最新话展示文本，如 `第206话`。
   final String? latestChapter;
 
+  /// 更新时间（源返回的原始展示文本，如 `2026-11-10`）。
+  final String? updatedAt;
+
   /// 封面角标（更新 / 新 / 完结等），源数据，不做本地化。
   final String? badge;
+
+  /// 排行名次；仅排行接口返回，1 基。
+  final int? rank;
+}
+
+/// 排行分类（日 / 周 / 月 / 总等），完全由源配置决定。
+class RankTab {
+  const RankTab({required this.id, required this.title});
+
+  final String id;
+  final String title;
 }
 
 /// 章节分组（设计稿：连载 → 番外 → 单行本）。

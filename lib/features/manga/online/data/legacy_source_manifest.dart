@@ -21,6 +21,8 @@ SourceManifest legacyManifestFromScript(
   final scriptName = _match(js, RegExp(r'''(?:^|\n)\s*name\s*=\s*["']([^"']+)["']'''));
   final scriptVersion = _match(js, RegExp(r'''(?:^|\n)\s*version\s*=\s*["']([^"']+)["']'''));
   final baseUrl = _match(js, RegExp(r'''(?:^|\n)\s*baseUrl\s*=\s*["']([^"']+)["']'''));
+  final hasRank =
+      RegExp(r'(?:^|\n)\s*rank\s*=\s*\{').hasMatch(js) || RegExp(r'enableRankingPage\s*:\s*true').hasMatch(js);
   final rawHosts = <String>{
     for (final match in RegExp(r'https?://([A-Za-z0-9.-]+\.[A-Za-z]{2,})').allMatches(js))
       match.group(1)!.toLowerCase(),
@@ -57,6 +59,7 @@ SourceManifest legacyManifestFromScript(
     rateLimitIntervalMs: 300,
     rateLimitConcurrency: 2,
     runtime: SourceRuntime.comicSource,
+    hasRank: hasRank,
   );
 }
 

@@ -200,6 +200,7 @@ class _DesktopHero extends ConsumerWidget {
                     ComicStatus.completed => l10n.onlineStatusCompleted,
                     ComicStatus.unknown => l10n.onlineStatusUnknown,
                   }, tone: OnlineTagTone.acc),
+                  if (comic.updatedAt != null) OnlineTag(l10n.onlineUpdatedAt(comic.updatedAt!)),
                   for (final tag in comic.tags) OnlineTag(tag),
                   Text(
                     comic.author == null
@@ -477,6 +478,7 @@ class _MobileHero extends ConsumerWidget {
                         ComicStatus.completed => l10n.onlineStatusCompleted,
                         ComicStatus.unknown => l10n.onlineStatusUnknown,
                       }, tone: OnlineTagTone.acc),
+                      if (comic.updatedAt != null) OnlineTag(l10n.onlineUpdatedAt(comic.updatedAt!)),
                       for (final tag in comic.tags.take(2)) OnlineTag(tag),
                     ],
                   ),

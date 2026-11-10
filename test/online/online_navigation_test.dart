@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:miao_dock_flutter/app/app.dart';
 import 'package:miao_dock_flutter/app/router/routes.dart';
 import 'package:miao_dock_flutter/app/shell/mobile_nav.dart';
+import 'package:miao_dock_flutter/features/manga/online/controller/online_browse_controller.dart';
 import 'package:miao_dock_flutter/features/manga/online/controller/online_reader_controller.dart';
 import 'package:miao_dock_flutter/features/manga/online/data/online_image_loader.dart';
 import 'package:miao_dock_flutter/features/manga/online/data/online_repository.dart';
@@ -19,7 +20,7 @@ import 'fake_engine.dart';
 import 'fake_image_loader.dart';
 import 'test_store.dart';
 
-Future<ProviderContainer> pumpApp(WidgetTester tester, Size size) async {
+Future<ProviderContainer> pumpApp(WidgetTester tester, Size size, {FakeSourceEngine? engine}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
@@ -27,7 +28,7 @@ Future<ProviderContainer> pumpApp(WidgetTester tester, Size size) async {
     ProviderScope(
       overrides: [
         onlineStoreProvider.overrideWithValue(MemoryStore()),
-        sourceEngineProvider.overrideWithValue(FakeSourceEngine()),
+        sourceEngineProvider.overrideWithValue(engine ?? FakeSourceEngine()),
         onlineImageLoaderProvider.overrideWithValue(FakeImageLoader()),
       ],
       child: const MiaoDockApp(),
@@ -73,6 +74,8 @@ void main() {
     expect(currentPath(container), '/manga/online/detail/manhuagui/kimetsu');
     expect(find.text('开始阅读'), findsWidgets);
     expect(find.text('下载并翻译'), findsWidgets);
+    expect(find.text('吾峠呼世晴 · 235 话'), findsOneWidget);
+    expect(find.text('更新 2026-11-10'), findsOneWidget);
 
     await tester.tap(find.text('第206话 决战之后').first);
     await pump(12);
@@ -172,5 +175,49 @@ void main() {
     expect(find.text('阅读模式'), findsWidgets);
     expect(find.text('范围'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('桌面：排行入口、日周月总 tabs 与 No 角标', (tester) async {
+    final container = await pumpApp(tester, const Size(1440, 900));
+    await tester.tap(find.descendant(of: find.byType(OnlineShelf), matching: find.text('排行')));
+    await pump(10);
+    expect(find.text('日排行'), findsOneWidget);
+    expect(find.text('周排行'), findsOneWidget);
+    expect(find.text('月排行'), findsOneWidget);
+    expect(find.text('总排行'), findsOneWidget);
+    // tabs 上方不再有「排行榜 / 漫画柜」标题栏。
+    expect(find.text('排行榜'), findsNothing);
+    expect(find.text('No.1'), findsOneWidget);
+    expect(find.text('No.6'), findsOneWidget);
+    await tester.tap(find.text('周排行'));
+    await pump(8);
+    expect(container.read(onlineNavProvider).view, OnlineView.ranking);
+  });
+  testWidgets('桌面：切换排行 tab 时 tabs 保持可见，加载态只在下方', (tester) async {
+    await pumpApp(tester, const Size(1440, 900), engine: FakeSourceEngine(delay: const Duration(milliseconds: 300)));
+    await tester.tap(find.descendant(of: find.byType(OnlineShelf), matching: find.text('排行')));
+    await pump(8);
+    expect(find.text('日排行'), findsOneWidget);
+
+    await tester.tap(find.text('周排行'));
+    await tester.pump();
+    expect(find.text('日排行'), findsOneWidget);
+    expect(find.text('周排行'), findsOneWidget);
+    expect(find.text('月排行'), findsOneWidget);
+    expect(find.text('总排行'), findsOneWidget);
+    expect(find.byType(OnlineGridSkeleton), findsOneWidget);
+
+    await pump(4);
+    expect(find.byType(OnlineGridSkeleton), findsNothing);
+  });
+  testWidgets('桌面：首次进入排行先显示 tabs，列表区域单独加载', (tester) async {
+    await pumpApp(tester, const Size(1440, 900), engine: FakeSourceEngine(rankPageDelay: const Duration(seconds: 1)));
+    await tester.tap(find.descendant(of: find.byType(OnlineShelf), matching: find.text('排行')));
+    await pump(2);
+    expect(find.text('日排行'), findsOneWidget);
+    expect(find.text('周排行'), findsOneWidget);
+    expect(find.byType(OnlineGridSkeleton), findsOneWidget);
+    await pump(4);
+    expect(find.byType(OnlineGridSkeleton), findsNothing);
+    expect(find.text('No.1'), findsOneWidget);
   });
 }

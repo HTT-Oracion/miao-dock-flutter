@@ -116,3 +116,36 @@ mysource/
 - 请求受脚本中提取的域名白名单约束；图片同样受限。
 - 图片缓存在 `online/images/<sourceId>/`，删除源时清除。
 - 应用不内置源、不提供官方源市场；第三方源的行为与可用性由源维护者负责。
+
+## 十、可选扩展：排行 `rank`
+
+应用识别单文件源上的 `rank` 扩展字段；没有该字段的源不显示「排行」入口。
+这也是普通 `ComicSource` 的可选扩展，不改变 `explore / category / search /
+comic` 的任何既有语义，其他兼容客户端会忽略它。
+
+```js
+rank = {
+  tabs: [
+    { id: "day", title: "日排行" },
+    { id: "week", title: "周排行" },
+    { id: "month", title: "月排行" },
+    { id: "total", title: "总排行" },
+  ],
+  load: async (tabId, page) => ({ comics: [], maxPage: 1 }),
+};
+```
+
+- `tabs` 决定应用排行页显示哪些 tab，顺序即展示顺序；只配置部分 tab 就只显示部分。
+- `load(tabId, page)` 返回与 `categoryComics.load` 同形的 `{ comics, maxPage }`。
+- 排行条目可以带 `rank` 数字；没有时应用按页内顺序补 `No.N`。
+- 兼容上游标准排行：若没有自定义 `rank`，但源声明了
+  `category.enableRankingPage = true` 且实现 `categoryComics.ranking.load`，
+  应用会从 `ranking.options` 生成 tabs 并调用同一个 loader。
+- 排行卡片沿用发现页卡片；带 `rank` 的漫画会在封面左上角显示 `No.N`。
+  1–5 名使用强调色，6 名以后使用次要色。
+
+### 作者 / 更新时间
+
+列表 `Comic` 推荐同时携带 `author`、`updateTime` 与 `subtitle`（最新章节）；
+详情 `ComicDetails.tags` 建议使用 `作者`（或 `author`）并在 `updateTime`
+提供更新日期。应用会同时读取显式字段和标签键，兼容不同来源写法。

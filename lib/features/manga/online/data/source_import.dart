@@ -109,6 +109,7 @@ class SourceImporter {
             'loadComicPages',
             'getImageLoadingConfig',
             'init',
+            if (manifest.hasRank) 'rank',
           }
         : detectCapabilities(package.js);
     if (!capabilities.contains('loadComicInfo')) {

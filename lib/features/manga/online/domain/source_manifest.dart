@@ -32,6 +32,7 @@ class SourceManifest {
     this.rateLimitIntervalMs = 400,
     this.rateLimitConcurrency = 2,
     this.runtime = SourceRuntime.contract,
+    this.hasRank = false,
   });
 
   final int specVersion;
@@ -52,6 +53,9 @@ class SourceManifest {
 
   /// 脚本格式；远程单 JS 源会自动合成清单并标记 [SourceRuntime.comicSource]。
   final SourceRuntime runtime;
+
+  /// 源是否声明了排行配置（自定义 rank 或上游 categoryComics.ranking）。
+  final bool hasRank;
 
   static const int supportedSpecVersion = 2;
 
@@ -130,6 +134,7 @@ class SourceManifest {
       rateLimitIntervalMs: intervalMs.clamp(100, 60000),
       rateLimitConcurrency: concurrency.clamp(1, 4),
       runtime: '${map['runtime'] ?? ''}' == 'comicSource' ? SourceRuntime.comicSource : SourceRuntime.contract,
+      hasRank: map['rank'] == true || map['rank'] is Map,
     );
   }
 
@@ -177,26 +182,29 @@ class SourceManifest {
     'request': {'timeoutMs': timeoutMs, if (headers.isNotEmpty) 'headers': headers},
     'rateLimit': {'intervalMs': rateLimitIntervalMs, 'concurrency': rateLimitConcurrency},
     if (runtime != SourceRuntime.contract) 'runtime': runtime.name,
+    if (hasRank) 'rank': true,
   };
 
   String toJsonString() => const JsonEncoder.withIndent('  ').convert(toJson());
 
-  SourceManifest copyWith({String? name, String? version, String? lang, List<String>? hosts}) => SourceManifest(
-    specVersion: specVersion,
-    id: id,
-    name: name ?? this.name,
-    version: version ?? this.version,
-    lang: lang ?? this.lang,
-    baseUrl: baseUrl,
-    entryClass: entryClass,
-    sourceFile: sourceFile,
-    hosts: hosts ?? this.hosts,
-    icon: icon,
-    description: description,
-    timeoutMs: timeoutMs,
-    headers: headers,
-    rateLimitIntervalMs: rateLimitIntervalMs,
-    rateLimitConcurrency: rateLimitConcurrency,
-    runtime: runtime,
-  );
+  SourceManifest copyWith({String? name, String? version, String? lang, List<String>? hosts, bool? hasRank}) =>
+      SourceManifest(
+        specVersion: specVersion,
+        id: id,
+        name: name ?? this.name,
+        version: version ?? this.version,
+        lang: lang ?? this.lang,
+        baseUrl: baseUrl,
+        entryClass: entryClass,
+        sourceFile: sourceFile,
+        hosts: hosts ?? this.hosts,
+        icon: icon,
+        description: description,
+        timeoutMs: timeoutMs,
+        headers: headers,
+        rateLimitIntervalMs: rateLimitIntervalMs,
+        rateLimitConcurrency: rateLimitConcurrency,
+        runtime: runtime,
+        hasRank: hasRank ?? this.hasRank,
+      );
 }

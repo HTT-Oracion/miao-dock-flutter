@@ -190,7 +190,7 @@ var Convert = {
 
 // ── 上游单文件源兼容层 ─────────────────────────────────────────────
 // 这些构造器只保留源脚本实际使用的字段；字段缺失时由适配器按空处理。
-function Comic({ id, title, subtitle, subTitle, cover, tags, description, maxPage, language, favoriteId, stars, author } = {}) {
+function Comic({ id, title, subtitle, subTitle, cover, tags, description, maxPage, language, favoriteId, stars, author, latestChapter, updatedAt, updateTime, rank, score } = {}) {
   this.id = id;
   this.title = title;
   this.subtitle = subtitle ?? subTitle;
@@ -203,9 +203,14 @@ function Comic({ id, title, subtitle, subTitle, cover, tags, description, maxPag
   this.favoriteId = favoriteId;
   this.stars = stars;
   this.author = author;
+  this.latestChapter = latestChapter ?? this.subtitle;
+  this.updatedAt = updatedAt ?? updateTime;
+  this.updateTime = this.updatedAt;
+  this.rank = rank;
+  this.score = score;
 }
 
-function ComicDetails({ title, subtitle, subTitle, cover, description, tags, chapters, recommend, author, status } = {}) {
+function ComicDetails({ title, subtitle, subTitle, cover, description, tags, chapters, recommend, author, status, latestChapter, updatedAt, updateTime } = {}) {
   this.title = title;
   this.subtitle = subtitle ?? subTitle;
   this.cover = cover;
@@ -215,6 +220,9 @@ function ComicDetails({ title, subtitle, subTitle, cover, description, tags, cha
   this.recommend = recommend;
   this.author = author;
   this.status = status;
+  this.latestChapter = latestChapter;
+  this.updatedAt = updatedAt ?? updateTime;
+  this.updateTime = this.updatedAt;
 }
 
 function ImageLoadingConfig({ url, method, data, headers } = {}) {
@@ -274,12 +282,60 @@ function __legacyTags(value) {
   return [String(value)];
 }
 
+function __legacyAuthor(source, tags) {
+  if (source.author != null) {
+    if (Array.isArray(source.author)) return source.author.map((e) => String(e)).filter(Boolean).join(', ');
+    const text = String(source.author).trim();
+    if (text) return text;
+  }
+  const names = ['author', 'authors', 'artist', 'artists', '作者', '画师'];
+  const raw = source.tags;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    for (const key of Object.keys(raw)) {
+      if (names.indexOf(String(key).toLowerCase()) >= 0) {
+        const value = raw[key];
+        if (Array.isArray(value)) return value.map((e) => String(e)).filter(Boolean).join(', ');
+        if (value != null && String(value).trim()) return String(value).trim();
+      }
+    }
+  }
+  for (const tag of tags) {
+    const m = /^(?:作者|author)[:：]\s*(.+)$/i.exec(tag);
+    if (m) return m[1].trim();
+  }
+  return undefined;
+}
+
+function __legacyUpdate(source, tags) {
+  const direct = source.updateTime ?? source.updatedAt ?? source.update;
+  if (direct != null && String(direct).trim()) return String(direct).trim();
+  const names = ['更新', '最後更新', '最后更新', 'update', 'last update', '更新时间'];
+  const raw = source.tags;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    for (const key of Object.keys(raw)) {
+      if (names.indexOf(String(key).toLowerCase()) >= 0) {
+        const value = raw[key];
+        const text = Array.isArray(value) ? (value.length ? String(value[0]) : '') : String(value || '');
+        if (text.trim()) return text.trim();
+      }
+    }
+  }
+  for (const tag of tags) {
+    const m = /^(?:更新于|更新|更新时间|update)[:：]\s*(.+)$/i.exec(tag);
+    if (m) return m[1].trim();
+  }
+  return undefined;
+}
+
 function __legacyComic(source) {
   if (!source) return null;
   const id = source.id == null ? '' : String(source.id).trim();
   const title = source.title == null ? '' : String(source.title).trim();
   if (!id || !title) return null;
   const tags = __legacyTags(source.tags);
+  const author = __legacyAuthor(source, tags);
+  const updatedAt = __legacyUpdate(source, tags);
+  const rank = source.rank == null ? undefined : (parseInt(source.rank, 10) || undefined);
   let status = source.status === 'completed' ? 'completed' : (source.status === 'ongoing' ? 'ongoing' : undefined);
   if (!status) {
     for (const tag of tags) {
@@ -292,10 +348,13 @@ function __legacyComic(source) {
     title,
     cover: source.cover ? String(source.cover) : undefined,
     subtitle: source.subtitle != null ? String(source.subtitle) : (source.subTitle != null ? String(source.subTitle) : undefined),
-    author: source.author != null ? String(source.author) : undefined,
+    latestChapter: source.latestChapter != null ? String(source.latestChapter) : (source.subtitle != null ? String(source.subtitle) : undefined),
+    author,
     tags,
     description: source.description != null ? String(source.description) : '',
     status,
+    updatedAt,
+    rank,
   };
 }
 
@@ -455,6 +514,7 @@ async function __legacyDetail(source, ctx) {
   if (typeof loader !== 'function') throw sourceError('SPEC_UNSUPPORTED', 'comic.loadInfo');
   const detail = await loader.call(source.comic, id);
   if (!detail) throw sourceError('NOT_FOUND', id);
+  const detailTags = __legacyTags(detail.tags);
   const comic = __legacyComic({
     ...detail,
     id: detail.id ?? id,
@@ -463,7 +523,8 @@ async function __legacyDetail(source, ctx) {
     subtitle: detail.subtitle ?? detail.subTitle,
     description: detail.description,
     tags: detail.tags,
-    author: detail.author,
+    author: detail.author ?? __legacyAuthor(detail, detailTags),
+    updateTime: detail.updateTime ?? __legacyUpdate(detail, detailTags),
     status: detail.status,
   });
   if (!comic) throw sourceError('PARSE_FAILED', 'detail title missing');
@@ -494,6 +555,47 @@ async function __legacyImageConfig(source, ctx) {
   };
 }
 
+function __legacyRankTabs(source) {
+  const rank = source.rank;
+  const tabs = [];
+  const add = (id, title) => {
+    if (id == null) return;
+    tabs.push({ id: String(id), title: String(title == null || title === '' ? id : title) });
+  };
+  if (rank) {
+    const rawTabs = Array.isArray(rank.tabs) ? rank.tabs : (Array.isArray(rank) ? rank : []);
+    for (let i = 0; i < rawTabs.length; i++) {
+      const item = rawTabs[i];
+      if (item && typeof item === 'object') add(item.id ?? i, item.title ?? item.name ?? item.id ?? i);
+      else add(i, item);
+    }
+  }
+  if (tabs.length === 0 && source.categoryComics && source.categoryComics.ranking) {
+    const options = source.categoryComics.ranking.options || [];
+    for (const option of options) {
+      const text = String(option);
+      const split = text.indexOf('-');
+      if (split < 0) continue;
+      add(text.slice(0, split), text.slice(split + 1));
+    }
+  }
+  return tabs;
+}
+
+async function __legacyRank(source, ctx) {
+  const id = String((ctx && ctx.id) || '');
+  const page = (ctx && ctx.page) || 1;
+  let loader = source.rank && source.rank.load;
+  if (typeof loader !== 'function' && source.categoryComics && source.categoryComics.ranking) {
+    loader = source.categoryComics.ranking.load;
+  }
+  if (typeof loader !== 'function') return { items: [], page, hasMore: false };
+  const res = await loader.call(source.rank && source.rank.load === loader ? source.rank : source.categoryComics.ranking, id, page);
+  const items = (res && (res.comics || res.items) || []).map(__legacyComic).filter(Boolean);
+  const maxPage = (res && res.maxPage) || 1;
+  return { items, page, hasMore: page < maxPage, total: items.length };
+}
+
 function __makeLegacyAdapter(source) {
   return {
     name: source.name,
@@ -502,6 +604,8 @@ function __makeLegacyAdapter(source) {
     explore: (ctx) => __legacyExplore(source, ctx),
     categories: () => __legacyCategories(source),
     category: (ctx) => __legacyCategory(source, ctx),
+    rankTabs: () => __legacyRankTabs(source),
+    rank: (ctx) => __legacyRank(source, ctx),
     search: (ctx) => __legacySearch(source, ctx),
     loadComicInfo: (ctx) => __legacyDetail(source, ctx),
     loadComicPages: (ctx) => __legacyPages(source, ctx),

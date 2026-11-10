@@ -7,13 +7,16 @@ import 'test_data.dart';
 
 /// 测试夹具引擎：不加载 QuickJS，按 [OnlineTestData] 回放。
 class FakeSourceEngine implements SourceEngine {
-  FakeSourceEngine({this.delay = Duration.zero});
+  FakeSourceEngine({this.delay = Duration.zero, this.rankTabsDelay, this.rankPageDelay});
 
   final Duration delay;
+  final Duration? rankTabsDelay;
+  final Duration? rankPageDelay;
   final Set<String> unloaded = {};
 
-  Future<void> _wait() async {
-    if (delay > Duration.zero) await Future<void>.delayed(delay);
+  Future<void> _wait([Duration? override]) async {
+    final wait = override ?? delay;
+    if (wait > Duration.zero) await Future<void>.delayed(wait);
   }
 
   @override
@@ -29,6 +32,25 @@ class FakeSourceEngine implements SourceEngine {
   Future<List<CategoryGroup>> categories(OnlineSource source) async {
     await _wait();
     return OnlineTestData.categoryGroups;
+  }
+
+  @override
+  Future<List<RankTab>> rankTabs(OnlineSource source) async {
+    await _wait(rankTabsDelay);
+    if (!source.hasRank) return const [];
+    return const [
+      RankTab(id: 'day', title: '日排行'),
+      RankTab(id: 'week', title: '周排行'),
+      RankTab(id: 'month', title: '月排行'),
+      RankTab(id: 'total', title: '总排行'),
+    ];
+  }
+
+  @override
+  Future<PagedComics> rank(OnlineSource source, {required String tabId, required int page}) async {
+    await _wait(rankPageDelay);
+    final items = OnlineTestData.rankedComics(tabId, page: page);
+    return PagedComics(items: items, page: page, hasMore: false, total: items.length);
   }
 
   @override

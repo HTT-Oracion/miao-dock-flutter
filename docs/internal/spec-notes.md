@@ -4338,3 +4338,22 @@
   PageView 滚动并支持拖拽平移；移动 `ReaderStage` 捏合上限同步为 250%，放大态平移。
 - **验证**：漫画阅读器缩放单测覆盖 250% 夹紧与平移；在线设置抽屉覆盖未配置/已配置
   翻译两种形态；`flutter test test/online` 14 passed，`--exclude-tags e2e` 315 passed。
+
+
+## D-200 · 源排行扩展与作者/更新时间（2026-11-10）
+
+- **状态**：开发完成，待用户校验，未提交。
+- **排行协议**：`ComicSource.rank = { tabs:[{id,title}], load(tabId,page) }`。
+  应用通过 `SourceManifest.hasRank` 显示分类下方「排行」；tab 完全由源返回。
+  同时兼容上游 `enableRankingPage` + `categoryComics.ranking`。
+- **UI**：排行复用发现页卡片，`OnlineComic.rank` 驱动左上 `No.N` 角标；
+  1–5 名强调色，6 名以后次要色。tabs 与列表分两段加载：tabs 先显示，
+  列表骨架/错误只出现在 tabs 下方，切换 tab 时 tabs 不消失。
+- **元数据**：legacy 适配从 `Comic.author`、`ComicDetails.tags` 的
+  `作者/author` 读取作者，从 `updateTime`、`更新时间`、`更新` 标签读取更新时间；
+  兼容构造器保留 `Comic.updateTime/rank/latestChapter` 与 `ComicDetails.updateTime`；
+  详情显示作者与「更新 YYYY-MM-DD」。
+- **源文件**：`.tmp/manhuagui.js` 增加 `rank` 与排行解析，修正旧详情页
+  `detail-list` 按标签解析作者/状态/更新时间，不改变上游标准字段。
+- **验证**：真实排行页 HTML 快照离线跑通 4 tabs、50 条排行、作者/更新时间；
+  `flutter test test/online` 17 passed；`--exclude-tags e2e` 318 passed。

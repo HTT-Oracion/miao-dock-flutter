@@ -12,6 +12,11 @@ abstract interface class SourceEngine {
 
   Future<List<CategoryGroup>> categories(OnlineSource source);
 
+  /// 源声明的排行分类；无排行返回空列表。
+  Future<List<RankTab>> rankTabs(OnlineSource source);
+
+  Future<PagedComics> rank(OnlineSource source, {required String tabId, required int page});
+
   Future<PagedComics> category(OnlineSource source, {required String id, required int page});
 
   Future<PagedComics> search(OnlineSource source, {required String keyword, required int page});

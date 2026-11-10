@@ -280,6 +280,102 @@ class _ChipSkeletons extends StatelessWidget {
   }
 }
 
+class OnlineRankView extends ConsumerWidget {
+  const OnlineRankView({super.key, required this.onOpenComic});
+
+  final ValueChanged<OnlineComic> onOpenComic;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final source = ref.watch(activeOnlineSourceProvider);
+    if (source == null) {
+      return SingleChildScrollView(
+        padding: onlinePagePadding(context),
+        child: OnlineStateBox(
+          icon: LucideIcons.inbox,
+          title: l10n.onlineSourceEmpty,
+          description: l10n.onlineSourceEmptyHint,
+        ),
+      );
+    }
+    final tabsAsync = ref.watch(onlineRankTabsProvider);
+    final tabs = tabsAsync.value ?? const <RankTab>[];
+    final wanted = ref.watch(onlineRankTabProvider);
+    final selected = wanted != null && tabs.any((tab) => tab.id == wanted)
+        ? wanted
+        : (tabs.isEmpty ? '' : tabs.first.id);
+    final rank = ref.watch(onlineRankProvider);
+    final state = rank.value;
+
+    final Widget tabRow;
+    if (tabsAsync.isLoading && tabs.isEmpty) {
+      tabRow = const _ChipSkeletons();
+    } else if (tabs.isEmpty) {
+      tabRow = const SizedBox.shrink();
+    } else {
+      tabRow = Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final tab in tabs)
+            OnlineChip(
+              label: tab.title,
+              selected: tab.id == selected,
+              onTap: () => ref.read(onlineRankProvider.notifier).selectTab(tab.id),
+            ),
+        ],
+      );
+    }
+
+    final Widget body;
+    if (rank.hasError) {
+      body = OnlineErrorBox(
+        error: rank.error,
+        title: l10n.onlineRankError,
+        description: l10n.onlineRankErrorHint,
+        onRetry: () => ref.read(onlineRankProvider.notifier).refresh(),
+      );
+    } else if (rank.isLoading || state == null) {
+      body = const OnlineGridSkeleton();
+    } else if (state.page.items.isEmpty) {
+      body = OnlineStateBox(
+        icon: LucideIcons.trophy,
+        title: l10n.onlineRankEmpty,
+        description: l10n.onlineRankEmptyHint,
+      );
+    } else {
+      body = OnlineBookGrid(comics: state.page.items, onOpen: onOpenComic);
+    }
+
+    final idle = !rank.isLoading && !rank.hasError && state != null;
+    return OnlineAutoLoadMore(
+      enabled: idle && state.page.hasMore && !state.loadingMore,
+      onLoadMore: () => ref.read(onlineRankProvider.notifier).loadMore(),
+      child: SingleChildScrollView(
+        padding: onlinePagePadding(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            tabRow,
+            const SizedBox(height: 14),
+            body,
+            if (idle)
+              _LoadMoreRow(
+                loading: state.loadingMore,
+                error: state.loadMoreError,
+                hasMore: state.page.hasMore,
+                page: state.page.page,
+                total: state.page.total,
+                onPressed: () => ref.read(onlineRankProvider.notifier).loadMore(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class OnlineRecentView extends ConsumerWidget {
   const OnlineRecentView({super.key, required this.onOpenComic, required this.onContinue});
 

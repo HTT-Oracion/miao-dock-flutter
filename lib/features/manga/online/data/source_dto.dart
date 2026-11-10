@@ -113,6 +113,48 @@ class SourceDto {
     return OnlineComicDetail(comic: comic, chapters: chapters);
   }
 
+  List<RankTab> rankTabs(Object? raw) {
+    if (raw is! List) return const [];
+    final tabs = <RankTab>[];
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final id = _str(item['id'], fallback: '');
+      final title = _str(item['title'], fallback: id);
+      if (id.isNotEmpty && title.isNotEmpty) tabs.add(RankTab(id: id, title: title));
+    }
+    return tabs;
+  }
+
+  PagedComics ranked(Object? raw, {required int page}) {
+    final result = paged(raw, page: page);
+    final base = (page - 1) * result.items.length;
+    return PagedComics(
+      items: [
+        for (final (index, comic) in result.items.indexed)
+          OnlineComic(
+            id: comic.id,
+            title: comic.title,
+            coverUrl: comic.coverUrl,
+            coverHeaders: comic.coverHeaders,
+            coverTone: comic.coverTone,
+            subtitle: comic.subtitle,
+            author: comic.author,
+            tags: comic.tags,
+            description: comic.description,
+            status: comic.status,
+            chapterCount: comic.chapterCount,
+            latestChapter: comic.latestChapter,
+            updatedAt: comic.updatedAt,
+            badge: comic.badge,
+            rank: comic.rank ?? base + index + 1,
+          ),
+      ],
+      page: result.page,
+      hasMore: result.hasMore,
+      total: result.total,
+    );
+  }
+
   /// `loadComicPages` 返回字符串 URL 列表；配置部件由调用方另行补齐。
   List<String> pageUrls(Object? raw) {
     if (raw is! List) return const [];
@@ -167,7 +209,9 @@ class SourceDto {
       status: ComicStatus.parse(raw['status']),
       chapterCount: chapterCount,
       latestChapter: _optionalStr(raw['latestChapter']),
+      updatedAt: _optionalStr(raw['updatedAt']) ?? _optionalStr(raw['updateTime']),
       badge: _optionalStr(raw['badge']),
+      rank: _optionalInt(raw['rank']),
     );
   }
 
@@ -207,6 +251,11 @@ class SourceDto {
   }
 
   static int _int(Object? value, int fallback) => value is num ? value.toInt() : int.tryParse('$value') ?? fallback;
+
+  static int? _optionalInt(Object? value) {
+    final parsed = value is num ? value.toInt() : int.tryParse('$value');
+    return parsed != null && parsed > 0 ? parsed : null;
+  }
 
   static double? _optionalDouble(Object? value) => value is num ? value.toDouble() : double.tryParse('$value');
 }

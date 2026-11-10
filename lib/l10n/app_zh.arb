@@ -3813,6 +3813,18 @@
   "@onlineSearchAction": {
     "description": "搜索按钮"
   },
+  "onlineRanking": "排行",
+  "@onlineRanking": {
+    "description": "在线漫画排行入口"
+  },
+  "onlineRankEmpty": "这个源还没有排行数据",
+  "@onlineRankEmpty": {
+    "description": "源声明了 rank 但接口为空"
+  },
+  "onlineRankEmptyHint": "源作者可以继续补充日/周/月/总排行。",
+  "onlineRankError": "排行加载失败",
+  "onlineRankErrorHint": "检查源 rank 配置或稍后重试。",
+  "onlineRankLoadMore": "加载更多排行",
   "onlineRefresh": "换一批",
   "@onlineRefresh": {
     "description": "首页换一批"
@@ -4348,6 +4360,15 @@
   "onlineChapterGroupHint": "章节按「连载 → 番外 → 单行本」分组",
   "@onlineChapterGroupHint": {
     "description": "章节分组说明"
+  },
+  "onlineUpdatedAt": "更新 {date}",
+  "@onlineUpdatedAt": {
+    "description": "在线漫画更新时间标签",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "onlineComicMeta": "{author} · {count} 话",
   "@onlineComicMeta": {

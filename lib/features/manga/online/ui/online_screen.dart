@@ -176,6 +176,7 @@ class _OnlineScreenState extends ConsumerState<OnlineScreen> {
     return switch (nav.view) {
       OnlineView.discover => OnlineDiscoverView(onOpenComic: _openComicForNav, onManageSources: _goSettingsSources),
       OnlineView.categories => OnlineCategoryView(onOpenComic: _openComicForNav),
+      OnlineView.ranking => OnlineRankView(onOpenComic: _openComicForNav),
       OnlineView.recent => OnlineRecentView(onOpenComic: _openComic, onContinue: _continueProgress),
       OnlineView.downloads => const OnlineDownloadsView(),
     };
@@ -187,6 +188,7 @@ class _OnlineScreenState extends ConsumerState<OnlineScreen> {
     return switch (nav.view) {
       OnlineView.discover => l10n.onlineDiscover,
       OnlineView.categories => l10n.onlineCategories,
+      OnlineView.ranking => l10n.onlineRanking,
       OnlineView.recent => l10n.onlineRecent,
       OnlineView.downloads => l10n.onlineDownloads,
     };

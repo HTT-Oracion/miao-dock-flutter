@@ -384,6 +384,16 @@ class QuickJsSourceEngine implements SourceEngine {
   }
 
   @override
+  Future<List<RankTab>> rankTabs(OnlineSource source) async {
+    return _call(source, 'rankTabs', const {}, (raw) => _dto(source).rankTabs(raw));
+  }
+
+  @override
+  Future<PagedComics> rank(OnlineSource source, {required String tabId, required int page}) async {
+    return _call(source, 'rank', {'id': tabId, 'page': page}, (raw) => _dto(source).ranked(raw, page: page));
+  }
+
+  @override
   Future<PagedComics> category(OnlineSource source, {required String id, required int page}) async {
     return _call(source, 'category', {'id': id, 'page': page}, (raw) => _dto(source).paged(raw, page: page));
   }

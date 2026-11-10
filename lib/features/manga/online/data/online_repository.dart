@@ -20,6 +20,11 @@ class OnlineRepository {
 
   Future<List<CategoryGroup>> categories(OnlineSource source) => engine.categories(source);
 
+  Future<List<RankTab>> rankTabs(OnlineSource source) => engine.rankTabs(source);
+
+  Future<PagedComics> rank(OnlineSource source, String tabId, int page) =>
+      engine.rank(source, tabId: tabId, page: page);
+
   Future<PagedComics> category(OnlineSource source, String id, int page) => engine.category(source, id: id, page: page);
 
   Future<PagedComics> search(OnlineSource source, String keyword, int page) =>

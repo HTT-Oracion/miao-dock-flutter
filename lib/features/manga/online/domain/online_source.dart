@@ -42,6 +42,8 @@ class OnlineSource {
   String get version => manifest.version;
   bool get isAbnormal => consecutiveFailures >= 3;
 
+  bool get hasRank => manifest.hasRank;
+
   /// 只有日文 / 英文源需要翻译；中文（含默认中文）与未配置均关闭翻译入口。
   bool get translationEnabled => switch (sourceLanguage?.toLowerCase()) {
     'ja' || 'en' => true,
