@@ -342,6 +342,13 @@ class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
     state = current.copyWith(controlsVisible: visible);
   }
 
+  /// 源语言配置变化时同步；关闭翻译时回到原图，避免旧的译文覆盖继续生效。
+  void setTranslationEnabled(bool enabled) {
+    final current = state;
+    if (current == null || current.translationEnabled == enabled) return;
+    state = current.copyWith(translationEnabled: enabled, showOriginal: enabled ? current.showOriginal : true);
+  }
+
   void setShowOriginal(bool original) {
     final current = state;
     if (current == null) return;

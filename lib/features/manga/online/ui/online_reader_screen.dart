@@ -16,6 +16,8 @@ import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/online_detail_controller.dart';
+import '../controller/online_sources_controller.dart';
+import '../domain/online_source.dart';
 import '../data/online_image_loader.dart';
 import '../controller/online_reader_controller.dart';
 import '../../ui/reader/reader_mobile.dart';
@@ -409,6 +411,19 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
     });
     final state = ref.watch(onlineReaderProvider);
     final prefs = ref.watch(readerPrefsProvider);
+    ref.listen(onlineSourcesProvider, (previous, next) {
+      final reader = ref.read(onlineReaderProvider);
+      final sources = next.value;
+      if (reader == null || sources == null) return;
+      OnlineSource? source;
+      for (final item in sources) {
+        if (item.id == reader.sourceId) {
+          source = item;
+          break;
+        }
+      }
+      ref.read(onlineReaderProvider.notifier).setTranslationEnabled(source?.translationEnabled ?? false);
+    });
     if (state == null) {
       return ColoredBox(
         color: palette.bg,
@@ -612,7 +627,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                     config: seq <= state.pageConfigs.length ? state.pageConfigs[seq - 1] : null,
                     sourceId: state.sourceId,
                     allowedHosts: state.sourceHosts,
-                    translated: state.showingTranslated && state.pageHasTranslation(seq),
+                    translated: state.translationEnabled && state.showingTranslated && state.pageHasTranslation(seq),
                     scanning: state.translation.state == TranslationState.running && !state.pageHasTranslation(seq),
                   ),
                 )
@@ -638,7 +653,8 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                       config: index < state.pageConfigs.length ? state.pageConfigs[index] : null,
                       sourceId: state.sourceId,
                       allowedHosts: state.sourceHosts,
-                      translated: state.showingTranslated && state.pageHasTranslation(index + 1),
+                      translated:
+                          state.translationEnabled && state.showingTranslated && state.pageHasTranslation(index + 1),
                       scanning:
                           state.translation.state == TranslationState.running && !state.pageHasTranslation(index + 1),
                     ),
@@ -733,7 +749,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
           config: seq <= state.pageConfigs.length ? state.pageConfigs[seq - 1] : null,
           sourceId: state.sourceId,
           allowedHosts: state.sourceHosts,
-          translated: state.showingTranslated && state.pageHasTranslation(seq),
+          translated: state.translationEnabled && state.showingTranslated && state.pageHasTranslation(seq),
         ),
       );
     }

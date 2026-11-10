@@ -93,10 +93,19 @@ void main() {
     reader = container.read(onlineReaderProvider)!;
     expect(reader.translationEnabled, isTrue);
     expect(find.byType(OnlineTranslationBar), findsOneWidget);
+
+    // 阅读器已打开时把源语言改回中文，翻译门控必须立即响应。
+    container.read(onlineSourcesProvider.notifier).setLanguage(base.id, 'zh');
+    await pump(4);
+    reader = container.read(onlineReaderProvider)!;
+    expect(reader.translationEnabled, isFalse);
+    expect(find.byType(OnlineTranslationBar), findsNothing);
+    expect(find.text('显示翻译'), findsNothing);
+
     await tester.tap(find.byIcon(LucideIcons.settings).last);
     await pump(3);
     expect(find.text('阅读模式'), findsOneWidget);
-    expect(find.text('范围'), findsOneWidget);
+    expect(find.text('范围'), findsNothing);
     await tester.tap(find.byIcon(LucideIcons.x).last);
     await pump(2);
   });
