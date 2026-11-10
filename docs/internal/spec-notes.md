@@ -4296,13 +4296,14 @@
 ## D-197 · 在线阅读器复用漫画库阅读器组件（2026-11-10）
 
 - **状态**：已实施。
-- **结论**：从漫画库阅读器抽出 `ReaderStage`（移动端翻页/缩放/长按放大镜/点按分区）
-  与 `PagedReaderStage`（桌面 PageView + ReaderZoom）；漫画库 `MobileReaderStage`
-  变成薄适配，在线阅读器使用同一舞台。移动端顶栏/底栏使用 `ReaderTopBar` /
-  `ReaderBottomBar`，桌面顶栏使用 `ReaderBar`，不再维护在线专用顶栏/底栏。
+- **结论**：从漫画库阅读器抽出 `ReaderStage`（移动端翻页/缩放/长按放大镜/点按分区）、
+  `PagedReaderStage`（桌面 PageView + ReaderZoom）与 `ReaderWebtoonStage`（条漫连续滚动）；
+  漫画库 `MobileReaderStage` / `ReaderWebtoonView` 变成薄适配，在线阅读器使用同一舞台。
+  移动端顶栏/底栏使用 `ReaderTopBar` / `ReaderBottomBar`，桌面顶栏使用 `ReaderBar`，
+  不再维护在线专用顶栏/底栏。
 - **共享状态**：在线条漫模式、夜间、亮度、RTL、翻页动画、舞台背景全部读
   `readerPrefsProvider`；在线只保留 `OnlineReaderState` 的源、章节、页图、翻译状态。
-- **在线扩展**：`OnlineTranslationBar`、`_OnlinePageView`、`_WebtoonStage` 仍由在线侧提供
+- **在线扩展**：`OnlineTranslationBar`、`_OnlinePageView` / `_OnlineWebtoonPage` 只提供
   数据内容；交互外壳与漫画库一致。
 - **清理**：删除在线专用顶栏、移动底栏、桌面页码滑条副本、移动手势与 `state.zoom`。
 - **验证**：`flutter test test/online` 10 passed；漫画阅读器测试 49 passed；

@@ -41,7 +41,7 @@
 | 应用不内置源 / 免责声明 | `online_store.dart`（首次写空清单）、`onlineDisclaimerProvider` | 完成 |
 | 在线阅读器内容区路由 / 移动全屏 | `routes.dart`、`online_reader_screen.dart`、`isReaderPath` | 完成 |
 | 页图取列表 / headers / 预载 | `OnlineReaderNotifier.open/_prefetch`、`OnlineImageLoader`、`QuickJsSourceEngine` | 完成真实字节下载、Host 白名单、内存/磁盘缓存、预载 2 页 |
-| 阅读器交互组件 | `reader_stage.dart`、`reader_paged_stage.dart`、`reader_mobile_stage.dart`、`reader_mobile.dart`、`reader_widgets.dart:ReaderBar` | 与漫画库共用同一套舞台 / 工具栏 / `readerPrefs`；在线侧只注入页图与翻译条 |
+| 阅读器交互组件 | `reader_stage.dart`、`reader_paged_stage.dart`、`reader_webtoon_stage.dart`、`reader_mobile_stage.dart`、`reader_mobile.dart`、`reader_widgets.dart:ReaderBar` | 与漫画库共用同一套舞台 / 工具栏 / `readerPrefs`；在线侧只注入页图与翻译条 |
 | 工具栏 / OSD / 自动隐藏 / 安全区 | `ReaderTopBar` / `ReaderBottomBar` / `ReaderBar`、`_SlideBar`、`_Osd`、`OnlineTranslationBar` | 完成（移动 3s 自动隐藏；翻译条是在线扩展） |
 | 原文 / 译文切换、未完成页回退 | `OnlineReaderState.showingTranslated/pageHasTranslation`、`OnlinePageImage` | 完成；页角徽标已移除 |
 | 翻译 7 态 + 重试 / 仅看原文 / 去设置 | `OnlineTranslationBar`、`OnlineReaderNotifier.startTranslation/retryTranslation` | UI/状态机完成；翻译服务仍是演示网关 |
