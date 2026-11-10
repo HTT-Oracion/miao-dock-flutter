@@ -12,7 +12,10 @@
 ### 1. 漫画翻译
 
 - **服务**：桌面端实现 `mangasvc` + engine（manga-image-translator）+ LLM（本地 Sakura-GalTransl-7B-v3.7 或 LLM API），支持**单独部署、启动漫画图片翻译流水线**；移动端**不装配引擎**，通过局域网访问桌面端服务。
-- **功能**：队列、投放、书架。
+- **功能**：队列、投放、书架、在线漫画（源包导入 / 发现 / 分类 / 搜索 / 详情 / 阅读 / 离线缓存）。
+  在线漫画与投放/队列/漫画库并列为漫画模块第 4 视图；源执行层当前是演示适配器
+  （`DemoSourceEngine`），原生 QuickJS 与真实下载/翻译服务是后续接入点，详见
+  `docs/internal/online-manga-delivery.md`。
 
 ### 2. 音乐
 
@@ -53,10 +56,12 @@ miao-dock-flutter/
 │   │   │   ├── data/                   #   mangasvc 客户端装配（真/Fake 切换在这层收口）
 │   │   │   ├── domain/                 #   任务/批次/进度的领域模型与纯逻辑
 │   │   │   ├── controller/             #   投放/队列/库三个 Riverpod Notifier
+│   │   │   ├── online/                 #   在线漫画（domain / data / controller / ui）
 │   │   │   └── ui/
 │   │   │       ├── submit/             #   投放屏（拖拽、批量选择）
 │   │   │       ├── queue/              #   队列屏（阶段进度、批次）
-│   │   │       └── library/            #   漫画库屏
+│   │   │       ├── library/            #   漫画库屏
+│   │   │       └── reader/             #   本地库阅读器
 │   │   ├── music/
 │   │   │   ├── data/  domain/  controller/
 │   │   │   └── ui/                     #   四平台、播放、歌词

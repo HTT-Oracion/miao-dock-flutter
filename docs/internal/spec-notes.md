@@ -4159,3 +4159,75 @@
 - **验证**：`flutter analyze` 0 issues；`dart format` 无 diff；
   `flutter test --exclude-tags e2e` **299 通过**。
 - **关联**：D-180（让位）· D-181（应用级全屏，本条补「系统侧状态回传」）。
+
+---
+
+## D-183 · 在线漫画是「漫画翻译」第 4 视图（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：`mangaViews` 增加 `online`，与投放 / 队列 / 漫画库并列；路由 `/manga/online`、
+  `/manga/online/detail/:sourceId/:comicId`、`/manga/online/reader`；不是一级模块。
+- **关键约束**：`isReaderPath` 必须同时识别 `/manga/reader` 与 `/manga/online/reader`，
+  否则移动端不整屏、工具栏不隐藏；`MangaGate` 对 `/manga/online` 放行（浏览不依赖本地引擎）。
+- **验证**：`test/online/online_shell_test.dart` 锁 4 视图 / 阅读器路径 / 门禁；反证为删掉 online
+  或去掉并列判断。
+
+## D-184 · 源包导入：静态校验四步，QuickJS 执行后置（2026-11-10）
+
+- **状态**：已实施（执行层待接入）。
+- **结论**：`SourceImporter` 按 plan §5.2/§7.5 校验 `specVersion / id / name / version / baseUrl /
+  entryClass / sourceFile / hosts / 路径 ..`，静态检查入口类 `extends SourceBase`、能力函数，
+  复制到 `<state>/online/sources/<id>/`；覆盖导入二次确认，删除源时清缓存。
+- **边界**：不在宿主里执行任意 JS；应用不内置源，首次进入是空态。
+
+## D-185 · 源引擎抽象与 DemoSourceEngine（2026-11-10）
+
+- **状态**：开发中（接口已落，原生运行时待接入）。
+- **结论**：`SourceEngine` 固定 `explore / categories / category / search / loadComicInfo /
+  loadComicPages / getImageLoadingConfig / ensureLoaded`；当前实现 `DemoSourceEngine`
+  回放 `DemoOnlineData`，与真实引擎同异步形状与错误码。接 `flutter_qjs` 时只替换
+  `sourceEngineProvider`，UI / controller / 下载 / 翻译状态机不改。
+- **风险**：原生 QuickJS、真实站点校验、图片字节管道尚未随本轮交付；导入的源目前使用
+  同一套演示数据，不能作为真实可联网源使用。
+
+## D-186 · 在线阅读器独立实现（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：`/manga/online/reader` 是内容区路由：桌面保留 NavRail / AppTitleBar，移动端整屏；
+  阅读器自持页状态、进度、7 态翻译条与章节抽屉，不改本地库的 `readerSession`。
+- **理由**：本地阅读器强绑 `ReaderSession / LibBook`；在线页是 URL 列表 + 翻译状态，共接口
+  需先把本地阅读器抽成 `ReaderPageSource`（plan §7.4），本轮先保住在线交互与进度隔离。
+- **已知取舍**：未复用本地 `ReaderBar` 的代码，仅复用主题令牌、共享按钮 / 骨架 / sheet /
+  toast 与视觉口径（48 顶栏、34 提示条、168 滑条、10px 按钮间隔）。
+
+## D-187 · 在线进度 / 已读 / 下载任务持久化（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：进度键 `sourceId|comicId|chapterId`（页码随记录），已读键 `sourceId|comicId`；
+  下载任务以整章为最小单位，状态机 queued / downloading / paused / done / partial /
+  canceled / failed；全部落 shell prefs 文件（`miao.online-*`），移动端只做离线缓存。
+- **边界**：跨端同步与 app 重启后的自动续传未接服务；进度、下载均为进程内模拟推进。
+
+## D-188 · 翻译状态机与网关（2026-11-10）
+
+- **状态**：开发中（演示网关已落）。
+- **结论**：`OnlineTranslationGateway` 输出 queued / running / done / partial / failed /
+  unavailable；阅读器只依赖此接口，状态条 7 态、原文/译文切换、逐页渐进均由 UI 渲染。
+  真实实现替换为 `mangasvc.createTask` + 监听 `translatedSeqs`。
+- **边界**：当前 `DemoTranslationGateway` 按 260ms/页推进；不写本地库、不建真实任务。
+
+## D-189 · 浅色主色文字对比度补偿（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：`AppPalette` 新增 `onBtn` / `accInk`：深色分别沿用 `onAcc` / `acc`，浅色取设计稿
+  别名 `#1A1204` / `#8A5416`；`AppButton.primary/danger/link/soft`、标签、激活 chip、
+  阅读器分段控件统一使用。设计稿 §二建议的对比度补偿落地。
+- **不改**：浅色 `onAcc` 仍是 `#FFF8EC`（其语义是主色上的高亮字，非按钮字）；未改全局字号。
+
+## D-190 · 首次运行不内置源；自测用测试 store 注入（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：`OnlineStore` 缺键时写入空清单 / 空进度 / 空下载，首屏显示「还没有漫画源」，
+  用户导入 `source.json` 后才进入浏览；符合设计稿免责声明与 plan §13.1。
+- **自测**：截图自测通过 `MemoryStore` / `TestStore` 注入设计稿的 3 个演示源与进度，
+  仅为覆盖视觉状态；正式构建不依赖这些自测文件。
