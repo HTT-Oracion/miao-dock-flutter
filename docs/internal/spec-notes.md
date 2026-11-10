@@ -4325,3 +4325,14 @@
   重新导入同 id 源保留已配置语言。
 - **验证**：`flutter test test/online` 13 passed；`flutter test --exclude-tags e2e`
   312 passed；源语言 UI 与门控均有回归。
+
+
+## D-199 · 阅读设置常驻与 250% 缩放（2026-11-10）
+
+- **状态**：已实施。
+- **设置**：漫画库与在线共用 `ReaderSettingsSheet`；在线阅读器设置按钮常驻，抽屉内
+  始终显示漫画库阅读设置；当前源配置了源语言时，追加翻译语言 / 范围 / 服务设置。
+- **缩放**：`ReaderZoom` 上限从 200% 调整到 250%；桌面 `ZoomablePage` 放大后关闭
+  PageView 滚动并支持拖拽平移；移动 `ReaderStage` 捏合上限同步为 250%，放大态平移。
+- **验证**：漫画阅读器缩放单测覆盖 250% 夹紧与平移；在线设置抽屉覆盖未配置/已配置
+  翻译两种形态；`flutter test test/online` 13 passed，`--exclude-tags e2e` 314 passed。

@@ -42,6 +42,7 @@
 | 在线阅读器内容区路由 / 移动全屏 | `routes.dart`、`online_reader_screen.dart`、`isReaderPath` | 完成 |
 | 页图取列表 / headers / 预载 | `OnlineReaderNotifier.open/_prefetch`、`OnlineImageLoader`、`QuickJsSourceEngine` | 完成真实字节下载、Host 白名单、内存/磁盘缓存、预载 2 页 |
 | 阅读器交互组件 | `reader_stage.dart`、`reader_paged_stage.dart`、`reader_webtoon_stage.dart`、`reader_mobile_stage.dart`、`reader_mobile.dart`、`reader_widgets.dart:ReaderBar` | 与漫画库共用同一套舞台 / 工具栏 / `readerPrefs`；在线侧只注入页图与翻译条 |
+| 设置抽屉 / 250% 缩放 | `reader_settings.dart`、`ReaderZoom.maxScale`、`ZoomablePage` / `ReaderStage` | 设置常驻；在线可翻译时追加翻译设置；50–250% 缩放，放大后拖拽平移 |
 | 工具栏 / OSD / 自动隐藏 / 安全区 | `ReaderTopBar` / `ReaderBottomBar` / `ReaderBar`、`_SlideBar`、`_Osd`、`OnlineTranslationBar` | 完成（移动 3s 自动隐藏；翻译条是在线扩展） |
 | 原文 / 译文切换、未完成页回退 | `OnlineReaderState.showingTranslated/pageHasTranslation`、`OnlinePageImage` | 完成；页角徽标已移除 |
 | 翻译 7 态 + 重试 / 仅看原文 / 去设置 | `OnlineTranslationBar`、`OnlineReaderNotifier.startTranslation/retryTranslation` | UI/状态机完成；翻译服务仍是演示网关 |
@@ -195,7 +196,7 @@ flutter test test/online
 - `dart format --set-exit-if-changed lib test`：**0 changed**。
 - `flutter analyze`：**0 issues**。
 - `flutter test test/online`：**13 passed**（5 个行为测试文件）。
-- `flutter test --exclude-tags e2e`：**312 passed**。
+- `flutter test --exclude-tags e2e`：**314 passed**。
 - 普通 `flutter test` 的 e2e 用例需要带令牌的 mangasvc，当前本机服务令牌不匹配会报 403；
   非 e2e 用例全部通过。
 - 数据源专用测试（仓库解析 / 单文件源 / QuickJS 快照）在开发期本地运行通过后已删除，按要求不进入提交。
