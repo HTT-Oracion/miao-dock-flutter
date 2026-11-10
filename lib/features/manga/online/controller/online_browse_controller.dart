@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/demo_online_data.dart';
+import '../domain/fallback_categories.dart';
 import '../data/online_repository.dart';
 import '../domain/online_error.dart';
 import '../domain/online_models.dart';
@@ -198,7 +198,7 @@ class OnlineCategoriesNotifier extends AsyncNotifier<List<CategoryGroup>> {
       // 分类结构解析失败时用常用题材兜底，并让 UI 显示「可能不完整」提示条。
       ref.read(onlineCategoriesFallbackProvider.notifier).set(true);
       ref.read(onlineSourcesProvider.notifier).markFailure(source.id);
-      return DemoOnlineData.categoryGroups;
+      return fallbackCategoryGroups;
     }
   }
 

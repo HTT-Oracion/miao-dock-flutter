@@ -3334,7 +3334,7 @@
   "@settingsNavOnline": {
     "description": "设置页分区：漫画源管理"
   },
-  "settingsBlurbOnline": "在线漫画的数据源。源由你自行导入，应用不内置、不提供在线源仓库。",
+  "settingsBlurbOnline": "在线漫画的数据源。源与仓库由你自行导入，应用不内置、不提供在线源仓库。",
   "@settingsBlurbOnline": {
     "description": "设置页漫画源分区说明"
   },
@@ -3366,11 +3366,11 @@
   "@onlineImportTitle": {
     "description": "源导入区块标题"
   },
-  "onlineImportDesc": "选择 source.json，或把整个源目录（json + js + icon）拖到这里",
+  "onlineImportDesc": "选择 source.json 或 .js 源文件，或把源目录拖到这里；也可以在上方粘贴链接",
   "@onlineImportDesc": {
     "description": "源导入说明"
   },
-  "onlineImportSteps": "校验 → 检查入口类 → 试跑 explore → 分级结果",
+  "onlineImportSteps": "校验 → 检查入口类 → 写入源目录",
   "@onlineImportSteps": {
     "description": "源导入四步"
   },
@@ -3433,11 +3433,11 @@
   "@onlineSourceEmpty": {
     "description": "空态：没有源"
   },
-  "onlineSourceEmptyHint": "在 设置 › 漫画源 导入 source.json 后即可浏览在线漫画。",
+  "onlineSourceEmptyHint": "在 设置 · 漫画源 通过链接或 source.json 导入源后即可浏览在线漫画。",
   "@onlineSourceEmptyHint": {
     "description": "空态：没有源说明"
   },
-  "onlineSourceEmptyHintShort": "导入 source.json 后即可浏览在线漫画。",
+  "onlineSourceEmptyHintShort": "通过链接或 source.json 导入源后即可浏览在线漫画。",
   "@onlineSourceEmptyHintShort": {
     "description": "空态：没有源短说明"
   },
@@ -3449,11 +3449,11 @@
   "@onlineGoImportShort": {
     "description": "空态按钮：去导入"
   },
-  "onlineSourceDisclaimer": "源由你自行导入，应用不内置、不提供在线源仓库。删除源会同时清除该源的缓存与 Cookie。",
+  "onlineSourceDisclaimer": "源与仓库由你自行导入，应用不内置、不提供在线源仓库；安装前请确认来源可信。",
   "@onlineSourceDisclaimer": {
     "description": "源管理免责声明"
   },
-  "onlineSourceDisclaimerShort": "源由你自行导入，应用不内置、不提供在线源仓库。",
+  "onlineSourceDisclaimerShort": "源与仓库由你自行导入，应用不内置、不提供在线源仓库。",
   "@onlineSourceDisclaimerShort": {
     "description": "源管理免责声明短"
   },
@@ -5322,7 +5322,7 @@
   "@onlineLangEnglish": {
     "description": "在线漫画：onlineLangEnglish"
   },
-  "onlineImportDescMobile": "选择 source.json（移动端走系统文件选择器，无拖放）\n校验 → 检查入口类 → 试跑 explore → 分级结果",
+  "onlineImportDescMobile": "选择 source.json / .js，或在上方粘贴数据源 / 仓库链接\n校验 → 检查入口类 → 写入源目录",
   "@onlineImportDescMobile": {
     "description": "移动端源导入说明"
   },
@@ -5333,5 +5333,121 @@
   "onlineReaderRangeSection": "范围",
   "@onlineReaderRangeSection": {
     "description": "翻译设置分区：范围"
+  },
+  "onlineLinkImportTitle": "链接导入",
+  "@onlineLinkImportTitle": {
+    "description": "在线漫画链接导入 / 源仓库：onlineLinkImportTitle"
+  },
+  "onlineLinkImportHint": "粘贴源仓库 index.json 或单个 .js 源链接",
+  "@onlineLinkImportHint": {
+    "description": "在线漫画链接导入 / 源仓库：onlineLinkImportHint"
+  },
+  "onlineLinkImportAction": "从链接导入",
+  "@onlineLinkImportAction": {
+    "description": "在线漫画链接导入 / 源仓库：onlineLinkImportAction"
+  },
+  "onlineLinkInvalid": "链接无效，请检查 http(s) 地址",
+  "@onlineLinkInvalid": {
+    "description": "在线漫画链接导入 / 源仓库：onlineLinkInvalid"
+  },
+  "onlineLinkImporting": "正在解析链接…",
+  "@onlineLinkImporting": {
+    "description": "在线漫画链接导入 / 源仓库：onlineLinkImporting"
+  },
+  "onlineSourcesLibraryTitle": "源仓库",
+  "@onlineSourcesLibraryTitle": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourcesLibraryTitle"
+  },
+  "onlineSourceLibraryEmpty": "还没有源仓库",
+  "@onlineSourceLibraryEmpty": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryEmpty"
+  },
+  "onlineSourceLibraryDesc": "添加一个 index.json 仓库，浏览并安装其中维护的漫画源。",
+  "@onlineSourceLibraryDesc": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryDesc"
+  },
+  "onlineSourceLibraryAdd": "添加仓库",
+  "@onlineSourceLibraryAdd": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryAdd"
+  },
+  "onlineSourceLibraryBrowse": "浏览仓库",
+  "@onlineSourceLibraryBrowse": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryBrowse"
+  },
+  "onlineSourceLibraryRefresh": "刷新仓库",
+  "@onlineSourceLibraryRefresh": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryRefresh"
+  },
+  "onlineSourceLibraryDelete": "删除仓库",
+  "@onlineSourceLibraryDelete": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryDelete"
+  },
+  "onlineSourceLibraryDeleteBody": "只移除仓库入口，已安装的源会保留。",
+  "@onlineSourceLibraryDeleteBody": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryDeleteBody"
+  },
+  "onlineSourceLibraryDeleteConfirm": "删除仓库「{name}」？",
+  "@onlineSourceLibraryDeleteConfirm": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryDeleteConfirm"
+  },
+  "onlineSourceLibraryAdded": "已添加仓库「{name}」",
+  "@onlineSourceLibraryAdded": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryAdded"
+  },
+  "onlineSourceLibraryLoadFailed": "仓库加载失败",
+  "@onlineSourceLibraryLoadFailed": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceLibraryLoadFailed"
+  },
+  "onlineSourceCatalogEmpty": "这个仓库暂时没有源",
+  "@onlineSourceCatalogEmpty": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceCatalogEmpty"
+  },
+  "onlineSourceCatalogInstall": "安装",
+  "@onlineSourceCatalogInstall": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceCatalogInstall"
+  },
+  "onlineSourceCatalogInstalled": "已安装",
+  "@onlineSourceCatalogInstalled": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceCatalogInstalled"
+  },
+  "onlineSourceCatalogUpdate": "更新到 {version}",
+  "@onlineSourceCatalogUpdate": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceCatalogUpdate"
+  },
+  "onlineSourceCatalogSourceCount": "{count} 个源",
+  "@onlineSourceCatalogSourceCount": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceCatalogSourceCount"
+  },
+  "onlineSourceInstallSuccess": "已安装「{name}」",
+  "@onlineSourceInstallSuccess": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceInstallSuccess"
+  },
+  "onlineSourceRemoteFailed": "链接导入失败",
+  "@onlineSourceRemoteFailed": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceRemoteFailed"
+  },
+  "onlineSourceRemoteNetwork": "无法连接源地址，请检查网络或链接",
+  "@onlineSourceRemoteNetwork": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceRemoteNetwork"
+  },
+  "onlineSourceRemoteInvalid": "链接内容不是有效的源或仓库",
+  "@onlineSourceRemoteInvalid": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceRemoteInvalid"
+  },
+  "onlineSourceFromLibrary": "来自仓库",
+  "@onlineSourceFromLibrary": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceFromLibrary"
+  },
+  "onlineSourceSourceUrl": "源地址",
+  "@onlineSourceSourceUrl": {
+    "description": "在线漫画链接导入 / 源仓库：onlineSourceSourceUrl"
+  },
+  "onlineSourceLibraryTitle": "来源仓库",
+  "@onlineSourceLibraryTitle": {
+    "description": "在线漫画源详情：onlineSourceLibraryTitle"
+  },
+  "onlineSourceLibraryId": "仓库 ID",
+  "@onlineSourceLibraryId": {
+    "description": "在线漫画源详情：onlineSourceLibraryId"
   }
 }

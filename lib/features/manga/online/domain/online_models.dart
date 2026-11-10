@@ -21,6 +21,8 @@ class OnlineComic {
   const OnlineComic({
     required this.id,
     required this.title,
+    this.coverUrl,
+    this.coverHeaders = const {},
     this.coverTone = CoverTone.blue,
     this.subtitle,
     this.author,
@@ -34,6 +36,12 @@ class OnlineComic {
 
   final String id;
   final String title;
+
+  /// 源返回的封面地址；为空或加载失败时退回 [coverTone] 渐变占位。
+  final String? coverUrl;
+
+  /// 封面请求头（源的 UA / Referer；无防盗链时为空）。
+  final Map<String, String> coverHeaders;
   final CoverTone coverTone;
 
   /// 副标题 / 最新话，直接展示。

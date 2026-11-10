@@ -15,7 +15,12 @@ import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../controller/online_detail_controller.dart';
+import '../data/online_image_loader.dart';
 import '../controller/online_reader_controller.dart';
+import '../domain/online_error.dart';
+import '../domain/online_models.dart';
+import 'widgets/online_common.dart';
+import 'widgets/online_page_image.dart';
 import 'widgets/online_reader_widgets.dart';
 import '../../../../shared/responsive.dart';
 
@@ -688,7 +693,9 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
         icon: LucideIcons.imageOff,
         title: l10n.onlinePageError,
         hint: l10n.onlinePageErrorHint,
-        code: '403',
+        code: state.pageError is OnlineException
+            ? (state.pageError! as OnlineException).code.wireName
+            : 'SOURCE_CRASHED',
         actions: [
           AppButton(
             label: l10n.onlinePageRetry,
@@ -731,14 +738,16 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                   ),
                   child: AnimatedSwitcher(
                     duration: AppMotion.pageSwitch,
-                    child: OnlineMangaPage(
-                      key: ValueKey('${state.chapter.id}-${state.page}-$translated'),
-                      page: state.page,
-                      translated: translated,
-                      scanning: scanning,
-                      translating: scanning,
-                      compact: mobile,
-                    ),
+                    child: state.pageBytes == null
+                        ? const OnlineReaderStageStatus(icon: LucideIcons.image, title: '', hint: '')
+                        : OnlinePageImage(
+                            key: ValueKey('${state.chapter.id}-${state.page}-$translated-${state.pageBytes!.length}'),
+                            page: state.page,
+                            bytes: state.pageBytes!,
+                            translated: translated,
+                            scanning: scanning,
+                            translating: scanning,
+                          ),
                   ),
                 ),
               ),
@@ -767,6 +776,78 @@ class _SlideBar extends StatelessWidget {
         offset: visible ? Offset.zero : offset,
         child: AnimatedOpacity(duration: AppMotion.fast, opacity: visible ? 1 : 0, child: child),
       ),
+    );
+  }
+}
+
+class _WebtoonPage extends ConsumerStatefulWidget {
+  const _WebtoonPage({
+    required this.page,
+    required this.config,
+    required this.sourceId,
+    required this.allowedHosts,
+    required this.translated,
+    required this.scanning,
+  });
+
+  final int page;
+  final ImageLoadingConfig? config;
+  final String sourceId;
+  final List<String> allowedHosts;
+  final bool translated;
+  final bool scanning;
+
+  @override
+  ConsumerState<_WebtoonPage> createState() => _WebtoonPageState();
+}
+
+class _WebtoonPageState extends ConsumerState<_WebtoonPage> {
+  Uint8List? _bytes;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final config = widget.config;
+    if (config == null) {
+      setState(() => _failed = true);
+      return;
+    }
+    try {
+      final bytes = await ref
+          .read(onlineImageLoaderProvider)
+          .load(config, sourceId: widget.sourceId, allowedHosts: widget.allowedHosts);
+      if (mounted) setState(() => _bytes = bytes);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) {
+      return ColoredBox(
+        color: onlineReaderStageColor(),
+        child: Center(child: Icon(LucideIcons.imageOff, color: AppPalette.of(context).ink2)),
+      );
+    }
+    final bytes = _bytes;
+    if (bytes == null) {
+      return ColoredBox(
+        color: onlineReaderStageColor(),
+        child: const Center(child: OnlineReaderSpinner()),
+      );
+    }
+    return OnlinePageImage(
+      page: widget.page,
+      bytes: bytes,
+      translated: widget.translated,
+      scanning: widget.scanning,
+      translating: widget.scanning,
     );
   }
 }
@@ -921,13 +1002,19 @@ class _WebtoonStageState extends State<_WebtoonStage> {
         },
         itemBuilder: (context, index) {
           final page = index + 1;
+          final config = page <= widget.state.pageConfigs.length ? widget.state.pageConfigs[page - 1] : null;
           return Center(
             child: AspectRatio(
               aspectRatio: 930 / 1353,
-              child: OnlineMangaPage(
+              child: _WebtoonPage(
                 page: page,
+                config: config,
+                sourceId: widget.state.sourceId,
+                allowedHosts: widget.state.sourceHosts,
                 translated: widget.state.showingTranslated && widget.state.pageHasTranslation(page),
-                compact: true,
+                scanning:
+                    widget.state.translation.state == TranslationState.running &&
+                    !widget.state.pageHasTranslation(page),
               ),
             ),
           );

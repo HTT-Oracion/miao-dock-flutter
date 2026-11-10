@@ -4,7 +4,7 @@ import '../domain/online_error.dart';
 import '../domain/online_models.dart';
 import '../domain/online_source.dart';
 import '../domain/source_engine.dart';
-import 'demo_source_engine.dart';
+import 'js/quickjs_source_engine.dart';
 import 'online_store.dart';
 
 /// 在线漫画仓库：controller 只依赖这一层，UI 不碰引擎与存储。
@@ -39,7 +39,7 @@ class OnlineRepository {
 }
 
 final sourceEngineProvider = Provider<SourceEngine>((ref) {
-  final engine = DemoSourceEngine();
+  final engine = QuickJsSourceEngine();
   ref.onDispose(() {
     engine.dispose();
   });

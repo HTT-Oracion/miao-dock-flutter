@@ -6,6 +6,7 @@ import '../domain/online_download.dart';
 import '../domain/online_error.dart';
 import '../domain/online_models.dart';
 import '../domain/online_source.dart';
+import '../domain/source_library.dart';
 
 /// 在线漫画的本地持久层。
 ///
@@ -18,6 +19,7 @@ class OnlineStore {
   static const keyDownloads = 'miao.online-downloads';
   static const keyDisclaimer = 'miao.online-disclaimer-seen';
   static const keySelectedSource = 'miao.online-selected-source';
+  static const keyLibraries = 'miao.online-libraries';
 
   /// 读取源清单。**缺键** = 首次启动，写入设计稿的 3 个 demo 源；
   /// 已写入空数组 = 用户删光了，保持空态（不能每次启动又长回来）。
@@ -48,6 +50,33 @@ class OnlineStore {
 
   void saveSources(List<OnlineSource> sources) {
     writeRawPref(keySources, jsonEncode([for (final source in sources) source.toJson()]));
+  }
+
+  Future<List<SourceLibrary>> loadLibraries() async {
+    final raw = readRawPref(keyLibraries);
+    if (raw == null) {
+      saveLibraries(const []);
+      return const [];
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      final result = <SourceLibrary>[];
+      for (final item in decoded) {
+        if (item is Map) {
+          final library = SourceLibrary.fromJson(Map<String, Object?>.from(item));
+          if (library != null) result.add(library);
+        }
+      }
+      result.sort((a, b) => a.priority.compareTo(b.priority));
+      return result;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  void saveLibraries(List<SourceLibrary> libraries) {
+    writeRawPref(keyLibraries, jsonEncode([for (final library in libraries) library.toJson()]));
   }
 
   Future<List<ReadingProgress>> loadProgress() async {
@@ -138,6 +167,7 @@ class OnlineStore {
     writeRawPref(keyReadChapters, '{}');
     writeRawPref(keyDownloads, '[]');
     writeRawPref(keyDisclaimer, '0');
+    writeRawPref(keyLibraries, '[]');
   }
 
   /// 把某个源的缓存 / Cookie 清掉（删除源时调用）。目前只有图片缓存目录约定。

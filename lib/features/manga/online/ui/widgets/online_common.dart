@@ -642,3 +642,6 @@ class OnlineBanner extends StatelessWidget {
     );
   }
 }
+
+/// 舞台黑色（设计稿 `--stage-bg` 独立于主题）。
+Color onlineReaderStageColor() => const Color(0xFF000000);

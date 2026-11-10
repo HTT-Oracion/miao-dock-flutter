@@ -17,9 +17,12 @@ import '../../../../../shared/widgets/buttons.dart';
 import '../../../../../shared/widgets/skeleton.dart';
 import '../../../../../shared/widgets/toast.dart';
 import '../../controller/online_sources_controller.dart';
+import '../../data/legacy_source_manifest.dart';
 import '../../data/source_import.dart';
+import '../../data/source_package.dart';
 import '../../domain/online_source.dart';
 import 'online_common.dart';
+import 'online_link_import.dart';
 import '../../../../../shared/responsive.dart';
 import '../../../../../shared/widgets/app_dropdown.dart';
 
@@ -44,7 +47,7 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
     try {
       final file = await openFile(
         acceptedTypeGroups: const [
-          XTypeGroup(label: 'source.json', extensions: ['json']),
+          XTypeGroup(label: 'source', extensions: ['json', 'js']),
         ],
       );
       if (file == null) return;
@@ -59,7 +62,7 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
     String? path;
     for (final item in items) {
       final candidate = item.path;
-      if (candidate.endsWith('/source.json') || candidate.endsWith('\\source.json')) {
+      if (candidate.endsWith('/source.json') || candidate.endsWith('\\source.json') || candidate.endsWith('.js')) {
         path = candidate;
         break;
       }
@@ -81,7 +84,20 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
 
   Future<void> _importPath(String path) async {
     setState(() => _importing = true);
-    final result = await _importer.importManifest(path);
+    SourceImportResult result;
+    if (path.endsWith('.js')) {
+      try {
+        final js = await File(path).readAsString();
+        final manifest = legacyManifestFromScript(js, scriptUri: Uri.file(path));
+        result = await _importer.installPackage(
+          SourcePackageData(manifest: manifest, js: js, sourceUrl: Uri.file(path).toString()),
+        );
+      } catch (_) {
+        result = const SourceImportResult(errors: [SourceIssue('invalidJson', 'js')]);
+      }
+    } else {
+      result = await _importer.importManifest(path);
+    }
     if (!mounted) return;
     setState(() => _importing = false);
     await _handleResult(result);
@@ -233,7 +249,7 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
     try {
       final file = await openFile(
         acceptedTypeGroups: const [
-          XTypeGroup(label: 'source.json', extensions: ['json']),
+          XTypeGroup(label: 'source', extensions: ['json', 'js']),
         ],
       );
       if (file == null) return;
@@ -365,6 +381,8 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
           data: (items) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const OnlineLinkImport(),
+              const SizedBox(height: 12),
               _dragWrapper(
                 _ImportBox(
                   importing: _importing,
@@ -687,6 +705,8 @@ class _SourceDetail extends StatelessWidget {
       (l10n.onlineFieldRate, l10n.onlineUnitConcurrency(manifest.rateLimitIntervalMs, manifest.rateLimitConcurrency)),
       (l10n.onlineFieldHeaders, '${manifest.headers.length}'),
       (l10n.onlineFieldCaps, source.capabilities.join(', ')),
+      if (source.sourceUrl != null) (l10n.onlineSourceSourceUrl, source.sourceUrl!),
+      if (source.libraryId != null) (l10n.onlineSourceLibraryTitle, source.libraryId!),
     ];
     return SizedBox(
       width: 480,

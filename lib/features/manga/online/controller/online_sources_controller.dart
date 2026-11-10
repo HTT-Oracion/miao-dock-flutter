@@ -4,7 +4,7 @@ import '../data/online_repository.dart';
 import '../data/online_store.dart';
 import '../data/source_import.dart';
 import '../domain/online_models.dart';
-import '../data/demo_online_data.dart';
+import '../domain/fallback_categories.dart';
 import '../domain/online_source.dart';
 import '../domain/source_manifest.dart';
 
@@ -43,6 +43,7 @@ class OnlineSourcesNotifier extends AsyncNotifier<List<OnlineSource>> {
       next.add(withTimestamp);
     }
     _commit(next);
+    ref.read(onlineRepositoryProvider).engine.unload(source.id);
     ref.read(onlineSourceSelectionProvider.notifier).select(source.id);
     return withTimestamp;
   }
@@ -61,6 +62,8 @@ class OnlineSourcesNotifier extends AsyncNotifier<List<OnlineSource>> {
   Future<void> remove(String id) async {
     _commit(_value.where((source) => source.id != id).toList());
     await _store.clearSourceCache(id);
+    await ref.read(sourceImporterProvider).removePackage(id);
+    await ref.read(onlineRepositoryProvider).engine.unload(id);
     if (ref.read(onlineSourceSelectionProvider) == id) {
       ref.read(onlineSourceSelectionProvider.notifier).select(null);
     }
@@ -186,4 +189,4 @@ bool sourceIdExists(List<OnlineSource> sources, SourceManifest manifest) =>
     sources.any((source) => source.id == manifest.id);
 
 /// 分类兜底数据：请求失败时 UI 仍能展示常用题材（设计稿 §分类边界）。
-List<CategoryGroup> categoriesFallback() => DemoOnlineData.categoryGroups;
+List<CategoryGroup> categoriesFallback() => fallbackCategoryGroups;

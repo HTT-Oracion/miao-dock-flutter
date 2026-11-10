@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/online_image_loader.dart';
 import '../data/online_repository.dart';
 import '../data/translation_gateway.dart';
 import '../domain/online_download.dart';
@@ -19,11 +21,14 @@ class OnlineReaderState {
   const OnlineReaderState({
     required this.sourceId,
     required this.sourceName,
+    required this.sourceHosts,
     required this.comic,
     required this.chapter,
     required this.chapters,
     required this.pageCount,
     this.page = 1,
+    this.pageBytes,
+    this.pageConfigs = const [],
     this.pageLoading = true,
     this.pageError,
     this.loadingPages = false,
@@ -42,11 +47,16 @@ class OnlineReaderState {
 
   final String sourceId;
   final String sourceName;
+  final List<String> sourceHosts;
   final OnlineComic comic;
   final OnlineChapter chapter;
   final List<OnlineChapter> chapters;
   final int pageCount;
   final int page;
+
+  /// 当前页已解码的图片字节；null = 尚未取到图。
+  final Uint8List? pageBytes;
+  final List<ImageLoadingConfig> pageConfigs;
   final bool pageLoading;
   final Object? pageError;
   final bool loadingPages;
@@ -89,8 +99,12 @@ class OnlineReaderState {
     OnlineComic? comic,
     OnlineChapter? chapter,
     List<OnlineChapter>? chapters,
+    List<String>? sourceHosts,
     int? pageCount,
     int? page,
+    Uint8List? pageBytes,
+    bool clearPageBytes = false,
+    List<ImageLoadingConfig>? pageConfigs,
     bool? pageLoading,
     Object? pageError,
     bool clearPageError = false,
@@ -110,11 +124,14 @@ class OnlineReaderState {
   }) => OnlineReaderState(
     sourceId: sourceId,
     sourceName: sourceName,
+    sourceHosts: sourceHosts ?? this.sourceHosts,
     comic: comic ?? this.comic,
     chapter: chapter ?? this.chapter,
     chapters: chapters ?? this.chapters,
     pageCount: pageCount ?? this.pageCount,
     page: page ?? this.page,
+    pageBytes: clearPageBytes ? null : (pageBytes ?? this.pageBytes),
+    pageConfigs: pageConfigs ?? this.pageConfigs,
     pageLoading: pageLoading ?? this.pageLoading,
     pageError: clearPageError ? null : (pageError ?? this.pageError),
     loadingPages: loadingPages ?? this.loadingPages,
@@ -135,17 +152,15 @@ class OnlineReaderState {
 final onlineReaderProvider = NotifierProvider<OnlineReaderNotifier, OnlineReaderState?>(OnlineReaderNotifier.new);
 
 class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
-  Timer? _pageTimer;
   Timer? _osdTimer;
   Timer? _translationTimer;
   StreamSubscription<TranslationStatus>? _translationSub;
-  final Set<String> _failedOnce = {};
   final Set<String> _prefetched = {};
+  int _pageRequest = 0;
 
   @override
   OnlineReaderState? build() {
     ref.onDispose(() {
-      _pageTimer?.cancel();
       _osdTimer?.cancel();
       _translationTimer?.cancel();
       _translationSub?.cancel();
@@ -162,11 +177,11 @@ class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
     int? startPage,
   }) async {
     _translationSub?.cancel();
-    _pageTimer?.cancel();
     final initialPage = (startPage ?? 1).clamp(1, 9999);
     state = OnlineReaderState(
       sourceId: source.id,
       sourceName: source.name,
+      sourceHosts: source.manifest.hosts,
       comic: comic,
       chapter: chapter,
       chapters: chapters.isEmpty ? [chapter] : chapters,
@@ -180,15 +195,24 @@ class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
       ref.read(onlineSourcesProvider.notifier).markSuccess(source.id);
       if (state == null) return;
       final count = pages.length;
-      final page = startPage == null ? 1 : initialPage.clamp(1, count <= 0 ? 1 : count);
+      if (count == 0) {
+        state = state!.copyWith(
+          loadingPages: false,
+          pageLoading: false,
+          pageConfigs: const [],
+          pagesError: const OnlineException(OnlineErrorCode.parse, 'empty chapter'),
+        );
+        return;
+      }
+      final page = startPage == null ? 1 : initialPage.clamp(1, count);
       state = state!.copyWith(
         pageCount: count,
         page: page,
+        pageConfigs: pages,
         loadingPages: false,
         translation: state!.translation.copyWith(total: count),
       );
-      _prefetch(page);
-      _loadPage(page);
+      unawaited(_loadPage(page));
     } catch (e) {
       ref.read(onlineSourcesProvider.notifier).markFailure(source.id);
       if (state == null) return;
@@ -211,44 +235,91 @@ class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
     }
     if (source == null) return;
     _translationSub?.cancel();
-    _pageTimer?.cancel();
     _osdTimer?.cancel();
     state = current.copyWith(
       chapter: chapter,
       page: startPage ?? 1,
       pageLoading: true,
+      loadingPages: true,
       clearPageError: true,
+      clearPageBytes: true,
       translation: TranslationStatus(total: current.pageCount),
       showOriginal: true,
       controlsVisible: true,
     );
-    _prefetch(startPage ?? 1);
-    _loadPage(startPage ?? 1);
-  }
-
-  void _loadPage(int page) {
-    final current = state;
-    if (current == null) return;
-    _pageTimer?.cancel();
-    state = current.copyWith(page: page, pageLoading: true, clearPageError: true);
-    _showOsd();
-    _pageTimer = Timer(const Duration(milliseconds: 380), () {
-      final latest = state;
-      if (latest == null || latest.page != page) return;
-      final failKey = '${latest.chapter.id}:$page';
-      // 设计稿要展示「403 防盗链拒绝」的失败页；用第 13 页首次加载演示，
-      // 重试后成功（自动换新签名）。
-      if (page == 13 && _failedOnce.add(failKey)) {
-        state = latest.copyWith(
+    try {
+      final pages = await ref.read(onlineRepositoryProvider).pages(source, current.comic.id, chapter.id);
+      if (state == null) return;
+      final count = pages.length;
+      if (count == 0) {
+        state = state!.copyWith(
+          loadingPages: false,
           pageLoading: false,
-          pageError: const OnlineException(OnlineErrorCode.blocked, '403 referer'),
+          pageConfigs: const [],
+          pagesError: const OnlineException(OnlineErrorCode.parse, 'empty chapter'),
         );
         return;
       }
-      state = latest.copyWith(pageLoading: false);
+      final page = (startPage ?? 1).clamp(1, count);
+      state = state!.copyWith(
+        pageCount: count,
+        page: page,
+        pageConfigs: pages,
+        loadingPages: false,
+        translation: state!.translation.copyWith(total: count),
+      );
+      unawaited(_loadPage(page));
+    } catch (e) {
+      if (state == null) return;
+      state = state!.copyWith(loadingPages: false, pageLoading: false, pagesError: e);
+    }
+  }
+
+  Future<void> _loadPage(int page) async {
+    final current = state;
+    if (current == null) return;
+    final token = ++_pageRequest;
+    state = current.copyWith(page: page, pageLoading: true, clearPageError: true, clearPageBytes: true);
+    _showOsd();
+    final configs = state!.pageConfigs;
+    if (page < 1 || page > configs.length) {
+      state = state!.copyWith(
+        pageLoading: false,
+        pageError: const OnlineException(OnlineErrorCode.parse, 'page out of range'),
+      );
+      return;
+    }
+    try {
+      final bytes = await ref
+          .read(onlineImageLoaderProvider)
+          .load(configs[page - 1], sourceId: state!.sourceId, allowedHosts: state!.sourceHosts);
+      if (state == null || token != _pageRequest) return;
+      state = state!.copyWith(pageLoading: false, pageBytes: bytes);
       _prefetch(page);
       _commitProgress();
-    });
+    } catch (e) {
+      if (state == null || token != _pageRequest) return;
+      state = state!.copyWith(pageLoading: false, pageError: e);
+    }
+  }
+
+  void _prefetch(int page) {
+    final current = state;
+    if (current == null) return;
+    for (var next = page + 1; next <= page + 2 && next <= current.pageCount; next++) {
+      final key = '${current.chapter.id}:$next';
+      if (!_prefetched.add(key)) continue;
+      final config = current.pageConfigs[next - 1];
+      unawaited(
+        ref
+            .read(onlineImageLoaderProvider)
+            .load(config, sourceId: current.sourceId, allowedHosts: current.sourceHosts)
+            .catchError((_) {
+              _prefetched.remove(key);
+              return Uint8List(0);
+            }),
+      );
+    }
   }
 
   void goToPage(int page) {
@@ -440,40 +511,7 @@ class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
     }
   }
 
-  Future<void> _prefetch(int page) async {
-    final current = state;
-    if (current == null || current.pageCount <= 0) return;
-    final source = _source(current.sourceId);
-    if (source == null) return;
-    for (var offset = -2; offset <= 2; offset++) {
-      final target = page + offset;
-      if (target < 1 || target > current.pageCount) continue;
-      final key = '${current.chapter.id}:$target';
-      if (!_prefetched.add(key)) continue;
-      unawaited(
-        ref
-            .read(onlineRepositoryProvider)
-            .imageConfig(
-              source,
-              'demo://${current.comic.id}/${current.chapter.id}/$target',
-              current.comic.id,
-              current.chapter.id,
-            )
-            .catchError((_) => const ImageLoadingConfig()),
-      );
-    }
-  }
-
-  OnlineSource? _source(String id) {
-    final sources = ref.read(onlineSourcesProvider).value ?? const <OnlineSource>[];
-    for (final source in sources) {
-      if (source.id == id) return source;
-    }
-    return null;
-  }
-
   Future<void> close() async {
-    _pageTimer?.cancel();
     _osdTimer?.cancel();
     _translationSub?.cancel();
     state = null;

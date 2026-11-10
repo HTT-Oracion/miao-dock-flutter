@@ -13,6 +13,8 @@ class OnlineSource {
     this.lastUsedAt,
     this.importedAt,
     this.glyphOverride,
+    this.sourceUrl,
+    this.libraryId,
   });
 
   final SourceManifest manifest;
@@ -22,8 +24,14 @@ class OnlineSource {
   final DateTime? lastUsedAt;
   final DateTime? importedAt;
 
-  /// 平台行图标字；demo 源在数据层显式给定（柜 / 拷 / BZ），导入源按源名推导。
+  /// 平台行图标字；导入源按源名推导，测试可显式给定。
   final String? glyphOverride;
+
+  /// 远程安装地址（source.json）；文件导入时为空。
+  final String? sourceUrl;
+
+  /// 来源仓库 id；文件导入时为空。
+  final String? libraryId;
 
   String get id => manifest.id;
   String get name => manifest.name;
@@ -46,7 +54,7 @@ class OnlineSource {
     return runes.length >= 2 ? String.fromCharCodes(runes.take(1)) : first;
   }
 
-  String get host => manifest.hosts.isEmpty ? '' : manifest.hosts.first;
+  String get host => Uri.tryParse(manifest.baseUrl)?.host ?? (manifest.hosts.isEmpty ? '' : manifest.hosts.first);
 
   OnlineSource copyWith({
     SourceManifest? manifest,
@@ -56,6 +64,8 @@ class OnlineSource {
     DateTime? lastUsedAt,
     DateTime? importedAt,
     String? glyphOverride,
+    String? sourceUrl,
+    String? libraryId,
   }) => OnlineSource(
     manifest: manifest ?? this.manifest,
     capabilities: capabilities ?? this.capabilities,
@@ -64,6 +74,8 @@ class OnlineSource {
     lastUsedAt: lastUsedAt ?? this.lastUsedAt,
     importedAt: importedAt ?? this.importedAt,
     glyphOverride: glyphOverride ?? this.glyphOverride,
+    sourceUrl: sourceUrl ?? this.sourceUrl,
+    libraryId: libraryId ?? this.libraryId,
   );
 
   Map<String, Object?> toJson() => {
@@ -74,6 +86,8 @@ class OnlineSource {
     'lastUsedAt': lastUsedAt?.toIso8601String(),
     'importedAt': importedAt?.toIso8601String(),
     if (glyphOverride != null) 'glyph': glyphOverride,
+    if (sourceUrl != null) 'sourceUrl': sourceUrl,
+    if (libraryId != null) 'libraryId': libraryId,
   };
 
   static OnlineSource? fromJson(Map<String, Object?> json) {
@@ -89,6 +103,8 @@ class OnlineSource {
       lastUsedAt: DateTime.tryParse('${json['lastUsedAt']}'),
       importedAt: DateTime.tryParse('${json['importedAt']}'),
       glyphOverride: json['glyph'] is String ? '${json['glyph']}' : null,
+      sourceUrl: json['sourceUrl'] is String ? '${json['sourceUrl']}' : null,
+      libraryId: json['libraryId'] is String ? '${json['libraryId']}' : null,
     );
   }
 }

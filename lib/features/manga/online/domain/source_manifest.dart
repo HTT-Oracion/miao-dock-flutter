@@ -1,5 +1,15 @@
 import 'dart:convert';
 
+/// 源运行时格式。
+enum SourceRuntime {
+  /// 本项目的异步能力契约（`class X extends SourceBase`）。
+  contract,
+
+  /// 上游 `ComicSource` 单文件格式（`class X extends ComicSource`），
+  /// 通过 JS 兼容适配器映射到本项目的 DTO。
+  comicSource,
+}
+
 /// 在线漫画源清单（plan §5.2 `source.json`）。
 ///
 /// 只做**结构与安全边界**的校验，不执行 JS：入口类、能力函数由导入时的
@@ -21,6 +31,7 @@ class SourceManifest {
     this.headers = const {},
     this.rateLimitIntervalMs = 400,
     this.rateLimitConcurrency = 2,
+    this.runtime = SourceRuntime.contract,
   });
 
   final int specVersion;
@@ -39,10 +50,13 @@ class SourceManifest {
   final int rateLimitIntervalMs;
   final int rateLimitConcurrency;
 
+  /// 脚本格式；远程单 JS 源会自动合成清单并标记 [SourceRuntime.comicSource]。
+  final SourceRuntime runtime;
+
   static const int supportedSpecVersion = 2;
 
   /// 源 id 命名规则（plan §5.2）：`^[a-z0-9][a-z0-9._-]{2,63}$`。
-  static final RegExp idPattern = RegExp(r'^[a-z0-9][a-z0-9._-]{2,63}$');
+  static final RegExp idPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$');
 
   /// 域名白名单：支持 `*.example.com` 通配子域。
   static final RegExp hostPattern = RegExp(r'^(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$');
@@ -115,6 +129,7 @@ class SourceManifest {
       headers: headers,
       rateLimitIntervalMs: intervalMs.clamp(100, 60000),
       rateLimitConcurrency: concurrency.clamp(1, 4),
+      runtime: '${map['runtime'] ?? ''}' == 'comicSource' ? SourceRuntime.comicSource : SourceRuntime.contract,
     );
   }
 
@@ -161,6 +176,7 @@ class SourceManifest {
     'hosts': hosts,
     'request': {'timeoutMs': timeoutMs, if (headers.isNotEmpty) 'headers': headers},
     'rateLimit': {'intervalMs': rateLimitIntervalMs, 'concurrency': rateLimitConcurrency},
+    if (runtime != SourceRuntime.contract) 'runtime': runtime.name,
   };
 
   String toJsonString() => const JsonEncoder.withIndent('  ').convert(toJson());
@@ -181,5 +197,6 @@ class SourceManifest {
     headers: headers,
     rateLimitIntervalMs: rateLimitIntervalMs,
     rateLimitConcurrency: rateLimitConcurrency,
+    runtime: runtime,
   );
 }

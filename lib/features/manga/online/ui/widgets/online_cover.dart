@@ -69,6 +69,16 @@ class OnlineCover extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
+            if (comic.coverUrl != null && comic.coverUrl!.isNotEmpty)
+              Positioned.fill(
+                child: Image.network(
+                  comic.coverUrl!,
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.low,
+                  headers: comic.coverHeaders,
+                  errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+                ),
+              ),
             // 底部暗角：保证书名在任意封面色上的可读性。
             Align(
               alignment: Alignment.bottomCenter,
@@ -103,7 +113,7 @@ class OnlineCover extends StatelessWidget {
                       shadows: [Shadow(color: palette.shadow, blurRadius: 4, offset: const Offset(0, 1))],
                     ),
                   ),
-                  if (showChapterCount) ...[
+                  if (showChapterCount && comic.chapterCount > 0) ...[
                     const SizedBox(height: 3),
                     Text(
                       AppLocalizations.of(context).onlineChapterCount(comic.chapterCount),
