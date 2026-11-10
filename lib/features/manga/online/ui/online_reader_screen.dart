@@ -23,6 +23,7 @@ import '../../ui/reader/reader_paged_stage.dart';
 import '../../ui/reader/reader_widgets.dart';
 import '../../ui/reader/reader_prefs.dart';
 import '../../ui/reader/reader_stage.dart';
+import '../../ui/reader/reader_webtoon_stage.dart';
 import '../../ui/reader/reader_zoom.dart';
 import '../domain/online_error.dart';
 import '../domain/online_models.dart';
@@ -705,12 +706,16 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
       );
     }
     if (prefs.mode == ReaderMode.webtoon) {
-      return _WebtoonStage(
-        state: state,
-        onTap: _interact,
-        onPage: (page) {
-          ref.read(onlineReaderProvider.notifier).goToPage(page);
-        },
+      return ReaderWebtoonStage(
+        pageCount: state.pageCount,
+        onCenterTap: _interact,
+        pageBuilder: (context, seq) => _OnlineWebtoonPage(
+          page: seq,
+          config: seq <= state.pageConfigs.length ? state.pageConfigs[seq - 1] : null,
+          sourceId: state.sourceId,
+          allowedHosts: state.sourceHosts,
+          translated: state.showingTranslated && state.pageHasTranslation(seq),
+        ),
       );
     }
     if (state.pageLoading) {
@@ -967,60 +972,79 @@ class _EdgeButtonState extends State<_EdgeButton> {
   }
 }
 
-class _WebtoonStage extends StatefulWidget {
-  const _WebtoonStage({required this.state, required this.onTap, required this.onPage});
+class _OnlineWebtoonPage extends ConsumerStatefulWidget {
+  const _OnlineWebtoonPage({
+    required this.page,
+    required this.config,
+    required this.sourceId,
+    required this.allowedHosts,
+    required this.translated,
+  });
 
-  final OnlineReaderState state;
-  final VoidCallback onTap;
-  final ValueChanged<int> onPage;
+  final int page;
+  final ImageLoadingConfig? config;
+  final String sourceId;
+  final List<String> allowedHosts;
+  final bool translated;
 
   @override
-  State<_WebtoonStage> createState() => _WebtoonStageState();
+  ConsumerState<_OnlineWebtoonPage> createState() => _OnlineWebtoonPageState();
 }
 
-class _WebtoonStageState extends State<_WebtoonStage> {
-  late final PageController _controller = PageController(
-    initialPage: (widget.state.page - 1).clamp(0, widget.state.pageCount > 0 ? widget.state.pageCount - 1 : 0).toInt(),
-  );
+class _OnlineWebtoonPageState extends ConsumerState<_OnlineWebtoonPage> {
+  Uint8List? _bytes;
+  bool _failed = false;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final config = widget.config;
+    if (config == null) {
+      setState(() => _failed = true);
+      return;
+    }
+    try {
+      final bytes = await ref
+          .read(onlineImageLoaderProvider)
+          .load(config, sourceId: widget.sourceId, allowedHosts: widget.allowedHosts);
+      if (mounted) setState(() => _bytes = bytes);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: PageView.builder(
-        controller: _controller,
-        scrollDirection: Axis.vertical,
-        itemCount: widget.state.pageCount,
-        onPageChanged: (index) {
-          final page = index + 1;
-          if (page != widget.state.page) widget.onPage(page);
-        },
-        itemBuilder: (context, index) {
-          final page = index + 1;
-          final config = page <= widget.state.pageConfigs.length ? widget.state.pageConfigs[page - 1] : null;
-          return Center(
-            child: AspectRatio(
-              aspectRatio: 930 / 1353,
-              child: _OnlinePageView(
-                page: page,
-                config: config,
-                sourceId: widget.state.sourceId,
-                allowedHosts: widget.state.sourceHosts,
-                translated: widget.state.showingTranslated && widget.state.pageHasTranslation(page),
-                scanning:
-                    widget.state.translation.state == TranslationState.running &&
-                    !widget.state.pageHasTranslation(page),
-              ),
-            ),
-          );
-        },
-      ),
+    final palette = AppPalette.of(context);
+    if (_failed) {
+      return Container(
+        height: 120,
+        color: onlineReaderStageColor(),
+        alignment: Alignment.center,
+        child: Icon(LucideIcons.imageOff, color: palette.ink2),
+      );
+    }
+    final bytes = _bytes;
+    if (bytes == null) {
+      return Container(
+        height: 420,
+        color: onlineReaderStageColor(),
+        alignment: Alignment.center,
+        child: const OnlineReaderSpinner(),
+      );
+    }
+    return Stack(
+      children: [
+        Image.memory(bytes, fit: BoxFit.fitWidth, width: double.infinity),
+        if (widget.translated)
+          Positioned.fill(
+            child: IgnorePointer(child: ColoredBox(color: palette.blue.withValues(alpha: 0.035))),
+          ),
+      ],
     );
   }
 }

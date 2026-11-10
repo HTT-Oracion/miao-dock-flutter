@@ -3,20 +3,18 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../controller/library_controller.dart';
 import '../../controller/queue_controller.dart';
 import 'reader_image_cache.dart';
-import 'reader_prefs.dart';
+import 'reader_webtoon_stage.dart';
 import 'reader_widgets.dart';
 
-/// 条漫（webtoon）连续滚动视图（重设计稿 mobile.html 条漫语义）：
-/// 纵向无缝滚动 · 中心点按呼出/收起工具栏 · 自动滚动（触摸即断 600ms 续播）·
-/// 左下角计页 chip · 滚到底出章末衔接卡。
-class ReaderWebtoonView extends ConsumerStatefulWidget {
+/// 条漫（webtoon）连续滚动视图：数据侧适配 [ReaderSession]，交互交给共享
+/// [ReaderWebtoonStage]，与在线阅读器保持同一套滚动 / 点按 / 自动滚动语义。
+class ReaderWebtoonView extends StatelessWidget {
   const ReaderWebtoonView({
     super.key,
     required this.session,
@@ -33,136 +31,12 @@ class ReaderWebtoonView extends ConsumerStatefulWidget {
   final Widget? endCard;
 
   @override
-  ConsumerState<ReaderWebtoonView> createState() => _ReaderWebtoonViewState();
-}
-
-class _ReaderWebtoonViewState extends ConsumerState<ReaderWebtoonView> {
-  final _scroll = ScrollController();
-  Timer? _autoTimer;
-  Timer? _resumeTimer;
-  int _page = 1;
-
-  @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _autoTimer?.cancel();
-    _resumeTimer?.cancel();
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (!_scroll.hasClients) return;
-    final max = _scroll.position.maxScrollExtent;
-    if (max <= 0) return;
-    final page = (_scroll.offset / max * (widget.session.pages - 1)).round() + 1;
-    if (page != _page) setState(() => _page = page.clamp(1, widget.session.pages));
-  }
-
-  /// 自动滚动（重设计稿：真匀速滚动；触摸即断，600ms 后续播）。
-  void _setAuto(bool on) {
-    ref.read(readerPrefsProvider.notifier).toggleAutoScroll();
-    if (!on) {
-      _autoTimer?.cancel();
-      return;
-    }
-    _autoTimer?.cancel();
-    _autoTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      if (!_scroll.hasClients) return;
-      final max = _scroll.position.maxScrollExtent;
-      if (_scroll.offset >= max) {
-        _setAutoOff();
-        return;
-      }
-      _scroll.jumpTo((_scroll.offset + 0.6).clamp(0, max));
-    });
-  }
-
-  void _setAutoOff() {
-    if (ref.read(readerPrefsProvider).autoScroll) {
-      ref.read(readerPrefsProvider.notifier).toggleAutoScroll();
-    }
-    _autoTimer?.cancel();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final auto = ref.watch(readerPrefsProvider).autoScroll;
-    final total = widget.session.pages;
-
-    return Stack(
-      children: [
-        NotificationListener<ScrollNotification>(
-          onNotification: (n) {
-            // 触摸即断：手指按下/拖动时暂停自动滚动，松手 600ms 后续播。
-            if (auto && n is ScrollStartNotification) {
-              _autoTimer?.cancel();
-              _resumeTimer?.cancel();
-              _resumeTimer = Timer(const Duration(milliseconds: 600), () {
-                if (mounted && ref.read(readerPrefsProvider).autoScroll) _setAuto(true);
-              });
-            }
-            return false;
-          },
-          child: ListView.builder(
-            controller: _scroll,
-            itemCount: total + 1, // 末尾 = 章末衔接卡
-            itemBuilder: (context, i) {
-              if (i == total) {
-                return SizedBox(height: 320, child: widget.endCard ?? const SizedBox.shrink());
-              }
-              return _WebtoonPage(session: widget.session, seq: i + 1, showOriginal: widget.showOriginal);
-            },
-          ),
-        ),
-        // 计页 chip（重设计稿：左下角，滚动时出现、停止 800ms 后隐去——这里常驻简化）。
-        Positioned(
-          left: 12,
-          bottom: 12,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              '$_page / $total',
-              style: TextStyle(
-                fontSize: AppFont.px10,
-                color: palette.textPrimary,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ),
-        // 自动滚动指示（右下角小圆点 + 图标）。
-        if (auto)
-          Positioned(
-            right: 12,
-            bottom: 12,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle),
-              child: Icon(LucideIcons.arrowDown, size: 14, color: palette.accent),
-            ),
-          ),
-        // 中心点按：呼出/收起工具栏（左右两侧留白给系统手势与自由滚动）。
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapUp: (d) {
-              final rel = d.localPosition.dx / MediaQuery.sizeOf(context).width;
-              if (rel > 0.3 && rel < 0.7) widget.onCenterTap();
-            },
-          ),
-        ),
-      ],
+    return ReaderWebtoonStage(
+      pageCount: session.pages,
+      onCenterTap: onCenterTap,
+      endCard: endCard,
+      pageBuilder: (context, seq) => _WebtoonPage(session: session, seq: seq, showOriginal: showOriginal),
     );
   }
 }
