@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/theme/tokens.dart';
-import '../../../../../l10n/app_localizations.dart';
 import 'online_common.dart';
 
 /// 真实页图渲染：保留原文/译文状态与扫描线，但不再合成漫画内容。
@@ -15,16 +14,12 @@ class OnlinePageImage extends StatefulWidget {
     required this.bytes,
     required this.translated,
     this.scanning = false,
-    this.translating = false,
-    this.showBadge = true,
   });
 
   final int page;
   final Uint8List bytes;
   final bool translated;
   final bool scanning;
-  final bool translating;
-  final bool showBadge;
 
   @override
   State<OnlinePageImage> createState() => _OnlinePageImageState();
@@ -57,7 +52,6 @@ class _OnlinePageImageState extends State<OnlinePageImage> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final palette = AppPalette.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(3),
@@ -99,24 +93,6 @@ class _OnlinePageImageState extends State<OnlinePageImage> with SingleTickerProv
                       ),
                     ),
                   ),
-                ),
-              ),
-            if (widget.showBadge)
-              Positioned(
-                top: 8,
-                left: 8,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    OnlineTag(
-                      widget.translated ? l10n.onlineReaderTranslatedBadge : l10n.onlineReaderOriginalBadge,
-                      tone: OnlineTagTone.acc,
-                    ),
-                    if (widget.translating) ...[
-                      const SizedBox(width: 5),
-                      OnlineTag(l10n.onlineReaderTranslatingPage, tone: OnlineTagTone.blue),
-                    ],
-                  ],
                 ),
               ),
           ],

@@ -3490,6 +3490,10 @@
       }
     }
   },
+  "onlineSourceNotReady": "数据源尚未就绪，请稍后重试。",
+  "@onlineSourceNotReady": {
+    "description": "打开阅读器时源列表尚未加载完成"
+  },
   "onlineSourceAbnormal": "连续失败",
   "@onlineSourceAbnormal": {
     "description": "源异常标签"

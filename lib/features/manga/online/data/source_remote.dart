@@ -17,6 +17,22 @@ class SourceRemoteException implements Exception {
   String toString() => detail.isEmpty ? code : '$code: $detail';
 }
 
+/// 把 GitHub 的 blob 页面链接换成 raw 文件地址；其他链接原样返回。
+String normalizeSourceLink(String raw) {
+  final trimmed = raw.trim();
+  final uri = Uri.tryParse(trimmed);
+  if (uri == null || uri.host.toLowerCase() != 'github.com') return trimmed;
+  final parts = uri.pathSegments;
+  if (parts.length >= 5 && (parts[2] == 'blob' || parts[2] == 'raw')) {
+    final owner = parts[0];
+    final repo = parts[1];
+    final branch = parts[3];
+    final path = parts.skip(4).join('/');
+    return 'https://raw.githubusercontent.com/$owner/$repo/$branch/$path';
+  }
+  return trimmed;
+}
+
 /// 远程链接导入：先判断是仓库 `index.json` 还是单个 `source.json`，
 /// 再按清单解析 `sourceFile` / `icon` 的相对地址并抓取。
 class SourceRemoteLoader {
@@ -25,7 +41,7 @@ class SourceRemoteLoader {
   final SourceHttp _http;
 
   Future<SourceLinkPayload> inspect(String rawUrl) async {
-    final url = rawUrl.trim();
+    final url = normalizeSourceLink(rawUrl);
     if (!isValidSourceUrl(url)) throw const SourceRemoteException('invalidUrl', 'url');
     final text = await _fetchText(url, maxBytes: 2 * 1024 * 1024);
     final head = text.trimLeft();
@@ -54,17 +70,19 @@ class SourceRemoteLoader {
   }
 
   Future<SourceCatalog> loadCatalog(String libraryUrl) async {
-    final text = await _fetchText(libraryUrl, maxBytes: 1024 * 1024);
+    final normalized = normalizeSourceLink(libraryUrl);
+    final text = await _fetchText(normalized, maxBytes: 1024 * 1024);
     try {
-      return parseSourceCatalog(text, libraryUrl);
+      return parseSourceCatalog(text, normalized);
     } on FormatException catch (e) {
       throw SourceRemoteException('invalidJson', e.message);
     }
   }
 
   Future<SourcePackageData> loadManifest(String manifestUrl, {String? libraryId}) async {
-    final text = await _fetchText(manifestUrl, maxBytes: 512 * 1024);
-    return _packageFromManifestText(manifestUrl, text, libraryId: libraryId);
+    final normalized = normalizeSourceLink(manifestUrl);
+    final text = await _fetchText(normalized, maxBytes: 512 * 1024);
+    return _packageFromManifestText(normalized, text, libraryId: libraryId);
   }
 
   Future<SourcePackageData> _packageFromManifestText(String manifestUrl, String text, {String? libraryId}) async {
@@ -97,11 +115,12 @@ class SourceRemoteLoader {
   }
 
   Future<SourcePackageData> loadEntry(SourceCatalogEntry entry, {String? libraryId}) async {
-    final text = await _fetchText(entry.manifestUrl, maxBytes: 2 * 1024 * 1024);
+    final normalized = normalizeSourceLink(entry.manifestUrl);
+    final text = await _fetchText(normalized, maxBytes: 2 * 1024 * 1024);
     final head = text.trimLeft();
     if (head.startsWith('class ') || head.startsWith('/**') || head.startsWith('//')) {
       return packageFromScript(
-        entry.manifestUrl,
+        normalized,
         text,
         catalogKey: entry.key,
         catalogName: entry.name,
@@ -111,7 +130,7 @@ class SourceRemoteLoader {
       );
     }
     if (head.startsWith('{')) {
-      return _packageFromManifestText(entry.manifestUrl, text, libraryId: libraryId);
+      return _packageFromManifestText(normalized, text, libraryId: libraryId);
     }
     throw const SourceRemoteException('unsupported', 'entry is neither script nor manifest');
   }
@@ -145,18 +164,18 @@ class SourceRemoteLoader {
   }) async {
     final manifest = legacyManifestFromScript(
       js,
-      scriptUri: Uri.parse(url),
+      scriptUri: Uri.parse(normalizeSourceLink(url)),
       catalogKey: catalogKey,
       catalogName: catalogName,
       catalogVersion: catalogVersion,
       catalogDescription: catalogDescription,
     );
-    return SourcePackageData(manifest: manifest, js: js, sourceUrl: url, libraryId: libraryId);
+    return SourcePackageData(manifest: manifest, js: js, sourceUrl: normalizeSourceLink(url), libraryId: libraryId);
   }
 
   Future<String> _fetchText(String url, {required int maxBytes}) async {
     try {
-      final response = await _http.fetchRemoteText(url, maxBytes: maxBytes);
+      final response = await _http.fetchRemoteText(normalizeSourceLink(url), maxBytes: maxBytes);
       if (response.status < 200 || response.status >= 300) {
         throw SourceRemoteException('http', '${response.status}');
       }

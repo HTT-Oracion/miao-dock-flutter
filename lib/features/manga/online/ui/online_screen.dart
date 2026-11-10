@@ -107,6 +107,7 @@ class _OnlineScreenState extends ConsumerState<OnlineScreen> {
           OnlineShelf(onManageSources: _goSettingsSources, onOpenComic: _openComic, onContinue: _continueProgress),
           Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 OnlineTopBar(
                   title: _titleOf(l10n, detailMode, nav),
@@ -330,8 +331,20 @@ class _OnlineScreenState extends ConsumerState<OnlineScreen> {
     int? page,
     bool autoTranslate = false,
   }) async {
-    final source = _sourceById(_detailSourceId);
-    if (source == null) return;
+    var source = _sourceById(_detailSourceId);
+    if (source == null) {
+      try {
+        await ref.read(onlineSourcesProvider.future);
+      } catch (_) {
+        // 源列表失败时下面统一提示。
+      }
+      if (!mounted) return;
+      source = _sourceById(_detailSourceId);
+    }
+    if (source == null) {
+      if (mounted) showAppToast(context, AppLocalizations.of(context).onlineSourceNotReady, tone: ToastTone.warn);
+      return;
+    }
     final location = _detailSourceId == null ? '/manga/online' : '/manga/online/detail/${source.id}/${detail.comic.id}';
     ref
         .read(onlineReaderLaunchProvider.notifier)

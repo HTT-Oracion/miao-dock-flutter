@@ -315,11 +315,25 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
       return;
     }
     if (state.pageError != null || state.loadingPages) return;
-    if (x < width * 0.30) {
-      _prevPage();
-    } else if (x > width * 0.70) {
-      _nextPage();
-    } else if (state.controlsVisible) {
+    final onLeft = x < width * 0.30;
+    final onRight = x > width * 0.70;
+    if (onLeft || onRight) {
+      // 移动端左右热区只翻页：始终收起工具栏，保持沉浸阅读。
+      if (context.isMobile) {
+        ref.read(onlineReaderProvider.notifier).setControlsVisible(false);
+        if (onLeft) {
+          ref.read(onlineReaderProvider.notifier).previousPage();
+        } else {
+          ref.read(onlineReaderProvider.notifier).nextPage();
+        }
+      } else if (onLeft) {
+        _prevPage();
+      } else {
+        _nextPage();
+      }
+      return;
+    }
+    if (state.controlsVisible) {
       ref.read(onlineReaderProvider.notifier).toggleControls();
     } else {
       ref.read(onlineReaderProvider.notifier).setControlsVisible(true);
@@ -435,63 +449,65 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
           onKeyEvent: (event) => _onKey(_focus, event),
           child: Column(
             children: [
-              _SlideBar(
-                visible: visible,
-                offset: const Offset(0, -0.35),
-                child: SafeArea(
-                  bottom: false,
-                  child: OnlineReaderTopBar(
+              if (!context.isMobile || visible)
+                _SlideBar(
+                  visible: visible,
+                  offset: const Offset(0, -0.35),
+                  child: SafeArea(
+                    bottom: false,
+                    child: OnlineReaderTopBar(
+                      state: state,
+                      mobile: context.isMobile,
+                      onBack: _close,
+                      onClose: _close,
+                      onPage: (page) {
+                        ref.read(onlineReaderProvider.notifier).goToPage(page);
+                        _interact();
+                      },
+                      onOriginal: () {
+                        ref.read(onlineReaderProvider.notifier).setShowOriginal(true);
+                        _interact();
+                      },
+                      onTranslated: _toggleTranslated,
+                      onTranslate: () {
+                        ref.read(onlineReaderProvider.notifier).startTranslation();
+                        _interact();
+                      },
+                      onCompare: _compare,
+                      onGrid: () => _showGrid(state),
+                      onChapters: () => _showChapters(state),
+                      onHelp: _showHelp,
+                      onFullscreen: _toggleFocus,
+                      onSettings: () => _showSettings(state),
+                      onZoom: () {
+                        ref.read(onlineReaderProvider.notifier).cycleZoom();
+                        _interact();
+                      },
+                    ),
+                  ),
+                ),
+              if (!context.isMobile || visible)
+                _SlideBar(
+                  visible: visible,
+                  offset: const Offset(0, -0.35),
+                  child: OnlineTranslationBar(
                     state: state,
                     mobile: context.isMobile,
-                    onBack: _close,
-                    onClose: _close,
-                    onPage: (page) {
-                      ref.read(onlineReaderProvider.notifier).goToPage(page);
-                      _interact();
-                    },
-                    onOriginal: () {
-                      ref.read(onlineReaderProvider.notifier).setShowOriginal(true);
-                      _interact();
-                    },
-                    onTranslated: _toggleTranslated,
                     onTranslate: () {
                       ref.read(onlineReaderProvider.notifier).startTranslation();
                       _interact();
                     },
-                    onCompare: _compare,
-                    onGrid: () => _showGrid(state),
-                    onChapters: () => _showChapters(state),
-                    onHelp: _showHelp,
-                    onFullscreen: _toggleFocus,
-                    onSettings: () => _showSettings(state),
-                    onZoom: () {
-                      ref.read(onlineReaderProvider.notifier).cycleZoom();
+                    onRetry: () {
+                      ref.read(onlineReaderProvider.notifier).retryTranslation();
                       _interact();
                     },
+                    onOriginal: () {
+                      ref.read(onlineReaderProvider.notifier).onlyOriginal();
+                      _interact();
+                    },
+                    onSettings: () => _showSettings(state),
                   ),
                 ),
-              ),
-              _SlideBar(
-                visible: visible,
-                offset: const Offset(0, -0.35),
-                child: OnlineTranslationBar(
-                  state: state,
-                  mobile: context.isMobile,
-                  onTranslate: () {
-                    ref.read(onlineReaderProvider.notifier).startTranslation();
-                    _interact();
-                  },
-                  onRetry: () {
-                    ref.read(onlineReaderProvider.notifier).retryTranslation();
-                    _interact();
-                  },
-                  onOriginal: () {
-                    ref.read(onlineReaderProvider.notifier).onlyOriginal();
-                    _interact();
-                  },
-                  onSettings: () => _showSettings(state),
-                ),
-              ),
               Expanded(
                 child: Listener(
                   onPointerSignal: (event) {
@@ -516,7 +532,12 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                           );
                           if (page != state.page) {
                             ref.read(onlineReaderProvider.notifier).goToPage(page);
-                            _interact();
+                            // 移动端滑动翻页不叫出工具栏。
+                            if (context.isMobile) {
+                              ref.read(onlineReaderProvider.notifier).setControlsVisible(false);
+                            } else if (state.controlsVisible) {
+                              _interact();
+                            }
                           }
                           _dragDx = 0;
                         },
@@ -582,44 +603,45 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                   ),
                 ),
               ),
-              _SlideBar(
-                visible: visible,
-                offset: const Offset(0, 0.35),
-                child: context.isMobile
-                    ? OnlineReaderMobileBottomBar(
-                        state: state,
-                        onPage: (page) {
-                          ref.read(onlineReaderProvider.notifier).goToPage(page);
-                          _interact();
-                        },
-                        onPrevChapter: () {
-                          final chapter = state.prevChapter;
-                          if (chapter != null) {
-                            ref.read(onlineReaderProvider.notifier).switchChapter(chapter: chapter);
+              if (!context.isMobile || visible)
+                _SlideBar(
+                  visible: visible,
+                  offset: const Offset(0, 0.35),
+                  child: context.isMobile
+                      ? OnlineReaderMobileBottomBar(
+                          state: state,
+                          onPage: (page) {
+                            ref.read(onlineReaderProvider.notifier).goToPage(page);
                             _interact();
-                          }
-                        },
-                        onNextChapter: () {
-                          final chapter = state.nextChapter;
-                          if (chapter != null) {
-                            ref.read(onlineReaderProvider.notifier).switchChapter(chapter: chapter);
+                          },
+                          onPrevChapter: () {
+                            final chapter = state.prevChapter;
+                            if (chapter != null) {
+                              ref.read(onlineReaderProvider.notifier).switchChapter(chapter: chapter);
+                              _interact();
+                            }
+                          },
+                          onNextChapter: () {
+                            final chapter = state.nextChapter;
+                            if (chapter != null) {
+                              ref.read(onlineReaderProvider.notifier).switchChapter(chapter: chapter);
+                              _interact();
+                            }
+                          },
+                          onNight: () {
+                            ref.read(onlineReaderProvider.notifier).toggleNight();
                             _interact();
-                          }
-                        },
-                        onNight: () {
-                          ref.read(onlineReaderProvider.notifier).toggleNight();
-                          _interact();
-                        },
-                        onWebtoon: () {
-                          ref.read(onlineReaderProvider.notifier).toggleWebtoon();
-                          _interact();
-                        },
-                        onBrightness: () => _showBrightness(state),
-                        onChapters: () => _showChapters(state),
-                        onSettings: () => _showSettings(state),
-                      )
-                    : const OnlineReaderFootBar(),
-              ),
+                          },
+                          onWebtoon: () {
+                            ref.read(onlineReaderProvider.notifier).toggleWebtoon();
+                            _interact();
+                          },
+                          onBrightness: () => _showBrightness(state),
+                          onChapters: () => _showChapters(state),
+                          onSettings: () => _showSettings(state),
+                        )
+                      : const OnlineReaderFootBar(),
+                ),
             ],
           ),
         ),
@@ -714,19 +736,13 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
       builder: (context, constraints) {
         final mobile = context.isMobile;
         final maxWidth = constraints.maxWidth * (mobile ? 1.0 : 0.88);
-        final maxHeight = constraints.maxHeight - (mobile ? 16 : 20);
-        var width = maxWidth;
-        var height = width * 1353 / 930;
-        if (height > maxHeight) {
-          height = maxHeight;
-          width = height * 930 / 1353;
-        }
+        final maxHeight = constraints.maxHeight - (mobile ? 0 : 20);
         final scanning = state.translation.state == TranslationState.running && !state.pageHasTranslation(state.page);
         final translated = state.showingTranslated && state.pageHasTranslation(state.page);
         return Center(
           child: SizedBox(
-            width: width,
-            height: height,
+            width: maxWidth,
+            height: maxHeight,
             child: ClipRect(
               child: Transform.scale(
                 scale: state.zoom,
@@ -746,7 +762,6 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                             bytes: state.pageBytes!,
                             translated: translated,
                             scanning: scanning,
-                            translating: scanning,
                           ),
                   ),
                 ),
@@ -842,13 +857,7 @@ class _WebtoonPageState extends ConsumerState<_WebtoonPage> {
         child: const Center(child: OnlineReaderSpinner()),
       );
     }
-    return OnlinePageImage(
-      page: widget.page,
-      bytes: bytes,
-      translated: widget.translated,
-      scanning: widget.scanning,
-      translating: widget.scanning,
-    );
+    return OnlinePageImage(page: widget.page, bytes: bytes, translated: widget.translated, scanning: widget.scanning);
   }
 }
 

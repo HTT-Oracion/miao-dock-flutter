@@ -40,7 +40,7 @@ class OnlineTopBar extends ConsumerWidget {
             style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w700, color: palette.ink),
           ),
           const SizedBox(width: 10),
-          Flexible(
+          Expanded(
             child: Text(
               l10n.onlineSourceCrumb(source?.name ?? '—', title),
               maxLines: 1,
@@ -48,7 +48,6 @@ class OnlineTopBar extends ConsumerWidget {
               style: TextStyle(fontSize: AppFont.px11, color: palette.mut),
             ),
           ),
-          const Spacer(),
           SizedBox(width: 320, child: _OnlineSearchField(onSubmitted: onSearchSubmitted)),
           const SizedBox(width: 10),
           AppButton(
@@ -237,7 +236,7 @@ class _PlatformChip extends ConsumerWidget {
   }
 }
 
-/// 移动端搜索行（设计稿 `.msearch`：输入框 + 主色搜索按钮）。
+/// 移动端搜索行：输入框占满宽度，回车 / 键盘搜索提交（不额外放按钮）。
 class OnlineMobileSearchBar extends ConsumerStatefulWidget {
   const OnlineMobileSearchBar({super.key, required this.onSubmitted});
 
@@ -277,42 +276,26 @@ class _OnlineMobileSearchBarState extends ConsumerState<OnlineMobileSearchBar> {
     });
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-      child: Row(
-        children: [
-          Expanded(
-            child: Focus(
-              onKeyEvent: (node, event) {
-                if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
-                  _controller.clear();
-                  ref.read(onlineNavProvider.notifier).clearSearch();
-                  return KeyEventResult.handled;
-                }
-                return KeyEventResult.ignored;
-              },
-              child: AppInput(
-                controller: _controller,
-                hint: l10n.onlineSearchHint,
-                height: 32,
-                fontSize: AppFont.px12,
-                fillColor: palette.card,
-                prefixIcon: LucideIcons.search,
-                prefixIconSize: 13,
-                onChanged: (value) => ref.read(onlineNavProvider.notifier).setSearchInput(value),
-                onSubmitted: (_) => _submit(),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          AppButton(
-            label: l10n.onlineSearchAction,
-            onTap: _submit,
-            variant: AppButtonVariant.primary,
-            height: 44,
-            horizontalPadding: 16,
-            fontSize: AppFont.px12,
-            fontWeight: FontWeight.w600,
-          ),
-        ],
+      child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+            _controller.clear();
+            ref.read(onlineNavProvider.notifier).clearSearch();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: AppInput(
+          controller: _controller,
+          hint: l10n.onlineSearchHint,
+          height: 40,
+          fontSize: AppFont.px12,
+          fillColor: palette.card,
+          prefixIcon: LucideIcons.search,
+          prefixIconSize: 13,
+          onChanged: (value) => ref.read(onlineNavProvider.notifier).setSearchInput(value),
+          onSubmitted: (_) => _submit(),
+        ),
       ),
     );
   }

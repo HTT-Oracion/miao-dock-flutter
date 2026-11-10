@@ -60,7 +60,11 @@ class _OnlineLinkImportState extends ConsumerState<OnlineLinkImport> {
       if (!mounted) return;
       switch (payload) {
         case SourceCatalogPayload():
-          final library = SourceLibrary(id: stableSourceLibraryId(raw), name: payload.catalog.name, url: raw);
+          final library = SourceLibrary(
+            id: stableSourceLibraryId(payload.rawUrl),
+            name: payload.catalog.name,
+            url: payload.rawUrl,
+          );
           ref.read(onlineLibrariesProvider.notifier).add(library);
           ref.read(onlineLibrariesProvider.notifier).markChecked(library.id);
           _controller.clear();
@@ -68,13 +72,13 @@ class _OnlineLinkImportState extends ConsumerState<OnlineLinkImport> {
           showAppToast(context, l10n.onlineSourceLibraryAdded(library.name), tone: ToastTone.good);
           await _openCatalog(library, payload.catalog);
         case SourceManifestPayload():
-          final package = await _loader.loadManifest(raw);
+          final package = await _loader.loadManifest(payload.rawUrl);
           final result = await _importer.installPackage(package);
           if (!mounted) return;
           await _finishInstall(result);
           if (result.ok) _controller.clear();
         case SourceScriptPayload():
-          final package = await _loader.loadScript(raw, payload.js);
+          final package = await _loader.loadScript(payload.rawUrl, payload.js);
           final result = await _importer.installPackage(package);
           if (!mounted) return;
           await _finishInstall(result);
@@ -335,7 +339,7 @@ class _OnlineLinkImportState extends ConsumerState<OnlineLinkImport> {
                     controller: _controller,
                     hint: l10n.onlineLinkImportHint,
                     onSubmitted: (_) => _import(),
-                    height: 34,
+                    height: 36,
                     prefixIcon: LucideIcons.link2,
                     errorText: _error,
                   ),
@@ -347,7 +351,7 @@ class _OnlineLinkImportState extends ConsumerState<OnlineLinkImport> {
                   onTap: _busy ? null : _import,
                   variant: AppButtonVariant.primary,
                   loading: _busy,
-                  height: 34,
+                  height: 36,
                   horizontalPadding: 12,
                   fontSize: AppFont.px11,
                   fontWeight: FontWeight.w600,

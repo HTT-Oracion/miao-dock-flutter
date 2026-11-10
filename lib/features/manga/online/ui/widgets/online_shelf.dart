@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/theme/tokens.dart';
@@ -32,6 +33,22 @@ class OnlineShelf extends ConsumerWidget {
     final recent = ref.watch(onlineRecentProvider);
     final downloads = ref.watch(onlineDownloadsProvider).value ?? const [];
     final activeDownloads = downloads.where((task) => task.isActive).length;
+
+    void leaveDetail() {
+      if (GoRouterState.of(context).uri.path.contains('/detail/')) {
+        context.go('/manga/online');
+      }
+    }
+
+    void selectView(OnlineView view) {
+      ref.read(onlineNavProvider.notifier).selectView(view);
+      leaveDetail();
+    }
+
+    void selectSource(OnlineSource source) {
+      ref.read(onlineSourceSelectionProvider.notifier).select(source.id);
+      selectView(OnlineView.discover);
+    }
 
     return Container(
       width: 246,
@@ -93,12 +110,7 @@ class OnlineShelf extends ConsumerWidget {
                                 source: source,
                                 index: index,
                                 active: active?.id == source.id,
-                                onTap: source.enabled
-                                    ? () {
-                                        ref.read(onlineSourceSelectionProvider.notifier).select(source.id);
-                                        ref.read(onlineNavProvider.notifier).selectView(OnlineView.discover);
-                                      }
-                                    : null,
+                                onTap: source.enabled ? () => selectSource(source) : null,
                               ),
                           ],
                         ),
@@ -138,26 +150,26 @@ class OnlineShelf extends ConsumerWidget {
                   icon: LucideIcons.compass,
                   label: l10n.onlineDiscover,
                   active: nav.view == OnlineView.discover && nav.query.isEmpty,
-                  onTap: () => ref.read(onlineNavProvider.notifier).selectView(OnlineView.discover),
+                  onTap: () => selectView(OnlineView.discover),
                 ),
                 _BrowseRow(
                   icon: LucideIcons.layers,
                   label: l10n.onlineCategories,
                   active: nav.view == OnlineView.categories && nav.query.isEmpty,
-                  onTap: () => ref.read(onlineNavProvider.notifier).selectView(OnlineView.categories),
+                  onTap: () => selectView(OnlineView.categories),
                 ),
                 _BrowseRow(
                   icon: LucideIcons.history,
                   label: l10n.onlineRecent,
                   active: nav.view == OnlineView.recent,
-                  onTap: () => ref.read(onlineNavProvider.notifier).selectView(OnlineView.recent),
+                  onTap: () => selectView(OnlineView.recent),
                 ),
                 _BrowseRow(
                   icon: LucideIcons.download,
                   label: l10n.onlineDownloads,
                   active: nav.view == OnlineView.downloads,
                   badge: activeDownloads > 0 ? activeDownloads : null,
-                  onTap: () => ref.read(onlineNavProvider.notifier).selectView(OnlineView.downloads),
+                  onTap: () => selectView(OnlineView.downloads),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
