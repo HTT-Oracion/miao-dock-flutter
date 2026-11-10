@@ -9,7 +9,9 @@ import 'package:miao_dock_flutter/features/manga/online/data/online_repository.d
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_common.dart';
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_page_image.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_mobile.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_prefs.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_stage.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_webtoon_stage.dart';
 
 import 'fake_engine.dart';
 import 'fake_image_loader.dart';
@@ -82,5 +84,11 @@ void main() {
     expect(size.width, closeTo(390, 1));
     expect(size.height, greaterThan(700));
     expect(tester.takeException(), isNull);
+
+    // 条漫模式也复用漫画库舞台。
+    container.read(readerPrefsProvider.notifier).setMode(ReaderMode.webtoon);
+    await pump(4);
+    expect(find.byType(ReaderWebtoonStage), findsOneWidget);
+    container.read(readerPrefsProvider.notifier).setMode(ReaderMode.paged);
   });
 }
