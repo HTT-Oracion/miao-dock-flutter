@@ -81,18 +81,19 @@ class OnlineSectionHeader extends StatelessWidget {
             style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
           ),
           if (tag != null) ...[const SizedBox(width: 10), OnlineTag(tag!)],
-          if (hint != null) ...[
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                hint!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
-              ),
-            ),
-          ],
-          const Spacer(),
+          if (hint != null) const SizedBox(width: 10),
+          // 用 tight Expanded 吃掉中段空白：Flexible + Spacer 时 loose flex 的
+          // 剩余份额会留在行尾，导致「换一批」离页面右边还差一截。
+          Expanded(
+            child: hint == null
+                ? const SizedBox.shrink()
+                : Text(
+                    hint!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
+                  ),
+          ),
           ?action,
         ],
       ),

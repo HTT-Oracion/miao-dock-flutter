@@ -63,6 +63,10 @@ void main() {
     expect(find.byType(OnlineShelf), findsOneWidget);
     expect(find.text('最近更新'), findsOneWidget);
     expect(find.byType(OnlineBookCard), findsWidgets);
+    final refresh = find.text('换一批');
+    final firstHeader = find.byType(OnlineSectionHeader).first;
+    expect(refresh, findsOneWidget);
+    expect(tester.getRect(refresh).right, closeTo(tester.getRect(firstHeader).right, 1));
 
     await tester.tap(find.byType(OnlineBookCard).first);
     await pump(10);
