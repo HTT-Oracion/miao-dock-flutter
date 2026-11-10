@@ -32,6 +32,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.coverEnd,
     required this.coverEndDeep,
     required this.paperCard,
+    required this.onBtn,
+    required this.accInk,
   });
 
   /// 画布底。
@@ -95,6 +97,12 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// 深浅主题都不变——它是**图片的纸**，不是界面层级。
   final Color paperCard;
 
+  /// 主色底上的文字（`--on-btn`）：浅色档必须用深色，白字对主色对比度不足。
+  final Color onBtn;
+
+  /// 纯文字使用主色（`--acc-ink`）：浅色档加深，保证正文级对比度。
+  final Color accInk;
+
   /// 深色主题（默认）。
   static const dark = AppPalette(
     bg: Color(0xFF0C0F12),
@@ -117,6 +125,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     coverEnd: Color(0xFF6B4423),
     coverEndDeep: Color(0xFF3A2C14),
     paperCard: Color(0xFFF5F2EA),
+    onBtn: Color(0xFF1A1305),
+    accInk: Color(0xFFE8A44C),
   );
 
   /// 浅色主题。
@@ -141,6 +151,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     coverEnd: Color(0xFF8A5A2E),
     coverEndDeep: Color(0xFF5C4420),
     paperCard: Color(0xFFF5F2EA),
+    onBtn: Color(0xFF1A1204),
+    accInk: Color(0xFF8A5416),
   );
 
   // ── 语义别名（与 AppTokens 同名，便于迁移时 1:1 替换）──────────────
@@ -195,6 +207,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? coverEnd,
     Color? coverEndDeep,
     Color? paperCard,
+    Color? onBtn,
+    Color? accInk,
   }) {
     return AppPalette(
       bg: bg ?? this.bg,
@@ -217,6 +231,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
       coverEnd: coverEnd ?? this.coverEnd,
       coverEndDeep: coverEndDeep ?? this.coverEndDeep,
       paperCard: paperCard ?? this.paperCard,
+      onBtn: onBtn ?? this.onBtn,
+      accInk: accInk ?? this.accInk,
     );
   }
 
@@ -244,8 +260,22 @@ class AppPalette extends ThemeExtension<AppPalette> {
       coverEnd: Color.lerp(coverEnd, other.coverEnd, t)!,
       coverEndDeep: Color.lerp(coverEndDeep, other.coverEndDeep, t)!,
       paperCard: Color.lerp(paperCard, other.paperCard, t)!,
+      onBtn: Color.lerp(onBtn, other.onBtn, t)!,
+      accInk: Color.lerp(accInk, other.accInk, t)!,
     );
   }
+}
+
+/// 字体族（设计稿 §02 标注用字）：只在主题与输入框控件里使用。
+abstract final class AppFonts {
+  static const String family = 'Noto Sans SC';
+  static const List<String> fallback = [
+    'PingFang SC',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
+    'Arial',
+    'Helvetica Neue',
+  ];
 }
 
 /// 字号阶梯（design.html §02）—— 只有五档，不新造字号。

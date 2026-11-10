@@ -60,8 +60,8 @@ ThemeData buildAppTheme(Brightness brightness) {
 
 /// 设计稿标注用字：Noto Sans SC，回退 PingFang SC / Microsoft YaHei（§02）。
 /// 未打包字体文件，交给系统按平台就近回落；`fontFamilyFallback` 兜住非中文平台。
-const String _fontFamily = 'Noto Sans SC';
-const List<String> _kFallback = ['PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC'];
+const String _fontFamily = AppFonts.family;
+const List<String> _kFallback = AppFonts.fallback;
 
 TextTheme _textTheme(AppPalette palette, Brightness brightness) {
   final base = brightness == Brightness.dark ? Typography.material2021().white : Typography.material2021().black;

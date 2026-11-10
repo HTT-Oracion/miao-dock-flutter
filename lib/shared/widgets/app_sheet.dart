@@ -35,6 +35,7 @@ class AppSheet extends StatelessWidget {
     this.subtitle,
     this.icon,
     this.onClose,
+    this.width = 380,
   });
 
   final String title;
@@ -43,6 +44,9 @@ class AppSheet extends StatelessWidget {
   final Widget child;
   final List<Widget> actions;
   final VoidCallback? onClose;
+
+  /// 宽屏抽屉宽度（设计稿阅读器 400、设置 380）。
+  final double width;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +98,7 @@ class AppSheet extends StatelessWidget {
   Widget _buildSide(BuildContext context) {
     final palette = AppPalette.of(context);
     return Container(
-      width: 380,
+      width: width,
       height: double.infinity,
       decoration: BoxDecoration(
         color: palette.panel,

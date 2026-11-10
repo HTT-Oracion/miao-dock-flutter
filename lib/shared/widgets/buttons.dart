@@ -84,7 +84,7 @@ class _AppTextActionState extends State<AppTextAction> {
             alignment: Alignment.center,
             child: Text(
               widget.label,
-              style: TextStyle(fontSize: AppFont.px12, color: highlight ? palette.pageBg : palette.textPrimary),
+              style: TextStyle(fontSize: AppFont.px12, color: highlight ? palette.onBtn : palette.textPrimary),
             ),
           ),
         ),
@@ -101,7 +101,7 @@ const double kPillRadius = 999;
 
 /// 按钮变体。
 enum AppButtonVariant {
-  /// 主操作：accent 底 + pageBg 字（新建漫画 / 查看 / 重试）。
+  /// 主操作：accent 底 + onBtn 字（新建漫画 / 查看 / 重试）。
   primary,
 
   /// 次级操作：divider 底 + textPrimary 字，hover 变 card（更多 / 取消 / 继续）。
@@ -112,12 +112,15 @@ enum AppButtonVariant {
   ghost,
 
   /// **危险确认**：仅用于「不可逆操作」弹窗的确认按钮（删除整本 / 删除本话）。
-  /// `bad` 底 + pageBg 字，hover 提亮 `badHover`。
+  /// `bad` 底 + onBtn 字，hover 提亮 `badHover`。
   ///
   /// 判定口径：操作会**造成数据不可恢复的丢失**才用它。
   /// 只是观感上严重（取消翻译 / 停止服务 / 重新下载）用 primary 或 secondary。
   /// 右键菜单 / 下拉里的删除项不走这个变体 —— 那里用 `AppDropdownItem(danger: true)`。
   danger,
+
+  /// 浅底主色：主色淡底 + 主色字（在线漫画翻译条的 idle 动作）。
+  soft,
 
   /// 文字链接：无底无内边距，hover 提亮（去投放 / 显示已隐藏）。
   link,
@@ -197,7 +200,7 @@ class _AppButtonState extends State<AppButton> {
     final v = widget.variant;
 
     if (v == AppButtonVariant.link) {
-      final base = widget.color ?? palette.accent;
+      final base = widget.color ?? palette.accInk;
       return MouseRegion(
         cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
         onEnter: (_) => setState(() => _hover = true),
@@ -223,10 +226,10 @@ class _AppButtonState extends State<AppButton> {
     switch (v) {
       case AppButtonVariant.primary:
         bg = showEnabled ? (_hover && enabled ? palette.accHover : palette.accent) : palette.divider;
-        fg = showEnabled ? palette.pageBg : palette.textSecondary;
+        fg = showEnabled ? palette.onBtn : palette.textSecondary;
       case AppButtonVariant.danger:
         bg = showEnabled ? (_hover && enabled ? palette.badHover : palette.bad) : palette.divider;
-        fg = showEnabled ? palette.pageBg : palette.textSecondary;
+        fg = showEnabled ? palette.onBtn : palette.textSecondary;
       case AppButtonVariant.secondary:
         // hover 提亮到 line2（不是 card）：弹窗底色就是 card，
         // 变 card 会与背景融合，按钮看起来消失。
@@ -237,6 +240,11 @@ class _AppButtonState extends State<AppButton> {
         // 用 ink2 而不是 textPrimary —— ghost 是次级动作，常态不该和标题同权重。
         bg = showEnabled && _hover && enabled ? palette.hi : Colors.transparent;
         fg = showEnabled ? (widget.color ?? (_hover && enabled ? palette.ink : palette.ink2)) : palette.textSecondary;
+      case AppButtonVariant.soft:
+        bg = showEnabled
+            ? (_hover && enabled ? palette.accHover.withValues(alpha: 0.16) : palette.accSoft)
+            : palette.divider;
+        fg = showEnabled ? (widget.color ?? palette.accInk) : palette.textSecondary;
       case AppButtonVariant.link:
         throw StateError('link variant must be handled above');
     }

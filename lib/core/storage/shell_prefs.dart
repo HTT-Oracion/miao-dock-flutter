@@ -279,3 +279,24 @@ int readReaderPreload() {
 }
 
 void persistReaderPreload(int value) => _writePref('miao.reader-preload', '${value.clamp(1, 6)}');
+
+/// ── 在线漫画模块的轻量持久化 ─────────────────────────────────────────────
+///
+/// 源清单 / 进度 / 下载任务都以 JSON 字符串落进同一份偏好文件：不引入新依赖、
+/// 与壳层偏好共用 `FLUTTER_TEST` 隔离，也不会在业务目录里散落临时文件。
+String? readRawPref(String key) => _readPrefs()[key];
+
+bool writeRawPref(String key, String value) => _writePref(key, value);
+
+/// 在线漫画数据目录（源包导出 / 图片缓存）。Web 返回 null（Web 不支持在线漫画）。
+Directory? onlineStateDirectory() {
+  if (kIsWeb) return null;
+  final prefs = _prefsFile();
+  final dir = Directory('${prefs.parent.path}/online');
+  try {
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    return dir;
+  } catch (_) {
+    return null;
+  }
+}

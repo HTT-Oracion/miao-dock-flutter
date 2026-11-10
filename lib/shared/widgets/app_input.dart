@@ -33,6 +33,7 @@ class AppInput extends StatelessWidget {
     this.inputFormatters,
     this.autofocus = false,
     this.maxLines = 1,
+    this.fillColor,
   });
 
   /// 占位文案（**必填**，规范要求）。
@@ -55,6 +56,9 @@ class AppInput extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final bool autofocus;
   final int maxLines;
+
+  /// 输入框底色；null = 项目默认 `navBg`（设计稿搜索框等场景用 `card`）。
+  final Color? fillColor;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +84,12 @@ class AppInput extends StatelessWidget {
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,
             maxLines: maxLines,
-            style: TextStyle(fontSize: fontSize, color: palette.textPrimary),
+            style: TextStyle(
+              fontSize: fontSize,
+              color: palette.textPrimary,
+              fontFamily: AppFonts.family,
+              fontFamilyFallback: AppFonts.fallback,
+            ),
             cursorColor: palette.accent,
           ),
         ),
@@ -106,9 +115,14 @@ class AppInput extends StatelessWidget {
     return InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: palette.navBg,
+      fillColor: fillColor ?? palette.navBg,
       hintText: hint,
-      hintStyle: TextStyle(fontSize: fontSize, color: palette.textSecondary),
+      hintStyle: TextStyle(
+        fontSize: fontSize,
+        color: palette.textSecondary,
+        fontFamily: AppFonts.family,
+        fontFamilyFallback: AppFonts.fallback,
+      ),
       // 🔴 垂直内距按高度算：`isDense: true` + 固定 vertical 8 会让输入框
       // 实际高度远小于外层 `SizedBox(height:)`（用户实测"输入框太小"）。
       // 用 (height - 字号行高) / 2 让文字在框内垂直居中、且撑满给定高度。

@@ -38,6 +38,7 @@ const List<SidebarViewItem> mangaViews = [
   SidebarViewItem(id: 'drop'),
   SidebarViewItem(id: 'queue'),
   SidebarViewItem(id: 'library'),
+  SidebarViewItem(id: 'online'),
 ];
 
 /// 音乐模块视图（design.html 侧栏「音乐」分组）。
@@ -51,11 +52,14 @@ const List<SidebarViewItem> musicViews = [
 /// 阅读器路由（漫画模块的子页，不属于任何视图页签）。
 const String readerPath = '/manga/reader';
 
+/// 在线阅读器路由（内容区子页；移动端同样整屏）。
+const String onlineReaderPath = '/manga/online/reader';
+
 /// 当前是否在阅读器。
 ///
 /// 三处行为都靠它判定：移动端**全屏**（不渲染壳层导航）、隐藏「新建漫画」入口、
 /// 以及阅读器在漫画库视图下的高亮归属（见 [resolveViewId]）。
-bool isReaderPath(String path) => path.startsWith(readerPath);
+bool isReaderPath(String path) => path.startsWith(readerPath) || path.startsWith(onlineReaderPath);
 
 /// 子页 → 归属视图。阅读器从漫画库进入，归到「漫画库」——
 /// 否则切回来时页签跑到「投放」、面包屑也显示投放，看着像路由错乱。

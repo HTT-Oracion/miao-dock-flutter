@@ -8,6 +8,8 @@ import '../../features/manga/ui/library_screen.dart';
 import '../../features/manga/ui/notready/not_ready_route_screen.dart';
 import '../../features/manga/ui/queue_screen.dart';
 import '../../features/manga/ui/reader_screen.dart';
+import '../../features/manga/online/ui/online_screen.dart';
+import '../../features/manga/online/ui/online_reader_screen.dart';
 import '../../features/music/ui/music_playlist_screen.dart';
 import '../../features/music/ui/music_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
@@ -54,6 +56,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                     // 阅读器开着 ⇒ 进漫画库就回到阅读器（续读同一页），见 [readerResumeRedirect]。
                     redirect: (_, _) => readerResumeRedirect(ref.read(readerSessionProvider)),
                     builder: (_, _) => const LibraryScreen(),
+                  ),
+                  GoRoute(
+                    path: 'online',
+                    builder: (_, _) => const OnlineScreen(),
+                    routes: [
+                      // 详情复用在线屏：桌面主区切换、移动端右侧滑层。
+                      GoRoute(path: 'detail/:sourceId/:comicId', builder: (_, _) => const OnlineScreen()),
+                      GoRoute(path: 'reader', builder: (_, _) => const OnlineReaderScreen()),
+                    ],
                   ),
                   GoRoute(path: 'reader', builder: (_, _) => const ReaderScreen()),
                   // 启动引导（D-012）：住在主体区，侧栏保留。归属「投放」高亮。

@@ -2641,27 +2641,49 @@
     "description": "桌面阅读器快捷键速查卡标题"
   },
   "readerHelpTurn": "上一页 / 下一页（RTL 时镜像；可按住连发）",
-  "@readerHelpTurn": {"description": "速查卡：方向键翻页"},
+  "@readerHelpTurn": {
+    "description": "速查卡：方向键翻页"
+  },
   "readerHelpWheelZoom": "Ctrl/⌘ + 滚轮：以光标为锚点缩放（50%–200%）",
-  "@readerHelpWheelZoom": {"description": "速查卡：滚轮缩放"},
+  "@readerHelpWheelZoom": {
+    "description": "速查卡：滚轮缩放"
+  },
   "readerHelpWheelTurn": "裸滚轮：翻页（放大态下为平移）",
-  "@readerHelpWheelTurn": {"description": "速查卡：裸滚轮翻页"},
+  "@readerHelpWheelTurn": {
+    "description": "速查卡：裸滚轮翻页"
+  },
   "readerHelpStepZoom": "+ / −：步进缩放 25%",
-  "@readerHelpStepZoom": {"description": "速查卡：步进缩放"},
+  "@readerHelpStepZoom": {
+    "description": "速查卡：步进缩放"
+  },
   "readerHelpCompare": "C：对照模式（原文 / 译文并排）",
-  "@readerHelpCompare": {"description": "速查卡：对照模式"},
+  "@readerHelpCompare": {
+    "description": "速查卡：对照模式"
+  },
   "readerHelpOriginal": "O：原图 ⇄ 译文",
-  "@readerHelpOriginal": {"description": "速查卡：原图/译文"},
+  "@readerHelpOriginal": {
+    "description": "速查卡：原图/译文"
+  },
   "readerHelpGrid": "G：网格总览（Esc 关闭）",
-  "@readerHelpGrid": {"description": "速查卡：网格总览"},
+  "@readerHelpGrid": {
+    "description": "速查卡：网格总览"
+  },
   "readerHelpFullscreen": "F：全屏（全屏时 Esc 只退全屏）",
-  "@readerHelpFullscreen": {"description": "速查卡：全屏"},
+  "@readerHelpFullscreen": {
+    "description": "速查卡：全屏"
+  },
   "readerHelpTap": "单击图片：隐藏 / 显示工具栏",
-  "@readerHelpTap": {"description": "速查卡：单击图片"},
+  "@readerHelpTap": {
+    "description": "速查卡：单击图片"
+  },
   "readerHelpEsc": "Esc：关闭阅读器",
-  "@readerHelpEsc": {"description": "速查卡：Esc 关闭"},
+  "@readerHelpEsc": {
+    "description": "速查卡：Esc 关闭"
+  },
   "readerHelpOpenHint": "?：呼出这张速查卡",
-  "@readerHelpOpenHint": {"description": "速查卡：? 呼出"},
+  "@readerHelpOpenHint": {
+    "description": "速查卡：? 呼出"
+  },
   "readerFootHint": "←→ 翻页 · Ctrl+滚轮 缩放 · G 网格 · C 对照 · ? 快捷键",
   "@readerFootHint": {
     "description": "桌面阅读器底部提示条"
@@ -3303,5 +3325,2013 @@
   "libSheetDeleteSub": "可选择是否连本地文件一起删除",
   "@libSheetDeleteSub": {
     "description": "移动端操作抽屉：删除副标"
+  },
+  "viewOnline": "在线",
+  "@viewOnline": {
+    "description": "漫画视图：在线漫画（第 4 视图）"
+  },
+  "settingsNavOnline": "漫画源",
+  "@settingsNavOnline": {
+    "description": "设置页分区：漫画源管理"
+  },
+  "settingsBlurbOnline": "在线漫画的数据源。源由你自行导入，应用不内置、不提供在线源仓库。",
+  "@settingsBlurbOnline": {
+    "description": "设置页漫画源分区说明"
+  },
+  "onlineSourceTitle": "漫画源",
+  "@onlineSourceTitle": {
+    "description": "在线漫画左栏标题"
+  },
+  "onlineManageSources": "管理源",
+  "@onlineManageSources": {
+    "description": "在线视图顶栏动作：前往设置管理源"
+  },
+  "onlineImportSource": "导入源…",
+  "@onlineImportSource": {
+    "description": "导入漫画源按钮"
+  },
+  "onlineImportFirst": "导入第一个源",
+  "@onlineImportFirst": {
+    "description": "空态按钮"
+  },
+  "onlineOpenSourceDir": "打开源目录",
+  "@onlineOpenSourceDir": {
+    "description": "打开源包目录按钮"
+  },
+  "onlineSelectFileVerify": "选择文件并校验",
+  "@onlineSelectFileVerify": {
+    "description": "移动端导入源按钮"
+  },
+  "onlineImportTitle": "导入漫画源",
+  "@onlineImportTitle": {
+    "description": "源导入区块标题"
+  },
+  "onlineImportDesc": "选择 source.json，或把整个源目录（json + js + icon）拖到这里",
+  "@onlineImportDesc": {
+    "description": "源导入说明"
+  },
+  "onlineImportSteps": "校验 → 检查入口类 → 试跑 explore → 分级结果",
+  "@onlineImportSteps": {
+    "description": "源导入四步"
+  },
+  "onlineImporting": "正在校验 source.json …",
+  "@onlineImporting": {
+    "description": "源导入加载态"
+  },
+  "onlineWaitImport": "等待导入",
+  "@onlineWaitImport": {
+    "description": "源导入按钮下方提示"
+  },
+  "onlineImportedTitle": "已导入的源",
+  "@onlineImportedTitle": {
+    "description": "源列表标题"
+  },
+  "onlineImportSuccess": "导入成功",
+  "@onlineImportSuccess": {
+    "description": "导入结果标题：成功"
+  },
+  "onlineImportWarningTitle": "导入成功，存在警告",
+  "@onlineImportWarningTitle": {
+    "description": "导入结果标题：警告"
+  },
+  "onlineImportRejectedTitle": "导入被拒绝",
+  "@onlineImportRejectedTitle": {
+    "description": "导入结果标题：拒收"
+  },
+  "onlineImportErrorsCount": "{count} 项错误",
+  "@onlineImportErrorsCount": {
+    "description": "导入结果错误计数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineImportWarningsCount": "{count} 项警告",
+  "@onlineImportWarningsCount": {
+    "description": "导入结果警告计数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineImportClose": "知道了",
+  "@onlineImportClose": {
+    "description": "导入结果关闭"
+  },
+  "onlineImportSuccessToast": "已导入「{name}」",
+  "@onlineImportSuccessToast": {
+    "description": "导入成功吐司",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSourceEmpty": "还没有漫画源",
+  "@onlineSourceEmpty": {
+    "description": "空态：没有源"
+  },
+  "onlineSourceEmptyHint": "在 设置 › 漫画源 导入 source.json 后即可浏览在线漫画。",
+  "@onlineSourceEmptyHint": {
+    "description": "空态：没有源说明"
+  },
+  "onlineSourceEmptyHintShort": "导入 source.json 后即可浏览在线漫画。",
+  "@onlineSourceEmptyHintShort": {
+    "description": "空态：没有源短说明"
+  },
+  "onlineGoImport": "去设置导入",
+  "@onlineGoImport": {
+    "description": "空态按钮：去设置"
+  },
+  "onlineGoImportShort": "去导入漫画源",
+  "@onlineGoImportShort": {
+    "description": "空态按钮：去导入"
+  },
+  "onlineSourceDisclaimer": "源由你自行导入，应用不内置、不提供在线源仓库。删除源会同时清除该源的缓存与 Cookie。",
+  "@onlineSourceDisclaimer": {
+    "description": "源管理免责声明"
+  },
+  "onlineSourceDisclaimerShort": "源由你自行导入，应用不内置、不提供在线源仓库。",
+  "@onlineSourceDisclaimerShort": {
+    "description": "源管理免责声明短"
+  },
+  "onlineSourceCaps": "{count} 项能力",
+  "@onlineSourceCaps": {
+    "description": "源能力计数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineSourceSummary": "v{version} · {count} 项能力",
+  "@onlineSourceSummary": {
+    "description": "平台行副标",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineSourceSummaryAbnormal": "v{version} · {count} 项能力 · 连续失败",
+  "@onlineSourceSummaryAbnormal": {
+    "description": "平台行副标：熔断",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineSourceAbnormal": "连续失败",
+  "@onlineSourceAbnormal": {
+    "description": "源异常标签"
+  },
+  "onlineSourceDetail": "源详情",
+  "@onlineSourceDetail": {
+    "description": "源操作：查看详情"
+  },
+  "onlineMore": "更多操作",
+  "@onlineMore": {
+    "description": "源操作：更多"
+  },
+  "onlineEnable": "启用",
+  "@onlineEnable": {
+    "description": "源开关语义"
+  },
+  "onlineSourceEnableToast": "已启用该源",
+  "@onlineSourceEnableToast": {
+    "description": "源启用吐司"
+  },
+  "onlineSourceDisableToast": "已停用该源",
+  "@onlineSourceDisableToast": {
+    "description": "源停用吐司"
+  },
+  "onlineDeleteSource": "删除源",
+  "@onlineDeleteSource": {
+    "description": "删除源菜单项"
+  },
+  "onlineDeleteConfirmTitle": "删除源",
+  "@onlineDeleteConfirmTitle": {
+    "description": "删除确认标题"
+  },
+  "onlineDeleteConfirmBody": "删除后将同时清除该源的缓存与 Cookie。",
+  "@onlineDeleteConfirmBody": {
+    "description": "删除确认正文"
+  },
+  "onlineDelete": "删除",
+  "@onlineDelete": {
+    "description": "删除按钮"
+  },
+  "onlineCancel": "取消",
+  "@onlineCancel": {
+    "description": "取消按钮"
+  },
+  "onlineCopyId": "复制 id",
+  "@onlineCopyId": {
+    "description": "复制源 id"
+  },
+  "onlineSourceIdCopied": "已复制 id",
+  "@onlineSourceIdCopied": {
+    "description": "复制成功吐司"
+  },
+  "onlineExportSource": "导出源包",
+  "@onlineExportSource": {
+    "description": "导出源包按钮"
+  },
+  "onlineExportHint": "打包 json + js + icon 便于分享",
+  "@onlineExportHint": {
+    "description": "导出说明"
+  },
+  "onlineExportFailed": "导出失败，请检查目标目录",
+  "@onlineExportFailed": {
+    "description": "导出失败吐司"
+  },
+  "onlineSourceDeleted": "已删除「{name}」",
+  "@onlineSourceDeleted": {
+    "description": "删除源吐司",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSourceExported": "已导出「{name}」",
+  "@onlineSourceExported": {
+    "description": "导出成功吐司",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSourceDetailTitle": "{name} · 源详情",
+  "@onlineSourceDetailTitle": {
+    "description": "源详情标题",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineFieldSpecVersion": "规范版本",
+  "@onlineFieldSpecVersion": {
+    "description": "源详情字段"
+  },
+  "onlineFieldId": "Id",
+  "@onlineFieldId": {
+    "description": "源详情字段"
+  },
+  "onlineFieldVersion": "版本",
+  "@onlineFieldVersion": {
+    "description": "源详情字段"
+  },
+  "onlineFieldLang": "语言",
+  "@onlineFieldLang": {
+    "description": "源详情字段"
+  },
+  "onlineFieldBaseUrl": "站点",
+  "@onlineFieldBaseUrl": {
+    "description": "源详情字段"
+  },
+  "onlineFieldEntryClass": "入口类",
+  "@onlineFieldEntryClass": {
+    "description": "源详情字段"
+  },
+  "onlineFieldSourceFile": "源文件",
+  "@onlineFieldSourceFile": {
+    "description": "源详情字段"
+  },
+  "onlineFieldHosts": "域名白名单",
+  "@onlineFieldHosts": {
+    "description": "源详情字段"
+  },
+  "onlineFieldTimeout": "超时",
+  "@onlineFieldTimeout": {
+    "description": "源详情字段"
+  },
+  "onlineFieldRate": "限速",
+  "@onlineFieldRate": {
+    "description": "源详情字段"
+  },
+  "onlineFieldCaps": "能力",
+  "@onlineFieldCaps": {
+    "description": "源详情字段"
+  },
+  "onlineFieldDescription": "说明",
+  "@onlineFieldDescription": {
+    "description": "源详情字段"
+  },
+  "onlineFieldImportedAt": "导入时间",
+  "@onlineFieldImportedAt": {
+    "description": "源详情字段"
+  },
+  "onlineFieldLastUsed": "最近使用",
+  "@onlineFieldLastUsed": {
+    "description": "源详情字段"
+  },
+  "onlineFieldRequests": "请求",
+  "@onlineFieldRequests": {
+    "description": "源详情字段"
+  },
+  "onlineFieldHeaders": "请求头",
+  "@onlineFieldHeaders": {
+    "description": "源详情字段"
+  },
+  "onlineUnitMs": "{ms} 毫秒",
+  "@onlineUnitMs": {
+    "description": "时间单位：毫秒",
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineUnitConcurrency": "间隔 {interval}ms · 并发 {count}",
+  "@onlineUnitConcurrency": {
+    "description": "限速展示",
+    "placeholders": {
+      "interval": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineSourceToggle": "启用或停用该源",
+  "@onlineSourceToggle": {
+    "description": "源开关 tooltip"
+  },
+  "onlineSourceManageEntry": "源管理在 设置 › 漫画源",
+  "@onlineSourceManageEntry": {
+    "description": "源管理入口 tooltip"
+  },
+  "onlineImportIssueJson": "source.json 不是有效 JSON",
+  "@onlineImportIssueJson": {
+    "description": "导入错误"
+  },
+  "onlineImportIssueField": "字段校验失败：{field}",
+  "@onlineImportIssueField": {
+    "description": "导入错误：字段",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineImportIssuePath": "源文件路径不合法（不得为绝对路径或包含 ..）",
+  "@onlineImportIssuePath": {
+    "description": "导入错误：路径"
+  },
+  "onlineImportIssueSourceMissing": "包内缺少 source.js",
+  "@onlineImportIssueSourceMissing": {
+    "description": "导入错误：缺源文件"
+  },
+  "onlineImportIssueEntry": "入口类 {entry} 不存在或未继承 SourceBase",
+  "@onlineImportIssueEntry": {
+    "description": "导入错误：入口类",
+    "placeholders": {
+      "entry": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineImportIssueTooLarge": "source.js 超过大小上限",
+  "@onlineImportIssueTooLarge": {
+    "description": "导入错误：过大"
+  },
+  "onlineImportIssueFileSize": "文件大小：{size} 字节",
+  "@onlineImportIssueFileSize": {
+    "description": "导入错误：大小",
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineImportIssueCapability": "缺少必填能力：{capability}",
+  "@onlineImportIssueCapability": {
+    "description": "导入错误：能力",
+    "placeholders": {
+      "capability": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineImportIssueOptional": "可选能力未实现：{capability}",
+  "@onlineImportIssueOptional": {
+    "description": "导入警告：可选能力",
+    "placeholders": {
+      "capability": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineImportIssueIconMissing": "声明的图标文件不存在",
+  "@onlineImportIssueIconMissing": {
+    "description": "导入警告：图标"
+  },
+  "onlineImportIssuePersist": "源包复制失败，仅在本次运行生效",
+  "@onlineImportIssuePersist": {
+    "description": "导入警告：复制失败"
+  },
+  "onlinePlatformLoadFailed": "平台列表加载失败",
+  "@onlinePlatformLoadFailed": {
+    "description": "平台列表错误标题"
+  },
+  "onlinePlatformLoadFailedHint": "读取本地源清单时出错。",
+  "@onlinePlatformLoadFailedHint": {
+    "description": "平台列表错误说明"
+  },
+  "onlineSwitchSource": "切换漫画源",
+  "@onlineSwitchSource": {
+    "description": "平台行语义"
+  },
+  "onlineDiscover": "发现",
+  "@onlineDiscover": {
+    "description": "在线视图：发现"
+  },
+  "onlineCategories": "分类",
+  "@onlineCategories": {
+    "description": "在线视图：分类"
+  },
+  "onlineRecent": "最近阅读",
+  "@onlineRecent": {
+    "description": "在线视图：最近阅读"
+  },
+  "onlineDownloads": "下载",
+  "@onlineDownloads": {
+    "description": "在线视图：下载"
+  },
+  "onlineSearchHint": "搜索漫画（当前源）",
+  "@onlineSearchHint": {
+    "description": "搜索框占位"
+  },
+  "onlineSearchAction": "搜索",
+  "@onlineSearchAction": {
+    "description": "搜索按钮"
+  },
+  "onlineRefresh": "换一批",
+  "@onlineRefresh": {
+    "description": "首页换一批"
+  },
+  "onlineSectionUpdate": "最近更新",
+  "@onlineSectionUpdate": {
+    "description": "首页分区标题"
+  },
+  "onlineSectionPopular": "人气作品",
+  "@onlineSectionPopular": {
+    "description": "首页分区标题"
+  },
+  "onlineItemsPerPage": "{count} 条 / 页",
+  "@onlineItemsPerPage": {
+    "description": "分区每页条数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineLoadMore": "加载更多",
+  "@onlineLoadMore": {
+    "description": "加载更多按钮"
+  },
+  "onlineLoadMorePage": "加载更多 · 第 {page} 页 / 共 {total} 条",
+  "@onlineLoadMorePage": {
+    "description": "加载更多带页码",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineLoading": "加载中…",
+  "@onlineLoading": {
+    "description": "加载中"
+  },
+  "onlineRetryLoad": "重试加载",
+  "@onlineRetryLoad": {
+    "description": "加载更多失败"
+  },
+  "onlineNoMore": "已经到底了 · 共 {total} 条",
+  "@onlineNoMore": {
+    "description": "到底提示",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineFeedEmpty": "这个源还没有内容",
+  "@onlineFeedEmpty": {
+    "description": "首页空态标题"
+  },
+  "onlineFeedEmptyHint": "源返回了空的 sections，属于正常空态而非错误。",
+  "@onlineFeedEmptyHint": {
+    "description": "首页空态说明"
+  },
+  "onlineFeedError": "首页加载失败",
+  "@onlineFeedError": {
+    "description": "首页错误标题"
+  },
+  "onlineFeedErrorHint": "站点拒绝了请求（403）或页面结构已变，该源可能已失效。",
+  "@onlineFeedErrorHint": {
+    "description": "首页错误说明"
+  },
+  "onlineCategoryEmpty": "该分类暂无内容",
+  "@onlineCategoryEmpty": {
+    "description": "分类空态标题"
+  },
+  "onlineCategoryEmptyHint": "换一个题材，或返回首页看看。",
+  "@onlineCategoryEmptyHint": {
+    "description": "分类空态说明"
+  },
+  "onlineCategoryError": "分类加载失败",
+  "@onlineCategoryError": {
+    "description": "分类错误标题"
+  },
+  "onlineCategoryErrorHint": "分类结构解析失败，可重试或使用常用题材兜底。",
+  "@onlineCategoryErrorHint": {
+    "description": "分类错误说明"
+  },
+  "onlineCategoryFallback": "分类列表可能不完整",
+  "@onlineCategoryFallback": {
+    "description": "分类兜底提示"
+  },
+  "onlineCategoryTagCount": "{count} 个纯题材",
+  "@onlineCategoryTagCount": {
+    "description": "分类计数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineSearchEmpty": "没有找到相关漫画",
+  "@onlineSearchEmpty": {
+    "description": "搜索空态标题"
+  },
+  "onlineSearchEmptyHint": "换个关键词，或切换平台再试。",
+  "@onlineSearchEmptyHint": {
+    "description": "搜索空态说明"
+  },
+  "onlineSearchTitle": "「{keyword}」· {source}",
+  "@onlineSearchTitle": {
+    "description": "搜索结果标题",
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSearchResultCount": "{count} 条 · hasMore={hasMore}",
+  "@onlineSearchResultCount": {
+    "description": "搜索结果计数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "hasMore": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSearchNoSource": "选择平台后搜索",
+  "@onlineSearchNoSource": {
+    "description": "无源搜索提示"
+  },
+  "onlineSourceCrumb": "{source} · 在线 / {view}",
+  "@onlineSourceCrumb": {
+    "description": "在线视图面包屑副标",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "view": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineCountItems": "{count} 条",
+  "@onlineCountItems": {
+    "description": "条数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineRecentEmpty": "还没有阅读记录",
+  "@onlineRecentEmpty": {
+    "description": "最近阅读空态"
+  },
+  "onlineRecentEmptyHint": "打开任意章节开始阅读，进度会记录在这里。",
+  "@onlineRecentEmptyHint": {
+    "description": "最近阅读空态说明"
+  },
+  "onlineRecentHint": "进度键 = sourceId + comicId + chapterId + page",
+  "@onlineRecentHint": {
+    "description": "最近阅读说明"
+  },
+  "onlineContinue": "继续阅读",
+  "@onlineContinue": {
+    "description": "继续阅读按钮"
+  },
+  "onlineContinueShort": "继续",
+  "@onlineContinueShort": {
+    "description": "移动端继续按钮"
+  },
+  "onlineReadAt": "{source} · 读到 {chapter} · P{page}",
+  "@onlineReadAt": {
+    "description": "最近阅读行副标",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "chapter": {
+        "type": "String"
+      },
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineReadAtShort": "{source} · {chapter} · P{page}",
+  "@onlineReadAtShort": {
+    "description": "移动端最近阅读副标",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "chapter": {
+        "type": "String"
+      },
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineContinuePage": "继续 P{page}",
+  "@onlineContinuePage": {
+    "description": "移动端详情继续按钮",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDownloadsTitle": "下载",
+  "@onlineDownloadsTitle": {
+    "description": "下载页标题"
+  },
+  "onlineDownloadEmpty": "还没有下载任务",
+  "@onlineDownloadEmpty": {
+    "description": "下载空态"
+  },
+  "onlineDownloadEmptyHint": "在详情页点「下载」或「下载并翻译」即可创建任务。",
+  "@onlineDownloadEmptyHint": {
+    "description": "下载空态说明"
+  },
+  "onlineDownloadError": "下载队列读取失败",
+  "@onlineDownloadError": {
+    "description": "下载错误标题"
+  },
+  "onlineDownloadErrorHint": "任务状态文件不可读，可重试。",
+  "@onlineDownloadErrorHint": {
+    "description": "下载错误说明"
+  },
+  "onlineDownloadNotice": "并发 2 · 整章为最小调度单位 · 桌面端写入本地漫画库；移动端仅离线缓存",
+  "@onlineDownloadNotice": {
+    "description": "下载队列说明"
+  },
+  "onlineDownloadNoticeMobile": "移动端仅离线缓存，不写本地漫画库（无 mangasvc）",
+  "@onlineDownloadNoticeMobile": {
+    "description": "移动端缓存说明"
+  },
+  "onlineDownloadStatusDownloading": "下载中",
+  "@onlineDownloadStatusDownloading": {
+    "description": "下载状态"
+  },
+  "onlineDownloadStatusDone": "已完成",
+  "@onlineDownloadStatusDone": {
+    "description": "下载状态"
+  },
+  "onlineDownloadStatusPartial": "部分成功",
+  "@onlineDownloadStatusPartial": {
+    "description": "下载状态"
+  },
+  "onlineDownloadStatusPaused": "已暂停",
+  "@onlineDownloadStatusPaused": {
+    "description": "下载状态"
+  },
+  "onlineDownloadStatusQueued": "排队中",
+  "@onlineDownloadStatusQueued": {
+    "description": "下载状态"
+  },
+  "onlineDownloadStatusCanceled": "已取消",
+  "@onlineDownloadStatusCanceled": {
+    "description": "下载状态"
+  },
+  "onlineDownloadStatusFailed": "失败",
+  "@onlineDownloadStatusFailed": {
+    "description": "下载状态"
+  },
+  "onlineDownloadProgressDownloading": "正在下载 {done}/{total}",
+  "@onlineDownloadProgressDownloading": {
+    "description": "下载进度",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDownloadProgressDone": "已完成 {done}/{total}",
+  "@onlineDownloadProgressDone": {
+    "description": "下载进度",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDownloadProgressPartial": "部分成功 {done}/{total}",
+  "@onlineDownloadProgressPartial": {
+    "description": "下载进度",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDownloadProgressPaused": "已暂停 {done}/{total}",
+  "@onlineDownloadProgressPaused": {
+    "description": "下载进度",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDownloadProgressQueued": "排队中",
+  "@onlineDownloadProgressQueued": {
+    "description": "下载进度"
+  },
+  "onlineDownloadProgressCanceled": "已取消",
+  "@onlineDownloadProgressCanceled": {
+    "description": "下载进度"
+  },
+  "onlinePause": "暂停",
+  "@onlinePause": {
+    "description": "暂停"
+  },
+  "onlineResume": "继续",
+  "@onlineResume": {
+    "description": "继续"
+  },
+  "onlineCancelTask": "取消",
+  "@onlineCancelTask": {
+    "description": "取消任务"
+  },
+  "onlinePauseAll": "暂停全部",
+  "@onlinePauseAll": {
+    "description": "暂停全部"
+  },
+  "onlineResumeAll": "继续全部",
+  "@onlineResumeAll": {
+    "description": "继续全部"
+  },
+  "onlineCache": "离线缓存",
+  "@onlineCache": {
+    "description": "移动端下载动作"
+  },
+  "onlineCacheSheet": "离线缓存",
+  "@onlineCacheSheet": {
+    "description": "移动端缓存 sheet 标题"
+  },
+  "onlineCacheEmpty": "还没有离线缓存",
+  "@onlineCacheEmpty": {
+    "description": "缓存空态"
+  },
+  "onlineCacheEmptyHint": "在详情页点「离线缓存」即可创建任务。",
+  "@onlineCacheEmptyHint": {
+    "description": "缓存空态说明"
+  },
+  "onlineCacheError": "缓存任务读取失败",
+  "@onlineCacheError": {
+    "description": "缓存错误标题"
+  },
+  "onlineCacheErrorHint": "任务状态不可读，可重试。",
+  "@onlineCacheErrorHint": {
+    "description": "缓存错误说明"
+  },
+  "onlineCacheStatusCaching": "缓存中",
+  "@onlineCacheStatusCaching": {
+    "description": "缓存状态"
+  },
+  "onlineCacheStatusDone": "已缓存",
+  "@onlineCacheStatusDone": {
+    "description": "缓存状态"
+  },
+  "onlineCacheProgress": "{done}/{total} 页",
+  "@onlineCacheProgress": {
+    "description": "缓存进度",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineCacheDoneProgress": "已完成 {done} 页",
+  "@onlineCacheDoneProgress": {
+    "description": "缓存完成",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      }
+    }
+  },
+  "onlinePagesShort": "{count} 页",
+  "@onlinePagesShort": {
+    "description": "页数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDownloadStartedToast": "已加入下载队列 · {chapter}",
+  "@onlineDownloadStartedToast": {
+    "description": "下载入队吐司",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineCacheStartedToast": "已加入离线缓存 · {chapter}",
+  "@onlineCacheStartedToast": {
+    "description": "缓存入队吐司",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineDownloadDoneToast": "已入库 · {chapter} {pages} 页",
+  "@onlineDownloadDoneToast": {
+    "description": "下载完成吐司",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineCacheDoneToast": "已缓存 · {chapter} {pages} 页",
+  "@onlineCacheDoneToast": {
+    "description": "缓存完成吐司",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDetailTitle": "漫画详情",
+  "@onlineDetailTitle": {
+    "description": "移动端详情标题"
+  },
+  "onlineBack": "返回",
+  "@onlineBack": {
+    "description": "返回"
+  },
+  "onlineDetailBack": "返回列表",
+  "@onlineDetailBack": {
+    "description": "详情返回按钮"
+  },
+  "onlineDetailError": "详情加载失败",
+  "@onlineDetailError": {
+    "description": "详情错误标题"
+  },
+  "onlineDetailErrorHint": "请求详情页时出错，可重试。",
+  "@onlineDetailErrorHint": {
+    "description": "详情错误说明"
+  },
+  "onlineDetailEmpty": "漫画不存在或已下架",
+  "@onlineDetailEmpty": {
+    "description": "详情空态"
+  },
+  "onlineDetailEmptyHint": "该链接可能已失效，返回列表看看其他作品。",
+  "@onlineDetailEmptyHint": {
+    "description": "详情空态说明"
+  },
+  "onlineChapters": "章节",
+  "@onlineChapters": {
+    "description": "详情章节标题"
+  },
+  "onlineChapterCount": "{count} 话",
+  "@onlineChapterCount": {
+    "description": "章节数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineChapterGroupSerial": "连载",
+  "@onlineChapterGroupSerial": {
+    "description": "章节分组"
+  },
+  "onlineChapterGroupExtra": "番外",
+  "@onlineChapterGroupExtra": {
+    "description": "章节分组"
+  },
+  "onlineChapterGroupVolume": "单行本",
+  "@onlineChapterGroupVolume": {
+    "description": "章节分组"
+  },
+  "onlineChapterOrder": "按话号升序",
+  "@onlineChapterOrder": {
+    "description": "章节排序说明"
+  },
+  "onlineChapterEmpty": "暂无章节",
+  "@onlineChapterEmpty": {
+    "description": "章节空态"
+  },
+  "onlineChapterEmptyHint": "该源没有返回章节列表，可能是 R18 作品或页面结构已变。",
+  "@onlineChapterEmptyHint": {
+    "description": "章节空态说明"
+  },
+  "onlineChapterError": "章节加载失败",
+  "@onlineChapterError": {
+    "description": "章节错误标题"
+  },
+  "onlineChapterErrorHint": "请求章节列表时出错，可重试或返回详情。",
+  "@onlineChapterErrorHint": {
+    "description": "章节错误说明"
+  },
+  "onlineChapterUnavailable": "部分章节不可用",
+  "@onlineChapterUnavailable": {
+    "description": "章节提示"
+  },
+  "onlineChapterUnavailableHint": "R18 作品章节藏在加密字段中，该源暂未解压。",
+  "@onlineChapterUnavailableHint": {
+    "description": "章节提示说明"
+  },
+  "onlineChapterGroupHint": "章节按「连载 → 番外 → 单行本」分组",
+  "@onlineChapterGroupHint": {
+    "description": "章节分组说明"
+  },
+  "onlineComicMeta": "{author} · {count} 话",
+  "@onlineComicMeta": {
+    "description": "详情作者与话数",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineStatusOngoing": "连载中",
+  "@onlineStatusOngoing": {
+    "description": "连载状态"
+  },
+  "onlineStatusCompleted": "完结",
+  "@onlineStatusCompleted": {
+    "description": "连载状态"
+  },
+  "onlineStatusUnknown": "未知",
+  "@onlineStatusUnknown": {
+    "description": "连载状态"
+  },
+  "onlineStatusCompletedAll": "完结 · 全{count}话",
+  "@onlineStatusCompletedAll": {
+    "description": "卡片副标",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineLatestChapter": "{chapter} · {status}",
+  "@onlineLatestChapter": {
+    "description": "卡片副标",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineStartRead": "开始阅读",
+  "@onlineStartRead": {
+    "description": "开始阅读"
+  },
+  "onlineDownloadAction": "下载",
+  "@onlineDownloadAction": {
+    "description": "下载"
+  },
+  "onlineTranslateAndDownload": "下载并翻译",
+  "@onlineTranslateAndDownload": {
+    "description": "下载并翻译"
+  },
+  "onlineContinueReadingWith": "继续阅读 · {chapter} P{page}",
+  "@onlineContinueReadingWith": {
+    "description": "详情继续阅读",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDetailEye": "阅读",
+  "@onlineDetailEye": {
+    "description": "详情阅读入口"
+  },
+  "onlineChapterList": "章节目录",
+  "@onlineChapterList": {
+    "description": "阅读器章节抽屉"
+  },
+  "onlineReadChapter": "阅读 {chapter}",
+  "@onlineReadChapter": {
+    "description": "章节卡语义",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineClose": "关闭",
+  "@onlineClose": {
+    "description": "关闭"
+  },
+  "onlineReaderBack": "返回（Esc）",
+  "@onlineReaderBack": {
+    "description": "阅读器返回"
+  },
+  "onlineReaderClose": "关闭（Esc）",
+  "@onlineReaderClose": {
+    "description": "阅读器关闭"
+  },
+  "onlineReaderPageOf": "{page} / {count}",
+  "@onlineReaderPageOf": {
+    "description": "阅读器页码",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineReaderPages": "{count} 页",
+  "@onlineReaderPages": {
+    "description": "阅读器页数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineReaderOriginal": "原文",
+  "@onlineReaderOriginal": {
+    "description": "原文"
+  },
+  "onlineReaderTranslated": "译文",
+  "@onlineReaderTranslated": {
+    "description": "译文"
+  },
+  "onlineReaderZoom": "缩放调节器",
+  "@onlineReaderZoom": {
+    "description": "缩放"
+  },
+  "onlineReaderCompare": "对照（C）",
+  "@onlineReaderCompare": {
+    "description": "对照"
+  },
+  "onlineReaderGrid": "网格（G）",
+  "@onlineReaderGrid": {
+    "description": "网格"
+  },
+  "onlineReaderChapterDrawer": "章节目录",
+  "@onlineReaderChapterDrawer": {
+    "description": "章节"
+  },
+  "onlineReaderHelp": "快捷键（?）",
+  "@onlineReaderHelp": {
+    "description": "帮助"
+  },
+  "onlineReaderFullscreen": "全屏（F）",
+  "@onlineReaderFullscreen": {
+    "description": "全屏"
+  },
+  "onlineReaderSettings": "设置",
+  "@onlineReaderSettings": {
+    "description": "设置"
+  },
+  "onlineReaderNight": "夜间",
+  "@onlineReaderNight": {
+    "description": "夜间"
+  },
+  "onlineReaderWebtoon": "条漫",
+  "@onlineReaderWebtoon": {
+    "description": "条漫"
+  },
+  "onlineReaderBrightness": "亮度",
+  "@onlineReaderBrightness": {
+    "description": "亮度"
+  },
+  "onlineReaderPrevChapter": "上一话",
+  "@onlineReaderPrevChapter": {
+    "description": "上一话"
+  },
+  "onlineReaderNextChapter": "下一话",
+  "@onlineReaderNextChapter": {
+    "description": "下一话"
+  },
+  "onlineReaderPrevPage": "上一页（←）",
+  "@onlineReaderPrevPage": {
+    "description": "上一页语义"
+  },
+  "onlineReaderNextPage": "下一页（→）",
+  "@onlineReaderNextPage": {
+    "description": "下一页语义"
+  },
+  "onlineReaderTapPrev": "上一页",
+  "@onlineReaderTapPrev": {
+    "description": "三分区提示"
+  },
+  "onlineReaderTapMid": "点这里显示 / 隐藏工具栏",
+  "@onlineReaderTapMid": {
+    "description": "三分区提示"
+  },
+  "onlineReaderTapNext": "下一页",
+  "@onlineReaderTapNext": {
+    "description": "三分区提示"
+  },
+  "onlineReaderLoading": "正在取图 · 已带 Referer 头",
+  "@onlineReaderLoading": {
+    "description": "页图加载"
+  },
+  "onlineReaderLoadingHint": "getImageLoadingConfig → fetchBytes → Image.memory",
+  "@onlineReaderLoadingHint": {
+    "description": "页图加载流程"
+  },
+  "onlinePageError": "这一页没取到",
+  "@onlinePageError": {
+    "description": "页图错误"
+  },
+  "onlinePageErrorHint": "403 · 防盗链拒绝或 e/m 签名已过期",
+  "@onlinePageErrorHint": {
+    "description": "页图错误说明"
+  },
+  "onlinePageRetry": "重试（自动换新签名）",
+  "@onlinePageRetry": {
+    "description": "页图重试"
+  },
+  "onlinePageSkip": "跳过此页",
+  "@onlinePageSkip": {
+    "description": "页图跳过"
+  },
+  "onlinePageRestored": "已恢复到第 {page} 页",
+  "@onlinePageRestored": {
+    "description": "续读提示",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineReaderFootPages": "翻页",
+  "@onlineReaderFootPages": {
+    "description": "阅读器底栏提示"
+  },
+  "onlineReaderFootEdge": "两侧 56px 热区翻页",
+  "@onlineReaderFootEdge": {
+    "description": "阅读器底栏提示"
+  },
+  "onlineReaderFootLang": "原文/译文",
+  "@onlineReaderFootLang": {
+    "description": "阅读器底栏提示"
+  },
+  "onlineReaderFootCenter": "点中央隐藏工具栏",
+  "@onlineReaderFootCenter": {
+    "description": "阅读器底栏提示"
+  },
+  "onlineReaderFootExit": "退出",
+  "@onlineReaderFootExit": {
+    "description": "阅读器底栏提示"
+  },
+  "onlineReaderOriginalBadge": "原文",
+  "@onlineReaderOriginalBadge": {
+    "description": "页角徽标"
+  },
+  "onlineReaderTranslatedBadge": "译文",
+  "@onlineReaderTranslatedBadge": {
+    "description": "页角徽标"
+  },
+  "onlineReaderTranslatingPage": "该页翻译中",
+  "@onlineReaderTranslatingPage": {
+    "description": "未完成页回退提示"
+  },
+  "onlineReaderGridTitle": "网格总览",
+  "@onlineReaderGridTitle": {
+    "description": "网格弹层标题"
+  },
+  "onlineReaderGridPage": "第 {page} 页",
+  "@onlineReaderGridPage": {
+    "description": "网格页标题",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineReaderHelpTitle": "快捷键",
+  "@onlineReaderHelpTitle": {
+    "description": "帮助标题"
+  },
+  "onlineReaderHelpPages": "← / → 翻页",
+  "@onlineReaderHelpPages": {
+    "description": "快捷键"
+  },
+  "onlineReaderHelpZoom": "Ctrl + 滚轮 缩放",
+  "@onlineReaderHelpZoom": {
+    "description": "快捷键"
+  },
+  "onlineReaderHelpLang": "T 原文/译文",
+  "@onlineReaderHelpLang": {
+    "description": "快捷键"
+  },
+  "onlineReaderHelpGrid": "G 网格",
+  "@onlineReaderHelpGrid": {
+    "description": "快捷键"
+  },
+  "onlineReaderHelpFullscreen": "F 全屏",
+  "@onlineReaderHelpFullscreen": {
+    "description": "快捷键"
+  },
+  "onlineReaderHelpExit": "Esc 退出",
+  "@onlineReaderHelpExit": {
+    "description": "快捷键"
+  },
+  "onlineReaderHelpTap": "点中央 显示 / 隐藏工具栏",
+  "@onlineReaderHelpTap": {
+    "description": "快捷键"
+  },
+  "onlineReaderCompareUnsupported": "在线漫画暂不支持对照模式",
+  "@onlineReaderCompareUnsupported": {
+    "description": "对照不支持吐司"
+  },
+  "onlineReaderBrightnessTitle": "亮度",
+  "@onlineReaderBrightnessTitle": {
+    "description": "亮度弹层标题"
+  },
+  "onlineReaderBrightnessHint": "拖动调整阅读区亮度",
+  "@onlineReaderBrightnessHint": {
+    "description": "亮度弹层说明"
+  },
+  "onlineReaderChapterEmpty": "暂无章节",
+  "@onlineReaderChapterEmpty": {
+    "description": "阅读器章节空态"
+  },
+  "onlineReaderChapterDrawerTitle": "章节目录",
+  "@onlineReaderChapterDrawerTitle": {
+    "description": "阅读器章节抽屉标题"
+  },
+  "onlineReaderLanguage": "翻译语言",
+  "@onlineReaderLanguage": {
+    "description": "翻译设置"
+  },
+  "onlineReaderLanguageHint": "沿用 设置 › 翻译 的语言对；阅读器不单独保存",
+  "@onlineReaderLanguageHint": {
+    "description": "翻译设置说明"
+  },
+  "onlineReaderGoSettings": "去设置",
+  "@onlineReaderGoSettings": {
+    "description": "去设置"
+  },
+  "onlineReaderSourceLang": "源语言标记",
+  "@onlineReaderSourceLang": {
+    "description": "源语言"
+  },
+  "onlineReaderSourceLangHint": "来自 source.json 的 lang 字段（只读）",
+  "@onlineReaderSourceLangHint": {
+    "description": "源语言说明"
+  },
+  "onlineReaderRange": "翻译范围",
+  "@onlineReaderRange": {
+    "description": "翻译范围"
+  },
+  "onlineReaderRangeHint": "以「从当前页开始」优先提交，缩短首译文可见时延",
+  "@onlineReaderRangeHint": {
+    "description": "翻译范围说明"
+  },
+  "onlineReaderRangeChapter": "本话",
+  "@onlineReaderRangeChapter": {
+    "description": "翻译范围：本话"
+  },
+  "onlineReaderRangeCurrent": "从当前页",
+  "@onlineReaderRangeCurrent": {
+    "description": "翻译范围：当前页"
+  },
+  "onlineReaderRetranslate": "已完成章节改语言",
+  "@onlineReaderRetranslate": {
+    "description": "改语言开关"
+  },
+  "onlineReaderRetranslateHint": "会重新翻译本话，需二次确认",
+  "@onlineReaderRetranslateHint": {
+    "description": "改语言说明"
+  },
+  "onlineReaderRealtimeNote": "准实时 · 就地渐进。图片先落盘 → createTask → 队列逐页产出译文文件 → 阅读器按本话 translatedSeqs 把原图淡化为译文，不跳页。真·实时内联翻译依赖新的内存产物通道，plan §13.7 排二期。",
+  "@onlineReaderRealtimeNote": {
+    "description": "翻译说明"
+  },
+  "onlineReaderService": "翻译服务",
+  "@onlineReaderService": {
+    "description": "翻译服务抽屉"
+  },
+  "onlineReaderServiceDesktop": "桌面端翻译服务",
+  "@onlineReaderServiceDesktop": {
+    "description": "翻译服务"
+  },
+  "onlineReaderServiceHint": "mangasvc · 未连接时在线翻译不可用",
+  "@onlineReaderServiceHint": {
+    "description": "翻译服务说明"
+  },
+  "onlineReaderServiceStatus": "未连接",
+  "@onlineReaderServiceStatus": {
+    "description": "服务状态"
+  },
+  "onlineReaderDegrade": "降级表现",
+  "@onlineReaderDegrade": {
+    "description": "降级"
+  },
+  "onlineReaderDegradeHint": "保留排队任务，提供「查看原文」，不阻塞阅读",
+  "@onlineReaderDegradeHint": {
+    "description": "降级说明"
+  },
+  "onlineReaderTranslateTitle": "翻译设置",
+  "@onlineReaderTranslateTitle": {
+    "description": "翻译设置标题"
+  },
+  "onlineReaderChapterTitle": "章节目录",
+  "@onlineReaderChapterTitle": {
+    "description": "章节抽屉标题"
+  },
+  "onlineReaderCurrentInfo": "{chapter} · {source} · {count} 页",
+  "@onlineReaderCurrentInfo": {
+    "description": "阅读器副标题",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineReaderTranslationOfChapter": "翻译本话",
+  "@onlineReaderTranslationOfChapter": {
+    "description": "翻译本话按钮"
+  },
+  "onlineTranslateIdle": "未翻译",
+  "@onlineTranslateIdle": {
+    "description": "翻译状态"
+  },
+  "onlineTranslateIdleDesc": "点「翻译本话」后可逐页看到译文",
+  "@onlineTranslateIdleDesc": {
+    "description": "翻译状态说明"
+  },
+  "onlineTranslateQueued": "已提交，排队中",
+  "@onlineTranslateQueued": {
+    "description": "翻译状态"
+  },
+  "onlineTranslateQueuedDesc": "已提交，等待桌面端队列空位…",
+  "@onlineTranslateQueuedDesc": {
+    "description": "翻译状态说明"
+  },
+  "onlineTranslateRunning": "翻译中",
+  "@onlineTranslateRunning": {
+    "description": "翻译状态"
+  },
+  "onlineTranslateRunningDesc": "逐页生成中…",
+  "@onlineTranslateRunningDesc": {
+    "description": "翻译状态说明"
+  },
+  "onlineTranslateDone": "本话已翻译",
+  "@onlineTranslateDone": {
+    "description": "翻译状态"
+  },
+  "onlineTranslateDoneDesc": "{done}/{total} 页完成 · 原文/译文切换已解锁",
+  "@onlineTranslateDoneDesc": {
+    "description": "翻译状态说明",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineTranslateDoneShort": "译文切换已解锁",
+  "@onlineTranslateDoneShort": {
+    "description": "翻译完成徽标"
+  },
+  "onlineTranslatePartial": "部分完成",
+  "@onlineTranslatePartial": {
+    "description": "翻译状态"
+  },
+  "onlineTranslatePartialDesc": "{done}/{total} 页完成，{failed} 页可单独重试",
+  "@onlineTranslatePartialDesc": {
+    "description": "翻译状态说明",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineTranslateFailed": "翻译失败",
+  "@onlineTranslateFailed": {
+    "description": "翻译状态"
+  },
+  "onlineTranslateFailedDesc": "翻译服务返回错误，可重试或仅看原文",
+  "@onlineTranslateFailedDesc": {
+    "description": "翻译状态说明"
+  },
+  "onlineTranslateUnavailable": "翻译服务不可用",
+  "@onlineTranslateUnavailable": {
+    "description": "翻译状态"
+  },
+  "onlineTranslateUnavailableDesc": "桌面端 mangasvc 未连接，需在桌面端完成翻译",
+  "@onlineTranslateUnavailableDesc": {
+    "description": "翻译状态说明"
+  },
+  "onlineTranslateUnavailableDescMobile": "移动端不跑 mangasvc，翻译需由桌面端执行",
+  "@onlineTranslateUnavailableDescMobile": {
+    "description": "移动端翻译降级说明"
+  },
+  "onlineTranslateRetry": "重试",
+  "@onlineTranslateRetry": {
+    "description": "翻译重试"
+  },
+  "onlineTranslateRetryFailed": "重试失败页",
+  "@onlineTranslateRetryFailed": {
+    "description": "部分失败重试"
+  },
+  "onlineTranslateOriginalOnly": "仅看原文",
+  "@onlineTranslateOriginalOnly": {
+    "description": "仅看原文"
+  },
+  "onlineTranslateViewOriginal": "查看原文",
+  "@onlineTranslateViewOriginal": {
+    "description": "查看原文"
+  },
+  "onlineTranslateGoSettings": "去设置",
+  "@onlineTranslateGoSettings": {
+    "description": "去设置"
+  },
+  "onlineTranslateCount": "{done}/{total}",
+  "@onlineTranslateCount": {
+    "description": "翻译计数",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineTranslateLocked": "译文尚未就绪",
+  "@onlineTranslateLocked": {
+    "description": "译文未就绪"
+  },
+  "onlineTranslateSubmitted": "已提交，由桌面端翻译中",
+  "@onlineTranslateSubmitted": {
+    "description": "移动端提交说明"
+  },
+  "onlineTranslateDoneToast": "本话翻译完成 · {count} 页",
+  "@onlineTranslateDoneToast": {
+    "description": "翻译完成吐司",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineTranslateStartToast": "已提交翻译任务 · {chapter}",
+  "@onlineTranslateStartToast": {
+    "description": "翻译提交吐司",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineTranslateWebUnsupported": "Web 端不支持在线漫画",
+  "@onlineTranslateWebUnsupported": {
+    "description": "Web 降级"
+  },
+  "onlineErrorHttp": "请求失败（{status}）",
+  "@onlineErrorHttp": {
+    "description": "在线错误：HTTP",
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineErrorNetwork": "网络连接失败",
+  "@onlineErrorNetwork": {
+    "description": "在线错误：网络"
+  },
+  "onlineErrorTimeout": "请求超时",
+  "@onlineErrorTimeout": {
+    "description": "在线错误：超时"
+  },
+  "onlineErrorBlocked": "站点拒绝了请求，该源可能已失效",
+  "@onlineErrorBlocked": {
+    "description": "在线错误：拦截"
+  },
+  "onlineErrorParse": "页面结构变了，无法解析",
+  "@onlineErrorParse": {
+    "description": "在线错误：解析"
+  },
+  "onlineErrorNotFound": "目标不存在",
+  "@onlineErrorNotFound": {
+    "description": "在线错误：不存在"
+  },
+  "onlineErrorAuth": "该源需要登录",
+  "@onlineErrorAuth": {
+    "description": "在线错误：登录"
+  },
+  "onlineErrorRateLimited": "请求过于频繁，请稍后再试",
+  "@onlineErrorRateLimited": {
+    "description": "在线错误：限速"
+  },
+  "onlineErrorHost": "请求了未授权的域名",
+  "@onlineErrorHost": {
+    "description": "在线错误：域名"
+  },
+  "onlineErrorSpec": "源版本不受支持",
+  "@onlineErrorSpec": {
+    "description": "在线错误：规范"
+  },
+  "onlineErrorCrashed": "源脚本异常",
+  "@onlineErrorCrashed": {
+    "description": "在线错误：崩溃"
+  },
+  "onlineErrorRetry": "重试",
+  "@onlineErrorRetry": {
+    "description": "错误重试"
+  },
+  "onlineErrorUnknown": "未知错误",
+  "@onlineErrorUnknown": {
+    "description": "未知错误"
+  },
+  "onlineDisclaimerTitle": "关于漫画源",
+  "@onlineDisclaimerTitle": {
+    "description": "首次进入声明标题"
+  },
+  "onlineDisclaimerBody": "在线漫画的站点由你自行导入，应用不内置、不提供在线源仓库。源脚本会按你导入的规则访问第三方站点；内容版权与可用性由该站点负责。首次使用建议在「漫画源」里做一次试跑，确认网络可达。",
+  "@onlineDisclaimerBody": {
+    "description": "首次进入声明正文"
+  },
+  "onlineDisclaimerOk": "我已了解",
+  "@onlineDisclaimerOk": {
+    "description": "声明确认"
+  },
+  "onlineWebUnsupported": "Web 端不支持在线漫画：flutter_qjs 无 Web 实现，且图片请求的自定义 Referer 在浏览器会被忽略。",
+  "@onlineWebUnsupported": {
+    "description": "Web 端灰置说明"
+  },
+  "onlineWebUnsupportedShort": "Web 端不支持在线漫画",
+  "@onlineWebUnsupportedShort": {
+    "description": "Web 端灰置短文案"
+  },
+  "onlineActionRefresh": "刷新",
+  "@onlineActionRefresh": {
+    "description": "刷新"
+  },
+  "onlineActionRetry": "重试",
+  "@onlineActionRetry": {
+    "description": "重试"
+  },
+  "onlineActionGoSettings": "去设置",
+  "@onlineActionGoSettings": {
+    "description": "去设置"
+  },
+  "onlineImportFileMissing": "未找到 source.json",
+  "@onlineImportFileMissing": {
+    "description": "导入文件不存在"
+  },
+  "onlineSourceLastUsed": "最近使用 {time}",
+  "@onlineSourceLastUsed": {
+    "description": "平台行最近使用",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSourceImportedAt": "导入于 {time}",
+  "@onlineSourceImportedAt": {
+    "description": "源详情导入时间",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineDateJustNow": "刚刚",
+  "@onlineDateJustNow": {
+    "description": "相对时间"
+  },
+  "onlineDateMinutesAgo": "{minutes} 分钟前",
+  "@onlineDateMinutesAgo": {
+    "description": "相对时间",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDateHoursAgo": "{hours} 小时前",
+  "@onlineDateHoursAgo": {
+    "description": "相对时间",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDateDaysAgo": "{days} 天前",
+  "@onlineDateDaysAgo": {
+    "description": "相对时间",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineSelectedSourceLabel": "当前源",
+  "@onlineSelectedSourceLabel": {
+    "description": "当前源标签"
+  },
+  "onlineSectionBrowse": "浏览",
+  "@onlineSectionBrowse": {
+    "description": "在线侧栏分区标题"
+  },
+  "onlineSectionRecent": "最近阅读",
+  "@onlineSectionRecent": {
+    "description": "在线侧栏分区标题"
+  },
+  "onlineSourceManageSheet": "设置 · 漫画源",
+  "@onlineSourceManageSheet": {
+    "description": "移动端源管理 sheet 标题"
+  },
+  "onlineDownloadTitleDetail": "下载",
+  "@onlineDownloadTitleDetail": {
+    "description": "详情页下载入口"
+  },
+  "onlineCachedAt": "{chapter} · 已完成 {count} 页",
+  "@onlineCachedAt": {
+    "description": "离线缓存副标",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineCachingAt": "{chapter} · {done}/{total} 页",
+  "@onlineCachingAt": {
+    "description": "离线缓存进行中",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineDownloadAt": "{chapter} · {pages} 页 · {progress}",
+  "@onlineDownloadAt": {
+    "description": "下载行副标",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "pages": {
+        "type": "int"
+      },
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSourceMore": "更多操作",
+  "@onlineSourceMore": {
+    "description": "更多"
+  },
+  "onlineChapterAll": "全部章节",
+  "@onlineChapterAll": {
+    "description": "全部章节?"
+  },
+  "onlineNoData": "暂无内容",
+  "@onlineNoData": {
+    "description": "无数据"
+  },
+  "onlineSearchClear": "清空搜索",
+  "@onlineSearchClear": {
+    "description": "清空搜索"
+  },
+  "onlineGridClose": "关闭网格",
+  "@onlineGridClose": {
+    "description": "关闭网格"
+  },
+  "onlineImportPickUnsupported": "当前环境无法打开文件选择器",
+  "@onlineImportPickUnsupported": {
+    "description": "文件选择不可用"
+  },
+  "onlineImportSourceShort": "导入源",
+  "@onlineImportSourceShort": {
+    "description": "源导入短按钮"
+  },
+  "onlineRecentShort": "最近",
+  "@onlineRecentShort": {
+    "description": "移动端最近标签"
+  },
+  "onlineSourceTitleShort": "源",
+  "@onlineSourceTitleShort": {
+    "description": "源短标签"
+  },
+  "onlineMobileDetailNote": "移动端不写漫画库：下载只做离线缓存，翻译需由桌面端 mangasvc 执行。",
+  "@onlineMobileDetailNote": {
+    "description": "移动端详情页提示"
+  },
+  "onlineDetailLoading": "正在加载详情…",
+  "@onlineDetailLoading": {
+    "description": "详情加载说明"
+  },
+  "onlineChaptersLoaded": "已加载 {count} 话",
+  "@onlineChaptersLoaded": {
+    "description": "章节计数：本地已加载",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineOverwrite": "覆盖导入",
+  "@onlineOverwrite": {
+    "description": "在线漫画：onlineOverwrite"
+  },
+  "onlineConfirmOverwriteTitle": "覆盖导入源",
+  "@onlineConfirmOverwriteTitle": {
+    "description": "在线漫画：onlineConfirmOverwriteTitle"
+  },
+  "onlineConfirmOverwriteBody": "同名源「{name}」已存在，覆盖后将替换清单与脚本。",
+  "@onlineConfirmOverwriteBody": {
+    "description": "在线漫画：onlineConfirmOverwriteBody",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineSourceOpenFailed": "无法打开源目录",
+  "@onlineSourceOpenFailed": {
+    "description": "在线漫画：onlineSourceOpenFailed"
+  },
+  "onlineSourceExportPickDir": "选择导出目录",
+  "@onlineSourceExportPickDir": {
+    "description": "在线漫画：onlineSourceExportPickDir"
+  },
+  "onlineSourceExportSuccess": "已导出到 {path}",
+  "@onlineSourceExportSuccess": {
+    "description": "在线漫画：onlineSourceExportSuccess",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineImportSourceFile": "source.json",
+  "@onlineImportSourceFile": {
+    "description": "在线漫画：onlineImportSourceFile"
+  },
+  "onlineImportWarnDetail": "修复以下警告后重新导入可消除提示。",
+  "@onlineImportWarnDetail": {
+    "description": "在线漫画：onlineImportWarnDetail"
+  },
+  "onlineSourceId": "源 id",
+  "@onlineSourceId": {
+    "description": "在线漫画：onlineSourceId"
+  },
+  "onlineSourceLoadedCount": "{count} 个源",
+  "@onlineSourceLoadedCount": {
+    "description": "在线漫画：onlineSourceLoadedCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineSourceImportReady": "可以导入",
+  "@onlineSourceImportReady": {
+    "description": "在线漫画：onlineSourceImportReady"
+  },
+  "onlineSourceSwitchOn": "已启用",
+  "@onlineSourceSwitchOn": {
+    "description": "在线漫画：onlineSourceSwitchOn"
+  },
+  "onlineSourceSwitchOff": "已停用",
+  "@onlineSourceSwitchOff": {
+    "description": "在线漫画：onlineSourceSwitchOff"
+  },
+  "onlineSessionCount": "已加载 {count} 话",
+  "@onlineSessionCount": {
+    "description": "在线漫画：onlineSessionCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineCloseDialog": "关闭",
+  "@onlineCloseDialog": {
+    "description": "在线漫画：onlineCloseDialog"
+  },
+  "onlineImportResult": "导入结果",
+  "@onlineImportResult": {
+    "description": "在线漫画：onlineImportResult"
+  },
+  "onlineDragHint": "或把整个源目录拖到这里",
+  "@onlineDragHint": {
+    "description": "在线漫画：onlineDragHint"
+  },
+  "onlineDragActive": "松开以导入源目录",
+  "@onlineDragActive": {
+    "description": "在线漫画：onlineDragActive"
+  },
+  "onlineSourceDetailCaps": "{list}",
+  "@onlineSourceDetailCaps": {
+    "description": "在线漫画：onlineSourceDetailCaps",
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineReaderGoSettingsShort": "打开设置",
+  "@onlineReaderGoSettingsShort": {
+    "description": "在线漫画：onlineReaderGoSettingsShort"
+  },
+  "onlineTranslating": "翻译中",
+  "@onlineTranslating": {
+    "description": "在线漫画：onlineTranslating"
+  },
+  "onlineDemoTranslatedPanel": "译文 {index}",
+  "@onlineDemoTranslatedPanel": {
+    "description": "演示漫画页的译文框标签",
+    "placeholders": {
+      "index": {
+        "type": "String"
+      }
+    }
+  },
+  "onlineReaderTranslateServiceSection": "翻译服务",
+  "@onlineReaderTranslateServiceSection": {
+    "description": "阅读器设置：服务"
+  },
+  "onlineReaderBrightnessValue": "{value}%",
+  "@onlineReaderBrightnessValue": {
+    "description": "亮度百分比",
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineReaderPagesTitle": "本话 {count} 页",
+  "@onlineReaderPagesTitle": {
+    "description": "本话页数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineReaderTapHint": "轻点左 / 中 / 右区域翻页或呼出工具栏",
+  "@onlineReaderTapHint": {
+    "description": "首次进入三分区提示"
+  },
+  "onlineReaderServiceConnected": "已连接",
+  "@onlineReaderServiceConnected": {
+    "description": "阅读器服务状态"
+  },
+  "onlineReaderServiceLocal": "本地",
+  "@onlineReaderServiceLocal": {
+    "description": "服务类型"
+  },
+  "onlineReaderShortcutZoom": "Ctrl + 滚轮",
+  "@onlineReaderShortcutZoom": {
+    "description": "快捷键组合：缩放"
+  },
+  "onlineReaderChapterShort": "章节",
+  "@onlineReaderChapterShort": {
+    "description": "阅读器底栏章节短标签"
+  },
+  "onlineSourceAbnormalBanner": "该源连续失败 {count} 次，可能已失效",
+  "@onlineSourceAbnormalBanner": {
+    "description": "在线漫画：onlineSourceAbnormalBanner",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineLangJapanese": "日本語",
+  "@onlineLangJapanese": {
+    "description": "在线漫画：onlineLangJapanese"
+  },
+  "onlineLangChinese": "简体中文",
+  "@onlineLangChinese": {
+    "description": "在线漫画：onlineLangChinese"
+  },
+  "onlineLangEnglish": "English",
+  "@onlineLangEnglish": {
+    "description": "在线漫画：onlineLangEnglish"
+  },
+  "onlineImportDescMobile": "选择 source.json（移动端走系统文件选择器，无拖放）\n校验 → 检查入口类 → 试跑 explore → 分级结果",
+  "@onlineImportDescMobile": {
+    "description": "移动端源导入说明"
+  },
+  "onlineReaderLanguageSection": "语言",
+  "@onlineReaderLanguageSection": {
+    "description": "翻译设置分区：语言"
+  },
+  "onlineReaderRangeSection": "范围",
+  "@onlineReaderRangeSection": {
+    "description": "翻译设置分区：范围"
   }
 }

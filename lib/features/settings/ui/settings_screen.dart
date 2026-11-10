@@ -35,6 +35,7 @@ import '../controller/engine_dir_controller.dart';
 import '../controller/engine_settings_controller.dart';
 import '../controller/section_controller.dart';
 import 'engine_parts_view.dart';
+import '../../manga/online/ui/widgets/online_source_panel.dart';
 
 /// 设置屏 —— 按 `ver1.0` 的「通用 / 翻译服务」两组落地（D-040）。
 ///
@@ -54,6 +55,7 @@ class SettingsScreen extends ConsumerWidget {
   static const _sections = [
     ('general', 'settingsNavGeneral', 4),
     ('translate', 'settingsNavTranslate', 13),
+    ('online', 'settingsNavOnline', 0),
     ('media', 'settingsNavMedia', 10),
     ('resource', 'settingsNavResource', 2),
     ('about', 'settingsNavAbout', 3),
@@ -155,12 +157,14 @@ class SettingsScreen extends ConsumerWidget {
   Widget _sectionBody(String selected, AppLocalizations l10n) => switch (selected) {
     'general' => const _GeneralSection(),
     'translate' => const _TranslateSection(),
+    'online' => const _OnlineSection(),
     _ => _PlaceholderSection(label: _labelOf(l10n, selected == 'media' ? 'settingsNavMedia' : 'settingsNavAbout')),
   };
 
   static String _labelOf(AppLocalizations l10n, String key) => switch (key) {
     'settingsNavGeneral' => l10n.settingsNavGeneral,
     'settingsNavTranslate' => l10n.settingsNavTranslate,
+    'settingsNavOnline' => l10n.settingsNavOnline,
     'settingsNavMedia' => l10n.settingsNavMedia,
     'settingsNavResource' => l10n.settingsNavResource,
     _ => l10n.settingsNavAbout,
@@ -226,7 +230,7 @@ class _NavItemState extends State<_NavItem> {
                   ),
                 ),
                 const Spacer(),
-                if (count != null)
+                if (count != null && count > 0)
                   Text(
                     '$count',
                     style: TextStyle(fontSize: AppFont.px8_5, color: palette.mut),
@@ -1104,6 +1108,28 @@ class _InferenceRows extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── 漫画源（在线漫画）─────────────────────────────────────────────────
+
+class _OnlineSection extends ConsumerWidget {
+  const _OnlineSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final mobile = context.isMobile;
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(mobile ? 12 : 20, mobile ? 10 : 18, mobile ? 12 : 20, 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Head(title: l10n.settingsNavOnline, blurb: l10n.settingsBlurbOnline),
+          const OnlineSourcePanel(),
+        ],
+      ),
     );
   }
 }
