@@ -15,6 +15,7 @@ import 'package:miao_dock_flutter/features/manga/controller/queue_controller.dar
 import 'package:miao_dock_flutter/features/manga/controller/reader_focus.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_prefs.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader/reader_widgets.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_zoom.dart';
 import 'package:miao_dock_flutter/features/manga/ui/reader_screen.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 import 'package:miao_dock_flutter/shared/widgets/app_sheet.dart';
@@ -390,6 +391,21 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
   });
 
+  testWidgets('放大上限 250%，放大后拖拽图片平移而不翻页', (tester) async {
+    final container = await pumpReader(tester);
+    for (var i = 0; i < 6; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await tester.pump();
+    }
+    final zoom = tester.widget<ZoomablePage>(find.byType(ZoomablePage).first).zoom;
+    expect(zoom.percent, 250);
+    final before = zoom.offset;
+    await tester.dragFrom(const Offset(600, 400), const Offset(80, 42));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(zoom.offset, isNot(before));
+    expect(container.read(readerPageProvider), 0);
+    await tester.pump(const Duration(milliseconds: 250));
+  });
   testWidgets('macOS 触控板横扫翻页（PointerPanZoom，不是滚轮）', (tester) async {
     final container = await pumpReader(tester);
     final g = await tester.createGesture(kind: PointerDeviceKind.trackpad);

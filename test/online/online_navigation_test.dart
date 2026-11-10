@@ -163,8 +163,10 @@ void main() {
     await pump(6);
     await tester.tap(find.text('设置').first);
     await pump(8);
-    // 移动端设置/章节/翻译入口都走同一套底部 sheet；内容标题可区分。
-    expect(find.text('翻译设置'), findsWidgets);
+    // 设置抽屉与漫画库共用；可翻译源额外带翻译区块。
+    expect(find.text('阅读设置'), findsWidgets);
+    expect(find.text('阅读模式'), findsWidgets);
+    expect(find.text('范围'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }

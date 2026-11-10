@@ -18,7 +18,7 @@ import 'package:protocol/protocol.dart';
 /// + 去掉「点图直接放大」。
 void main() {
   group('ReaderZoom 纯逻辑', () {
-    test('调节器 25% 一档，50–200% 夹紧', () {
+    test('调节器 25% 一档，50–250% 夹紧', () {
       final zoom = ReaderZoom()..viewport = const Size(400, 400);
       expect(zoom.percent, 100);
       zoom.step(-1);
@@ -32,7 +32,7 @@ void main() {
       for (var i = 0; i < 10; i++) {
         zoom.step(1);
       }
-      expect(zoom.percent, 200);
+      expect(zoom.percent, 250);
       expect(zoom.atMax, isTrue);
     });
 

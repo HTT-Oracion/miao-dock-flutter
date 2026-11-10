@@ -61,6 +61,13 @@ void main() {
     expect(reader.translationEnabled, isFalse);
     expect(find.byType(OnlineTranslationBar), findsNothing);
     expect(find.text('显示翻译'), findsNothing);
+    // 设置常驻，且未配置语言时只有漫画库阅读设置，不出现翻译区块。
+    await tester.tap(find.byIcon(LucideIcons.settings).last);
+    await pump(3);
+    expect(find.text('阅读模式'), findsOneWidget);
+    expect(find.text('范围'), findsNothing);
+    await tester.tap(find.byIcon(LucideIcons.x).last);
+    await pump(2);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyT);
     await pump(2);
     reader = container.read(onlineReaderProvider)!;
@@ -76,6 +83,12 @@ void main() {
     reader = container.read(onlineReaderProvider)!;
     expect(reader.translationEnabled, isTrue);
     expect(find.byType(OnlineTranslationBar), findsOneWidget);
+    await tester.tap(find.byIcon(LucideIcons.settings).last);
+    await pump(3);
+    expect(find.text('阅读模式'), findsOneWidget);
+    expect(find.text('范围'), findsOneWidget);
+    await tester.tap(find.byIcon(LucideIcons.x).last);
+    await pump(2);
   });
   testWidgets('已导入源可通过菜单编辑源语言', (tester) async {
     tester.view.devicePixelRatio = 1;
