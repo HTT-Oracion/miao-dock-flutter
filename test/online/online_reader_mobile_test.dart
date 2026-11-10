@@ -8,6 +8,8 @@ import 'package:miao_dock_flutter/features/manga/online/data/online_image_loader
 import 'package:miao_dock_flutter/features/manga/online/data/online_repository.dart';
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_common.dart';
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_page_image.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_mobile.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_stage.dart';
 
 import 'fake_engine.dart';
 import 'fake_image_loader.dart';
@@ -49,9 +51,14 @@ void main() {
     await tester.tap(find.text('开始阅读').first);
     await pump(14);
     expect(container.read(onlineReaderProvider), isNotNull);
-
+    expect(find.byType(ReaderStage), findsOneWidget);
     final notifier = container.read(onlineReaderProvider.notifier);
     notifier.setControlsVisible(true);
+    await pump(1);
+    // 在线阅读器必须使用漫画库同一套移动端工具栏。
+    expect(find.byType(ReaderTopBar), findsOneWidget);
+    expect(find.byType(ReaderBottomBar), findsOneWidget);
+    notifier.setControlsVisible(false);
     await pump(2);
     final beforeTap = container.read(onlineReaderProvider)!.page;
     await tester.tapAt(const Offset(350, 430));

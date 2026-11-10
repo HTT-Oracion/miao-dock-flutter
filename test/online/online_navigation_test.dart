@@ -11,6 +11,9 @@ import 'package:miao_dock_flutter/features/manga/online/data/online_image_loader
 import 'package:miao_dock_flutter/features/manga/online/data/online_repository.dart';
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_common.dart';
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_shelf.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_paged_stage.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_zoom.dart';
+import 'package:miao_dock_flutter/features/manga/ui/reader/reader_widgets.dart';
 
 import 'fake_engine.dart';
 import 'fake_image_loader.dart';
@@ -70,14 +73,17 @@ void main() {
     await tester.tap(find.text('第206话 决战之后').first);
     await pump(12);
     expect(currentPath(container), '/manga/online/reader');
+    expect(find.byType(ReaderBar), findsOneWidget);
+    expect(find.byType(PagedReaderStage), findsOneWidget);
+    expect(find.byType(ZoomChip), findsOneWidget);
     expect(find.text('翻译本话'), findsWidgets);
-    expect(find.text('原文'), findsWidgets);
+    expect(find.text('显示翻译'), findsWidgets);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await pump(4);
     expect(find.text('2 / 26'), findsWidgets);
 
-    await tester.tap(find.byTooltip('关闭（Esc）').first);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await pump(8);
     // 阅读器从详情打开，关闭后回详情（设计稿 §阅读进度）。
     expect(currentPath(container), '/manga/online/detail/manhuagui/kimetsu');
@@ -87,7 +93,7 @@ void main() {
     await tester.tap(find.text('开始阅读').first);
     await pump(12);
     expect(currentPath(container), '/manga/online/reader');
-    await tester.tap(find.byTooltip('关闭（Esc）').first);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await pump(8);
 
     // 详情内切换「分类」应离开详情路由，而不是被详情 body 卡住。
