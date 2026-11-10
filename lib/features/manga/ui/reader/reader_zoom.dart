@@ -17,7 +17,7 @@ import '../../../../shared/widgets/buttons.dart';
 /// 视口尺寸时**最小只能 100%**（`_matrixScale` 里 `viewport/boundary` 那一项），
 /// 设计稿要的 50%（调节器向下三档）根本到不了。
 class ReaderZoom extends ChangeNotifier {
-  ReaderZoom({this.minScale = 0.5, this.maxScale = 2.0});
+  ReaderZoom({this.minScale = 0.5, this.maxScale = 2.5});
 
   final double minScale;
   final double maxScale;

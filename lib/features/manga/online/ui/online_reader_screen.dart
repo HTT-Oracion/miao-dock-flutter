@@ -20,6 +20,7 @@ import '../data/online_image_loader.dart';
 import '../controller/online_reader_controller.dart';
 import '../../ui/reader/reader_mobile.dart';
 import '../../ui/reader/reader_paged_stage.dart';
+import '../../ui/reader/reader_settings.dart';
 import '../../ui/reader/reader_widgets.dart';
 import '../../ui/reader/reader_prefs.dart';
 import '../../ui/reader/reader_stage.dart';
@@ -250,25 +251,28 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
   }
 
   void _showSettings(OnlineReaderState state) {
-    final l10n = AppLocalizations.of(context);
     final launch = ref.read(onlineReaderLaunchProvider);
     showAppSheet<void>(
       context: context,
-      builder: (sheetContext) => AppSheet(
-        title: l10n.onlineReaderTranslateTitle,
-        icon: LucideIcons.languages,
-        onClose: () => Navigator.of(sheetContext).pop(),
-        width: 400,
-        child: OnlineReaderSettingsContent(
-          state: state,
-          sourceLang: _languageLabel(l10n, launch?.source.manifest.lang ?? ''),
-          onRange: (range) => ref.read(onlineReaderProvider.notifier).setRange(range),
-          onRetranslate: (value) => ref.read(onlineReaderProvider.notifier).setRetranslate(value),
-          onGoSettings: () {
-            Navigator.of(sheetContext).pop();
-            _goSettings();
-          },
-        ),
+      builder: (sheetContext) => ReaderSettingsSheet(
+        extra: state.translationEnabled
+            ? Consumer(
+                builder: (context, ref, _) {
+                  final l10n = AppLocalizations.of(context);
+                  final latest = ref.watch(onlineReaderProvider) ?? state;
+                  return OnlineReaderSettingsContent(
+                    state: latest,
+                    sourceLang: _languageLabel(l10n, launch?.source.sourceLanguage ?? ''),
+                    onRange: (range) => ref.read(onlineReaderProvider.notifier).setRange(range),
+                    onRetranslate: (value) => ref.read(onlineReaderProvider.notifier).setRetranslate(value),
+                    onGoSettings: () {
+                      Navigator.of(sheetContext).pop();
+                      _goSettings();
+                    },
+                  );
+                },
+              )
+            : null,
       ),
     );
   }
@@ -460,7 +464,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                                   ref.read(onlineReaderProvider.notifier).goToPage(page + 1);
                                   _interact();
                                 },
-                                onSettings: state.translationEnabled ? () => _showSettings(state) : null,
+                                onSettings: () => _showSettings(state),
                                 onCompare: state.translationEnabled ? _compare : null,
                                 onCompareActive: false,
                                 onGrid: () => _showGrid(state),
@@ -533,7 +537,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                             _interact();
                           },
                           onChapters: () => _showChapters(state),
-                          onSettings: state.translationEnabled ? () => _showSettings(state) : null,
+                          onSettings: () => _showSettings(state),
                           hideProgress: 0,
                           onPrevChapter: state.prevChapter == null
                               ? null

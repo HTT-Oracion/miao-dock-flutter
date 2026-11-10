@@ -17,7 +17,6 @@ import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/responsive.dart';
 import '../../../shared/widgets/app_sheet.dart';
-import '../../../shared/widgets/app_switch.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../controller/library_controller.dart';
 import '../controller/reader_focus.dart';
@@ -28,6 +27,7 @@ import 'reader/reader_mobile.dart';
 import 'reader/reader_mobile_stage.dart';
 import 'reader/reader_paged_stage.dart';
 import 'reader/reader_prefs.dart';
+import 'reader/reader_settings.dart';
 import 'reader/reader_webtoon.dart';
 import 'reader/reader_widgets.dart';
 import 'reader/reader_zoom.dart';
@@ -1346,166 +1346,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     );
   }
 
-  /// 阅读设置抽屉（设计稿 mobile.html `#sheetSettings`）。
+  /// 阅读设置抽屉：与在线阅读器共用 [ReaderSettingsSheet]。
   void _openSettings() {
-    showAppSheet<void>(
-      context: context,
-      builder: (ctx) => Consumer(
-        builder: (ctx, ref2, _) {
-          final p = ref2.watch(readerPrefsProvider);
-          final l10n = AppLocalizations.of(ctx);
-          final palette = AppPalette.of(ctx);
-          final notifier = ref2.read(readerPrefsProvider.notifier);
-          return SliderTheme(
-            data: SliderTheme.of(ctx).copyWith(
-              trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-              activeTrackColor: palette.acc,
-              inactiveTrackColor: palette.progressTrack,
-              thumbColor: palette.acc,
-            ),
-            child: AppSheet(
-              title: l10n.readerSettingsTitle,
-              onClose: () => Navigator.of(ctx).pop(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 阅读
-                  ReaderSettingRow(
-                    label: l10n.readerModeTitle,
-                    child: _Seg<ReaderMode>(
-                      value: p.mode,
-                      options: [(ReaderMode.paged, l10n.readerModePaged), (ReaderMode.webtoon, l10n.readerModeWebtoon)],
-                      onChanged: notifier.setMode,
-                    ),
-                  ),
-                  ReaderSettingRow(
-                    label: l10n.readerRtl,
-                    child: _Seg<bool>(
-                      value: p.rtl,
-                      options: const [(false, 'LTR'), (true, 'RTL')],
-                      onChanged: (_) => notifier.toggleRtl(),
-                    ),
-                  ),
-                  ReaderSettingRow(
-                    label: l10n.readerTurnAnimTitle,
-                    child: _Seg<ReaderTurnAnim>(
-                      value: p.turnAnim,
-                      options: [
-                        (ReaderTurnAnim.push, l10n.readerTurnAnimPush),
-                        (ReaderTurnAnim.fade, l10n.readerTurnAnimFade),
-                        (ReaderTurnAnim.none, l10n.readerTurnAnimNone),
-                      ],
-                      onChanged: notifier.setTurnAnim,
-                    ),
-                  ),
-                  ReaderSettingRow(
-                    label: l10n.readerTapTurn,
-                    hint: l10n.readerTapTurnHint,
-                    child: AppSwitch(value: p.tapTurn, onChanged: (_) => notifier.toggleTapTurn()),
-                  ),
-                  // 显示
-                  ReaderSettingRow(
-                    label: l10n.readerNightTitle,
-                    child: _Seg<ReaderNight>(
-                      value: p.night,
-                      options: [
-                        (ReaderNight.off, l10n.readerNightOff),
-                        (ReaderNight.warm, l10n.readerNightWarm),
-                        (ReaderNight.black, l10n.readerNightBlack),
-                        (ReaderNight.red, l10n.readerNightRed),
-                      ],
-                      onChanged: notifier.setNight,
-                    ),
-                  ),
-                  ReaderSettingRow(
-                    label: l10n.readerNightIntensity,
-                    hint: l10n.readerPercent('${(p.nightIntensity * 100).round()}'),
-                    child: SizedBox(
-                      width: 132,
-                      child: Slider(value: p.nightIntensity, min: 0.2, max: 1, onChanged: notifier.setNightIntensity),
-                    ),
-                  ),
-                  ReaderSettingRow(
-                    label: l10n.readerStageBg,
-                    hint: l10n.readerStageBgHint,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final bg in ReaderStageBg.values) ...[
-                          GestureDetector(
-                            onTap: () => notifier.setStageBg(bg),
-                            child: Container(
-                              width: 26,
-                              height: 26,
-                              decoration: BoxDecoration(
-                                color: readerStageColor(bg),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: p.stageBg == bg ? AppPalette.of(ctx).acc : AppPalette.of(ctx).line2,
-                                  width: p.stageBg == bg ? 2 : 1,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (bg != ReaderStageBg.values.last) const SizedBox(width: 8),
-                        ],
-                      ],
-                    ),
-                  ),
-                  ReaderSettingRow(
-                    label: l10n.readerPageNum,
-                    hint: l10n.readerPageNumHint,
-                    child: AppSwitch(value: p.pageNum, onChanged: (_) => notifier.togglePageNum()),
-                  ),
-                  if (context.isMobile)
-                    ReaderSettingRow(
-                      label: l10n.readerImmersive,
-                      hint: l10n.readerImmersiveHint,
-                      child: AppSwitch(value: p.immersive, onChanged: (_) => notifier.toggleImmersive()),
-                    ),
-                  // 预载
-                  ReaderSettingRow(
-                    label: l10n.readerPreload,
-                    hint: l10n.readerPreloadUnit(p.preload),
-                    child: SizedBox(
-                      width: 132,
-                      child: Slider(
-                        value: p.preload.toDouble(),
-                        min: 1,
-                        max: 6,
-                        divisions: 5,
-                        onChanged: (v) => notifier.setPreload(v.round()),
-                      ),
-                    ),
-                  ),
-                  if (defaultTargetPlatform == TargetPlatform.android)
-                    ReaderSettingRow(
-                      label: l10n.readerVolumeKeys,
-                      hint: l10n.readerVolumeKeysHint,
-                      child: AppSwitch(value: p.volumeKeys, onChanged: (_) => notifier.toggleVolumeKeys()),
-                    ),
-                  if (p.mode == ReaderMode.webtoon)
-                    ReaderSettingRow(
-                      label: l10n.readerAutoScroll,
-                      hint: l10n.readerAutoScrollHint,
-                      child: AppSwitch(value: p.autoScroll, onChanged: (_) => notifier.toggleAutoScroll()),
-                    ),
-                  if (context.isMobile)
-                    ReaderSettingRow(
-                      label: l10n.readerAwake,
-                      hint: l10n.readerAwakeHint,
-                      child: AppSwitch(value: p.awake, onChanged: (_) => notifier.toggleAwake()),
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
+    showAppSheet<void>(context: context, builder: (_) => const ReaderSettingsSheet());
   }
 
   void _close() {
@@ -1520,51 +1363,4 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
 void resetReaderTapHint() => _ReaderScreenState._tapHintShown = false;
 
 /// 分段控件（设计稿 `.setrow .seg`）：等宽按钮组，选中 = 主色底。
-class _Seg<T> extends StatelessWidget {
-  const _Seg({required this.value, required this.options, required this.onChanged});
-
-  final T value;
-  final List<(T, String)> options;
-  final ValueChanged<T> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: palette.card,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: palette.line2),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final (v, label) in options) ...[
-            GestureDetector(
-              onTap: () => onChanged(v),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: v == value ? palette.acc : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: AppFont.px10_5,
-                    fontWeight: v == value ? FontWeight.w700 : FontWeight.w500,
-                    color: v == value ? palette.onAcc : palette.ink2,
-                  ),
-                ),
-              ),
-            ),
-            if (v != options.last.$1) const SizedBox(width: 2),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 /// 「PageView 重新挂载时对齐页码」的薄壳（见 `_desktopStage` 里的注释）。

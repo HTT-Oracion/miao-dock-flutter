@@ -369,7 +369,7 @@ class _ReaderStageState extends State<ReaderStage> with TickerProviderStateMixin
     if (d.pointerCount >= 2) _phase = _Phase.pinch;
     switch (_phase) {
       case _Phase.pinch:
-        final target = (_startScale * d.scale).clamp(1.0, 4.0);
+        final target = (_startScale * d.scale).clamp(1.0, _doubleTapZoom);
         if (target <= 1.0001) {
           if (_scale != 1 || _offset != Offset.zero) setState(() => _scale = 1);
           setState(() => _offset = Offset.zero);
