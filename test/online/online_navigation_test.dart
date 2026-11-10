@@ -82,6 +82,19 @@ void main() {
     // 阅读器从详情打开，关闭后回详情（设计稿 §阅读进度）。
     expect(currentPath(container), '/manga/online/detail/manhuagui/kimetsu');
     expect(find.text('开始阅读'), findsWidgets);
+
+    // 主「开始阅读」按钮也必须进入阅读器（不能只有章节行可点）。
+    await tester.tap(find.text('开始阅读').first);
+    await pump(12);
+    expect(currentPath(container), '/manga/online/reader');
+    await tester.tap(find.byTooltip('关闭（Esc）').first);
+    await pump(8);
+
+    // 详情内切换「分类」应离开详情路由，而不是被详情 body 卡住。
+    await tester.tap(find.descendant(of: find.byType(OnlineShelf), matching: find.text('分类')));
+    await pump(10);
+    expect(currentPath(container), '/manga/online');
+    expect(find.text('热血'), findsWidgets);
   });
 
   testWidgets('桌面：分类 / 搜索 / 最近 / 下载 / 源管理均可达', (tester) async {
