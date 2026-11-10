@@ -7,10 +7,13 @@ import 'package:miao_dock_flutter/app/app.dart';
 import 'package:miao_dock_flutter/app/router/routes.dart';
 import 'package:miao_dock_flutter/app/shell/mobile_nav.dart';
 import 'package:miao_dock_flutter/features/manga/online/controller/online_reader_controller.dart';
+import 'package:miao_dock_flutter/features/manga/online/data/online_image_loader.dart';
 import 'package:miao_dock_flutter/features/manga/online/data/online_repository.dart';
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_common.dart';
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_shelf.dart';
 
+import 'fake_engine.dart';
+import 'fake_image_loader.dart';
 import 'test_store.dart';
 
 Future<ProviderContainer> pumpApp(WidgetTester tester, Size size) async {
@@ -18,7 +21,14 @@ Future<ProviderContainer> pumpApp(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    ProviderScope(overrides: [onlineStoreProvider.overrideWithValue(MemoryStore())], child: const MiaoDockApp()),
+    ProviderScope(
+      overrides: [
+        onlineStoreProvider.overrideWithValue(MemoryStore()),
+        sourceEngineProvider.overrideWithValue(FakeSourceEngine()),
+        onlineImageLoaderProvider.overrideWithValue(FakeImageLoader()),
+      ],
+      child: const MiaoDockApp(),
+    ),
   );
   await tester.pump(const Duration(milliseconds: 200));
   final context = tester.element(find.byType(MiaoDockApp));

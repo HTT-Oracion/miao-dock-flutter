@@ -7,26 +7,16 @@ import 'package:miao_dock_flutter/features/manga/online/controller/online_downlo
 import 'package:miao_dock_flutter/features/manga/online/controller/online_progress_controller.dart';
 import 'package:miao_dock_flutter/features/manga/online/controller/online_reader_controller.dart';
 import 'package:miao_dock_flutter/features/manga/online/controller/online_sources_controller.dart';
-import 'package:miao_dock_flutter/features/manga/online/data/demo_online_data.dart';
-import 'package:miao_dock_flutter/features/manga/online/data/demo_source_engine.dart';
+import 'package:miao_dock_flutter/features/manga/online/data/online_image_loader.dart';
 import 'package:miao_dock_flutter/features/manga/online/data/online_repository.dart';
 import 'package:miao_dock_flutter/features/manga/online/data/translation_gateway.dart';
 import 'package:miao_dock_flutter/features/manga/online/domain/online_download.dart';
-import 'package:miao_dock_flutter/features/manga/online/domain/online_error.dart';
-import 'package:miao_dock_flutter/features/manga/online/domain/online_models.dart';
-import 'package:miao_dock_flutter/features/manga/online/domain/online_source.dart';
 import 'package:miao_dock_flutter/features/manga/online/domain/source_engine.dart';
 
+import 'fake_engine.dart';
+import 'fake_image_loader.dart';
+import 'test_data.dart';
 import 'test_store.dart';
-
-class FailingEngine extends DemoSourceEngine {
-  FailingEngine() : super(delay: Duration.zero);
-
-  @override
-  Future<HomeFeed> explore(OnlineSource source, {required int page}) async {
-    throw const OnlineException(OnlineErrorCode.blocked, 'blocked');
-  }
-}
 
 class QuickTranslationGateway implements OnlineTranslationGateway {
   @override
@@ -49,7 +39,8 @@ ProviderContainer containerWith({SourceEngine? engine, OnlineTranslationGateway?
   final container = ProviderContainer(
     overrides: [
       onlineStoreProvider.overrideWithValue(MemoryStore()),
-      sourceEngineProvider.overrideWithValue(engine ?? DemoSourceEngine(delay: Duration.zero)),
+      sourceEngineProvider.overrideWithValue(engine ?? FakeSourceEngine()),
+      onlineImageLoaderProvider.overrideWithValue(FakeImageLoader()),
       if (gateway != null) onlineTranslationGatewayProvider.overrideWithValue(gateway),
     ],
   );
@@ -110,8 +101,8 @@ void main() {
     await container.read(onlineSourcesProvider.future);
     await container.read(onlineRecentProvider.future);
     final source = container.read(activeOnlineSourceProvider)!;
-    final comic = DemoOnlineData.comicById('kimetsu')!;
-    final chapter = DemoOnlineData.chaptersOf('kimetsu').first;
+    final comic = OnlineTestData.comicById('kimetsu')!;
+    final chapter = OnlineTestData.chaptersOf('kimetsu').first;
 
     await container
         .read(onlineReaderProvider.notifier)
@@ -119,7 +110,7 @@ void main() {
           source: source,
           comic: comic,
           chapter: chapter,
-          chapters: DemoOnlineData.chaptersOf('kimetsu'),
+          chapters: OnlineTestData.chaptersOf('kimetsu'),
           startPage: 10,
         );
     await Future<void>.delayed(const Duration(milliseconds: 450));
@@ -157,8 +148,8 @@ void main() {
     await container.read(onlineSourcesProvider.future);
     await container.read(onlineDownloadsProvider.future);
     final source = container.read(activeOnlineSourceProvider)!;
-    final comic = DemoOnlineData.comicById('kimetsu')!;
-    final chapter = DemoOnlineData.chaptersOf('kimetsu').first;
+    final comic = OnlineTestData.comicById('kimetsu')!;
+    final chapter = OnlineTestData.chaptersOf('kimetsu').first;
     final task = await container
         .read(onlineDownloadsProvider.notifier)
         .begin(source: source, comic: comic, chapter: chapter, target: DownloadTarget.library, translate: true);
@@ -173,7 +164,7 @@ void main() {
     container.read(onlineDownloadsProvider.notifier).cancel(task.id);
     expect(container.read(onlineDownloadsProvider).value!.first.status, DownloadStatus.canceled);
 
-    final partial = DemoOnlineData.seedDownloads(DateTime.now()).firstWhere((t) => t.status == DownloadStatus.partial);
+    final partial = OnlineTestData.seedDownloads(DateTime.now()).firstWhere((t) => t.status == DownloadStatus.partial);
     expect(partial.canResume, isTrue);
   });
 }

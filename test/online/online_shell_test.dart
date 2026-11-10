@@ -6,10 +6,13 @@ import 'package:miao_dock_flutter/app/app.dart';
 import 'package:miao_dock_flutter/app/router/routes.dart';
 import 'package:miao_dock_flutter/app/shell/shell_controller.dart';
 import 'package:miao_dock_flutter/features/manga/online/controller/online_reader_controller.dart';
+import 'package:miao_dock_flutter/features/manga/online/data/online_image_loader.dart';
 import 'package:miao_dock_flutter/features/manga/online/data/online_repository.dart';
 import 'package:miao_dock_flutter/features/manga/online/ui/widgets/online_common.dart';
 import 'package:miao_dock_flutter/features/manga/ui/manga_gate.dart';
 
+import 'fake_engine.dart';
+import 'fake_image_loader.dart';
 import 'test_store.dart';
 
 Future<void> pump([int steps = 8]) async {
@@ -35,7 +38,14 @@ void main() {
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      ProviderScope(overrides: [onlineStoreProvider.overrideWithValue(MemoryStore())], child: const MiaoDockApp()),
+      ProviderScope(
+        overrides: [
+          onlineStoreProvider.overrideWithValue(MemoryStore()),
+          sourceEngineProvider.overrideWithValue(FakeSourceEngine()),
+          onlineImageLoaderProvider.overrideWithValue(FakeImageLoader()),
+        ],
+        child: const MiaoDockApp(),
+      ),
     );
     await tester.pump(const Duration(milliseconds: 200));
     final context = tester.element(find.byType(MiaoDockApp));
@@ -52,9 +62,14 @@ void main() {
     await pump(14);
     final reader = container.read(onlineReaderProvider);
     expect(reader, isNotNull);
-    expect(reader!.controlsVisible, isTrue);
+    // 先确定性地把工具栏隐藏，再点击中央显示；这样 3s 自动隐藏从点击时重新计时。
+    container.read(onlineReaderProvider.notifier).setControlsVisible(false);
+    await pump(1);
+    await tester.tapAt(const Offset(195, 420));
+    await pump(3);
+    expect(container.read(onlineReaderProvider)!.controlsVisible, isTrue);
 
-    await pump(6);
+    await pump(14);
     // 破坏点：去掉自动隐藏定时器后，这里仍为 true。
     expect(container.read(onlineReaderProvider)!.controlsVisible, isFalse);
 
