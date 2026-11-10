@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -111,5 +111,14 @@ void main() {
     await tester.tapAt(const Offset(720, 450));
     await pump(4);
     expect(container.read(onlineReaderProvider)!.controlsVisible, isTrue);
+
+    // 翻页不是「呼出工具栏」：隐藏后按方向键，页码前进但工具栏保持隐藏。
+    container.read(onlineReaderProvider.notifier).setControlsVisible(false);
+    await pump(1);
+    final beforePage = container.read(onlineReaderProvider)!.page;
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await pump(4);
+    expect(container.read(onlineReaderProvider)!.page, beforePage + 1);
+    expect(container.read(onlineReaderProvider)!.controlsVisible, isFalse);
   });
 }

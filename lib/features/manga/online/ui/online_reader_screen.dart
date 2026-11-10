@@ -133,6 +133,13 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
     _focus.requestFocus();
   }
 
+  /// 翻页本身不应该把工具栏拉出来；只有工具栏已经显示时才续命。
+  void _interactIfVisible() {
+    final state = ref.read(onlineReaderProvider);
+    if (state == null || !state.controlsVisible) return;
+    _interact();
+  }
+
   void _toggleControls() {
     final state = ref.read(onlineReaderProvider);
     if (state == null) return;
@@ -186,12 +193,12 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
 
   void _nextPage() {
     ref.read(onlineReaderProvider.notifier).nextPage();
-    _interact();
+    _interactIfVisible();
   }
 
   void _prevPage() {
     ref.read(onlineReaderProvider.notifier).previousPage();
-    _interact();
+    _interactIfVisible();
   }
 
   void _toggleTranslated() {
@@ -477,7 +484,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                                 pageCount: state.pageCount,
                                 onPageChanged: (page) {
                                   ref.read(onlineReaderProvider.notifier).goToPage(page + 1);
-                                  _interact();
+                                  _interactIfVisible();
                                 },
                                 onSettings: () => _showSettings(state),
                                 onCompare: state.translationEnabled ? _compare : null,
@@ -532,7 +539,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                           pageCount: state.pageCount,
                           onPageChanged: (page) {
                             ref.read(onlineReaderProvider.notifier).goToPage(page + 1);
-                            _interact();
+                            _interactIfVisible();
                           },
                           mode: prefs.mode,
                           onToggleMode: () {
@@ -608,8 +615,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                   prefs: prefs,
                   onPage: (index) {
                     ref.read(onlineReaderProvider.notifier).goToPage(index + 1);
-                    final current = ref.read(onlineReaderProvider);
-                    if (current != null && current.controlsVisible) _interact();
+                    _interactIfVisible();
                   },
                   onToggleBar: _toggleControls,
                   onBrightnessDelta: (delta) => ref.read(readerPrefsProvider.notifier).nudgeBrightness(delta),
@@ -646,7 +652,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
                     onTap: _toggleControls,
                     onPageChanged: (index) {
                       ref.read(onlineReaderProvider.notifier).goToPage(index + 1);
-                      _interact();
+                      _interactIfVisible();
                     },
                     pageBuilder: (context, index) => _OnlinePageView(
                       page: index + 1,
@@ -671,7 +677,7 @@ class _OnlineReaderScreenState extends ConsumerState<OnlineReaderScreen> {
           Positioned.fill(
             child: TapZoneHint(rtl: prefs.rtl, visible: _showTapHint && prefs.tapTurn, opacity: 1),
           ),
-        if (state.osdVisible && !state.pageLoading && !state.loadingPages && state.pageError == null)
+        if (prefs.pageNum && state.osdVisible && !state.pageLoading && !state.loadingPages && state.pageError == null)
           Positioned.fill(
             child: IgnorePointer(
               child: Center(child: _Osd(state: state)),
@@ -952,6 +958,7 @@ class _Osd extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     return Container(
+      key: const Key('online-reader-osd'),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       decoration: BoxDecoration(
         color: palette.panel.withValues(alpha: 0.96),

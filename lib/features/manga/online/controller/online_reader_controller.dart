@@ -10,6 +10,7 @@ import '../domain/online_download.dart';
 import '../domain/online_error.dart';
 import '../domain/online_models.dart';
 import '../domain/online_source.dart';
+import '../../ui/reader/reader_prefs.dart';
 import 'online_progress_controller.dart';
 import 'online_sources_controller.dart';
 
@@ -443,6 +444,11 @@ class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
   void _showOsd() {
     final current = state;
     if (current == null) return;
+    if (!ref.read(readerPrefsProvider).pageNum) {
+      _osdTimer?.cancel();
+      if (current.osdVisible) state = current.copyWith(osdVisible: false);
+      return;
+    }
     state = current.copyWith(osdVisible: true);
     _osdTimer?.cancel();
     _osdTimer = Timer(const Duration(milliseconds: 800), () {

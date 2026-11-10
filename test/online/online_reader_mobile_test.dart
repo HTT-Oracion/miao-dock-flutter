@@ -85,6 +85,17 @@ void main() {
     expect(size.height, greaterThan(700));
     expect(tester.takeException(), isNull);
 
+    // 「显示页码」关闭后，在线阅读器翻页也不能再冒页码 OSD。
+    container.read(readerPrefsProvider.notifier).togglePageNum();
+    expect(container.read(readerPrefsProvider).pageNum, isFalse);
+    await pump(1);
+    expect(find.byKey(const Key('online-reader-osd')), findsNothing);
+    final beforeNoOsd = container.read(onlineReaderProvider)!.page;
+    await tester.tapAt(const Offset(350, 430));
+    await pump(6);
+    expect(container.read(onlineReaderProvider)!.page, beforeNoOsd + 1);
+    expect(find.byKey(const Key('online-reader-osd')), findsNothing);
+
     // 条漫模式也复用漫画库舞台。
     container.read(readerPrefsProvider.notifier).setMode(ReaderMode.webtoon);
     await pump(4);
