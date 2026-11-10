@@ -77,4 +77,39 @@ void main() {
     await pump(2);
     expect(container.read(onlineReaderProvider)!.controlsVisible, isTrue);
   });
+  testWidgets('桌面：点击舞台中央收起/展开工具栏（不能只隐藏移动端）', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1440, 900);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onlineStoreProvider.overrideWithValue(MemoryStore()),
+          sourceEngineProvider.overrideWithValue(FakeSourceEngine()),
+          onlineImageLoaderProvider.overrideWithValue(FakeImageLoader()),
+        ],
+        child: const MiaoDockApp(),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    final context = tester.element(find.byType(MiaoDockApp));
+    final container = ProviderScope.containerOf(context, listen: false);
+    container.read(routerProvider).go('/manga/online');
+    await pump(8);
+    if (find.text('我已了解').evaluate().isNotEmpty) {
+      await tester.tap(find.text('我已了解'));
+      await pump(4);
+    }
+    await tester.tap(find.byType(OnlineBookCard).first);
+    await pump(8);
+    await tester.tap(find.text('开始阅读').first);
+    await pump(14);
+    expect(container.read(onlineReaderProvider)!.controlsVisible, isTrue);
+    await tester.tapAt(const Offset(720, 450));
+    await pump(4);
+    expect(container.read(onlineReaderProvider)!.controlsVisible, isFalse);
+    await tester.tapAt(const Offset(720, 450));
+    await pump(4);
+    expect(container.read(onlineReaderProvider)!.controlsVisible, isTrue);
+  });
 }
