@@ -35,11 +35,7 @@ class OnlineReaderState {
     this.pagesError,
     this.translation = const TranslationStatus(),
     this.showOriginal = true,
-    this.zoom = 1,
     this.controlsVisible = true,
-    this.night = false,
-    this.webtoon = false,
-    this.brightness = 1,
     this.osdVisible = false,
     this.range = TranslationRange.chapter,
     this.retranslate = true,
@@ -63,11 +59,7 @@ class OnlineReaderState {
   final Object? pagesError;
   final TranslationStatus translation;
   final bool showOriginal;
-  final double zoom;
   final bool controlsVisible;
-  final bool night;
-  final bool webtoon;
-  final double brightness;
   final bool osdVisible;
   final TranslationRange range;
   final bool retranslate;
@@ -113,11 +105,7 @@ class OnlineReaderState {
     bool clearPagesError = false,
     TranslationStatus? translation,
     bool? showOriginal,
-    double? zoom,
     bool? controlsVisible,
-    bool? night,
-    bool? webtoon,
-    double? brightness,
     bool? osdVisible,
     TranslationRange? range,
     bool? retranslate,
@@ -138,11 +126,7 @@ class OnlineReaderState {
     pagesError: clearPagesError ? null : (pagesError ?? this.pagesError),
     translation: translation ?? this.translation,
     showOriginal: showOriginal ?? this.showOriginal,
-    zoom: zoom ?? this.zoom,
     controlsVisible: controlsVisible ?? this.controlsVisible,
-    night: night ?? this.night,
-    webtoon: webtoon ?? this.webtoon,
-    brightness: brightness ?? this.brightness,
     osdVisible: osdVisible ?? this.osdVisible,
     range: range ?? this.range,
     retranslate: retranslate ?? this.retranslate,
@@ -353,43 +337,11 @@ class OnlineReaderNotifier extends Notifier<OnlineReaderState?> {
     state = current.copyWith(controlsVisible: visible);
   }
 
-  void setZoom(double zoom) {
-    final current = state;
-    if (current == null) return;
-    state = current.copyWith(zoom: zoom.clamp(0.75, 3));
-  }
-
-  void cycleZoom() {
-    final current = state;
-    if (current == null) return;
-    const values = [1.0, 1.25, 1.5, 2.0];
-    final index = values.indexOf(current.zoom);
-    setZoom(values[(index + 1) % values.length]);
-  }
-
   void setShowOriginal(bool original) {
     final current = state;
     if (current == null) return;
     if (!original && !current.canToggleTranslated) return;
     state = current.copyWith(showOriginal: original);
-  }
-
-  void toggleNight() {
-    final current = state;
-    if (current == null) return;
-    state = current.copyWith(night: !current.night);
-  }
-
-  void toggleWebtoon() {
-    final current = state;
-    if (current == null) return;
-    state = current.copyWith(webtoon: !current.webtoon);
-  }
-
-  void setBrightness(double value) {
-    final current = state;
-    if (current == null) return;
-    state = current.copyWith(brightness: value.clamp(0.25, 1));
   }
 
   void setRange(TranslationRange range) {

@@ -39,6 +39,7 @@ class ReaderBar extends StatelessWidget {
     this.zoom,
     this.onFullscreen,
     this.onHelp,
+    this.extra,
   });
 
   final String title;
@@ -69,6 +70,9 @@ class ReaderBar extends StatelessWidget {
   /// 全屏 / 快捷键速查（桌面专属）：null = 不渲染。
   final VoidCallback? onFullscreen;
   final VoidCallback? onHelp;
+
+  /// 数据侧扩展动作（在线源的章节入口等）；漫画库不传。
+  final Widget? extra;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +154,7 @@ class ReaderBar extends StatelessWidget {
             _BarIcon(icon: LucideIcons.maximize, tooltip: l10n.readerFullscreen, onTap: onFullscreen!),
             const SizedBox(width: 10),
           ],
+          if (extra != null) ...[extra!, const SizedBox(width: 10)],
           GestureDetector(
             onTap: onSettings,
             child: Icon(LucideIcons.settings, size: 15, color: palette.textSecondary),

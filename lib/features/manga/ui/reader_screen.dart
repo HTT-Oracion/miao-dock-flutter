@@ -26,6 +26,7 @@ import '../domain/lib_book.dart';
 import 'reader/reader_image_cache.dart';
 import 'reader/reader_mobile.dart';
 import 'reader/reader_mobile_stage.dart';
+import 'reader/reader_paged_stage.dart';
 import 'reader/reader_prefs.dart';
 import 'reader/reader_webtoon.dart';
 import 'reader/reader_widgets.dart';
@@ -1062,41 +1063,29 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen>
     );
   }
 
-  /// 单页舞台：PageView + 页码同步。
+  /// 单页舞台：与在线阅读器共用 [PagedReaderStage]（PageView + 缩放）。
   Widget _pagesBody(ReaderSession session, int index, int total) {
-    final pages = ListenableBuilder(
-      listenable: _zoom,
-      builder: (context, _) => PageView.builder(
-        controller: _controller,
-        // 未放大：把滚动交回 PageView —— 鼠标横向拖拽就是 1:1 跟手 + 松手落位。
-        // 放大态必须关掉：那时拖动是平移，留着 PageView 会两头抢手势（D-164）。
-        physics: _zoom.zoomed ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
-        itemCount: total,
-        onPageChanged: (i) {
-          _zoom.reset();
-          ref.read(readerPageProvider.notifier).set(i);
-          if (_barVisible) _armBarTimer();
-          _preload(i, total);
-        },
-        itemBuilder: (context, i) => ZoomablePage(
-          key: ValueKey('p-$i'),
-          zoom: _zoom,
-          onTap: _toggleBar,
-          // 原图 ⇄ 译文走 250ms 交叉淡入，不再硬切（外壳 key 不带 variant，
-          // 否则 AnimatedSwitcher 会跟着重建，淡入失效）。
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: ReaderPage(
-              key: ValueKey('img-$i-$_showOriginal'),
-              session: session,
-              seq: i + 1,
-              showOriginal: _showOriginal,
-            ),
-          ),
+    return PagedReaderStage(
+      controller: _controller,
+      zoom: _zoom,
+      pageCount: total,
+      index: index,
+      onPageChanged: (i) {
+        ref.read(readerPageProvider.notifier).set(i);
+        if (_barVisible) _armBarTimer();
+        _preload(i, total);
+      },
+      onTap: _toggleBar,
+      pageBuilder: (context, i) => AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        child: ReaderPage(
+          key: ValueKey('img-$i-$_showOriginal'),
+          session: session,
+          seq: i + 1,
+          showOriginal: _showOriginal,
         ),
       ),
     );
-    return _PageSync(controller: _controller, index: index, child: pages);
   }
 
   /// 对照舞台：原文/译文双栏。
@@ -1579,30 +1568,3 @@ class _Seg<T> extends StatelessWidget {
 }
 
 /// 「PageView 重新挂载时对齐页码」的薄壳（见 `_desktopStage` 里的注释）。
-class _PageSync extends StatefulWidget {
-  const _PageSync({required this.controller, required this.index, required this.child});
-
-  final PageController controller;
-  final int index;
-  final Widget child;
-
-  @override
-  State<_PageSync> createState() => _PageSyncState();
-}
-
-class _PageSyncState extends State<_PageSync> {
-  @override
-  void initState() {
-    super.initState();
-    // 同一帧里 PageView 还没 attach，必须等首帧结束再 jump。
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !widget.controller.hasClients) return;
-      if (widget.controller.page?.round() != widget.index) {
-        widget.controller.jumpToPage(widget.index);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
-}
