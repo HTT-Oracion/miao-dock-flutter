@@ -55,7 +55,7 @@ class SourceManifest {
 
   static const int supportedSpecVersion = 2;
 
-  /// 源 id 命名规则（plan §5.2）：`^[a-z0-9][a-z0-9._-]{2,63}$`。
+  /// 源 id 命名规则：兼容上游 `ComicSource` 的大写 key，如 `ManHuaGui`。
   static final RegExp idPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$');
 
   /// 域名白名单：支持 `*.example.com` 通配子域。
