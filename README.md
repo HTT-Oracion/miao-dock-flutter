@@ -12,10 +12,10 @@
 ### 1. 漫画翻译
 
 - **服务**：桌面端实现 `mangasvc` + engine（manga-image-translator）+ LLM（本地 Sakura-GalTransl-7B-v3.7 或 LLM API），支持**单独部署、启动漫画图片翻译流水线**；移动端**不装配引擎**，通过局域网访问桌面端服务。
-- **功能**：队列、投放、书架、在线漫画（源包导入 / 发现 / 分类 / 搜索 / 详情 / 阅读 / 离线缓存）。
-  在线漫画与投放/队列/漫画库并列为漫画模块第 4 视图；源执行层当前是演示适配器
-  （`DemoSourceEngine`），原生 QuickJS 与真实下载/翻译服务是后续接入点，详见
-  `docs/internal/online-manga-delivery.md`。
+- **功能**：队列、投放、书架、在线漫画（链接导入 / 源仓库 / 发现 / 分类 / 搜索 / 详情 / 阅读 / 离线缓存）。
+  在线漫画与投放/队列/漫画库并列为漫画模块第 4 视图；数据源在 QuickJS 中执行，
+  通过链接或用户自建 `index.json` 仓库导入，应用不内置源。源仓库格式见
+  `docs/internal/online-source-repository.md`。
 
 ### 2. 音乐
 

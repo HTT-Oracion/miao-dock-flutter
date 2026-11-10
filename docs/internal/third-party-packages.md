@@ -14,6 +14,13 @@
 | `flutter_localizations` | SDK 内置 | 国际化基础（`Localizations` / `GlobalMaterialLocalizations`） | 根 |
 | `unorm_dart` | ^0.3.3 | Unicode 规范化（NFKC）：漫画名规范化对齐旧项目 `names.rs` | 根（protocol） |
 | `intl` | 0.20.3（transitive） | `gen_l10n` 生成物的运行时依赖；**不由我们直接声明版本**，随 `flutter_localizations` 锁定 | 根（传递） |
+| `flutter_qjs` | git pin `8feae95` | 在线漫画数据源的 quickjs-ng 运行时；单 runtime + `dispatch()` 事件循环，macOS/Windows/Linux/iOS/Android 原生构建 | 根（App） |
+| `html` | ^0.15.6 | 源 JS 的同步 DOM 宿主（`package:html` 解析 + 句柄表） | 根（App） |
+| `crypto` | ^3.0.6 | 源仓库稳定 id、页图磁盘缓存键 | 根（App） |
+
+> `flutter_qjs` 带原生 macOS / iOS / Android / Windows / Linux 构建；当前 macOS、Android
+> 构建通过。该包尚未支持 Swift Package Manager，Flutter 构建会给出未来兼容性警告；
+> iOS 真机签名与 Simulator runtime 需在开发机另行验证。
 
 > `flutter_localizations` 来自 Flutter SDK，不属于 pub 第三方包，不受 §纪律 1 的"候选包"约束；
 > 但因其把 `intl` 带进来，仍在此登记一笔，便于审计传递依赖。
@@ -34,7 +41,7 @@
 | `riverpod_lint` + `custom_lint`（dev） | Riverpod 专属 lint | 第一个业务 Notifier 落地时 |
 | `dio` | mangasvc HTTP 客户端（拦截器承载端口探测、取消） | manga/data 接真服务时 |
 | `web_socket_channel`（或 http 流式 + SSE 自解析） | 队列阶段进度推送 | 队列屏需要实时进度时 |
-| `collection` / `path` / `path_provider` / `uuid` / `intl` / `crypto` | 基础工具（官方或高引用低风险） | 各域按需 |
+| `collection` / `path` / `path_provider` / `uuid` / `intl` | 基础工具（官方或高引用低风险） | 各域按需 |
 | `envied`（dev） | 编译期读 `.env` | 需要环境变量时 |
 
 ### App：存储

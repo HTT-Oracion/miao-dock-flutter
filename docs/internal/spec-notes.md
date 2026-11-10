@@ -4174,19 +4174,19 @@
 
 ## D-184 · 源包导入：静态校验四步，QuickJS 执行后置（2026-11-10）
 
-- **状态**：已实施（执行层待接入）。
-- **结论**：`SourceImporter` 按 plan §5.2/§7.5 校验 `specVersion / id / name / version / baseUrl /
-  entryClass / sourceFile / hosts / 路径 ..`，静态检查入口类 `extends SourceBase`、能力函数，
-  复制到 `<state>/online/sources/<id>/`；覆盖导入二次确认，删除源时清缓存。
+- **状态**：已实施；执行层由 D-192 接入。
+- **结论**：`SourceImporter` 校验 `specVersion / id / name / version / baseUrl /
+  entryClass / sourceFile / hosts / 路径 ..`，静态检查入口类（`SourceBase` 或上游
+  `ComicSource`），复制到 `<state>/online/sources/<id>/`；覆盖导入二次确认，删除源时清缓存。
+  远程单 JS 源由 `legacyManifestFromScript` 合成清单后复用同一安装入口。
 - **边界**：不在宿主里执行任意 JS；应用不内置源，首次进入是空态。
 
-## D-185 · 源引擎抽象与 DemoSourceEngine（2026-11-10）
+## D-185 · 源引擎抽象（2026-11-10；已被 D-192 扩展）
 
-- **状态**：开发中（接口已落，原生运行时待接入）。
+- **状态**：接口保留；Demo 实现已删除，QuickJS 实现见 D-192。
 - **结论**：`SourceEngine` 固定 `explore / categories / category / search / loadComicInfo /
-  loadComicPages / getImageLoadingConfig / ensureLoaded`；当前实现 `DemoSourceEngine`
-  回放 `DemoOnlineData`，与真实引擎同异步形状与错误码。接 `flutter_qjs` 时只替换
-  `sourceEngineProvider`，UI / controller / 下载 / 翻译状态机不改。
+  loadComicPages / getImageLoadingConfig / ensureLoaded`。接口保留后，真实实现已替换为
+  `QuickJsSourceEngine`（D-192）；测试通过 provider 注入 fake。
 - **风险**：原生 QuickJS、真实站点校验、图片字节管道尚未随本轮交付；导入的源目前使用
   同一套演示数据，不能作为真实可联网源使用。
 
@@ -4231,3 +4231,50 @@
   用户导入 `source.json` 后才进入浏览；符合设计稿免责声明与 plan §13.1。
 - **自测**：截图自测通过 `MemoryStore` / `TestStore` 注入设计稿的 3 个演示源与进度，
   仅为覆盖视觉状态；正式构建不依赖这些自测文件。
+
+---
+
+## D-191 · 数据源改为链接导入 + 用户仓库（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：设置 › 漫画源新增「链接导入」。粘贴 `index.json` 视为仓库，持久化为
+  `SourceLibrary`；粘贴单个 `.js` / 旧 `source.json` 直接安装。源仓库格式见
+  `docs/internal/online-source-repository.md`。
+- **边界**：应用不内置仓库；仓库条目按 `key` 匹配已安装源，版本不同显示更新。
+- **验证**：仓库解析、相对路径、单 JS 合成清单、UI 仓库安装均有断言。
+
+## D-192 · QuickJS 单例运行时 + 同步 DOM / 异步 HTTP 宿主（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：`QuickJsSourceEngine` 用一个 quickjs 运行时执行所有源；`sendMessage`
+  分流到 DOM 句柄表（同步）、HTTP/dio（Promise）、Cookie、日志、源数据；源之间用
+  `globalThis.__sources[id]` 隔离。超时或崩溃后关闭并重建 runtime。
+- **限制**：64 MB 内存上限、单次调用 20s；原生框架需随 App 构建，`flutter test`
+  默认拿不到 framework 时引擎用例自动 skip。
+
+## D-193 · 单文件 ComicSource 兼容适配（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：远程单 JS 从脚本提取 `name/key/version/baseUrl/entryClass`，从绝对 URL
+  提取域名白名单，生成本地 `source.json` + `source.js`；运行时用
+  `__makeLegacyAdapter` 把 `explore / category / search / comic.loadInfo /
+  comic.loadEp / comic.onImageLoad` 映射为统一 DTO。
+- **范围**：账号、WebView、评论等扩展未接；栏目只支持常见形状。
+- **验证**：随附真实快照走通 explore / categories / category / search / detail / pages；
+  另用真实 `index.json` 在线拉取 33 条并合成漫画柜清单。
+
+## D-194 · 真实页图：字节下载、Host 白名单、缓存（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：`OnlineImageLoader` 按 `getImageLoadingConfig` / `onImageLoad` 的 headers
+  取图；只允许源 manifest hosts；内存 LRU 12 张 + 磁盘 `online/images/<sourceId>/`；
+  阅读器打开章节即预载后 2 页。封面用 `Image.network` + 原始兜底。
+- **验证**：测试夹具页图在阅读器真实渲染（RawImage 930×1353）；403/404/超时映射。
+
+## D-195 · 生产代码移除 demo 数据（2026-11-10）
+
+- **状态**：已实施。
+- **结论**：删除 `demo_online_data.dart` / `demo_source_engine.dart`；App 只从
+  QuickJS 真实源取数。演示源、进度与下载只保留在 `test/online/test_data.dart` /
+  `fake_engine.dart`，用 `sourceEngineProvider` 注入，不进入构建。
+- **验证**：`flutter analyze` 0；在线测试无生产 demo 依赖；全量测试后续跑。

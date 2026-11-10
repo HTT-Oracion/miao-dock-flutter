@@ -1,6 +1,10 @@
 # 在线漫画模块交付说明（2026-11-10）
 
 > 范围：在「漫画翻译」模块新增第 4 视图【在线】，覆盖桌面端与移动端。
+> 2026-11-10 升级：数据源改为链接导入（仓库 index.json / 单文件 .js），
+> QuickJS 执行真实脚本；生产代码已移除 demo 数据，测试夹具独立于 App。
+> 数据源链接规范见 `docs/internal/online-source-repository.md`。
+> 仓库格式 / 单文件源约定见 `docs/internal/online-source-repository.md`。
 > 视觉依据：`design/online-manga/desktop.html`、`mobile.html` 与 `preview/*.png`；
 > 功能依据：`design/manga-online-plan/manga-online-module-plan.md`（v2）。
 > 代码入口：`lib/features/manga/online/`，路由 `/manga/online`。
@@ -11,13 +15,13 @@
 |---|---|---|
 | 路由 / 壳 | `lib/app/router/routes.dart`、`lib/app/shell/shell_controller.dart`、`view_labels.dart` | 第 4 视图、详情 / 阅读器子路由、`isReaderPath` 并列判断 |
 | 领域 | `online/domain/`（7 个文件） | 源清单、统一漫画模型、错误码、下载 / 翻译状态、源引擎接口 |
-| 数据 | `online/data/`（6 个文件） | 源包导入 / 导出、持久化、演示引擎、翻译网关、仓库注入 |
+| 数据 | `online/data/` | 链接仓库、单文件源安装、QuickJS 引擎、DOM/HTTP 宿主、页图缓存、旧包兼容 |
 | 控制器 | `online/controller/`（6 个文件） | 源 / 浏览 / 详情 / 阅读器 / 进度 / 下载 / 翻译 |
 | UI | `online/ui/online_screen.dart`、`online_reader_screen.dart`、`ui/widgets/` | 桌面 / 移动两套布局、详情滑层、阅读器、源管理、状态件 |
 | 设置 | `lib/features/settings/ui/settings_screen.dart` | 新增「漫画源」分区 |
 | 国际化 | `lib/l10n/app_zh.arb` | 新增在线漫画词条，UI 零中文硬编码 |
 | 主题 | `lib/core/theme/tokens.dart` | `onBtn` / `accInk` 对比度别名；字体族常量 |
-| 断言 | `test/online/`（4 个测试文件 + fixture） | 路由 / 浏览 / 阅读器 / 下载 / 翻译 / 导入校验 |
+| 断言 | `test/online/`（3 个行为测试 + 测试夹具） | 路由 / 浏览 / 阅读器 / 下载 / 翻译；数据源相关测试按要求不提交 |
 | 台账 | `docs/internal/spec-notes.md` D-183..D-190 | 架构与取舍 |
 
 ## 二、功能覆盖对照表（plan → 实现）
@@ -32,15 +36,15 @@
 | 加载更多 / 触底 | `OnlineFeedNotifier.loadMore`、`OnlineAutoLoadMore`、`_LoadMoreRow` | 完成（桌面 200px / 移动 160px） |
 | 详情 hero / 继续阅读 / 章节分组 / 已读对勾 | `online_detail_controller.dart`、`online_detail_view.dart:OnlineDesktopDetailView/OnlineMobileDetailSlide/_Chapters` | 完成；分组可折叠 |
 | NOT_FOUND / 章节空态 | `OnlineStateBox` 分支、`_Chapters` | 完成（NOT_FOUND 走空态而非错误；章节空态独立） |
-| 数据源导入四步 / 覆盖确认 | `source_import.dart:SourceImporter`、`online_source_panel.dart` | 完成静态四步；入口类 / 能力 / 路径 / hosts 校验；覆盖二次确认 |
+| 链接导入 / 源仓库 / 覆盖确认 | `source_remote.dart`、`source_library.dart`、`online_link_import.dart`、`source_import.dart` | 完成：index.json / .js / 旧 source.json；安装前校验；覆盖二次确认；仓库持久化 |
 | 源行开关 / 详情 / 覆盖 / 删除 / 复制 id / 导出 | `online_source_panel.dart:_SourceRow/_SourceDetail`、`OnlineSourcesNotifier` | 完成；删除清缓存 |
 | 应用不内置源 / 免责声明 | `online_store.dart`（首次写空清单）、`onlineDisclaimerProvider` | 完成 |
 | 在线阅读器内容区路由 / 移动全屏 | `routes.dart`、`online_reader_screen.dart`、`isReaderPath` | 完成 |
-| 页图取列表 / headers / 预载 2 页 | `OnlineReaderNotifier.open/_prefetch`、`DemoSourceEngine.loadComicPages/getImageLoadingConfig` | 完成接口与预载；字节管道由演示页替代 |
+| 页图取列表 / headers / 预载 | `OnlineReaderNotifier.open/_prefetch`、`OnlineImageLoader`、`QuickJsSourceEngine` | 完成真实字节下载、Host 白名单、内存/磁盘缓存、预载 2 页 |
 | 阅读器翻页 / 滑条 / 热区 / 双击缩放 / 键盘 | `online_reader_screen.dart`、`online_reader_widgets.dart:OnlinePageSlider` | 完成；键盘 ←/→/T/C/G/F/?/Esc |
 | 工具栏 / OSD / 自动隐藏 / 安全区 | `OnlineReaderTopBar/OnlineReaderFootBar/OnlineReaderMobileBottomBar`、`_SlideBar`、`_Osd` | 完成（移动 3s 自动隐藏） |
 | 原文 / 译文切换、未完成页回退 | `OnlineReaderState.showingTranslated/pageHasTranslation`、`OnlineMangaPage` | 完成；300ms 交叉淡化；页角徽标 |
-| 翻译 7 态 + 重试 / 仅看原文 / 去设置 | `OnlineTranslationBar`、`OnlineReaderNotifier.startTranslation/retryTranslation` | 完成（DemoTranslationGateway） |
+| 翻译 7 态 + 重试 / 仅看原文 / 去设置 | `OnlineTranslationBar`、`OnlineReaderNotifier.startTranslation/retryTranslation` | UI/状态机完成；翻译服务仍是演示网关 |
 | 章节目录 / 网格 / 帮助 / 亮度 / 夜间 / 条漫 / 全屏 | `_showChapters/_showGrid/_showHelp/_showBrightness`、`online_reader_widgets.dart` | 完成 |
 | 翻译语言沿用设置 / 源语言只读 | `OnlineReaderSettingsContent`、`_showSettings` | 完成；语言显示日本語 / 简体中文 |
 | 进度记忆（sourceId+comicId+chapterId+page） | `OnlineReaderNotifier._commitProgress`、`OnlineRecentNotifier`、`online_store.dart` | 完成；跨进程持久化 |
@@ -50,15 +54,17 @@
 | 深 / 浅主题 | `AppPalette`、online 全部取 palette | 完成 |
 | 移动端 390 适配 / 触控热区 | `context.isMobile` 单断点、移动布局、44px 动作 | 完成；底部导航沿用壳层 |
 
-### 明确未接通的真实服务（重要）
+### 执行层与尚未接通的真实服务（重要）
 
-- `SourceEngine` 只有 **DemoSourceEngine**：导入的 JS 不会被执行，浏览数据按 `DemoOnlineData`
-  回放；接 `flutter_qjs` 后替换 `sourceEngineProvider` 即可，controller/UI 不变。
-- 翻译只走 **DemoTranslationGateway**（260ms/页模拟），没有调用 `mangasvc.createTask`，
-  译文也没有落盘；状态条 / 原文译文切换 / 渐进式页面都是真 UI 状态。
-- 下载任务只模拟页进度并持久化任务状态，没有写入 `~/Pictures/MiaoDock Mangas`，也没有
-  新增 `POST /library/.../images` 端点；「已入库」Toast 是状态机的完成反馈。
-- 以上三点是本轮真实缺口，不是视觉近似；台账 D-184..D-188 已记录。
+- **源执行已接通**：`QuickJsSourceEngine` 执行真实 `source.js`，提供 HTTP、同步 DOM、
+  Cookie、日志、数据存取与超时/内存上限；上游单文件 `ComicSource` 通过兼容层映射。
+- **翻译仍是演示网关**：没有调用 `mangasvc.createTask`，译文没有落盘；UI 状态条、
+  原文/译文切换、渐进状态是真实状态，图像目前是原图加译文标记。
+- **下载仍是队列模拟**：按页推进并持久化任务状态，但没有真正写入漫画库或中转目录。
+- **上游源兼容范围**：`explore / category / search / comic.loadInfo / comic.loadEp /
+  comic.onImageLoad`；账号登录、WebView 验证、评论、动态分类等扩展 API 未接。
+- **真实站点验证**：manhuagui 在本机出口 IP 返回 403；已用项目随附的真实详情/章节
+  快照 + QuickJS 跑通全部能力，并用单文件源自身逻辑回归。线上 403 属网络侧，不是解析缺失。
 
 ## 三、#spec-panel 交互说明 → 实现位置
 
@@ -110,7 +116,7 @@
 | 11 | `m-reader` 全屏 / 安全区 | `isReaderPath('/manga/online/reader')`、`OnlineReaderScreen` SafeArea |
 | 12 | `m-ract-row` 滑条行 + 动作行 | `OnlineReaderMobileBottomBar`、`_ReaderAction`、`OnlinePageSlider` |
 | 13 | `m-reader-bar` 热区 / 间隔 | 移动按钮 44 / 动作行 12 gap / 1.5px 进度线 / 3s 自动隐藏 |
-| 14 | `m-page` 页图失败 | `OnlineReaderStageStatus`、`retryPage`、`skip`、403 演示页 |
+| 14 | `m-page` 页图失败 | `OnlineReaderStageStatus`、`OnlineImageLoader`、`retryPage`、`skip`；真实 HTTP 403/超时映射 |
 | 15 | `m-progress` 进度恢复 | `ReadingProgress`、`onlineRecentProvider`、恢复 Toast |
 | 16 | `m-translate` 翻译触发 / 状态机 | `OnlineTranslationBar` 移动布局（idle 按钮在状态条内）、7 态 |
 | 17 | `m-langswitch` 原文 / 译文 | `_LanguageSeg`（44px）、`OnlineMangaPage` 交叉淡化 |
@@ -147,7 +153,9 @@
   阅读器整屏 / 安全区 / 底部导航隐藏。
 - **模块**：发现、分类、最近、下载、详情、章节、阅读器、源管理、移动端导入 sheet、
   移动端缓存 sheet、移动端翻译设置 sheet、网格 / 章节抽屉 / 帮助。
-- **截图数量**：**50 张** 1440×900 / 390×844 实渲染（含状态注入与 14 个交互场景）。
+- **截图数量**：历史 50 张 + 本轮新增 12 张（链接导入 / 仓库 / 目录弹窗 / 真实页图 / 错误）；
+  全部自测产物已删除。
+  本轮关键截图覆盖 1440×900 与 390×844 的深色源管理面板、移动端源列表、仓库弹窗、空态、链接错误、真实页图阅读器。
 - **状态**：平台 loading / empty / error；首页 loading / empty / error；分类 empty / error；
   详情 empty / error；章节 empty；下载 empty / error；页图 loading / 403 error；
   翻译 idle / queued / running / partial / failed / unavailable / done；源管理 error；
@@ -169,7 +177,8 @@
 
 - `test/online_shot_scene_test.dart`（单场景截图 harness，已删）
 - `test/online_shot_tmp_test.dart` / `online_shot_flow_test.dart` / `online_smoke_tmp_test.dart`（已删）
-- `.tmp/online-impl/`（50 张截图、probe / 批量截图脚本、日志，已删）
+- `.tmp/online-impl/`（62 张截图、批量截图脚本、日志，已删）
+- 工程根目录的 `flutter_qjs.framework` 软链（仅测试期临时创建，已删；正式 App 用构建产物 Frameworks）
 
 保留的 `test/online/` 是**正式产品断言**，不依赖截图脚本；`flutter test` 可独立运行。
 `design/online-manga/` 下的设计稿与 `preview/` 是用户输入资料，保持原样未删。
@@ -185,11 +194,16 @@ flutter test test/online
 
 - `dart format --set-exit-if-changed lib test`：**0 changed**。
 - `flutter analyze`：**0 issues**。
-- `flutter test test/online`：**16 passed**（4 个测试文件）。
-- `flutter test`：**319 passed / 11 skipped**（原 303，新增 16）。
+- `flutter test test/online`：**9 passed**（3 个行为测试文件）。
+- `flutter test`：**312 passed / 11 skipped**（跳过项为项目原有的条件用例）。
+- 数据源专用测试（仓库解析 / 单文件源 / QuickJS 快照）在开发期本地运行通过后已删除，按要求不进入提交。
 - `flutter build macos --debug`：**✓ Built** `build/macos/Build/Products/Debug/miao_dock_flutter.app`。
-- 真机：仅以 Flutter test 的 1440×900 / 390×844 逻辑尺寸与 macOS 字体渲染验证；未在真机
-  iOS / Android 上跑安装包，未验证系统返回手势与原生文件选择器的实际行为。
+- `flutter build apk --debug`：**✓ Built** `build/app/outputs/flutter-apk/app-debug.apk`。
+- 真实链接：开发期用 `SourceRemoteLoader` 实际请求示例 `index.json`，拿到 **33 条**、定位漫画柜
+  `manhuagui.js`（45,783 bytes），合成清单含 `www.manhuagui.com / cf.mhgui.com /
+  us.hamreus.com / cdn.jsdelivr.net`。
+- iOS：device 构建缺少 Apple 签名；simulator 构建因本机未安装 Simulator runtime 未完成。
+  未在真机 iOS / Android 上跑安装包，未验证系统返回手势与原生文件选择器行为。
 
 ## 八、已知偏差与合理差异
 
@@ -204,7 +218,13 @@ flutter test test/online
 5. **按钮圆角**：统一 `kButtonRadius=6`；设计 `.ibtn` 的 8px 圆角未破例。
 6. **AppTitleBar 状态 chip**：沿用项目「引擎未就绪 / 本地翻译」，设计稿写「引擎就绪 / 本地」；
    在线模块本身不要求本地引擎。
-7. **源 / 翻译 / 下载服务**：见第二节「明确未接通的真实服务」；属于真实缺口。
+7. **翻译 / 下载服务**：见第二节；翻译和真实入库仍未接。
+8. **上游源兼容层**：按社区 `ComicSource` 常见字段适配，未覆盖账号、WebView、评论。
+9. **源仓库**：不内置仓库；用户粘贴的 index.json 决定可用源。
+10. **动态域名**：旧版单文件源的 hosts 从脚本绝对 URL 启发式提取；极少数脚本若运行时拼域名可能被白名单拒绝。
+11. **上游扩展 API**：账号登录、WebView、评论、动态分类选项未接；仅覆盖公开浏览/详情/页图。
+12. **原生工程**：`flutter_qjs` 目前不支持 Swift Package Manager（构建警告）；iOS 真机 / 模拟器
+    未在本机验证，Android 与 macOS 构建通过。
 8. **Web 灰置**：在线视图内显示「Web 端不支持」；壳层页签未做成灰置不可点（项目
    `ShellViewTabs` 当前没有 disabled 变体）。
 9. **自动隐藏 / 首次提示**：移动阅读器按 3s 自动隐藏、1.6s 三分区提示；截图在隐藏前捕获。
