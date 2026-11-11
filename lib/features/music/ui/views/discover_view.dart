@@ -411,13 +411,22 @@ class _RecCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 插画区：种子封面渐变 + 同心圆装饰 + 右下角大图标。
+                // 插画区：有真实封面就铺图，没有才退回种子渐变 + 同心圆装饰。
                 Expanded(
                   child: SeedGradient(
                     seed: card.seed,
                     hue: card.hue,
                     child: Stack(
                       children: [
+                        if (card.coverUrl != null && card.coverUrl!.isNotEmpty)
+                          Positioned.fill(
+                            child: Image.network(
+                              card.coverUrl!,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                            ),
+                          ),
                         Positioned(
                           right: mobile ? -8 : -12,
                           bottom: mobile ? -12 : -16,

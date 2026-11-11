@@ -4436,3 +4436,23 @@
   「我喜欢的音乐」横卡只显示真实封面与「我喜欢的音乐 N首」。
 - **验证**：仓库装配、移动详情间距、本地收藏门禁、系统歌单摘要均有反证测试；音乐域测试、
   `flutter analyze` 与 l10n 棘轮通过。
+
+## D-205 · 扫码登录收口与封面补齐（2026-11-12）
+
+- **状态**：已实施。
+- **登录根因**：803 分支原先「先 `loginStatus()` 再置登录」，昵称接口失败（风控 / 老 Cookie）
+  会中断整条成功链路，用户扫码后应用状态不更新。改为**先落 Cookie + 置登录成功，再补昵称**，
+  昵称失败只降级为空串。
+- **Cookie 收口**：轮询是多次请求，`Set-Cookie` 可能分批下发；按扫码 key 累积合并，并兼容
+  响应体 `cookie` 字段。`MUSIC_U` 是登录票据，只有 `NMTID` 时判为未登录（否则误报已登录）。
+- **接口可测**：`MusicLoginController.createApi()` 收口为可覆盖方法，用例注入假接口，
+  不再连真实站点。
+- **封面**：四平台封面字段补兜底 —— 网易云专辑图缺失回落歌手头像；酷狗
+  `Image/AlbumImage → albuminfo → trans_param.union_cover`；咪咕 `img3/2/1 → albumImgs`；
+  QQ「我喜欢」用平台固定收藏图。
+- **封面进 UI**：桌面曲目行补 38px 封面（miao-dock `.song-table` 同口径，此前只在移动端显示）；
+  推荐卡、播放条、队列行、搜索歌单结果均透传 `coverUrl`；`MusicRecCard` 新增 `coverUrl`。
+- **真实数据**：`likedPlaylist()` 不再恒抛 `loginRequired`，改从已登录用户歌单里取 `special` 项。
+- **验证**：新增 `music_login_flow_test`（803 成功、昵称失败降级、仅 NMTID 不算登录、Cookie
+  解析、弹窗自动关闭）、`music_cover_test`（桌面行封面 / 曲目表 / 歌单瓦片）、
+  `music_cover_mapping_test`（QQ 收藏图与字段顺序）；均做过反证轮（还原缺陷后对应断言变红）。

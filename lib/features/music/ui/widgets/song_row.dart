@@ -621,11 +621,10 @@ class _SongRowState extends ConsumerState<SongRow> {
           ),
           child: Row(
             children: [
-              // 移动端行首显示封面（M08 行 ≥48）；桌面保持序号列（设计稿 `.row`）。
-              if (mobile) ...[
-                SeedCover(seed: song.title, imageUrl: song.coverUrl, size: 44, radius: 8),
-                const SizedBox(width: 10),
-              ],
+              // 行首封面：桌面 / 移动都显示（miao-dock `.song-table .music-row > .music-cover`
+              // 桌面是 38px / r9，移动端行更高取 44）。
+              SeedCover(seed: song.title, imageUrl: song.coverUrl, size: mobile ? 44 : 38, radius: mobile ? 8 : 9),
+              SizedBox(width: mobile ? 10 : 8),
               // 序号列 22px 占位：hover 变播放图标、当前行变 ♪，文字不跳动。
               if (!mobile)
                 SizedBox(

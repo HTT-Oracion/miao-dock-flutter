@@ -177,6 +177,7 @@ class MusicRecCard {
     required this.songIds,
     this.playlistId,
     this.hue,
+    this.coverUrl,
   });
 
   final String id;
@@ -193,6 +194,9 @@ class MusicRecCard {
 
   /// 真实音源的歌单 id；null = 演示卡（用 [songIds] 直接播）。
   final String? playlistId;
+
+  /// 真实封面（在线音源）。null = 走设计稿的渐变插画底。
+  final String? coverUrl;
 
   /// 封面色相（设计稿 `coverBg(seed).h`）。演示数据直接存色相，避免把
   /// 带中文的 seed 字符串写进数据层（D-006 棘轮：数据层也不新增中文）。

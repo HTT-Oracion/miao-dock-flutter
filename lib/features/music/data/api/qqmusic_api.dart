@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../../domain/music_models.dart';
 import 'lrc.dart';
@@ -199,7 +200,7 @@ class QqMusicApi {
     if (rows is! List) return const [];
     return [
       for (final item in rows)
-        if (item is Map<String, dynamic>) _userPlaylistFromMap(item, subscribed: false),
+        if (item is Map<String, dynamic>) userPlaylistFromMap(item, subscribed: false),
     ];
   }
 
@@ -212,12 +213,13 @@ class QqMusicApi {
     if (rows is! List) return const [];
     return [
       for (final item in rows)
-        if (item is Map<String, dynamic>) _userPlaylistFromMap(item, subscribed: true),
+        if (item is Map<String, dynamic>) userPlaylistFromMap(item, subscribed: true),
     ];
   }
 
   /// 用户歌单字段映射（`dissid / diss_name / dirid`；`dirid == 201` 是「我喜欢」）。
-  static MusicPlaylist _userPlaylistFromMap(Map<String, dynamic> m, {required bool subscribed}) {
+  @visibleForTesting
+  static MusicPlaylist userPlaylistFromMap(Map<String, dynamic> m, {required bool subscribed}) {
     final dirid = (m['dirid'] as num?)?.toInt() ?? 0;
     final liked = dirid == 201;
     final rawId = '${m['dissid'] ?? m['tid'] ?? m['dirid'] ?? m['id'] ?? ''}';
@@ -234,7 +236,9 @@ class QqMusicApi {
       seed: name,
       playCountValue: rawListen is num ? rawListen.round() : null,
       description: creator.isEmpty ? null : creator,
-      coverUrl: '${m['logo'] ?? m['picurl'] ?? m['diss_cover'] ?? ''}',
+      // 「我喜欢」歌单没有自己的封面，接口也不给图 —— 用平台官方收藏图兜底，
+      // 否则列表里那张卡永远是渐变占位（miao-dock 同口径）。
+      coverUrl: liked ? _likedCover : _coalesceCover([m['logo'], m['picurl'], m['diss_cover'], m['cover']]),
       author: creator.isEmpty ? null : creator,
       special: liked,
       subscribed: subscribed && !liked,
@@ -478,6 +482,17 @@ class QqMusicApi {
       mediaId:
           '${(m['file'] is Map<String, dynamic> ? (m['file'] as Map<String, dynamic>)['media_mid'] : null) ?? m['media_mid'] ?? ''}',
     );
+  }
+
+  /// 「我喜欢」歌单的固定封面（miao-dock 常量）。
+  static const _likedCover = 'https://y.gtimg.cn/mediastyle/global/img/cover_like.png';
+
+  static String _coalesceCover(List<Object?> candidates) {
+    for (final c in candidates) {
+      final v = '${c ?? ''}'.trim();
+      if (v.isNotEmpty) return v;
+    }
+    return '';
   }
 
   /// QQ 专辑封面模板：`T002R300x300M000{albumMid}.jpg`。

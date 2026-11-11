@@ -250,8 +250,29 @@ class MiguApi {
       platform: MusicPlatform.migu,
       qualityLabel: _miguQuality(item),
       mediaId: '${item['contentId'] ?? item['copyrightId'] ?? ''}',
-      coverUrl: _padImage('${item['img3'] ?? item['img1'] ?? item['img2'] ?? ''}'),
+      coverUrl: _miguCover(item),
     );
+  }
+
+  /// 封面：新版 `img3/img2/img1`；旧版只有 `albumImgs[]`（按 03→02→01 取最优）。
+  /// 两条链路都要走，否则老歌单 / 老榜单一整片退化成渐变占位。
+  static String? _miguCover(Map<String, dynamic> item) {
+    for (final key in const ['img3', 'img2', 'img1']) {
+      final v = _padImage('${item[key] ?? ''}');
+      if (v != null) return v;
+    }
+    final imgs = item['albumImgs'];
+    if (imgs is List) {
+      for (final type in const ['03', '02', '01']) {
+        for (final row in imgs) {
+          if (row is! Map) continue;
+          if ('${row['imgSizeType'] ?? ''}' != type) continue;
+          final v = _padImage('${row['img'] ?? ''}');
+          if (v != null) return v;
+        }
+      }
+    }
+    return null;
   }
 
   static String? _miguQuality(Map<String, dynamic> item) {

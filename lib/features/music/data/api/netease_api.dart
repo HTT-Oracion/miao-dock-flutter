@@ -311,6 +311,11 @@ class NeteaseApi {
   /// 🔴 必须是**表单**编码：同一个接口用 JSON body 会返回
   /// `{"code":400,"message":"参数错误"}`（2026-11 实测），表现为二维码一直不刷新、
   /// 扫码后也不会跳成功 —— 这是「二维码扫不了」的真正原因。
+  ///
+  /// Cookie 有两个来源，缺一不可：
+  /// · 响应头 `Set-Cookie`（`MUSIC_U` / `__csrf` 在这里，登录成功才下发）；
+  /// · 响应体 `cookie` 字段（部分节点会把整串塞回 body）。
+  /// 轮询是多次请求，每次可能只下发一部分，因此按 key 累积合并后再交给登录收口。
   Future<({int code, String message, String? cookie})> qrCheck(String key) async {
     final resp = await _http.dio.post<String>(
       '$_base/api/login/qrcode/client/login',
@@ -320,14 +325,41 @@ class NeteaseApi {
     final json = resp.data == null ? null : _tryDecode(resp.data!);
     final code = (json is Map ? json['code'] as num? : null)?.toInt() ?? -1;
     final message = (json is Map ? '${json['message'] ?? ''}' : '');
-    final setCookie = resp.headers['set-cookie'] ?? const <String>[];
-    final parts = <String>[
-      for (final c in setCookie)
-        if (c.split(';').first.trim().isNotEmpty) c.split(';').first.trim(),
-    ];
-    final cookie = parts.isEmpty ? null : parts.join('; ');
-    return (code: code, message: message, cookie: cookie);
+    final jar = _qrCookies.putIfAbsent(key, () => <String, String>{});
+    _mergeCookies(jar, resp.headers['set-cookie'] ?? const <String>[]);
+    if (json is Map && json['cookie'] is String) _mergeCookieText(jar, json['cookie'] as String);
+    if (jar.isEmpty) return (code: code, message: message, cookie: null);
+    return (code: code, message: message, cookie: jar.entries.map((e) => '${e.key}=${e.value}').join('; '));
   }
+
+  /// 每个扫码 key 一份 Cookie 罐：轮询期间累积，成功或废弃后丢弃。
+  final Map<String, Map<String, String>> _qrCookies = {};
+
+  static void _mergeCookies(Map<String, String> jar, List<String> setCookie) {
+    for (final raw in setCookie) {
+      // 一行可能塞了多个 Set-Cookie（逗号分隔），按「名字=」起点拆。
+      for (final part in raw.split(RegExp(r',(?=[^;=]+=)'))) {
+        _mergeCookieText(jar, part);
+      }
+    }
+  }
+
+  static void _mergeCookieText(Map<String, String> jar, String text) {
+    final first = text.split(';').first.trim();
+    final i = first.indexOf('=');
+    if (i <= 0) return;
+    final name = first.substring(0, i).trim();
+    final value = first.substring(i + 1).trim();
+    if (name.isEmpty || value.isEmpty) return;
+    jar[name] = value;
+  }
+
+  /// Cookie 串里是否有登录态票据。
+  ///
+  /// 只有 `NMTID` 这类统计 Cookie 时接口也回 200，但账号并未登录；
+  /// 必须要求 `MUSIC_U`，否则会把「扫码未成功」误判成登录成功。
+  static bool cookieHasLogin(String? cookie) =>
+      cookie != null && RegExp(r'(^|;\s*)MUSIC_U=').hasMatch(cookie) && !RegExp(r'MUSIC_U=\s*(;|$)').hasMatch(cookie);
 
   /// 登录态（`/api/nuser/account/get`）：返回用户 id 与昵称。
   Future<({bool loggedIn, String userId, String nick})> loginStatus() async {
@@ -381,8 +413,21 @@ class NeteaseApi {
       duration: Duration(milliseconds: dt?.toInt() ?? 0),
       platform: MusicPlatform.netease,
       qualityLabel: _qualityLabel(m),
-      coverUrl: _picUrl('${album['picUrl'] ?? ''}'),
+      // 专辑封面缺失时退回歌手头像：在线音源里 al.picUrl 偶发为空（老歌 / 冷门曲），
+      // 直接留空会让列表与播放器整块变渐变占位，用户以为没加载出来。
+      coverUrl: _picUrl('${album['picUrl'] ?? ''}') ?? _artistAvatar(rawArtists),
     );
+  }
+
+  /// 专辑封面缺失时的兜底：取第一位歌手的头像。
+  static String? _artistAvatar(dynamic rawArtists) {
+    if (rawArtists is! List) return null;
+    for (final a in rawArtists) {
+      if (a is! Map) continue;
+      final img = _picUrl('${a['img1v1Url'] ?? a['picUrl'] ?? ''}');
+      if (img != null) return img;
+    }
+    return null;
   }
 
   /// 网易云封面支持 `?param=WxH` 缩放；统一取 300×300，列表与详情够用。

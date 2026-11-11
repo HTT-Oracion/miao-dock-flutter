@@ -90,6 +90,7 @@ class PlatformMusicRepository implements MusicRepository {
             icon: _recIcons[i % _recIcons.length],
             songIds: const [],
             playlistId: pl.id,
+            coverUrl: pl.coverUrl,
           ),
         );
       }
@@ -104,6 +105,7 @@ class PlatformMusicRepository implements MusicRepository {
             icon: _recIcons[(i + 3) % _recIcons.length],
             songIds: const [],
             playlistId: ch.id,
+            coverUrl: ch.coverUrl,
           ),
         );
       }
@@ -182,8 +184,13 @@ class PlatformMusicRepository implements MusicRepository {
 
   @override
   Future<MusicPlaylist> likedPlaylist() => _translate(() async {
-    // 真实音源的「我喜欢的音乐」需要登录；未登录时抛 loginRequired 由 UI 引导。
-    throw const MusicRepositoryException(MusicRepositoryErrorCode.loginRequired);
+    // 「我喜欢的音乐」在四平台的用户歌单里都以 `special`（网易云 specialType=5）
+    // 标识，没有独立接口：从已登录的用户歌单里挑出来即可。
+    // 未登录时 userPlaylists 会抛 login_required，仓库层转成 loginRequired 供 UI 引导。
+    final playlists = await _source.userPlaylists();
+    final liked = playlists.where((p) => p.special).firstOrNull;
+    if (liked == null) throw const MusicRepositoryException(MusicRepositoryErrorCode.loginRequired);
+    return liked;
   }, FailScope.playlists);
 
   @override

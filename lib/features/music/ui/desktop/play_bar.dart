@@ -58,7 +58,13 @@ class MusicPlayBar extends ConsumerWidget {
                     // 封面 / 歌名点击 → 沉浸播放器（N16）。
                     GestureDetector(
                       onTap: () => ref.read(musicUiProvider.notifier).setImmersive(true),
-                      child: SeedCover(key: const ValueKey('playbar-cover'), seed: song.title, size: 36, radius: 7),
+                      child: SeedCover(
+                        key: const ValueKey('playbar-cover'),
+                        seed: song.title,
+                        imageUrl: song.coverUrl,
+                        size: 36,
+                        radius: 7,
+                      ),
                     ),
                     const SizedBox(width: 11),
                     Expanded(

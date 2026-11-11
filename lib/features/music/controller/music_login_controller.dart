@@ -54,11 +54,14 @@ class MusicQrState {
 
 /// 二维码登录控制器：唯一允许触碰平台登录接口的地方（UI 只读 state）。
 ///
-/// 只对**网易云**实现真实扫码：其余三家（酷狗 / QQ / 咪咕）的上游登录是
-/// 网页 Cookie 回读或手机号+验证码，属独立能力，本期不伪造入口 —— 它们的
-/// 登录弹窗仍走演示流程，但线上仓库拿不到 Cookie 时会如实提示需要登录。
+/// 只对**网易云**实现真实扫码：其余三家的上游登录是网页 Cookie 回读或
+/// 手机号 + 验证码，属独立能力，本期不伪造入口。
 class MusicLoginController extends Notifier<MusicQrState> {
   Timer? _poll;
+
+  /// 接口工厂（测试可替换，避免用例连真实站点）。
+  @protected
+  NeteaseApi createApi({String cookie = ''}) => NeteaseApi(cookie: cookie);
 
   @override
   MusicQrState build() {
@@ -77,7 +80,7 @@ class MusicLoginController extends Notifier<MusicQrState> {
     // 延迟到当前帧之后：弹窗先渲染「加载中」，下一帧再真正取 key。
     await Future<void>.delayed(Duration.zero);
     state = const MusicQrState(phase: MusicQrPhase.loading);
-    final api = NeteaseApi();
+    final api = createApi();
     try {
       final key = await api.qrKey();
       state = MusicQrState(
@@ -100,31 +103,55 @@ class MusicLoginController extends Notifier<MusicQrState> {
       return;
     }
     state = state.copyWith(secondsLeft: left);
+    final result = await _tryCheck(api, key);
+    if (result == null) return; // 单拍失败不打断：有效期 4 分钟，下一拍继续
+    switch (result.code) {
+      case 802:
+        if (state.phase != MusicQrPhase.scanned) {
+          state = state.copyWith(phase: MusicQrPhase.scanned);
+        }
+      case 803:
+        _poll?.cancel();
+        await _finishLogin(result.cookie);
+      case 800:
+        _poll?.cancel();
+        state = state.copyWith(phase: MusicQrPhase.expired, secondsLeft: 0);
+        return;
+    }
+  }
+
+  Future<({int code, String message, String? cookie})?> _tryCheck(NeteaseApi api, String key) async {
     try {
-      final r = await api.qrCheck(key);
-      switch (r.code) {
-        case 802:
-          if (state.phase != MusicQrPhase.scanned) {
-            state = state.copyWith(phase: MusicQrPhase.scanned);
-          }
-        case 803:
-          final cookie = r.cookie;
-          if (cookie == null || cookie.isEmpty) {
-            state = state.copyWith(phase: MusicQrPhase.failed, message: 'cookie_missing');
-            _poll?.cancel();
-            return;
-          }
-          _poll?.cancel();
-          await ref.read(musicAuthProvider.notifier).save(MusicPlatform.netease, cookie);
-          final info = await NeteaseApi(cookie: cookie).loginStatus();
-          ref.read(musicAccountProvider.notifier).login(MusicPlatform.netease, info.nick);
-          state = state.copyWith(phase: MusicQrPhase.succeeded, nick: info.nick);
-        case 800:
-          _poll?.cancel();
-          state = state.copyWith(phase: MusicQrPhase.expired, secondsLeft: 0);
-      }
+      return await api.qrCheck(key);
     } on Object {
-      // 单拍失败不打断：扫码有效期 4 分钟，下一拍继续。
+      return null;
+    }
+  }
+
+  /// 803 收口：**先把 Cookie 落盘并置登录成功，再去补昵称**。
+  ///
+  /// 昵称是展示增强，`loginStatus` 失败（接口风控 / 老 Cookie）不能让用户
+  /// 卡在「扫了码但没登录」——这正是之前扫码后应用状态不更新的根因。
+  Future<void> _finishLogin(String? cookie) async {
+    if (!NeteaseApi.cookieHasLogin(cookie)) {
+      state = state.copyWith(phase: MusicQrPhase.failed, message: 'cookie_missing');
+      return;
+    }
+    await ref.read(musicAuthProvider.notifier).save(MusicPlatform.netease, cookie!);
+    ref.read(musicAccountProvider.notifier).login(MusicPlatform.netease, '');
+    state = state.copyWith(phase: MusicQrPhase.succeeded);
+    final nick = await _fetchNick(cookie);
+    if (nick.isEmpty) return;
+    ref.read(musicAccountProvider.notifier).login(MusicPlatform.netease, nick);
+    state = state.copyWith(nick: nick);
+  }
+
+  Future<String> _fetchNick(String cookie) async {
+    try {
+      final info = await createApi(cookie: cookie).loginStatus();
+      return info.nick;
+    } on Object {
+      return '';
     }
   }
 

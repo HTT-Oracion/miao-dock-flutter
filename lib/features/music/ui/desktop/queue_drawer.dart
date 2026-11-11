@@ -10,6 +10,7 @@ import '../../../../shared/widgets/toast.dart';
 import '../../controller/music_player.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
+import '../widgets/music_shared.dart';
 
 /// 播放队列抽屉（N14/N15）：右侧 panel 抽屉，不遮播放条（bottom 留播放条高度）。
 ///
@@ -254,6 +255,8 @@ class _QueueRowState extends ConsumerState<_QueueRow> {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              SeedCover(seed: widget.song.title, imageUrl: widget.song.coverUrl, size: 30, radius: 6),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(

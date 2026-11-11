@@ -357,7 +357,7 @@ class KugouApi {
       duration: Duration(seconds: durationSec),
       platform: MusicPlatform.kugou,
       qualityLabel: _kugouQuality(item),
-      coverUrl: _coverUrl('${item['Image'] ?? item['AlbumImage'] ?? ''}'),
+      coverUrl: _coverFromItem(item),
       mediaId: '${item['MixSongID'] ?? item['AlbumID'] ?? ''}',
     );
   }
@@ -377,9 +377,32 @@ class KugouApi {
       duration: Duration(seconds: durationSec),
       platform: MusicPlatform.kugou,
       qualityLabel: null,
-      coverUrl: _coverUrl('${item['album_cover'] ?? item['img'] ?? ''}'),
+      coverUrl: _coverFromItem(item),
       mediaId: '${item['album_audio_id'] ?? item['album_id'] ?? ''}',
     );
+  }
+
+  /// 搜索结果的封面有三个来源（miao-dock 同口径）：
+  /// 顶层 `Image` / `AlbumImage` → `albuminfo.img` → `trans_param.union_cover`。
+  /// 只取第一处会漏掉相当一部分老歌。
+  static String? _coverFromItem(Map<String, dynamic> item) {
+    for (final key in const ['Image', 'AlbumImage', 'cover', 'album_cover', 'img']) {
+      final v = _coverUrl('${item[key] ?? ''}');
+      if (v != null) return v;
+    }
+    final info = item['albuminfo'];
+    if (info is Map) {
+      for (final key in const ['img', 'cover', 'sizable_cover']) {
+        final v = _coverUrl('${info[key] ?? ''}');
+        if (v != null) return v;
+      }
+    }
+    final trans = item['trans_param'];
+    if (trans is Map) {
+      final v = _coverUrl('${trans['union_cover'] ?? ''}');
+      if (v != null) return v;
+    }
+    return null;
   }
 
   /// 酷狗封面占位符 `{size}` 替换成 300（接口给的是模板串）。

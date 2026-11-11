@@ -587,7 +587,7 @@ class _SearchPlaylistRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Row(
           children: [
-            SeedCover(seed: playlist.name, size: 32, radius: 6),
+            SeedCover(seed: playlist.name, imageUrl: playlist.coverUrl, size: 32, radius: 6),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
