@@ -24,6 +24,7 @@ class MusicScrollMemory extends ConsumerStatefulWidget {
 class _MusicScrollMemoryState extends ConsumerState<MusicScrollMemory> {
   late final ScrollController _controller = ScrollController();
   late final MusicScrollMemoryNotifier _memory;
+  int _seenTopSignal = 0;
 
   @override
   void initState() {
@@ -51,5 +52,16 @@ class _MusicScrollMemoryState extends ConsumerState<MusicScrollMemory> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.builder(context, _controller);
+  Widget build(BuildContext context) {
+    // N03：重复点击当前视图页签 → 只回顶，不重新请求。
+    final signals = ref.watch(musicScrollTopProvider);
+    final seen = signals[widget.storageKey] ?? 0;
+    if (_seenTopSignal != seen) {
+      _seenTopSignal = seen;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.hasClients) _controller.jumpTo(0);
+      });
+    }
+    return widget.builder(context, _controller);
+  }
 }

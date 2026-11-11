@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_player.dart';
+import 'package:miao_dock_flutter/features/music/controller/music_playlist_library.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/features/music/data/demo_music_repository.dart';
@@ -167,6 +168,19 @@ void main() {
     // 或在 dispose 读 controller.offset（已 detach）→ 记成 0 / 抛异常。
     expect(tester.takeException(), isNull);
     expect(container.read(musicScrollMemoryProvider)['discover'] ?? 0, greaterThan(0));
+  });
+
+  testWidgets('(h) 重复点击当前视图：只回顶不重载（N03）', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    await tester.pumpWidget(ProviderScope(child: baseApp(const MusicScreen(view: MusicScreenView.playlist))));
+    await tester.pumpAndSettle();
+    final container = containerOf(tester);
+    final before = container.read(userPlaylistsProvider);
+    container.read(musicScrollTopProvider.notifier).bump('playlist');
+    await tester.pump();
+    // 破坏点：把回顶实现成 `context.go(同一路径)` → provider 会被重建（不再是同一个 AsyncValue 实例）。
+    expect(identityHashCode(container.read(userPlaylistsProvider)), identityHashCode(before));
+    expect(container.read(musicScrollTopProvider)['playlist'], 1);
   });
 
   testWidgets('(e) 搜索浮层：未登录说明态出现', (tester) async {

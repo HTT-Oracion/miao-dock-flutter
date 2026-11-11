@@ -276,7 +276,13 @@ class _DesktopShell extends ConsumerWidget {
 
 void _goView(BuildContext context, int moduleIndex, String viewId) {
   final base = moduleIndex == 1 ? 'music' : 'manga';
-  context.go('/$base/$viewId');
+  final target = '/$base/$viewId';
+  // N03：重复点击当前视图不重载，只把内容滚回顶部（省一次无意义的重新请求）。
+  if (moduleIndex == 1 && GoRouterState.of(context).uri.path == target) {
+    ProviderScope.containerOf(context, listen: false).read(musicScrollTopProvider.notifier).bump(viewId);
+    return;
+  }
+  context.go(target);
   // 再打一次「跳完之后路由器认为自己在哪」——
   // 若这里仍是旧路径 ⇒ 路由没生效；若已是新路径 ⇒ 路由对、是渲染层没换。
   WidgetsBinding.instance.addPostFrameCallback((_) {

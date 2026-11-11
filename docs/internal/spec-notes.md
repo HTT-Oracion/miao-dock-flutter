@@ -4394,9 +4394,10 @@
   改听 `accountSheetOpen`（此前点顶栏 logo 无反应）；本地空态移动端改「单环 + 音符轨道」
   整宽按钮、桌面改 1.5px 虚线拖放区；历史空态补插画与「去发现页」动作；`SkeletonRows`
   尾部条改 Flexible，修 390 宽下溢出 30px；四视图补滚动位置记忆（N03：`MusicScrollMemory`
-  + `musicScrollMemoryProvider`，滚动即记、重建后回填，替代跨路由失效的 PageStorage）。
+  + `musicScrollMemoryProvider`，滚动即记、重建后回填，替代跨路由失效的 PageStorage）；
+  重复点当前视图页签只回顶不重载（`musicScrollTopProvider`，壳层 `_goView` 拦截）。
 - **验证**：`flutter analyze` 0；`dart run tool/check_l10n.dart` 通过；`flutter test` 全绿
-  （跳过项为本机未启动 mangasvc 的 e2e）；`test/music` 38 passed；截图自测覆盖
+  （跳过项为本机未启动 mangasvc 的 e2e）；`test/music` 39 passed；截图自测覆盖
   双端 × 双主题 × 发现 / 歌单库 / 歌单详情 / 收藏歌单 / 本地 / 历史 / 搜索 / 账号抽屉 /
   队列 / 全屏播放器（光碟 / 歌词 / 评论）/ 沉浸播放器 / 加载 / 失败 / 空态。
 - **自测脚本与产物（已删除）**：`integration_test/music_selftest_test.dart`（含临时加的

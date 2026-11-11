@@ -42,6 +42,8 @@ class MusicDetailScreen extends ConsumerWidget {
     final player = ref.watch(playerProvider);
     final library = ref.watch(playlistLibraryProvider);
     final mobile = context.isMobile;
+    // 桌面 sm（<900）隐藏专辑列；移动端本来不渲染表头，行内专辑并在副行。
+    final showAlbumColumn = !mobile && MediaQuery.sizeOf(context).width >= AppMetrics.musicNarrowBreakpoint;
 
     // 每日推荐未登录 → 登录 CTA（与发现页同卡）。
     if (kind == MusicSourceKind.daily && !ref.watch(musicAccountProvider.select((a) => a.logged))) {
@@ -121,7 +123,7 @@ class MusicDetailScreen extends ConsumerWidget {
                   },
                 ),
                 // 移动端不放表头（设计稿只有分隔线 + 行），桌面保留专辑 / 音质 / 时长表头。
-                if (mobile) Container(height: 1, color: palette.line) else const _TableHead(),
+                if (mobile) Container(height: 1, color: palette.line) else _TableHead(showAlbum: showAlbumColumn),
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -131,7 +133,9 @@ class MusicDetailScreen extends ConsumerWidget {
                       return SongRow(
                         song: s,
                         index: i,
-                        showAlbum: true,
+                        // N32：桌面窄窗（sm <900）隐藏专辑列，与设计稿
+                        // `#app[data-w="sm"] .row .alb{display:none}` 同口径。
+                        showAlbum: showAlbumColumn,
                         current: player.current?.id == s.id,
                         liked: player.likedIds.contains(s.id),
                       );
@@ -395,7 +399,10 @@ class _Hero extends StatelessWidget {
 
 /// 曲目表头（app.css `.thead`）。
 class _TableHead extends StatelessWidget {
-  const _TableHead();
+  const _TableHead({this.showAlbum = true});
+
+  /// N32：sm（<900）隐藏专辑列，表头与行必须同步，否则列宽对不齐。
+  final bool showAlbum;
 
   @override
   Widget build(BuildContext context) {
@@ -416,7 +423,7 @@ class _TableHead extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(child: Text(l10n.musicColTitle, style: style)),
-          SizedBox(width: 150, child: Text(l10n.musicAlbumTag, style: style)),
+          if (showAlbum) SizedBox(width: 150, child: Text(l10n.musicAlbumTag, style: style)),
           SizedBox(
             width: 46,
             child: Text(l10n.musicQualitySheetTitle, textAlign: TextAlign.center, style: style),

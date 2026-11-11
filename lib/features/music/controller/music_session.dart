@@ -81,6 +81,18 @@ final musicScrollMemoryProvider = NotifierProvider<MusicScrollMemoryNotifier, Ma
   MusicScrollMemoryNotifier.new,
 );
 
+/// 「重复点击当前视图 → 回到顶部」信号（N03：省一次无意义重新请求）。
+///
+/// 用自增计数而不是布尔：同一视图连点两次也要能再滚一次。
+class MusicScrollTopNotifier extends Notifier<Map<String, int>> {
+  @override
+  Map<String, int> build() => const {};
+
+  void bump(String viewId) => state = {...state, viewId: (state[viewId] ?? 0) + 1};
+}
+
+final musicScrollTopProvider = NotifierProvider<MusicScrollTopNotifier, Map<String, int>>(MusicScrollTopNotifier.new);
+
 /// 播放器样式（N17：现代 / 封面渐染 / 透明彩胶 / 音域回响 / 沉浸 / 通透）。
 /// 「动态」开关只在现代样式出现（其余样式没有可动元素）。
 final playerStyleProvider = NotifierProvider<PlayerStyleNotifier, PlayerStyle>(PlayerStyleNotifier.new);

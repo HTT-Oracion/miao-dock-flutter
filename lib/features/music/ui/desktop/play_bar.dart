@@ -38,8 +38,10 @@ class MusicPlayBar extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, box) {
-        // N32 lg 档（≥1120）才显示桌面歌词与音质入口（任务口径，壳层三档断点之一）。
+        // N32 三档：lg ≥1120 全量；md 900–1119 收起灵动岛与音质胶囊；
+        // sm <900 再收掉音量滑杆（移动布局没有位置，桌面窄窗同样让位）。
         final wide = box.maxWidth >= AppMetrics.musicIslandBreakpoint;
+        final showVolume = box.maxWidth >= AppMetrics.musicNarrowBreakpoint;
         return Container(
           height: height,
           decoration: BoxDecoration(
@@ -192,7 +194,7 @@ class MusicPlayBar extends ConsumerWidget {
                       ),
                       const SizedBox(width: 4),
                     ],
-                    _VolumeRegion(),
+                    if (showVolume) _VolumeRegion(),
                     if (wide) ...[
                       _BarIcon(
                         icon: LucideIcons.monitorSpeaker,
