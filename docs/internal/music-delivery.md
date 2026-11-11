@@ -90,6 +90,8 @@
   我的歌单库（深浅）、收藏歌单详情、歌单详情、本地空态、播放历史、搜索浮层。
 - **比对方式**：Playwright 打开 `design/music/ver1.0/desktop.html` / `mobile.html` 截同状态设计稿，
   与 Flutter 集成测试截图逐张对照（布局顺序、间距、字号、圆角、颜色、图标、动效落点）。
+- **补充自测**：窄窗三档（1440 / 900 / 390）复验歌单详情与歌单库，确认 sm 下专辑列、
+  音量滑杆收起且表头与行同步；移动端 390 为单列行 + 返回箭头。
 - **已修复的问题**（本轮自测发现）：
   1. 移动端全屏播放器缺封面色氛围层 → 补 `_PlayerWash`；
   2. 浅色主题唱针白色融底 → 唱针改 `ink` + 浅色描边；
@@ -115,6 +117,8 @@
 | 路径 | 内容 |
 |---|---|
 | `integration_test/music_selftest_test.dart` | 截图自测 harness（34 张图）+ 运行时临时加的 `integration_test` dev 依赖（`pubspec.yaml` / `pubspec.lock` 已还原） |
+| `integration_test/music_selftest2_test.dart` | 窄窗复验 harness（1440 / 900 / 390 三档详情） |
+| `.tmp/music-selftest2/` | 窄窗复验截图 |
 | `.tmp/music-selftest/` | 34 张 Flutter 自测截图（桌面 / 移动 × 深浅 × 各状态） |
 | `.tmp/music-selftest-logs/` | 13 次自测运行日志 |
 | `.tmp/music-design/` | Playwright 抓的设计稿对照截图 |
