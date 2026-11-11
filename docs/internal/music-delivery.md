@@ -153,3 +153,93 @@
    与灵动岛同一档，避免出现「岛已隐藏、歌词按钮还在」的半截取舍；差 20px 属同一断点收敛。
 10. **平台接口**是第三方站点，未在 CI 做在线断言（离线用例覆盖签名 / 解码 / 映射）；
    真实网络探针仅在开发期手动跑过，线上风控变化可能导致某些分区降级为空。
+
+## 5. 功能覆盖对照表（#spec「功能覆盖」85 条 → 实现位置）
+
+| # | ver1.0 功能点 | 处理 | 实现位置 |
+|---|---|---|---|
+| 1 | 侧栏展开 208 / 收起 68，双向图标 | 保留 | `shared/widgets/nav_rail.dart` `NavRail`（208 ⇄ 68、`TweenAnimationBuilder` 320ms、panel-left 图标随态换） |
+| 2 | 模块切换（漫画翻译 / 音乐 / 番剧） | 保留 | `app/shell/module_nav.dart` `switchModule` + `app_shell.dart` `_PageTransition`（300ms 淡入上移 8px） |
+| 3 | 音乐视图组 发现 / 歌单 / 本地 / 历史 | 保留 | `app/shell/sidebar_music_views.dart` `SidebarMusicViews` / `app/shell/mobile_nav.dart` `MobileViewTabs`；滚动记忆 `ui/widgets/music_scroll_memory.dart` |
+| 4 | 在线平台组（4 家 + 当前源徽标） | 保留 | `features/music/ui/sidebar_source_group.dart` `SidebarSourceGroup/_SourceRow`（三态徽标） |
+| 5 | 平台点击：切源 / 拉起登录 / 已是当前源 | 保留 | `music_session.dart` `MusicAccountNotifier.switchPlatform/login`；`music_sheets.dart` `_AccountBody`；未登录 → `openLogin` |
+| 6 | 侧栏迷你播放器（封面 / 歌名 / 歌手 / 时间 / 暂停） | 优化 | `ui/sidebar_mini_player.dart` `SidebarMiniPlayer`（整卡 + 28px 橙圆播放键 + 底部进度条） |
+| 7 | 迷你播放器点击打开播放器 | 保留 | 同上：卡片空白处 `setImmersive(true)` |
+| 8 | 侧栏设置入口 + 服务状态点 | 保留 | `shared/widgets/nav_rail.dart` 底部 `_RailBody` 设置项 + `ReadinessDot`；`app_shell.dart` `goSettings` |
+| 9 | 顶栏面包屑（音乐 › 页面名） | 保留 | `app_shell.dart` `_Crumbs`；音乐详情补第三级（`musicDetailCrumbProvider`） |
+| 10 | 顶栏搜索，登录后可用、未登录禁用 | 优化 | `ui/desktop/search_overlay.dart` `SearchOverlay`（⌘K；未登录说明态 `_SearchBody` 未登录分支） |
+| 11 | 搜索即时过滤歌曲行 | 优化 | 同上 `_submit` 防抖 + `music_providers.dart` `SearchNotifier.submit`（单曲 / 歌单分组） |
+| 12 | 账号 chip → 账号菜单（四平台 / 退出） | 保留 | `ui/desktop/account_menu.dart` `AccountMenuPopover`（四平台 + 退出） |
+| 13 | 窗口三键（最小化 / 最大化 / 关闭确认） | 保留 | `shared/widgets/app_title_bar.dart` `_ControlButton`（最小化 / 最大化 / 关闭） |
+| 14 | 原型调试面板（模拟加载失败） | 优化 | 开发期用 `data` 层 `setFailScope` + 自测 harness 注入（正式代码不含演示面板，见偏差说明 §4） |
+| 15 | 播放条：封面 / 歌名点击展开播放器 | 保留 | `ui/desktop/play_bar.dart` 左侧封面 / 歌名 `GestureDetector` → `setImmersive(true)` |
+| 16 | 播放条：上一曲 / 播放暂停 / 下一曲 | 保留 | `play_bar.dart` `_BarIcon` 传输键 + 中央 52 播放键 |
+| 17 | 进度条点击跳转 + 当前/总时长 | 优化 | `play_bar.dart` `MusicSeek`（拖拽 + `_hover` 时间气泡）+ `MusicTimeText` 等宽数字 |
+| 18 | 播放模式 5 档循环切换 | 保留 | `music_player.dart` `cycleMode()` + `ui/widgets/music_shared.dart` `playModeIcon` |
+| 19 | 心动模式门槛（网易云 + 我喜欢的音乐） | 优化 | `music_player.dart` `cycleMode()`（`queueFromLiked` + 当前源网易云双条件；不满足整档跳过）、`_notice(heartbeatExit)` |
+| 20 | 音质 5 档循环（标准→超清母带） | 优化 | `ui/mobile/music_sheets.dart` `_QualityBody`、`play_bar.dart` `_QualityChip` + `_showQualityPopover`、`domain/music_models.dart` `QualityTier` |
+| 21 | 音量图标静音切换 | 优化 | `play_bar.dart` `_VolumeRegion`（静音记忆原值 + 悬停滑杆）、`immersive_player.dart` `_ImmersiveVolume` |
+| 22 | 桌面歌词开关（开启态描边橙） | 保留 | `play_bar.dart` 显示器图标（开启态 `_BarIcon(on:)` 橙描边）+ `desktop_lyrics.dart` `DesktopLyricsOverlay` |
+| 23 | 桌面歌词设置（字号 / 高亮 / 底色 / 行数） | 保留 | `desktop_lyrics.dart` `DesktopLyricsSettingsModal`（字号 16–40 / 高亮 / 未唱 / 行数，改动即时写 `desktopLyricsPrefsProvider`） |
+| 24 | 播放队列按钮（开启态高亮） | 保留 | `play_bar.dart` 队列图标（`ui.queueOpen` 高亮） |
+| 25 | 关闭播放（停止但保留队列） | 保留 | `play_bar.dart` 最右 ✕ → `playerProvider.closePlayer()`（保留队列） |
+| 26 | 窄窗口按键取舍（逐级隐藏） | 优化 | `play_bar.dart` `LayoutBuilder`：lg 全量 / md 收音质 / sm 再收音量（`musicIslandBreakpoint` / `musicNarrowBreakpoint`） |
+| 27 | 灵动岛折叠 230×34（封面 / 歌名 / 波形） | 保留 | `ui/desktop/island.dart` `DynamicIsland`（230×34 ⇄ 348×186、320ms、波形律动） |
+| 28 | 灵动岛悬停展开 348×186（歌词 / 进度 / 传输） | 保留 | 同上展开态（大封面 + 当前歌词 + 进度 + 传输） |
+| 29 | 灵动岛点击打开播放器 | 保留 | 同上内容区点击 → `setImmersive(true)` |
+| 30 | 岛内「歌词卡 / 播放卡」切换 | 保留 | `island.dart` 右下切换按钮（`musicIslandLyricTab` / `musicIslandSingerTab`） |
+| 31 | 队列抽屉：计数 / 关闭 / 遮罩 | 保留 | `queue_drawer.dart` `QueueDrawer`（计数标题 + ✕ + 遮罩点击关闭） |
+| 32 | 队列行：序号 / 歌名 / 歌手 / 时长 / ♪ | 保留 | `queue_drawer.dart` `_QueueRow`（序号 / 歌名 / 歌手 / 时长 / 当前行 ♪） |
+| 33 | 队列行点击播放 | 保留 | 同上 `onTap` → `playAt(i)` |
+| 34 | 队列清空 | 优化 | `queue_drawer.dart` `_clear` → `clearQueueKeepCurrent` + 6s `_QueueUndoBar` |
+| 35 | 队列拖动排序（ver1.0 无） | 新增 | `queue_drawer.dart` `ReorderableListView` + `music_player.dart` `moveQueue`（落点用 M3 位移反馈，见偏差 §4.3） |
+| 36 | 队列单行移除（ver1.0 无） | 新增 | `queue_drawer.dart` `_QueueRow` 悬停 ✕ → `removeAt`（只剩一首时 `queueEmptyRemoveForbidden` 提示） |
+| 37 | 播放器收起 / 全屏化 | 保留 | `immersive_player.dart` `_TopBar`（收起 / 全屏按钮） |
+| 38 | 黑胶旋转，暂停停转 | 保留 | `immersive_player.dart` `_DiscPainter` + `_spin`（暂停停转） |
+| 39 | 曲名 / 歌手 / 专辑 | 保留 | `immersive_player.dart` `_ArtColumn`（曲名 / 歌手 / 专辑 / 音质 / 时长 chip） |
+| 40 | 「译」翻译歌词开关 | 保留 | `immersive_player.dart` `_TabPill`「译」→ `musicUiProvider.translateOn` |
+| 41 | 歌词 / 评论 双页签 | 保留 | `immersive_player.dart` `_TabPill`（歌词 / 评论）+ `musicCommentsProvider` |
+| 42 | 当前行高亮 + 点击行跳转 | 保留 | `immersive_player.dart` `_LyricsView`（当前行 17px 橙加粗、点击 `seekMs`） |
+| 43 | 歌词悬停变蓝提示可点 | 保留 | `immersive_player.dart` `_HoverLyricLine`（悬停变 `palette.blue`） |
+| 44 | 自动跟随 / 手动滚动 3 秒恢复 | 优化 | `immersive_player.dart` `_LyricsView` 手动滚动侦测 + `resetManual` 3s 计时（右上角 `musicLyricAuto/Manual` 标签） |
+| 45 | 评论列表（头像 / 昵称 / 内容 / 赞） | 保留 | `immersive_player.dart` `_CommentsView`（头像 / 昵称 / 内容 / 时间 / 点赞 +1 / 热门角标） |
+| 46 | 红心（liked 变红） | 保留 | `play_bar.dart` 红心、`immersive_player.dart` 红心、`song_row.dart` 菜单红心（`toggleLike`） |
+| 47 | 碟片模式开关 /「唱片」页签 | 移除 | 按评审移除：`immersive_player.dart` 只保留常驻黑胶环，无「唱片」页签 / 开关 |
+| 48 | 播放器样式 6 种循环切换 | 优化 | `immersive_player.dart` `_SkinPopoverState` + `_SkinSwatch`（6 项直选 + 色块 + 勾选） |
+| 49 | 「动态」开关（仅现代样式） | 保留 | `immersive_player.dart` 底部左侧「动态」开关（仅 `PlayerStyle.modern` 渲染） |
+| 50 | 播放器内音量滑杆 | 保留 | `immersive_player.dart` `_ImmersiveVolume`（播放器底部传输区） |
+| 51 | 移动播放条 7 键（展开/红心/模式/播放/静音/队列/关闭） | 优化 | `ui/mobile/mini_bar.dart` `MiniMusicBar`（播放 / 播放列表两键 + `_MiniSwipeArea` 横滑 + 上滑展开） |
+| 52 | 移动全屏头部：收起 + 译/歌词/光碟/评论 | 优化 | `ui/mobile/full_player.dart` `_topBar`（收起 + 当前歌单 / 歌名·歌手 + 更多）；旧页签行已移除 |
+| 53 | 移动歌词视图（自动/手动、点击跳转） | 优化 | `full_player.dart` `_LyricsView`（自动跟随 / 手动定位卡 / 3s 恢复 / 轻点返回光碟 `onTapBack`） |
+| 54 | 移动光碟视图（旋转 + 曲名/歌手/音质） | 优化 | `full_player.dart` `_DiscView`（黑胶 + 中心封面 + 唱针，整块可点；曲名信息在 `_infoRow`） |
+| 55 | 移动评论视图 | 保留 | `full_player.dart` `_CommentsView` + `_toggleComments`（记住 `_prevTab`） |
+| 56 | 移动操作行：红心 / 音质 / 队列 / 样式 | 优化 | `full_player.dart` `_infoRow/_progressRow/_ctrlRow`（信息或译 + 爱心 / 评论；进度 + 时间 / 音质 / 时长；五键） |
+| 57 | 移动端不出现桌面歌词两件套 | 保留 | 移动端不挂 `desktop_lyrics.dart`（仅 `_DesktopShell` 挂载，见 `app_shell.dart`） |
+| 58 | 发现页：骨架屏（标题 + 8 方块） | 优化 | `discover_view.dart` `_RecBarSkeleton` + `_ChartSkeleton` + 歌单瓦片骨架（同布局无 CLS） |
+| 59 | 发现页：失败横幅 + 重试 | 优化 | `discover_view.dart` `_FailPage`（`FailMagicCircle`）+ `ErrorBanner(compact: true)` |
+| 60 | 官方榜单 4 卡 + 换一批 | 优化 | `discover_view.dart` `_ChartGrid/_ChartCard`（6 卡，桌面 2 列 / 移动 1 列）+ `MusicSectionHeader(onRefresh:)` |
+| 61 | 推荐歌单瓦片 + 换一批 | 优化 | `discover_view.dart` `_PlaylistTiles`（6 瓦片 + 播放量角标 + 两行标题 + 刷新 icon） |
+| 62 | 每日推荐 4 行 + 播放全部 | 优化 | `discover_view.dart` 推荐歌曲区（`MusicSectionHeader` + `_DailySection` + 播放全部） |
+| 63 | 未登录：每日推荐空态 + 登录按钮 | 优化 | `discover_view.dart` `MusicLoginCtaCard`（未登录 CTA） |
+| 64 | 歌曲行 hover 高亮 / 当前行声波 | 优化 | `song_row.dart` `SongRow`（hover 极淡底 + 22px 序号占位 + 当前行橙色 ♪） |
+| 65 | 歌曲右键菜单（播放 / 下一首） | 优化 | `song_row.dart` `_showContextMenu`（两项）+ `_showFullMenu`（完整菜单）+ 长按同款 |
+| 66 | 歌单页 hero + 播放全部 / 随机播放 | 优化 | `music_detail.dart` `_Hero`（播放全部 + 收藏），无随机播放按钮 |
+| 67 | 歌单曲目表（专辑 / 音质 / 时长） | 保留 | `music_detail.dart` `_TableHead` + `SongRow(showAlbum:)`（sm <900 隐藏专辑列） |
+| 68 | 本地：选择文件 / 选择文件夹 / 清空 | 优化 | `local_view.dart` `_import/_clear` + `_DropZone`（选择文件 / 文件夹 / 拖入） |
+| 69 | 本地导入 toast 与列表追加 | 优化 | `local_view.dart` `_import` 中 `_importing` 禁用态 + `musicImportDone` 吐司 + `musicLocalProvider.importNames` |
+| 70 | 本地空态 | 保留 | `local_view.dart` `_DropZone`（空态虚线拖放区）+ `MusicEmptyState`（移动端） |
+| 71 | 播放历史：计数 / 清空 / 跨平台 | 优化 | `history_view.dart` `_groupEntries`（今 / 昨 / 更早）+ `_clear` 撤销 + 平台色点 |
+| 72 | 登录弹窗（二维码 / 4:32 倒计时 / 刷新 / 手机号 / 模拟成功） | 保留 | `ui/desktop/login_modal.dart` `LoginModal`（二维码 / 4:32 倒计时 / 刷新 / 手机号 / 模拟成功） |
+| 73 | 退出登录 | 保留 | `ui/desktop/account_menu.dart` 底部「退出登录」/ `music_sheets.dart` `_AccountBody` |
+| 74 | 吐司三类（info / good / bad） | 保留 | `shared/widgets/toast.dart` `showAppToast`（info / good / bad 三色，堆叠与自动消失沿用原项目） |
+| 75 | 发现页顶部「继续播放」大卡（hero） | 移除 | 按评审移除：`discover_view.dart` 无「继续播放」hero，改为 `_RecBar` 推荐栏 |
+| 76 | （ver1.0 无）顶部推荐栏：竖卡 + 彩色说明带 + 横向滚动 | 新增 | `discover_view.dart` `_RecBar/_RecCard`（9 卡 + 桌面 hover 箭头按 0.78 视口平滑滚动；移动端 16px 内边距） |
+| 77 | （ver1.0 无）歌单收藏状态切换 | 新增 | `music_detail.dart` 收藏按钮 + `music_playlist_library.dart` `toggleSubscribe/toggleSaved`（收藏歌单默认为已收藏） |
+| 78 | 移动端顶栏「音乐」标识 | 移除 | 按评审移除：`app_shell.dart` `_MusicMobileHeader` 只有搜索条 + 平台 logo |
+| 79 | 移动端队列抽屉底部「关闭 / 清空队列」文字按钮 | 移除 | 按评审移除：`music_sheets.dart` `_QueueHeader` 改为垃圾桶 + ✕ 两个 icon |
+| 80 | （ver1.0 无）迷你条横滑切上 / 下一首并显示相邻曲名 | 新增 | `mini_bar.dart` `_MiniSwipeArea/_IncomingSlide`（封面 + 歌名 + 歌手 + 方向标签，≥56px 先滑到位再切） |
+| 81 | （ver1.0 无）歌词手动滚动定位卡片 | 新增 | `full_player.dart` `_LyricsView` 定位卡（时间戳 + 纯 icon ▶，无底色）+ 3s 恢复 |
+| 82 | （ver1.0 无）移动端歌曲行浮层下拉菜单 | 新增 | `song_row.dart` `_showFullMenu`（跟随触发点 + 封面头部 + 红心即时 + 点外关闭） |
+| 83 | （ver1.0 无）平台标识改为品牌 logo（侧栏音源组 / 账号菜单 / 移动顶栏 / 账号抽屉） | 新增 | `ui/widgets/platform_logo.dart` `PlatformLogo`（四平台扁平圆底 + 白色符号，无渐变 / 高光） |
+| 84 | 我的歌单视图（左栏歌单列表 → 曲目详情） | 优化 | `ui/views/playlist_view.dart` `PlaylistLibraryView` + `controller/music_playlist_library.dart` `groupPlaylists`（系统歌单 / 创建 / 收藏，四态、空组不渲染） |
+| 85 | （ver1.0 无）收藏的歌单分组与取消订阅 | 新增 | `music_playlist_library.dart` `toggleSubscribe` + `playlist_view.dart` `_PlaylistCover` 心形角标 + `music_detail.dart` COLLECTED 眉标 / 收藏歌单胶囊 |
