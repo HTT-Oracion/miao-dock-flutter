@@ -54,7 +54,7 @@ class PlaylistLibraryNotifier extends Notifier<PlaylistLibraryState> {
         : state.copyWith(createdCollapsed: !state.createdCollapsed);
   }
 
-  /// 收藏歌单取消订阅 / 重新订阅（N43：只动分组归属，不改演示数据）。
+  /// 收藏歌单取消订阅 / 重新订阅（N43：当前只动分组归属）。
   void toggleSubscribe(String playlistId) {
     final next = {...state.unsubscribed};
     if (!next.remove(playlistId)) next.add(playlistId);

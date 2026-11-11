@@ -21,6 +21,9 @@ class QqSource implements MusicSource {
   bool get supportsRecommendPlaylists => true;
 
   @override
+  bool get supportsSimilarSongs => false;
+
+  @override
   Future<List<MusicSong>> searchSongs(String keywords, {int limit = 30, int offset = 0}) =>
       _api.searchSongs(keywords, limit: limit, offset: offset);
 
@@ -39,8 +42,8 @@ class QqSource implements MusicSource {
   Future<List<MusicPlaylist>> userPlaylists() => _api.userPlaylists();
 
   @override
-  Future<List<({String id, String name, String updateMeta})>> charts() async {
-    return [for (final r in QqMusicApi.rankList) (id: r.id, name: r.name, updateMeta: '')];
+  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async {
+    return [for (final r in QqMusicApi.rankList) (id: r.id, name: r.name, updateMeta: '', coverUrl: null)];
   }
 
   @override
@@ -51,6 +54,9 @@ class QqSource implements MusicSource {
 
   @override
   Future<List<MusicSong>> dailySongs() async => const [];
+
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) async => const [];
 
   @override
   Future<List<MusicComment>> comments(String songId, {int limit = 20, int offset = 0}) async => const [];

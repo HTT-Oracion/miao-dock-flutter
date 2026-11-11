@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../domain/music_models.dart';
-import 'music_repository.dart';
+import 'package:miao_dock_flutter/features/music/data/music_repository.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 
 /// A 级 Fake 音乐仓库（D-201）：逐条对齐 `design/music/ver1.0/assets/data.js`。
 ///
@@ -212,8 +212,9 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p0',
       name: '我喜欢的音乐',
       trackCount: 46,
-      playCount: '1.2万',
-      description: '红心过的歌都在这里',
+      playCountValue: 12000,
+      description: '收藏过的歌都在这里',
+      coverUrl: 'https://example.test/liked-cover.jpg',
       seed: 'fav',
       special: true,
     ),
@@ -221,7 +222,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p1',
       name: '日语小甜歌 | 听完想谈恋爱系列',
       trackCount: 24,
-      playCount: '23.3万',
+      playCountValue: 233000,
       description: '地铁两站刚好一曲',
       seed: 'pl-1',
       author: '云中漫步信箱',
@@ -230,7 +231,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p2',
       name: '个人向 Galgame 主题曲集合',
       trackCount: 31,
-      playCount: '691万',
+      playCountValue: 6910000,
       description: '无歌词，纯循环',
       seed: 'pl-2',
       author: '云中漫步信箱',
@@ -239,7 +240,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p3',
       name: '日系告白 | 能否让我成为你的太阳',
       trackCount: 48,
-      playCount: '49.3万',
+      playCountValue: 493000,
       description: '本周新增 6 首',
       seed: 'pl-3',
       author: '云中漫步信箱',
@@ -248,7 +249,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p4',
       name: '『日系』二次元 & ACG 精选歌曲',
       trackCount: 12,
-      playCount: '122.7万',
+      playCountValue: 1227000,
       description: '雨声 · 空调声 · 键盘声',
       seed: 'pl-4',
       author: '云中漫步信箱',
@@ -257,7 +258,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p5',
       name: 'CLANNAD 心动神曲',
       trackCount: 36,
-      playCount: '128.7万',
+      playCountValue: 1287000,
       description: '2000–2010 华语',
       seed: 'pl-5',
       author: '云中漫步信箱',
@@ -266,7 +267,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p6',
       name: '【ACG】愿你有一天能和你最重要的人相遇',
       trackCount: 19,
-      playCount: '18919',
+      playCountValue: 18919,
       description: '本周编辑精选',
       seed: 'pl-6',
       author: '云中漫步信箱',
@@ -275,7 +276,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p7',
       name: '影视原声收藏',
       trackCount: 27,
-      playCount: '8.4万',
+      playCountValue: 84000,
       description: '动画 / 日剧 / 电影',
       seed: 'pl-7',
       author: '云中漫步信箱',
@@ -284,7 +285,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'p8',
       name: '睡眠冥想',
       trackCount: 9,
-      playCount: '3.1万',
+      playCountValue: 31000,
       description: '30 分钟后自动停止',
       seed: 'pl-8',
       author: '云中漫步信箱',
@@ -295,7 +296,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'c1',
       name: '华语 City Pop | 夜色霓虹漫游',
       trackCount: 38,
-      playCount: '76.2万',
+      playCountValue: 762000,
       description: '复古合成器与潮湿的街',
       seed: 'sub-1',
       author: '城市漫游者',
@@ -305,7 +306,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'c2',
       name: '游戏 OST 钢琴改编精选',
       trackCount: 22,
-      playCount: '31.8万',
+      playCountValue: 318000,
       description: '存档点前的那一段旋律',
       seed: 'sub-2',
       author: '星轨邮差',
@@ -315,7 +316,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'c3',
       name: '通勤路上の J-Pop 2010s',
       trackCount: 56,
-      playCount: '208万',
+      playCountValue: 2080000,
       description: '两站地铁刚好两首',
       seed: 'sub-3',
       author: '木漏れ日',
@@ -325,7 +326,7 @@ class DemoMusicRepository implements MusicRepository {
       id: 'c4',
       name: 'Lo-fi 学习用 · 雨天白噪音',
       trackCount: 17,
-      playCount: '9.6万',
+      playCountValue: 96000,
       description: '专注 45 分钟不打断',
       seed: 'sub-4',
       author: '打烊之后',
@@ -511,6 +512,10 @@ class DemoMusicRepository implements MusicRepository {
     return (songs: songs, playlists: playlists);
   }
 
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) async =>
+      _songs.where((song) => song.id != seed.id).take(limit).toList(growable: false);
+
   // ── 歌词（s1 为设计稿逐句数据；其余生成简单时间轴）──────────────────────────
   static const _yozoraLyrics = <(int, String, String)>[
     (0, '沈むように溶けてゆくように', '缓缓下沉，仿佛消融一般'),
@@ -530,6 +535,11 @@ class DemoMusicRepository implements MusicRepository {
   @override
   @override
   Future<SongLyrics> loadLyrics(MusicSong song) async => lyricsFor(song);
+
+  /// 测试替身的播放地址：只用来驱动「已加载」分支，不会被真的请求
+  /// （测试进程用 SilentAudioEngine，见 music_audio_engine.dart）。
+  @override
+  Future<String?> resolvePlayUrl(MusicSong song, QualityTier quality) async => 'https://example.invalid/${song.id}.mp3';
 
   @override
   SongLyrics lyricsFor(MusicSong song) {

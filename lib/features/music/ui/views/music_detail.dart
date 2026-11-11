@@ -59,9 +59,9 @@ class MusicDetailScreen extends ConsumerWidget {
       color: palette.bg,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          mobile ? 16 : AppMetrics.contentPadding,
+          mobile ? 8 : AppMetrics.contentPadding,
           mobile ? 14 : 6,
-          mobile ? 16 : AppMetrics.contentPadding,
+          mobile ? 8 : AppMetrics.contentPadding,
           mobile ? 4 : 6,
         ),
         child: detail.when(
@@ -122,24 +122,12 @@ class MusicDetailScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                // 移动端不放表头（设计稿只有分隔线 + 行），桌面保留专辑 / 音质 / 时长表头。
-                if (mobile) Container(height: 1, color: palette.line) else _TableHead(showAlbum: showAlbumColumn),
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    itemCount: d.songs.length,
-                    itemBuilder: (_, i) {
-                      final s = d.songs[i];
-                      return SongRow(
-                        song: s,
-                        index: i,
-                        // N32：桌面窄窗（sm <900）隐藏专辑列，与设计稿
-                        // `#app[data-w="sm"] .row .alb{display:none}` 同口径。
-                        showAlbum: showAlbumColumn,
-                        current: player.current?.id == s.id,
-                        liked: player.likedIds.contains(s.id),
-                      );
-                    },
+                  child: MusicSongTable(
+                    songs: d.songs,
+                    showAlbum: showAlbumColumn,
+                    fromLiked: d.meta.special && kind == MusicSourceKind.playlist,
+                    queueTitle: d.meta.name,
                   ),
                 ),
               ],
@@ -179,6 +167,9 @@ class _DetailBackBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
+    if (mobile && kind == MusicSourceKind.playlist && !meta.special && !meta.subscribed) {
+      return const SizedBox.shrink();
+    }
     // 🔴 不要用 Container(alignment: ...)：带 alignment 的 Container 会撑满有界宽度，
     // 胶囊会变成一条整行横条（移动端实测）。高度 + padding 已足够让它收缩到内容宽。
     final chip = Container(
@@ -355,7 +346,7 @@ class _Hero extends StatelessWidget {
           children: [
             Row(
               children: [
-                SeedCover(seed: meta.name, size: 78, radius: AppMetrics.radiusCard),
+                SeedCover(seed: meta.name, imageUrl: meta.coverUrl, size: 78, radius: AppMetrics.radiusCard),
                 const SizedBox(width: 13),
                 Expanded(child: info),
               ],
@@ -379,7 +370,7 @@ class _Hero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // 设计稿 `.pl-hero .cover`：152 方形、r14。
-          SeedCover(seed: meta.name, size: 152, radius: AppMetrics.radiusCardLg),
+          SeedCover(seed: meta.name, imageUrl: meta.coverUrl, size: 152, radius: AppMetrics.radiusCardLg),
           const SizedBox(width: 20),
           Expanded(
             child: Column(
@@ -391,49 +382,6 @@ class _Hero extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 曲目表头（app.css `.thead`）。
-class _TableHead extends StatelessWidget {
-  const _TableHead({this.showAlbum = true});
-
-  /// N32：sm（<900）隐藏专辑列，表头与行必须同步，否则列宽对不齐。
-  final bool showAlbum;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    final style = TextStyle(fontSize: AppFont.px10_5, letterSpacing: 1.2, color: palette.mut);
-    return Container(
-      height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: palette.line)),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 22,
-            child: Text('#', textAlign: TextAlign.center, style: style),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: Text(l10n.musicColTitle, style: style)),
-          if (showAlbum) SizedBox(width: 150, child: Text(l10n.musicAlbumTag, style: style)),
-          SizedBox(
-            width: 46,
-            child: Text(l10n.musicQualitySheetTitle, textAlign: TextAlign.center, style: style),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 44,
-            child: Text(l10n.musicColDuration, textAlign: TextAlign.right, style: style),
-          ),
-          const SizedBox(width: 28),
         ],
       ),
     );
@@ -494,7 +442,3 @@ class _DetailSkeleton extends StatelessWidget {
     );
   }
 }
-
-/// 等宽数字样式（表格时长用）—— 供行内复用的口径收口。
-TextStyle musicMonoStyle(AppPalette palette) =>
-    TextStyle(fontSize: AppFont.px11, color: palette.mut, fontFeatures: const [FontFeature.tabularFigures()]);

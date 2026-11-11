@@ -146,8 +146,9 @@ class QqMusicApi {
             name: '${item['dissname'] ?? ''}',
             trackCount: (item['song_count'] as num?)?.toInt() ?? 0,
             seed: '${item['dissname'] ?? ''}',
-            playCount: _playCount((item['listennum'] as num?)),
+            playCountValue: (item['listennum'] as num?)?.round(),
             description: '${_dig(item, ['creator', 'name']) ?? ''}',
+            coverUrl: '${item['imgurl'] ?? item['logo'] ?? ''}',
           ),
     ];
   }
@@ -231,8 +232,9 @@ class QqMusicApi {
       name: name,
       trackCount: rawCount is num ? rawCount.toInt() : 0,
       seed: name,
-      playCount: _playCount(rawListen is num ? rawListen : null),
+      playCountValue: rawListen is num ? rawListen.round() : null,
       description: creator.isEmpty ? null : creator,
+      coverUrl: '${m['logo'] ?? m['picurl'] ?? m['diss_cover'] ?? ''}',
       author: creator.isEmpty ? null : creator,
       special: liked,
       subscribed: subscribed && !liked,
@@ -297,7 +299,7 @@ class QqMusicApi {
         name: '${cd['dissname'] ?? ''}',
         trackCount: (cd['songnum'] as num?)?.toInt() ?? (songs is List ? songs.length : 0),
         seed: '${cd['dissname'] ?? ''}',
-        playCount: _playCount(cd['visitnum'] as num?),
+        playCountValue: (cd['visitnum'] as num?)?.round(),
         description: '${_dig(cd, ['creator', 'name']) ?? ''}',
       ),
       songs: <MusicSong>[
@@ -541,12 +543,5 @@ class QqMusicApi {
     } on FormatException {
       return null;
     }
-  }
-
-  static String? _playCount(num? n) {
-    if (n == null || n <= 0) return null;
-    if (n >= 100000000) return '${(n / 100000000).toStringAsFixed(1)}e8';
-    if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}w';
-    return '${n.toInt()}';
   }
 }

@@ -6,9 +6,15 @@ import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/music/ui/mobile/mobile_music_screen.dart';
 import 'package:miao_dock_flutter/features/music/ui/music_screen.dart';
 import 'package:miao_dock_flutter/features/music/ui/views/music_detail.dart';
+import 'package:miao_dock_flutter/features/music/ui/widgets/music_shared.dart';
 import 'package:miao_dock_flutter/features/music/ui/widgets/song_row.dart';
 import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
+import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
+import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
+
+import 'support/demo_music_repository.dart';
+import 'support/music_test_account.dart';
 
 /// 音乐模块的窄屏断言（AGENTS §4.16：390×844 至少一条「窄屏不该出现的没出现」）。
 ///
@@ -18,6 +24,10 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 /// · 移动容器渲染底部一级导航（壳层职责）→ 存在性断言失败。
 void main() {
   Widget host(Widget child, {Size size = const Size(390, 844), bool reduceMotion = false}) => ProviderScope(
+    overrides: [
+      musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
+      musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
+    ],
     child: MediaQuery(
       data: MediaQueryData(size: size, disableAnimations: reduceMotion),
       child: MaterialApp(
@@ -85,6 +95,44 @@ void main() {
     final l10n = AppLocalizations.of(tester.element(find.byType(MusicDetailScreen)));
     // 破坏点：只在行上隐藏专辑、表头仍渲染 → 表头有「专辑」而行没有，列宽错位。
     expect(find.text(l10n.musicAlbumTag), findsNothing);
+  });
+
+  testWidgets('390×844：普通歌单详情隐藏类型胶囊并缩小左右间距', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      host(
+        const MusicDetailScreen(kind: MusicSourceKind.playlist, id: 'p1'),
+        size: const Size(390, 844),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 240));
+    final l10n = AppLocalizations.of(tester.element(find.byType(MusicDetailScreen)));
+
+    expect(find.text(l10n.musicPlChipPlaylist), findsNothing);
+    expect(tester.getTopLeft(find.byType(SeedCover).first).dx, closeTo(8, 0.5));
+  });
+
+  testWidgets('本地歌曲菜单不显示收藏动作', (tester) async {
+    const local = MusicSong(
+      id: 'local-1',
+      title: 'local',
+      artist: '',
+      album: '',
+      duration: Duration.zero,
+      platform: MusicPlatform.local,
+    );
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(host(const SongRow(song: local, index: 0), size: const Size(1280, 800)));
+    await tester.tap(find.byKey(const ValueKey('song-row-more')));
+    await tester.pump();
+    final l10n = AppLocalizations.of(tester.element(find.byType(SongRow)));
+
+    expect(find.text(l10n.musicMenuLike), findsNothing);
+    expect(find.text(l10n.musicMenuUnlike), findsNothing);
   });
 
   testWidgets('减少动态效果：魔法阵 / 波形不排新帧（不旋转）', (tester) async {

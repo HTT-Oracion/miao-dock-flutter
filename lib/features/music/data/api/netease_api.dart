@@ -175,6 +175,42 @@ class NeteaseApi {
     return (meta: detail.meta.copyWithSpecial(true), songs: detail.songs);
   }
 
+  /// 心动模式相似歌曲。优先调用智能播放接口，失败或空结果时回落匿名可用的 simiSong。
+  Future<List<MusicSong>> similarSongs(String songId, {int limit = 20}) async {
+    if (cookie.isNotEmpty) {
+      try {
+        final playlists = await userPlaylists();
+        final liked = playlists.where((playlist) => playlist.special).firstOrNull;
+        if (liked != null) {
+          final json = await _client.postForm('$_base/api/playmode/intelligence/list', {
+            'songId': songId,
+            'type': 'fromPlayOne',
+            'playlistId': liked.id,
+            'startMusicId': songId,
+            'count': 1,
+          });
+          final data = _dig(json, ['data']);
+          if (data is List) {
+            final songs = <MusicSong>[
+              for (final item in data)
+                if (item is Map && item['songInfo'] is Map) _songFromMap(item['songInfo']),
+            ];
+            if (songs.isNotEmpty) return songs.take(limit).toList(growable: false);
+          }
+        }
+      } on Object {
+        // 智能播放要求登录与喜欢歌单；失败继续走匿名相似歌曲接口。
+      }
+    }
+    final json = await _client.getJson('$_base/api/v1/discovery/simiSong', query: {'songid': songId});
+    final rows = _dig(json, ['songs']);
+    if (rows is! List) return const [];
+    return [
+      for (final item in rows.take(limit))
+        if (item is Map<String, dynamic>) _songFromMap(item),
+    ];
+  }
+
   // ── 歌词 / 评论 / 播放地址 ───────────────────────────────────────────────
 
   /// 逐句歌词（`/api/song/lyric/v1`，含翻译轨）。
@@ -271,11 +307,15 @@ class NeteaseApi {
   }
 
   /// 轮询扫码状态：801 等待 / 802 待确认 / 803 成功（成功时回写 cookie）。
+  ///
+  /// 🔴 必须是**表单**编码：同一个接口用 JSON body 会返回
+  /// `{"code":400,"message":"参数错误"}`（2026-11 实测），表现为二维码一直不刷新、
+  /// 扫码后也不会跳成功 —— 这是「二维码扫不了」的真正原因。
   Future<({int code, String message, String? cookie})> qrCheck(String key) async {
     final resp = await _http.dio.post<String>(
       '$_base/api/login/qrcode/client/login',
       data: {'key': key, 'type': 1, 'csrf_token': ''},
-      options: diagOptions(),
+      options: diagOptions().copyWith(contentType: Headers.formUrlEncodedContentType),
     );
     final json = resp.data == null ? null : _tryDecode(resp.data!);
     final code = (json is Map ? json['code'] as num? : null)?.toInt() ?? -1;
@@ -376,25 +416,13 @@ class NeteaseApi {
       name: '${m['name'] ?? ''}',
       trackCount: count?.toInt() ?? 0,
       seed: '${m['name'] ?? ''}',
-      playCount: _playCount((m['playCount'] ?? m['playcount']) as num?),
+      playCountValue: ((m['playCount'] ?? m['playcount']) as num?)?.round(),
       description: nickname,
+      coverUrl: _picUrl('${m['coverImgUrl'] ?? m['picUrl'] ?? ''}'),
       author: nickname.isEmpty ? null : nickname,
       special: (m['specialType'] as num?)?.toInt() == 5,
       subscribed: m['subscribed'] == true,
     );
-  }
-
-  static String? _playCount(num? n) {
-    if (n == null || n <= 0) return null;
-    if (n >= 100000000) return '${_oneDecimal(n / 100000000)}e8';
-    if (n >= 10000) return '${_oneDecimal(n / 10000)}w';
-    return '${n.toInt()}';
-  }
-
-  /// 一位小数并去掉多余的 `.0`（`1.0w` → `1w`）。
-  static String _oneDecimal(double v) {
-    final s = v.toStringAsFixed(1);
-    return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
   }
 
   static String _relativeTime(dynamic ms) {

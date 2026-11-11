@@ -21,6 +21,9 @@ class MiguSource implements MusicSource {
   bool get supportsRecommendPlaylists => true;
 
   @override
+  bool get supportsSimilarSongs => false;
+
+  @override
   Future<List<MusicSong>> searchSongs(String keywords, {int limit = 30, int offset = 0}) =>
       _api.searchSongs(keywords, limit: limit, offset: offset);
 
@@ -34,10 +37,10 @@ class MiguSource implements MusicSource {
   Future<List<MusicPlaylist>> userPlaylists() => _api.userPlaylists();
 
   @override
-  Future<List<({String id, String name, String updateMeta})>> charts() async => const [
-    (id: MiguApi.rankHot, name: '', updateMeta: ''),
-    (id: MiguApi.rankNew, name: '', updateMeta: ''),
-    (id: MiguApi.rankOriginal, name: '', updateMeta: ''),
+  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async => const [
+    (id: MiguApi.rankHot, name: '', updateMeta: '', coverUrl: null),
+    (id: MiguApi.rankNew, name: '', updateMeta: '', coverUrl: null),
+    (id: MiguApi.rankOriginal, name: '', updateMeta: '', coverUrl: null),
   ];
 
   @override
@@ -48,6 +51,9 @@ class MiguSource implements MusicSource {
 
   @override
   Future<List<MusicSong>> dailySongs() async => const [];
+
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) async => const [];
 
   @override
   Future<List<MusicComment>> comments(String songId, {int limit = 20, int offset = 0}) async => const [];

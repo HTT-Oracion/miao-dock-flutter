@@ -20,7 +20,6 @@ import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/app_switch.dart';
-import '../../music/controller/music_providers.dart';
 import '../../../shared/widgets/log_box.dart';
 import '../../../shared/widgets/setting_row.dart';
 import '../../../shared/widgets/toast.dart';
@@ -316,21 +315,6 @@ class _GeneralSection extends ConsumerWidget {
           variant: AppButtonVariant.primary,
           onTap: null,
           clickable: false,
-        ),
-      ),
-      SettingRow(
-        label: l10n.settingMusicSource,
-        why: l10n.settingMusicSourceWhy,
-        def: ref.watch(musicSourceModeProvider) == MusicSourceMode.demo
-            ? l10n.settingMusicSourceDemo
-            : l10n.settingMusicSourceOnline,
-        control: AppSelect<MusicSourceMode>(
-          value: ref.watch(musicSourceModeProvider),
-          items: [
-            (MusicSourceMode.demo, l10n.settingMusicSourceDemo),
-            (MusicSourceMode.online, l10n.settingMusicSourceOnline),
-          ],
-          onChanged: (v) => ref.read(musicSourceModeProvider.notifier).set(v),
         ),
       ),
       // 侧栏展开开关：与侧栏自身的收起/展开按钮**同一个状态**（navCollapsedProvider）。

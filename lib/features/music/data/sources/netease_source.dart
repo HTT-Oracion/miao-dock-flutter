@@ -21,6 +21,9 @@ class NeteaseSource implements MusicSource {
   bool get supportsRecommendPlaylists => true;
 
   @override
+  bool get supportsSimilarSongs => true;
+
+  @override
   Future<List<MusicSong>> searchSongs(String keywords, {int limit = 30, int offset = 0}) =>
       _api.searchSongs(keywords, limit: limit, offset: offset);
 
@@ -35,9 +38,9 @@ class NeteaseSource implements MusicSource {
   Future<List<MusicPlaylist>> userPlaylists() => _api.userPlaylists();
 
   @override
-  Future<List<({String id, String name, String updateMeta})>> charts() async {
+  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async {
     final list = await _api.toplists();
-    return [for (final c in list) (id: c.id, name: c.name, updateMeta: c.updateMeta)];
+    return [for (final c in list) (id: c.id, name: c.name, updateMeta: c.updateMeta, coverUrl: c.cover)];
   }
 
   @override
@@ -48,6 +51,9 @@ class NeteaseSource implements MusicSource {
 
   @override
   Future<List<MusicSong>> dailySongs() => _api.newSongs(limit: 6);
+
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) => _api.similarSongs(seed.id, limit: limit);
 
   @override
   Future<List<MusicComment>> comments(String songId, {int limit = 20, int offset = 0}) =>

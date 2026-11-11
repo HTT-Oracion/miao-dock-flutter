@@ -273,9 +273,109 @@ class MusicMenuDivider extends StatelessWidget {
 // 歌曲行
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// 曲目表：推荐歌曲、歌单详情与本地曲库共用同一套表头、列宽和歌曲行。
+class MusicSongTable extends ConsumerWidget {
+  const MusicSongTable({
+    super.key,
+    required this.songs,
+    this.showHeader = true,
+    this.showAlbum = true,
+    this.scrollable = true,
+    this.controller,
+    this.fromLiked = false,
+    this.queueTitle,
+  });
+
+  final List<MusicSong> songs;
+  final bool showHeader;
+  final bool showAlbum;
+  final bool scrollable;
+  final ScrollController? controller;
+  final bool fromLiked;
+  final String? queueTitle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final player = ref.watch(playerProvider);
+    final mobile = context.isMobile;
+    final header = showHeader && !mobile ? MusicSongTableHeader(showAlbum: showAlbum) : null;
+    Widget row(int index) {
+      final song = songs[index];
+      return SongRow(
+        song: song,
+        index: index,
+        showAlbum: showAlbum,
+        current: player.current?.id == song.id,
+        liked: player.likedIds.contains(song.id),
+        onPlay: () {
+          ref.read(playerProvider.notifier).playAll(songs, start: index, fromLiked: fromLiked, title: queueTitle);
+          showAppToast(context, AppLocalizations.of(context).musicPlayingNow(song.title));
+        },
+      );
+    }
+
+    if (!scrollable) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [?header, for (var i = 0; i < songs.length; i++) row(i)],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ?header,
+        Expanded(
+          child: ListView.builder(
+            controller: controller,
+            padding: const EdgeInsets.only(bottom: 12),
+            itemCount: songs.length,
+            itemBuilder: (_, index) => row(index),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class MusicSongTableHeader extends StatelessWidget {
+  const MusicSongTableHeader({super.key, this.showAlbum = true});
+
+  final bool showAlbum;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    final style = TextStyle(fontSize: AppFont.px10_5, letterSpacing: 1.2, color: palette.mut);
+    return Container(
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: palette.line)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 22),
+          const SizedBox(width: 8),
+          Expanded(child: Text(l10n.musicColTitle, style: style)),
+          if (showAlbum) SizedBox(width: 150, child: Text(l10n.musicAlbumTag, style: style)),
+          if (showAlbum) const SizedBox(width: 12),
+          SizedBox(
+            width: 44,
+            child: Text(l10n.musicColDuration, textAlign: TextAlign.right, style: style),
+          ),
+          const SizedBox(width: 4),
+          const SizedBox(width: 24),
+        ],
+      ),
+    );
+  }
+}
+
 /// 歌曲行（设计稿 app.css `.row`，桌面 / 移动共用）：
 /// 高 34、hover 极淡底色；序号列 22px 占位 —— hover 变播放图标、当前行变 ♪，
-/// 文字不左右跳动（N23）；当前行橙色文字 + ♪；音质小徽标、时长右对齐等宽数字、来源平台色点。
+/// 文字不左右跳动（N23）；当前行橙色文字 + ♪；专辑定宽左对齐、时长右对齐等宽数字。
 ///
 /// 交互（N23/N36/M11/M15）：点行播放；桌面右键弹「播放 / 下一首播放」两项精简菜单
 /// （跟随鼠标坐标）；⋯ 按钮与长按弹完整菜单。默认动作已内置，
@@ -422,15 +522,17 @@ class _SongRowState extends ConsumerState<SongRow> {
                 (widget.onNext ?? _defaultNext)();
               },
             ),
-            const MusicMenuDivider(),
-            MusicMenuTile(
-              icon: LucideIcons.heart,
-              label: liked ? l10n.musicMenuUnlike : l10n.musicMenuLike,
-              onTap: () {
-                Navigator.of(ctx).pop();
-                (widget.onToggleLike ?? _defaultToggleLike)();
-              },
-            ),
+            if (widget.song.platform != MusicPlatform.local) ...[
+              const MusicMenuDivider(),
+              MusicMenuTile(
+                icon: LucideIcons.heart,
+                label: liked ? l10n.musicMenuUnlike : l10n.musicMenuLike,
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  (widget.onToggleLike ?? _defaultToggleLike)();
+                },
+              ),
+            ],
             MusicMenuTile(
               icon: LucideIcons.listPlus,
               label: l10n.musicMenuAddTo,
@@ -576,8 +678,8 @@ class _SongRowState extends ConsumerState<SongRow> {
                 ),
               ),
               if (widget.showAlbum && !mobile)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 150),
+                SizedBox(
+                  width: 150,
                   child: Text(
                     song.album,
                     maxLines: 1,
@@ -586,37 +688,6 @@ class _SongRowState extends ConsumerState<SongRow> {
                   ),
                 ),
               if (widget.showAlbum && !mobile) const SizedBox(width: 12),
-              // 音质小徽标（数据自带 qualityLabel，如「无损 / 320K」）。
-              if (song.qualityLabel != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: palette.accSoft,
-                    border: Border.all(color: palette.acc.withValues(alpha: 0.35)),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    song.qualityLabel!,
-                    style: TextStyle(
-                      fontSize: AppFont.px9_5,
-                      fontWeight: FontWeight.w700,
-                      color: palette.accInk,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-              ],
-              // 来源平台小色点（品牌色属内容，不随主题 —— N40 口径）。
-              Container(
-                width: 6,
-                height: 6,
-                margin: const EdgeInsets.only(right: 4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: platformBrands[song.platform]?.color ?? palette.mut,
-                ),
-              ),
               SizedBox(
                 width: 44,
                 child: Text(

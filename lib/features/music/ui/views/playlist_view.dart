@@ -196,21 +196,7 @@ class _LikedCardState extends ConsumerState<_LikedCard> {
     final l10n = AppLocalizations.of(context);
     final mobile = context.isMobile;
     final p = widget.playlist;
-    // 红心封面是**内容色**（设计稿 #C2553F → #7A2C26，约 hue 11），不随主题变化 ——
-    // 与 SeedGradient 同口径用色相生成，而不是借主题 bad（浅色档会偏灰）。
-    // 红心封面是**内容色**（设计稿 `.lk-cover`：linear-gradient(140deg,#C2553F,#7A2C26)
-    // + 内描边），与封面渐变同属内容、不随主题变化；不用 SeedGradient 的固定
-    // 明度档，否则深色下会偏成土黄。
-    final cover = Container(
-      width: mobile ? 52 : 60,
-      height: mobile ? 52 : 60,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(mobile ? 11 : 14),
-        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: likedCoverColors),
-        boxShadow: [BoxShadow(color: Colors.white.withValues(alpha: 0.16), spreadRadius: -1)],
-      ),
-      child: Icon(LucideIcons.heart, size: mobile ? 26 : 30, color: palette.coverInk),
-    );
+    final cover = SeedCover(seed: p.name, imageUrl: p.coverUrl, size: mobile ? 52 : 60, radius: mobile ? 11 : 14);
     return Semantics(
       button: true,
       label: l10n.musicPlLibraryAriaLiked,
@@ -244,50 +230,15 @@ class _LikedCardState extends ConsumerState<_LikedCard> {
                 cover,
                 SizedBox(width: mobile ? 12 : 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.musicPlLibraryLikedTitle,
-                        style: TextStyle(
-                          fontSize: mobile ? AppFont.px14 : AppFont.px17,
-                          fontWeight: FontWeight.w800,
-                          color: palette.ink,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.musicPlLibraryLikedDesc(p.trackCount),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: mobile ? AppFont.px10_5 : AppFont.px11_5, color: palette.mut),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        height: mobile ? 18 : 20,
-                        padding: EdgeInsets.symmetric(horizontal: mobile ? 7 : 8),
-                        decoration: BoxDecoration(
-                          color: palette.accSoft,
-                          borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(LucideIcons.sparkles, size: mobile ? 9 : 10, color: palette.accInk),
-                            const SizedBox(width: 3),
-                            Text(
-                              l10n.musicPlLibraryLikedTag,
-                              style: TextStyle(
-                                fontSize: mobile ? AppFont.px9_5 : AppFont.px10,
-                                fontWeight: FontWeight.w600,
-                                color: palette.accInk,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    l10n.musicPlLibraryLikedSummary(p.trackCount),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: mobile ? AppFont.px14 : AppFont.px17,
+                      fontWeight: FontWeight.w800,
+                      color: palette.ink,
+                    ),
                   ),
                 ),
                 Icon(LucideIcons.chevronRight, size: mobile ? 16 : 18, color: palette.mut),
@@ -477,7 +428,7 @@ class _PlaylistCover extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          SeedCover(seed: playlist.name, size: size, radius: radius),
+          SeedCover(seed: playlist.name, imageUrl: playlist.coverUrl, size: size, radius: radius),
           if (collected)
             Positioned(
               right: -3,

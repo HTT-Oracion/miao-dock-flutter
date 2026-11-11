@@ -51,11 +51,13 @@ class SidebarSourceGroup extends ConsumerWidget {
   }
 
   void _onTap(BuildContext context, WidgetRef ref, MusicAccountState account, MusicPlatform p, AppLocalizations l10n) {
-    if (account.cur == p) return; // 已是当前源 → 不动（N04）
+    // 未登录优先：即使 p 已是当前源（典型：网易云未登录）也必须能拉登录，
+    // 否则用户在「当前源」上点一次毫无反应，以为入口坏了。
     if (!account.isLogged(p)) {
       ref.read(musicUiProvider.notifier).openLogin(p);
       return;
     }
+    if (account.cur == p) return; // 已登录且已是当前源 → 不动（N04）
     ref.read(musicAccountProvider.notifier).switchPlatform(p);
     showAppToast(context, l10n.musicSwitchSourceToast(platformBrands[p]!.label), tone: ToastTone.good);
   }

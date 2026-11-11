@@ -1,48 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/demo_music_repository.dart';
 import '../data/music_repository.dart';
 import '../data/platform_music_repository.dart';
 import '../domain/music_models.dart';
 import 'music_auth.dart';
 import 'music_session.dart';
 
-/// 数据源模式：演示数据（离线可跑，覆盖设计稿全部状态）/ 真实平台接口。
-///
-/// 默认演示：四平台接口是**第三方站点**，无网络或接口风控时整页都不可用；
-/// 演示模式保证 UI 与状态自测不依赖外网。切到线上后按当前音源建仓库。
-enum MusicSourceMode { demo, online }
-
-class MusicSourceModeNotifier extends Notifier<MusicSourceMode> {
-  @override
-  MusicSourceMode build() => MusicSourceMode.demo;
-
-  void set(MusicSourceMode mode) => state = mode;
-}
-
-final musicSourceModeProvider = NotifierProvider<MusicSourceModeNotifier, MusicSourceMode>(MusicSourceModeNotifier.new);
-
-/// 仓库装配：演示模式 → [DemoMusicRepository]；线上模式 → 按当前音源建
-/// [PlatformMusicRepository]（切音源即换仓库，队列不清空，见 N04 边界）。
+/// 仓库装配：始终按当前音源连接真实平台接口；切音源即换仓库，队列不清空。
 final musicRepositoryProvider = Provider<MusicRepository>((ref) {
-  if (ref.watch(musicSourceModeProvider) == MusicSourceMode.demo) return DemoMusicRepository();
   final account = ref.watch(musicAccountProvider);
   final cookie = ref.watch(musicAuthProvider).cookieOf(account.cur) ?? '';
   return PlatformMusicRepository(platform: account.cur, cookie: cookie);
 });
 
-/// 演示仓库的强类型别名（供需要 Demo 特有动作的调用方窄化）。
-///
-/// 线上模式下没有演示数据可改（导入 / 清空是本地列表动作），按需回落一个
-/// 独立演示实例，避免调用点因类型转换崩溃。
-final demoMusicRepositoryProvider = Provider<DemoMusicRepository>((ref) {
-  final repo = ref.watch(musicRepositoryProvider);
-  return repo is DemoMusicRepository ? repo : DemoMusicRepository();
-});
-
-/// 红心种子（播放器初始 likedIds；演示口径：s1/s5/s7/s10 已红心）。
-final likedSeedsProvider = Provider<Set<String>>((ref) => const {'s1', 's5', 's7', 's10'});
+/// 收藏集合由真实账号同步前保持为空，不预置演示歌曲。
+final likedSeedsProvider = Provider<Set<String>>((ref) => const {});
 
 // ── 发现页各分区（加载 / 失败 / 空三态，AsyncValue 直达 UI）──────────────────
 
@@ -90,21 +63,34 @@ final sourceDetailProvider = FutureProvider.autoDispose
 
 @immutable
 class MusicSearchState {
-  const MusicSearchState({this.query = '', this.songs = const [], this.playlists = const [], this.searched = false});
+  const MusicSearchState({
+    this.query = '',
+    this.songs = const [],
+    this.playlists = const [],
+    this.recent = const [],
+    this.searched = false,
+  });
   final String query;
   final List<MusicSong> songs;
   final List<MusicPlaylist> playlists;
+  final List<String> recent;
   final bool searched;
 
   bool get hasResults => songs.isNotEmpty || playlists.isNotEmpty;
 
-  MusicSearchState copyWith({String? query, List<MusicSong>? songs, List<MusicPlaylist>? playlists, bool? searched}) =>
-      MusicSearchState(
-        query: query ?? this.query,
-        songs: songs ?? this.songs,
-        playlists: playlists ?? this.playlists,
-        searched: searched ?? this.searched,
-      );
+  MusicSearchState copyWith({
+    String? query,
+    List<MusicSong>? songs,
+    List<MusicPlaylist>? playlists,
+    List<String>? recent,
+    bool? searched,
+  }) => MusicSearchState(
+    query: query ?? this.query,
+    songs: songs ?? this.songs,
+    playlists: playlists ?? this.playlists,
+    recent: recent ?? this.recent,
+    searched: searched ?? this.searched,
+  );
 }
 
 class SearchNotifier extends Notifier<MusicSearchState> {
@@ -112,8 +98,12 @@ class SearchNotifier extends Notifier<MusicSearchState> {
   MusicSearchState build() => const MusicSearchState();
 
   Future<void> submit(String keyword) async {
-    state = state.copyWith(query: keyword, searched: true);
-    if (keyword.trim().isEmpty) {
+    final value = keyword.trim();
+    final recent = value.isEmpty
+        ? state.recent
+        : [value, ...state.recent.where((item) => item != value)].take(8).toList();
+    state = state.copyWith(query: keyword, recent: recent, searched: true);
+    if (value.isEmpty) {
       state = state.copyWith(songs: const [], playlists: const []);
       return;
     }
@@ -135,33 +125,33 @@ final musicSearchProvider = NotifierProvider<SearchNotifier, MusicSearchState>(S
 
 class _LocalNotifier extends AsyncNotifier<List<MusicSong>> {
   @override
-  Future<List<MusicSong>> build() async => ref.watch(musicRepositoryProvider).localTracks();
-
-  Future<void> _patch() async {
-    try {
-      state = AsyncData(await ref.read(demoMusicRepositoryProvider).localTracks());
-    } on Object catch (e, st) {
-      state = AsyncError(e, st);
-    }
-  }
+  Future<List<MusicSong>> build() async => const [];
 
   Future<void> importNames(List<String> names) async {
-    ref.read(demoMusicRepositoryProvider).addLocalTracks(names);
-    _patch();
+    final current = state.value ?? const <MusicSong>[];
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final additions = <MusicSong>[
+      for (final (index, raw) in names.indexed)
+        MusicSong(
+          id: 'local-$stamp-$index',
+          title: raw.replaceFirst(RegExp(r'\.[^.]+$'), ''),
+          artist: '',
+          album: '',
+          duration: Duration.zero,
+          platform: MusicPlatform.local,
+        ),
+    ];
+    state = AsyncData([...current, ...additions]);
   }
 
   /// 清空本地列表（不删文件，N25）：返回快照供撤销。
   Future<List<MusicSong>> clearKeepSnapshot() async {
-    final snapshot = List<MusicSong>.of(await ref.read(demoMusicRepositoryProvider).localTracks());
-    ref.read(demoMusicRepositoryProvider).clearLocal();
-    _patch();
+    final snapshot = List<MusicSong>.of(state.value ?? const []);
+    state = const AsyncData([]);
     return snapshot;
   }
 
-  void restore(List<MusicSong> snapshot) {
-    ref.read(demoMusicRepositoryProvider).addLocalTracks([for (final s in snapshot) s.title]);
-    _patch();
-  }
+  void restore(List<MusicSong> snapshot) => state = AsyncData(snapshot);
 }
 
 final musicLocalProvider = AsyncNotifierProvider<_LocalNotifier, List<MusicSong>>(_LocalNotifier.new);

@@ -767,16 +767,17 @@ class _AccountBody extends ConsumerWidget {
 
     void tapPlatform(MusicPlatform p) {
       final notifier = ref.read(musicUiProvider.notifier);
-      if (p == acc.cur) return;
-      if (acc.isLogged(p)) {
-        // N04：已登录 → 直接切为当前源并播报；已是当前源 → 不动。
-        ref.read(musicAccountProvider.notifier).switchPlatform(p);
-        showAppToast(context, l10n.musicSwitchSourceToast(platformLabel(l10n, p)));
-        notifier.setAccountSheet(false);
-      } else {
+      // 未登录优先：当前源未登录（如网易云）点自己也要能拉起登录。
+      if (!acc.isLogged(p)) {
         notifier.setAccountSheet(false);
         notifier.openLogin(p);
+        return;
       }
+      if (p == acc.cur) return;
+      // 到这里一定是「已登录且不是当前源」：切换并播报。
+      ref.read(musicAccountProvider.notifier).switchPlatform(p);
+      showAppToast(context, l10n.musicSwitchSourceToast(platformLabel(l10n, p)));
+      notifier.setAccountSheet(false);
     }
 
     return Column(

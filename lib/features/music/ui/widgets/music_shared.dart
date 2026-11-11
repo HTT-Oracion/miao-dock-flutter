@@ -177,10 +177,10 @@ class MusicNoticeBridge extends ConsumerWidget {
     ref.listen(playerNoticeProvider, (prev, next) {
       if (next == null || (prev != null && next.seq <= prev.seq)) return;
       switch (next.kind) {
-        case PlayerNoticeKind.heartbeatExit:
-          showAppToast(context, l10n.musicHeartbeatExit, tone: ToastTone.warn);
         case PlayerNoticeKind.queueEmptyRemoveForbidden:
           showAppToast(context, l10n.musicQueueRemoveForbidden, tone: ToastTone.warn);
+        case PlayerNoticeKind.playbackUnavailable:
+          showAppToast(context, l10n.musicPlaybackUnavailable, tone: ToastTone.warn);
       }
     });
     return child;
@@ -238,6 +238,28 @@ String? qualityLimit(AppLocalizations l10n, QualityTier q) => switch (q.svipRequ
   false => l10n.musicQualityVip,
   true => l10n.musicQualitySvip,
 };
+
+/// 播放次数按当前语言格式化；中文使用「万 / 亿」并保留至多一位小数。
+String formatMusicPlayCount(AppLocalizations l10n, int count) {
+  if (count < 10000) return _groupThousands(count);
+  if (count < 100000000) return l10n.musicPlayCountWan(_trimOneDecimal(count / 10000));
+  return l10n.musicPlayCountYi(_trimOneDecimal(count / 100000000));
+}
+
+String _trimOneDecimal(double value) {
+  final text = value.toStringAsFixed(1);
+  return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+}
+
+String _groupThousands(int value) {
+  final text = '$value';
+  final out = StringBuffer();
+  for (var i = 0; i < text.length; i++) {
+    if (i > 0 && (text.length - i) % 3 == 0) out.write(',');
+    out.write(text[i]);
+  }
+  return out.toString();
+}
 
 /// 平台显示名（侧栏音源组 / 账号菜单 / 行来源共用）。
 String platformLabel(AppLocalizations l10n, MusicPlatform p) =>

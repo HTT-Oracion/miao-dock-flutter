@@ -269,7 +269,8 @@ class _RecBarState extends State<_RecBar> {
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: Stack(
-        clipBehavior: Clip.none,
+        // 箭头现在是内嵌定位，不需要出血；Clip.none 反而会让悬停阴影溢到相邻区块。
+        clipBehavior: Clip.hardEdge,
         children: [
           // 只有 9 张定宽卡：用 Row + 单一横向滚动容器（非懒加载，全部可命中）。
           SingleChildScrollView(
@@ -291,14 +292,24 @@ class _RecBarState extends State<_RecBar> {
           // 箭头只在 hover 时出现，不常驻抢视线（N37）。
           if (_hover) ...[
             Positioned(
-              left: -14,
-              top: _height / 2 - 15,
-              child: _NavArrow(icon: LucideIcons.chevronLeft, onTap: () => _scroll(-1)),
+              // 箭头完全落在推荐栏内部（不再用负偏移出血）：外层滚动容器会裁剪
+              // 超出边界的子件，负偏移时左右各被切掉一半（用户实测「图标被截断」）。
+              left: 8,
+              top: _height / 2 - 16,
+              child: _NavArrow(
+                key: const ValueKey('music-rec-prev'),
+                icon: LucideIcons.chevronLeft,
+                onTap: () => _scroll(-1),
+              ),
             ),
             Positioned(
-              right: -14,
-              top: _height / 2 - 15,
-              child: _NavArrow(icon: LucideIcons.chevronRight, onTap: () => _scroll(1)),
+              right: 8,
+              top: _height / 2 - 16,
+              child: _NavArrow(
+                key: const ValueKey('music-rec-next'),
+                icon: LucideIcons.chevronRight,
+                onTap: () => _scroll(1),
+              ),
             ),
           ],
         ],
@@ -308,7 +319,7 @@ class _RecBarState extends State<_RecBar> {
 }
 
 class _NavArrow extends StatelessWidget {
-  const _NavArrow({required this.icon, required this.onTap});
+  const _NavArrow({super.key, required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback onTap;
@@ -316,14 +327,25 @@ class _NavArrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return Material(
-      color: palette.panel,
-      shape: CircleBorder(side: BorderSide(color: palette.line2)),
-      elevation: 2,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(width: 30, height: 30, child: Icon(icon, size: 16, color: palette.ink2)),
+    // 32×32 圆形按钮 + 投影：Material 的 elevation 在圆形 shape 下会裁切阴影，
+    // 这里用 Container + BoxShadow，保证图标视觉不被边框吃掉。
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: palette.panel,
+            shape: BoxShape.circle,
+            border: Border.all(color: palette.line2),
+            boxShadow: [
+              BoxShadow(color: palette.shadow.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3)),
+            ],
+          ),
+          child: Icon(icon, size: 18, color: palette.ink2),
+        ),
       ),
     );
   }
@@ -356,9 +378,8 @@ class _RecCard extends ConsumerWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(radius),
           onTap: () async {
-            // 演示卡直接给曲目 id；线上卡只带歌单 id，需要先拉详情（失败如实提示）。
-            var songs = ref.read(demoMusicRepositoryProvider).songsByIds(card.songIds);
-            if (songs.isEmpty && card.playlistId != null) {
+            var songs = <MusicSong>[];
+            if (card.playlistId != null) {
               try {
                 final detail = await ref.read(
                   sourceDetailProvider((MusicSourceKind.playlist, card.playlistId!)).future,
@@ -547,8 +568,12 @@ class MusicPlaylistTile extends ConsumerWidget {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final hoverPlay = onPlayAll != null;
+    // 播放量只在接口给出**数值**时显示，并按当前语言格式化（万 / 亿）。
+    // 接口没给（或只给了平台自带的 "1.2w" 串）就不画角标 —— 不显示原始长数字，
+    // 也不把英文缩略串直接贴到界面上。
+    final playCount = playlist.playCountValue == null ? null : formatMusicPlayCount(l10n, playlist.playCountValue!);
     return Semantics(
-      label: l10n.musicPlaysAria(playlist.playCount ?? '${playlist.trackCount}'),
+      label: playCount == null ? playlist.name : l10n.musicPlaysAria(playCount),
       button: true,
       child: Material(
         color: Colors.transparent,
@@ -563,36 +588,41 @@ class MusicPlaylistTile extends ConsumerWidget {
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: SeedCover(seed: playlist.name, radius: AppMetrics.radiusCardLg),
-                    ),
-                    // 播放量角标（左上）。
-                    Positioned(
-                      left: 8,
-                      top: 8,
-                      child: Container(
-                        height: 19,
-                        padding: const EdgeInsets.symmetric(horizontal: 7),
-                        decoration: BoxDecoration(
-                          color: palette.coverScrim,
-                          borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(LucideIcons.headphones, size: 10, color: palette.coverInk),
-                            const SizedBox(width: 3),
-                            Text(
-                              playlist.playCount ?? '${playlist.trackCount}',
-                              style: TextStyle(
-                                fontSize: AppFont.px10,
-                                fontWeight: FontWeight.w600,
-                                color: palette.coverInk,
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: SeedCover(
+                        seed: playlist.name,
+                        imageUrl: playlist.coverUrl,
+                        radius: AppMetrics.radiusCardLg,
                       ),
                     ),
+                    // 播放量角标（左上）；没有数值时不渲染。
+                    if (playCount != null)
+                      Positioned(
+                        left: 8,
+                        top: 8,
+                        child: Container(
+                          height: 19,
+                          padding: const EdgeInsets.symmetric(horizontal: 7),
+                          decoration: BoxDecoration(
+                            color: palette.coverScrim,
+                            borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(LucideIcons.headphones, size: 10, color: palette.coverInk),
+                              const SizedBox(width: 3),
+                              Text(
+                                playCount,
+                                style: TextStyle(
+                                  fontSize: AppFont.px10,
+                                  fontWeight: FontWeight.w600,
+                                  color: palette.coverInk,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     // 红心歌单徽标（设计稿 `.t-badge`：我的收藏，仅 p0）。
                     if (playlist.special)
                       Positioned(
@@ -953,7 +983,9 @@ class _ChartCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Positioned.fill(child: SeedCover(seed: chart.seed, radius: 8)),
+                          Positioned.fill(
+                            child: SeedCover(seed: chart.seed, imageUrl: chart.coverUrl, radius: 8),
+                          ),
                         ],
                       ),
                     ),
@@ -1052,14 +1084,11 @@ class _DailySection extends ConsumerWidget {
     final data = daily.value;
     if (data == null) return const _DailySkeleton();
     if (data.isEmpty) return const SizedBox(height: 8);
-    final player = ref.watch(playerProvider);
-    final liked = player.likedIds;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final (i, s) in data.indexed)
-          SongRow(song: s, index: i, current: player.current?.id == s.id, liked: liked.contains(s.id)),
-      ],
+    return MusicSongTable(
+      songs: data,
+      scrollable: false,
+      showAlbum: true,
+      queueTitle: AppLocalizations.of(context).musicSecDaily,
     );
   }
 }

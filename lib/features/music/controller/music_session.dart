@@ -1,13 +1,14 @@
+import 'dart:ui' show Rect;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/music_models.dart';
+import 'music_auth.dart';
 
 /// 账号与音源会话（设计稿 N04/N05/M10）。
 ///
-/// 初始口径与设计稿一致：网易云为当前源且已登录（云中漫步信箱），QQ 预置已登录，
-/// 酷狗 / 咪咕未登录。登录弹窗的「模拟成功」只翻本状态；真实 Cookie 流程接
-/// 真实音源时替换动作实现（D-201）。
+/// 当前音源与真实 Cookie 登录状态。
 @immutable
 class MusicAccountState {
   const MusicAccountState({required this.cur, required this.logged, required this.nick, required this.extra});
@@ -21,9 +22,9 @@ class MusicAccountState {
 
   static const initial = MusicAccountState(
     cur: MusicPlatform.netease,
-    logged: true,
-    nick: '云中漫步信箱',
-    extra: {MusicPlatform.qq: true, MusicPlatform.kugou: false, MusicPlatform.migu: false},
+    logged: false,
+    nick: null,
+    extra: {MusicPlatform.qq: false, MusicPlatform.kugou: false, MusicPlatform.migu: false},
   );
 
   /// 平台徽标三态（core.js platBadge）：当前源 / 已登录 / 未登录。
@@ -39,18 +40,38 @@ class MusicAccountState {
 }
 
 class MusicAccountNotifier extends Notifier<MusicAccountState> {
+  MusicPlatform _current = MusicPlatform.netease;
+  String? _nick;
+
   @override
-  MusicAccountState build() => MusicAccountState.initial;
+  MusicAccountState build() {
+    final auth = ref.watch(musicAuthProvider);
+    final logged = (auth.cookieOf(_current) ?? '').isNotEmpty;
+    return MusicAccountState(
+      cur: _current,
+      logged: logged,
+      nick: logged ? _nick : null,
+      extra: {
+        for (final platform in MusicPlatform.values)
+          if (platform != MusicPlatform.local && platform != _current)
+            platform: (auth.cookieOf(platform) ?? '').isNotEmpty,
+      },
+    );
+  }
 
   /// 切音源：未登录 → 由 UI 拉起登录弹窗；已登录 → 直接切；已是当前源 → 不动（N04）。
   void switchPlatform(MusicPlatform p) {
     if (p == state.cur) return;
-    state = state.copyWith(cur: p);
+    final wasLogged = state.isLogged(p);
+    _current = p;
+    _nick = null;
+    state = MusicAccountState(cur: p, logged: wasLogged, nick: null, extra: {...state.extra, state.cur: state.logged});
   }
 
-  /// 登录成功（弹窗模拟成功 / 未来真实回读 Cookie）。
+  /// 登录成功（真实平台状态回读）。
   void login(MusicPlatform p, String nick) {
     if (p == state.cur) {
+      _nick = nick;
       state = state.copyWith(logged: true, nick: nick);
       return;
     }
@@ -58,7 +79,12 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
   }
 
   /// 退出当前源（N05）；退出后 chip 变「未登录」。
-  void logout() => state = state.copyWith(logged: false, nick: null);
+  Future<void> logout() async {
+    final platform = state.cur;
+    _nick = null;
+    state = MusicAccountState(cur: state.cur, logged: false, nick: null, extra: state.extra);
+    await ref.read(musicAuthProvider.notifier).clear(platform);
+  }
 }
 
 final musicAccountProvider = NotifierProvider<MusicAccountNotifier, MusicAccountState>(MusicAccountNotifier.new);
@@ -203,3 +229,18 @@ class MusicUiNotifier extends Notifier<MusicUiState> {
 }
 
 final musicUiProvider = NotifierProvider<MusicUiNotifier, MusicUiState>(MusicUiNotifier.new);
+
+/// 账号菜单锚点（全局坐标，右下角）。
+///
+/// 为什么不用 `LayerLink` + `CompositedTransformFollower`：工具条的动作区在
+/// `DragToMoveArea` 里，跟随者的坐标系与锚点不在同一合成层时会被落在左上角
+/// （实测位置跑偏）。这里在点击时把胶囊的全局矩形记下来，菜单用 `Positioned`
+/// 精确贴在胶囊下方，坐标可控、也方便夹在窗口内。
+class MusicAccountAnchorNotifier extends Notifier<Rect?> {
+  @override
+  Rect? build() => null;
+
+  void set(Rect? rect) => state = rect;
+}
+
+final musicAccountAnchorProvider = NotifierProvider<MusicAccountAnchorNotifier, Rect?>(MusicAccountAnchorNotifier.new);

@@ -2,8 +2,7 @@ import '../domain/music_models.dart';
 
 /// 音乐数据仓库抽象（D-201）。
 ///
-/// UI / controller 只面向本接口；当前实现是 [DemoMusicRepository]（A 级 Fake，
-/// 对齐设计稿演示数据集），真实四平台接口接入时替换实现，模型与 UI 不动。
+/// UI / controller 只面向本接口；运行时实现连接当前选择的真实音乐平台。
 abstract interface class MusicRepository {
   /// 发现页推荐栏（9 张竖卡）。
   Future<List<MusicRecCard>> recCards();
@@ -29,7 +28,10 @@ abstract interface class MusicRepository {
   /// 歌词异步取（真实音源必须走这里，结果回填 [lyricsFor] 的缓存）。
   Future<SongLyrics> loadLyrics(MusicSong song);
 
-  /// 评论（播放器「评论」页签，演示数据，N20）。
+  /// 当前音质下的真实播放地址；null 表示平台明确不可播放。
+  Future<String?> resolvePlayUrl(MusicSong song, QualityTier quality);
+
+  /// 评论（播放器「评论」页签，N20）。
   Future<List<MusicComment>> comments(String songId);
 
   /// 播放历史（应用启动时灌入内存态；新增条目由播放器追加）。
@@ -40,6 +42,9 @@ abstract interface class MusicRepository {
 
   /// 「我喜欢的音乐」歌单曲目（心动模式合法队列来源）。
   Future<MusicPlaylist> likedPlaylist();
+
+  /// 以当前歌曲为种子生成心动模式队列；仅网易云有真实接口。
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20});
 
   /// 我的歌单库（设计稿 N41/N43）：系统歌单（`special`）+ 自己创建 + 收藏的歌单。
   ///

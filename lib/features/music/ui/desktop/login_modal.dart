@@ -4,24 +4,18 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../shared/widgets/app_input.dart';
-import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../../controller/music_login_controller.dart';
-import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
 import '../widgets/music_shared.dart';
 import '../widgets/platform_logo.dart';
 
-/// 登录弹窗（N04/M10）：二维码占位 + 状态轮换 + 倒计时 + 刷新 + 手机号页签模拟登录。
-///
-/// 演示口径：二维码 5 秒后自动「已扫码」、再 4 秒「登录成功」；
-/// 昵称统一用 ASCII 演示名 'MiaoDock'（controller 的 initial 演示昵称为中文，
-/// 由 session 层持有；本弹窗不做中文硬编码，差异记入报告）。
+/// 登录弹窗（N04/M10）：真实二维码状态 + 倒计时 + 刷新。
 class LoginModal extends ConsumerStatefulWidget {
   const LoginModal({super.key});
 
@@ -35,29 +29,28 @@ class _LoginModalState extends ConsumerState<LoginModal> {
   /// 弹窗内选中的平台（仅弹窗局部态；确定后才写入 session）。
   late MusicPlatform _platform = ref.read(musicUiProvider).loginPlatform;
 
-  bool _phoneTab = false;
   _QrPhase _phase = _QrPhase.waiting;
   int _cd = 272;
   Timer? _ticker;
-  final _phoneCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _startTicker();
+    // 首帧之后再启动登录流程：initState 里同步改 provider 会踩 Riverpod 的
+    // 「modify during build」断言，二维码就永远停在加载中。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _startTicker();
+    });
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
-    _phoneCtrl.dispose();
     super.dispose();
   }
 
-  /// 线上模式的真实扫码：交给 [musicLoginProvider]，本弹窗只读状态。
-  ///
-  /// 演示模式仍是本地轮换（等待 → 已扫码 → 成功），不触网。
-  bool get _online => _platform == MusicPlatform.netease && ref.read(musicSourceModeProvider) == MusicSourceMode.online;
+  /// 网易云扫码交给真实登录控制器；其余平台不伪造扫码成功。
+  bool get _online => _platform == MusicPlatform.netease;
 
   void _startTicker() {
     _ticker?.cancel();
@@ -68,35 +61,26 @@ class _LoginModalState extends ConsumerState<LoginModal> {
       return;
     }
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _cd = math.max(_cd - 1, 0);
-        // 演示轮换：等待 → 5s → 已扫码 → 再 4s → 成功。
-        if (_phase == _QrPhase.waiting && 272 - _cd >= 5) {
-          _phase = _QrPhase.scanned;
-        } else if (_phase == _QrPhase.scanned && 272 - _cd >= 9) {
-          _finishLogin();
-        }
-      });
+      if (mounted) setState(() => _cd = math.max(_cd - 1, 0));
     });
   }
 
-  void _finishLogin() {
-    _ticker?.cancel();
-    final l10n = AppLocalizations.of(context);
-    final account = ref.read(musicAccountProvider.notifier);
-    account.login(_platform, 'MiaoDock');
-    if (ref.read(musicAccountProvider).cur != _platform) {
-      account.switchPlatform(_platform);
+  void _selectPlatform(MusicPlatform platform) {
+    if (_platform == platform) {
+      _startTicker();
+      return;
     }
-    ref.read(musicUiProvider.notifier).closeLogin();
-    showAppToast(context, l10n.musicLoginSuccessToast, tone: ToastTone.good);
+    setState(() => _platform = platform);
+    // 切换平台：先把上一个平台的扫码状态清掉，再启动新的。
+    ref.read(musicLoginProvider.notifier).reset();
+    _startTicker();
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
+    final qrState = ref.watch(musicLoginProvider);
 
     // 线上扫码成功：关弹窗 + 轻提示（状态由 controller 写，UI 只响应一次）。
     ref.listen(musicLoginProvider.select((s) => s.phase), (prev, next) {
@@ -135,59 +119,46 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                     children: [
                       for (final p in MusicPlatform.values.where((p) => p != MusicPlatform.local)) ...[
                         Expanded(
-                          child: _PlatformPick(
-                            platform: p,
-                            selected: p == _platform,
-                            onTap: () => setState(() => _platform = p),
-                          ),
+                          child: _PlatformPick(platform: p, selected: p == _platform, onTap: () => _selectPlatform(p)),
                         ),
                         if (p != MusicPlatform.migu) const SizedBox(width: 6),
                       ],
                     ],
                   ),
                   const SizedBox(height: 14),
-                  _Segment(
-                    labels: [l10n.musicLoginTitle, l10n.musicLoginPhone],
-                    on: _phoneTab ? 1 : 0,
-                    onTap: (i) => setState(() => _phoneTab = i == 1),
-                  ),
-                  const SizedBox(height: 14),
-                  if (!_phoneTab) ..._qrBody(context, palette, l10n) else ..._phoneBody(palette, l10n),
-                  // 倒计时 + 刷新（仅二维码页签）。
-                  if (!_phoneTab) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          l10n.musicLoginCountdown(_cd),
-                          style: TextStyle(fontSize: AppFont.px11, color: palette.mut),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => setState(_startTicker),
-                          child: Tooltip(
-                            message: l10n.musicLoginRefreshAria,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(LucideIcons.refreshCw, size: 12, color: palette.accInk),
-                                const SizedBox(width: 4),
-                                Text(
-                                  l10n.musicLoginRefreshAria,
-                                  style: TextStyle(
-                                    fontSize: AppFont.px10_5,
-                                    fontWeight: FontWeight.w600,
-                                    color: palette.accInk,
-                                  ),
+                  ..._qrBody(context, palette, l10n),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        l10n.musicLoginCountdown(_online ? qrState.secondsLeft : _cd),
+                        style: TextStyle(fontSize: AppFont.px11, color: palette.mut),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => setState(_startTicker),
+                        child: Tooltip(
+                          message: l10n.musicLoginRefreshAria,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(LucideIcons.refreshCw, size: 12, color: palette.accInk),
+                              const SizedBox(width: 4),
+                              Text(
+                                l10n.musicLoginRefreshAria,
+                                style: TextStyle(
+                                  fontSize: AppFont.px10_5,
+                                  fontWeight: FontWeight.w600,
+                                  color: palette.accInk,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -200,6 +171,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
   List<Widget> _qrBody(BuildContext context, AppPalette palette, AppLocalizations l10n) {
     final brand = platformBrands[_platform];
     final qr = _online ? ref.watch(musicLoginProvider) : null;
+    final gatewayUrl = qr?.gatewayUrl;
     final phase = qr == null
         ? _phase
         : switch (qr.phase) {
@@ -223,16 +195,34 @@ class _LoginModalState extends ConsumerState<LoginModal> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: SeedCover(
-                  seed: brand?.label ?? 'qr',
-                  size: 158,
-                  radius: AppMetrics.radiusCard,
-                  child: Icon(LucideIcons.qrCode, size: 56, color: Colors.white.withValues(alpha: 0.9)),
-                ),
+                child: gatewayUrl == null
+                    ? SeedCover(
+                        seed: brand?.label ?? 'qr',
+                        size: 158,
+                        radius: AppMetrics.radiusCard,
+                        child: Icon(LucideIcons.qrCode, size: 56, color: palette.coverInk),
+                      )
+                    : DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: palette.coverInk,
+                          borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: QrImageView(
+                            key: const ValueKey('music-login-qr'),
+                            data: gatewayUrl,
+                            version: QrVersions.auto,
+                            eyeStyle: QrEyeStyle(color: palette.vinylBase),
+                            dataModuleStyle: QrDataModuleStyle(color: palette.vinylBase),
+                          ),
+                        ),
+                      ),
               ),
               // 四角框（设计稿 qr 边角）。
               const _Corners(),
-              if (_cd <= 0) Positioned.fill(child: ColoredBox(color: Colors.black.withValues(alpha: 0.45))),
+              if ((qr?.secondsLeft ?? _cd) <= 0)
+                Positioned.fill(child: ColoredBox(color: palette.shadow.withValues(alpha: 0.45))),
             ],
           ),
         ),
@@ -248,38 +238,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
       Center(
         child: Text(
           statusText,
-          style: TextStyle(fontSize: AppFont.px11, color: _phase == _QrPhase.waiting ? palette.mut : palette.accInk),
-        ),
-      ),
-      const SizedBox(height: 12),
-      Center(
-        child: AppButton(
-          label: l10n.musicLoginSimulate,
-          icon: LucideIcons.check,
-          variant: AppButtonVariant.primary,
-          height: 32,
-          onTap: _finishLogin,
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> _phoneBody(AppPalette palette, AppLocalizations l10n) {
-    return [
-      AppInput(
-        hint: l10n.musicLoginPhonePlaceholder,
-        controller: _phoneCtrl,
-        keyboardType: TextInputType.phone,
-        fillColor: palette.card,
-      ),
-      const SizedBox(height: 12),
-      Center(
-        child: AppButton(
-          label: l10n.musicLoginSimulate,
-          icon: LucideIcons.check,
-          variant: AppButtonVariant.primary,
-          height: 32,
-          onTap: _finishLogin,
+          style: TextStyle(fontSize: AppFont.px11, color: phase == _QrPhase.waiting ? palette.mut : palette.accInk),
         ),
       ),
     ];
@@ -350,53 +309,6 @@ class _PlatformPick extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _Segment extends StatelessWidget {
-  const _Segment({required this.labels, required this.on, required this.onTap});
-
-  final List<String> labels;
-  final int on;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    return Container(
-      height: 30,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: palette.card,
-        border: Border.all(color: palette.line2),
-        borderRadius: BorderRadius.circular(AppMetrics.radiusButton),
-      ),
-      child: Row(
-        children: [
-          for (final (i, label) in labels.indexed)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => onTap(i),
-                child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: on == i ? palette.acc : Colors.transparent,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: AppFont.px11_5,
-                      fontWeight: on == i ? FontWeight.w600 : FontWeight.w400,
-                      color: on == i ? palette.onAcc : palette.ink2,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }

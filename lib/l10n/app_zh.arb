@@ -1501,22 +1501,6 @@
   "@settingSidebarLabelsShow": {
     "description": "设置页文案"
   },
-  "settingMusicSource": "音乐数据源",
-  "@settingMusicSource": {
-    "description": "音乐模块：演示数据 / 真实平台接口"
-  },
-  "settingMusicSourceWhy": "演示数据离线可用、覆盖全部状态；真实接口直接请求四大平台，需要联网且受平台风控影响。",
-  "@settingMusicSourceWhy": {
-    "description": "音乐数据源说明"
-  },
-  "settingMusicSourceDemo": "演示数据",
-  "@settingMusicSourceDemo": {
-    "description": "音乐数据源：演示"
-  },
-  "settingMusicSourceOnline": "真实接口",
-  "@settingMusicSourceOnline": {
-    "description": "音乐数据源：线上"
-  },
   "settingLangZh": "简体中文",
   "@settingLangZh": {
     "description": "设置页文案"
@@ -5567,6 +5551,24 @@
       }
     }
   },
+  "musicPlayCountWan": "{value}万",
+  "@musicPlayCountWan": {
+    "description": "中文播放次数：万",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "musicPlayCountYi": "{value}亿",
+  "@musicPlayCountYi": {
+    "description": "中文播放次数：亿",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "musicCountSongs": "{count} 首",
   "@musicCountSongs": {
     "description": "歌单 / 队列 / 本地曲目计数",
@@ -5633,9 +5635,9 @@
   "@musicKickerDaily": {
     "description": "歌单详情 hero 上方的小标签：每日推荐"
   },
-  "musicDetailSourceLiked": "网易云 · 红心同步",
+  "musicDetailSourceLiked": "网易云 · 收藏同步",
   "@musicDetailSourceLiked": {
-    "description": "红心歌单详情的来源行"
+    "description": "收藏歌单详情的来源行"
   },
   "musicDetailSourcePlaylist": "网易云 · 由你创建",
   "@musicDetailSourcePlaylist": {
@@ -5713,13 +5715,13 @@
   "@musicMenuNext": {
     "description": "歌曲菜单：下一首播放"
   },
-  "musicMenuLike": "红心",
+  "musicMenuLike": "收藏",
   "@musicMenuLike": {
-    "description": "歌曲菜单：红心（未红心态）"
+    "description": "歌曲菜单：收藏（未收藏态）"
   },
-  "musicMenuUnlike": "取消红心",
+  "musicMenuUnlike": "取消收藏",
   "@musicMenuUnlike": {
-    "description": "歌曲菜单：红心（已红心态）"
+    "description": "歌曲菜单：收藏（已收藏态）"
   },
   "musicMenuAddTo": "加入歌单",
   "@musicMenuAddTo": {
@@ -5741,13 +5743,13 @@
   "@musicAddedNext": {
     "description": "下一首播放成功轻提示"
   },
-  "musicLiked": "已加入红心",
+  "musicLiked": "已收藏",
   "@musicLiked": {
-    "description": "红心成功轻提示"
+    "description": "收藏成功轻提示"
   },
-  "musicUnliked": "已取消红心",
+  "musicUnliked": "已取消收藏",
   "@musicUnliked": {
-    "description": "取消红心轻提示"
+    "description": "取消收藏轻提示"
   },
   "musicPlayingNow": "正在播放：{title}",
   "@musicPlayingNow": {
@@ -5810,10 +5812,6 @@
         "type": "String"
       }
     }
-  },
-  "musicHeartbeatExit": "心动模式已退出：队列不再是「我喜欢的音乐」",
-  "@musicHeartbeatExit": {
-    "description": "离开合法队列时自动退回顺序播放的轻提示"
   },
   "musicQualityAria": "音质",
   "@musicQualityAria": {
@@ -6060,9 +6058,13 @@
   "@musicImmersiveCloseAria": {
     "description": "沉浸播放器收起读法"
   },
-  "musicFullscreenAria": "全屏",
-  "@musicFullscreenAria": {
-    "description": "沉浸播放器全屏按钮读法"
+  "musicWindowFullScreenAria": "进入全屏",
+  "@musicWindowFullScreenAria": {
+    "description": "沉浸播放器右上角应用全屏按钮读法"
+  },
+  "musicWindowExitFullScreenAria": "退出全屏",
+  "@musicWindowExitFullScreenAria": {
+    "description": "沉浸播放器右上角退出应用全屏按钮读法"
   },
   "musicPlayerCtx": "正在播放 · {platform}",
   "@musicPlayerCtx": {
@@ -6100,14 +6102,6 @@
   "musicTabComments": "评论",
   "@musicTabComments": {
     "description": "播放器页签：评论"
-  },
-  "musicLyricManual": "手动滚动",
-  "@musicLyricManual": {
-    "description": "歌词右上角状态标签（手动滚动）"
-  },
-  "musicLyricAuto": "自动跟随",
-  "@musicLyricAuto": {
-    "description": "歌词右上角状态标签（自动跟随）"
   },
   "musicTranslateOn": "译",
   "@musicTranslateOn": {
@@ -6242,18 +6236,6 @@
   "musicLoginRefreshAria": "刷新二维码",
   "@musicLoginRefreshAria": {
     "description": "刷新按钮读法"
-  },
-  "musicLoginPhone": "手机号登录",
-  "@musicLoginPhone": {
-    "description": "登录弹窗手机号页签"
-  },
-  "musicLoginPhonePlaceholder": "输入手机号",
-  "@musicLoginPhonePlaceholder": {
-    "description": "手机号输入框占位"
-  },
-  "musicLoginSimulate": "模拟登录成功",
-  "@musicLoginSimulate": {
-    "description": "登录弹窗模拟成功按钮（演示）"
   },
   "musicLoginSuccessToast": "登录成功",
   "@musicLoginSuccessToast": {
@@ -6571,18 +6553,14 @@
   "@musicPlLibraryLikedTitle": {
     "description": "我的歌单库：系统歌单横卡标题"
   },
-  "musicPlLibraryLikedDesc": "{count} 首 · 红心过的歌都在这里",
-  "@musicPlLibraryLikedDesc": {
-    "description": "我的歌单库：系统歌单横卡说明",
+  "musicPlLibraryLikedSummary": "我喜欢的音乐 {count}首",
+  "@musicPlLibraryLikedSummary": {
+    "description": "我的歌单库：系统歌单名称与曲目数",
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
-  },
-  "musicPlLibraryLikedTag": "心动模式唯一来源",
-  "@musicPlLibraryLikedTag": {
-    "description": "我的歌单库：系统歌单横卡上的胶囊标签"
   },
   "musicPlLibraryAriaLiked": "打开我喜欢的音乐",
   "@musicPlLibraryAriaLiked": {
@@ -6780,5 +6758,9 @@
   "musicSearchPicks": "点歌台",
   "@musicSearchPicks": {
     "description": "搜索浮层空关键词时的推荐歌曲分组（设计稿「点歌台」）"
+  },
+  "musicPlaybackUnavailable": "这首暂时无法播放（无版权、需会员或需登录），已停在本曲",
+  "@musicPlaybackUnavailable": {
+    "description": "取不到播放地址或解码失败时的提示"
   }
 }

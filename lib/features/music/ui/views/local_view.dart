@@ -237,18 +237,12 @@ class _LocalViewState extends ConsumerState<LocalView> {
             // N03：切视图后回来恢复滚动位置。
             child: MusicScrollMemory(
               storageKey: 'local',
-              builder: (context, controller) => ListView(
+              builder: (context, controller) => MusicSongTable(
                 controller: controller,
-                padding: EdgeInsets.zero,
-                children: [
-                  for (final (i, s) in songs.indexed)
-                    SongRow(
-                      song: s,
-                      index: i,
-                      current: player.current?.id == s.id,
-                      liked: player.likedIds.contains(s.id),
-                    ),
-                ],
+                songs: songs,
+                showHeader: false,
+                showAlbum: false,
+                queueTitle: l10n.viewLocal,
               ),
             ),
           ),

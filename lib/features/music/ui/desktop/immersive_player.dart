@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/window/window_controller.dart';
 import '../../../../shared/responsive.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../controller/music_player.dart';
@@ -39,9 +42,9 @@ class ImmersivePlayer extends ConsumerStatefulWidget {
   ConsumerState<ImmersivePlayer> createState() => _ImmersivePlayerState();
 }
 
-class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerProviderStateMixin {
-  bool _full = false;
+class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerProviderStateMixin, WindowListener {
   bool _tabLyrics = true;
+  bool _fullScreen = false;
 
   /// 「动态」氛围开关（仅现代样式；设计稿 `.dyn`）。
   bool _dynamicOn = true;
@@ -57,12 +60,52 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
   String? _lastSongId;
 
   @override
+  void initState() {
+    super.initState();
+    if (isDesktopPlatform) {
+      windowManager.addListener(this);
+      unawaited(_syncFullScreen());
+    }
+  }
+
+  @override
   void dispose() {
+    if (isDesktopPlatform) windowManager.removeListener(this);
     _spin.dispose();
     _fx.dispose();
     _lyrCtrl.dispose();
     _manualTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _syncFullScreen() async {
+    try {
+      final fullScreen = await windowManager.isFullScreen();
+      if (mounted && fullScreen != _fullScreen) setState(() => _fullScreen = fullScreen);
+    } on Object {
+      // Widget 测试与不支持窗口管理的平台没有原生通道，保持普通窗口图标。
+    }
+  }
+
+  Future<void> _toggleFullScreen() async {
+    final previous = _fullScreen;
+    setState(() => _fullScreen = !previous);
+    try {
+      await windowManager.setFullScreen(!previous);
+      await _syncFullScreen();
+    } on Object {
+      if (mounted) setState(() => _fullScreen = previous);
+    }
+  }
+
+  @override
+  void onWindowEnterFullScreen() {
+    if (mounted && !_fullScreen) setState(() => _fullScreen = true);
+  }
+
+  @override
+  void onWindowLeaveFullScreen() {
+    if (mounted && _fullScreen) setState(() => _fullScreen = false);
   }
 
   void _syncSpin(bool playing) {
@@ -99,7 +142,7 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
     final ui = ref.read(musicUiProvider);
     final lyrics = ref.read(musicRepositoryProvider).lyricsFor(song);
     final idx = _lyricIndexOf(lyrics, player.positionMs);
-    final lineH = _lineHeight(lyrics, ui.translateOn);
+    final lineH = _lineHeight(lyrics, ui.translateOn, ref.read(playerStyleProvider));
     final target = (idx * lineH + lineH / 2 - _lyrCtrl.position.viewportDimension / 2).clamp(
       0.0,
       _lyrCtrl.position.maxScrollExtent,
@@ -118,9 +161,10 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
     return i;
   }
 
-  double _lineHeight(SongLyrics lyrics, bool translateOn) {
+  double _lineHeight(SongLyrics lyrics, bool translateOn, PlayerStyle skin) {
     final withTr = lyrics.hasTranslation && translateOn;
-    return withTr ? 54 : 36;
+    if (skin == PlayerStyle.immersive) return withTr ? 76 : 50;
+    return withTr ? 62 : 42;
   }
 
   @override
@@ -137,9 +181,11 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
 
     final lyrics = ref.watch(musicRepositoryProvider).lyricsFor(song);
     final lyricIdx = _lyricIndexOf(lyrics, player.positionMs);
-    final lineH = _lineHeight(lyrics, ui.translateOn);
+    final lineH = _lineHeight(lyrics, ui.translateOn, skin);
+    final plainLayout = skin == PlayerStyle.modern || skin == PlayerStyle.glass;
+    final followsLyrics = skin != PlayerStyle.spectrum && (plainLayout ? _tabLyrics : true);
     // 歌词自动跟随：当前行变化（或换曲）时回中；手动滚动期间不抢（N18）。
-    if (_tabLyrics && !_manual && (song.id != _lastSongId || lyricIdx != _lastFollowIdx)) {
+    if (followsLyrics && !_manual && (song.id != _lastSongId || lyricIdx != _lastFollowIdx)) {
       _lastSongId = song.id;
       _lastFollowIdx = lyricIdx;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -156,7 +202,8 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
       });
     }
 
-    final artSize = _full ? 340.0 : 300.0;
+    final topInset = isMacosPlatform && !_fullScreen ? AppMetrics.macTrafficLightBand : 0.0;
+    final showLyricsPanel = skin != PlayerStyle.spectrum;
 
     return Focus(
       autofocus: true,
@@ -174,7 +221,7 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
                 _TopBar(
                   song: song,
                   quality: player.quality,
-                  full: _full,
+                  topInset: topInset,
                   lyricsOn: ui.desktopLyricsOn,
                   onClose: () => ref.read(musicUiProvider.notifier).setImmersive(false),
                   onSkin: () {
@@ -182,34 +229,39 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
                     _showSkinPopover(context, ref, box.localToGlobal(Offset(box.size.width - 300, 52)));
                   },
                   onLyrics: () => ref.read(musicUiProvider.notifier).setDesktopLyrics(!ui.desktopLyricsOn),
-                  onToggleFull: () => setState(() => _full = !_full),
+                  fullScreen: _fullScreen,
+                  onToggleFullScreen: _toggleFullScreen,
                 ),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: _full ? 12 : 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SizedBox(
-                          width: math.min(420.0, MediaQuery.sizeOf(context).width * 0.38),
-                          child: _ArtColumn(
-                            song: song,
-                            quality: player.quality,
-                            playing: player.playing,
-                            spin: _spin,
-                            size: artSize,
-                            onDiscTap: () => setState(() => _tabLyrics = true),
+                        if (plainLayout)
+                          SizedBox(
+                            width: math.min(420.0, MediaQuery.sizeOf(context).width * 0.38),
+                            child: _ArtColumn(
+                              song: song,
+                              quality: player.quality,
+                              playing: player.playing,
+                              spin: _spin,
+                              size: 300,
+                              onDiscTap: () => setState(() => _tabLyrics = true),
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: _RightPanel(
-                            song: song,
-                            ui: ui,
-                            player: player,
-                            host: this,
-                            setTabLyrics: (v) => setState(() => _tabLyrics = v),
+                        if (showLyricsPanel)
+                          Expanded(
+                            child: _RightPanel(
+                              song: song,
+                              skin: skin,
+                              ui: ui,
+                              player: player,
+                              host: this,
+                              setTabLyrics: (v) => setState(() => _tabLyrics = v),
+                            ),
                           ),
-                        ),
+                        if (!plainLayout && !showLyricsPanel) const Spacer(),
                       ],
                     ),
                   ),
@@ -385,7 +437,7 @@ class _Atmosphere extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [palette.accSoft, palette.bg, palette.bg],
+              colors: [cover.first, cover.last.withValues(alpha: 0.52), palette.bg],
               stops: const [0, 0.52, 1],
             ),
           ),
@@ -492,7 +544,6 @@ class _Atmosphere extends StatelessWidget {
           ),
         );
       case PlayerStyle.glass:
-        // 雾面：封面晕染 + 半透明雾层（真实 BackdropFilter 略，见报告偏差）。
         return Stack(
           children: [
             Positioned.fill(
@@ -506,7 +557,12 @@ class _Atmosphere extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned.fill(child: ColoredBox(color: palette.bg.withValues(alpha: 0.55))),
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: ColoredBox(color: palette.bg.withValues(alpha: 0.55)),
+              ),
+            ),
           ],
         );
     }
@@ -547,28 +603,31 @@ class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.song,
     required this.quality,
-    required this.full,
+    required this.topInset,
     required this.lyricsOn,
     required this.onClose,
     required this.onSkin,
     required this.onLyrics,
-    required this.onToggleFull,
+    required this.fullScreen,
+    required this.onToggleFullScreen,
   });
 
   final MusicSong song;
   final QualityTier quality;
-  final bool full;
+  final double topInset;
   final bool lyricsOn;
   final VoidCallback onClose;
   final VoidCallback onSkin;
   final VoidCallback onLyrics;
-  final VoidCallback onToggleFull;
+  final bool fullScreen;
+  final VoidCallback onToggleFullScreen;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    Widget ibtn(IconData icon, String tip, VoidCallback onTap, {bool on = false}) => GestureDetector(
+    Widget ibtn(IconData icon, String tip, VoidCallback onTap, {bool on = false, Key? key}) => GestureDetector(
+      key: key,
       onTap: onTap,
       child: Container(
         width: 32,
@@ -582,42 +641,50 @@ class _TopBar extends StatelessWidget {
       ),
     );
     return SizedBox(
-      height: 56,
-      child: Row(
-        children: [
-          const SizedBox(width: 16),
-          ibtn(LucideIcons.chevronDown, l10n.musicImmersiveCloseAria, onClose),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.musicNowPlayingTag,
-                  style: TextStyle(
-                    fontSize: AppFont.px11,
-                    letterSpacing: 1.4,
-                    color: palette.mut,
-                    fontWeight: FontWeight.w700,
+      height: 56 + topInset,
+      child: Padding(
+        padding: EdgeInsets.only(top: topInset),
+        child: Row(
+          children: [
+            const SizedBox(width: 16),
+            ibtn(LucideIcons.chevronDown, l10n.musicImmersiveCloseAria, onClose),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.musicNowPlayingTag,
+                    style: TextStyle(
+                      fontSize: AppFont.px11,
+                      letterSpacing: 1.4,
+                      color: palette.mut,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                Text(
-                  l10n.musicPlatformQuality(platformLabel(l10n, song.platform), qualityLabel(l10n, quality)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
-                ),
-              ],
+                  Text(
+                    l10n.musicPlatformQuality(platformLabel(l10n, song.platform), qualityLabel(l10n, quality)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
+                  ),
+                ],
+              ),
             ),
-          ),
-          ibtn(LucideIcons.palette, l10n.musicSkinTitle, onSkin),
-          const SizedBox(width: 6),
-          ibtn(LucideIcons.monitorSpeaker, l10n.titleDesktopLyrics, onLyrics, on: lyricsOn),
-          const SizedBox(width: 6),
-          ibtn(full ? LucideIcons.minimize2 : LucideIcons.maximize2, l10n.musicFullscreenAria, onToggleFull),
-          const SizedBox(width: 16),
-        ],
+            ibtn(LucideIcons.palette, l10n.musicSkinTitle, onSkin),
+            const SizedBox(width: 6),
+            ibtn(LucideIcons.monitorSpeaker, l10n.titleDesktopLyrics, onLyrics, on: lyricsOn),
+            const SizedBox(width: 6),
+            ibtn(
+              fullScreen ? LucideIcons.minimize2 : LucideIcons.maximize2,
+              fullScreen ? l10n.musicWindowExitFullScreenAria : l10n.musicWindowFullScreenAria,
+              onToggleFullScreen,
+              key: const ValueKey('music-window-fullscreen'),
+            ),
+            const SizedBox(width: 16),
+          ],
+        ),
       ),
     );
   }
@@ -803,6 +870,7 @@ class _ImmersiveVolume extends ConsumerWidget {
 class _RightPanel extends ConsumerWidget {
   const _RightPanel({
     required this.song,
+    required this.skin,
     required this.ui,
     required this.player,
     required this.host,
@@ -810,6 +878,7 @@ class _RightPanel extends ConsumerWidget {
   });
 
   final MusicSong song;
+  final PlayerStyle skin;
   final MusicUiState ui;
   final MusicPlayerState player;
   final _ImmersivePlayerState host;
@@ -821,73 +890,71 @@ class _RightPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    final showLyrics = host._tabLyrics;
-    final manual = host._manual;
+    final plainLayout = skin == PlayerStyle.modern || skin == PlayerStyle.glass;
+    final showLyrics = plainLayout ? host._tabLyrics : true;
+    final showTitle = skin == PlayerStyle.vinyl || skin == PlayerStyle.cover;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 4),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 「译」开关（N18）：双语歌词显隐。
-                GestureDetector(
-                  onTap: () => ref.read(musicUiProvider.notifier).setTranslate(!ui.translateOn),
-                  child: Container(
-                    height: 28,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: ui.translateOn ? palette.accSoft : Colors.transparent,
-                      border: Border.all(color: ui.translateOn ? palette.acc.withValues(alpha: 0.55) : palette.line2),
-                      borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      l10n.musicTranslateOn,
-                      style: TextStyle(
-                        fontSize: AppFont.px12,
-                        fontWeight: FontWeight.w600,
-                        color: ui.translateOn ? palette.accInk : palette.ink2,
+        if (plainLayout)
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 「译」开关（N18）：双语歌词显隐。
+                  GestureDetector(
+                    onTap: () => ref.read(musicUiProvider.notifier).setTranslate(!ui.translateOn),
+                    child: Container(
+                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: ui.translateOn ? palette.accSoft : Colors.transparent,
+                        border: Border.all(color: ui.translateOn ? palette.acc.withValues(alpha: 0.55) : palette.line2),
+                        borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        l10n.musicTranslateOn,
+                        style: TextStyle(
+                          fontSize: AppFont.px12,
+                          fontWeight: FontWeight.w600,
+                          color: ui.translateOn ? palette.accInk : palette.ink2,
+                        ),
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  _TabPill(label: l10n.musicTabLyrics, on: showLyrics, onTap: () => setTabLyrics(true)),
+                  _TabPill(label: l10n.musicTabComments, on: !showLyrics, onTap: () => setTabLyrics(false)),
+                ],
+              ),
+            ],
+          ),
+        if (showTitle)
+          Padding(
+            padding: const EdgeInsets.only(left: 14, top: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  song.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: AppFont.px26, fontWeight: FontWeight.w900, color: palette.ink),
                 ),
-                const SizedBox(width: 6),
-                _TabPill(label: l10n.musicTabLyrics, on: showLyrics, onTap: () => setTabLyrics(true)),
-                _TabPill(label: l10n.musicTabComments, on: !showLyrics, onTap: () => setTabLyrics(false)),
+                Text(
+                  song.artist,
+                  style: TextStyle(fontSize: AppFont.px13, color: palette.mut),
+                ),
               ],
             ),
-            // 跟随状态标签（N18）：歌词页签时右上角显示。
-            if (showLyrics)
-              Positioned(
-                right: 2,
-                child: Container(
-                  height: 22,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: manual ? palette.warn.withValues(alpha: 0.14) : palette.card,
-                    border: Border.all(color: manual ? palette.warn.withValues(alpha: 0.5) : palette.line),
-                    borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    manual ? l10n.musicLyricManual : l10n.musicLyricAuto,
-                    style: TextStyle(
-                      fontSize: AppFont.px10,
-                      fontWeight: FontWeight.w600,
-                      color: manual ? palette.warn : palette.mut,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+          ),
         const SizedBox(height: 8),
         Expanded(
-          child: showLyrics ? _LyricsView(host: host) : _CommentsView(songId: song.id),
+          child: showLyrics ? _LyricsView(host: host, skin: skin) : _CommentsView(songId: song.id),
         ),
         const SizedBox(height: 12),
       ],
@@ -931,10 +998,11 @@ class _TabPill extends StatelessWidget {
 /// 歌词视图（N18）：逐句跟随、当前行橙加粗放大、唱过行降透明、点击行跳转、
 /// 手动滚动暂停跟随 3 秒恢复；上下边缘遮罩渐隐。
 class _LyricsView extends ConsumerWidget {
-  const _LyricsView({required this.host});
+  const _LyricsView({required this.host, required this.skin});
 
   /// 只读访问宿主的滚动控制器 / 手动态；写操作经 [host.resetManual] 等方法。
   final _ImmersivePlayerState host;
+  final PlayerStyle skin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -944,8 +1012,10 @@ class _LyricsView extends ConsumerWidget {
     final song = player.current!;
     final lyrics = ref.watch(musicRepositoryProvider).lyricsFor(song);
     final withTr = lyrics.hasTranslation && ui.translateOn;
-    final lineH = host._lineHeight(lyrics, ui.translateOn);
+    final lineH = host._lineHeight(lyrics, ui.translateOn, skin);
     final idx = _ImmersivePlayerState._lyricIndexOf(lyrics, player.positionMs);
+    final leftAligned = skin == PlayerStyle.vinyl || skin == PlayerStyle.cover;
+    final immersive = skin == PlayerStyle.immersive;
 
     return NotificationListener<ScrollNotification>(
       onNotification: (n) {
@@ -960,19 +1030,18 @@ class _LyricsView extends ConsumerWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
-          stops: [0, 0.12, 0.86, 1],
+          stops: [0, 0.10, 0.88, 1],
         ).createShader(bounds),
         blendMode: BlendMode.dstIn,
         child: ListView.builder(
           controller: host._lyrCtrl,
           itemExtent: lineH,
-          padding: EdgeInsets.symmetric(vertical: MediaQuery.sizeOf(context).height * 0.16, horizontal: 6),
+          padding: const EdgeInsets.fromLTRB(4, 28, 4, 16),
           itemCount: lyrics.lines.length,
           itemBuilder: (_, i) {
             final line = lyrics.lines[i];
             final on = i == idx;
-            final past = i < idx;
-            final mainColor = on ? palette.acc : (past ? palette.ink2.withValues(alpha: 0.42) : palette.ink2);
+            final mainColor = on ? palette.acc : palette.ink2.withValues(alpha: 0.5);
             // N18：悬停行变蓝提示可点；鼠标离开恢复（用状态色 blue，不改正文色纪律 ——
             // 歌词行是可交互元素，不是「用彩色表达状态」）。
             return _HoverLyricLine(
@@ -984,18 +1053,18 @@ class _LyricsView extends ConsumerWidget {
               },
               builder: (hover) => Container(
                 height: lineH,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: leftAligned ? CrossAxisAlignment.start : CrossAxisAlignment.center,
                   children: [
                     Text(
                       line.text,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
+                      textAlign: leftAligned ? TextAlign.left : TextAlign.center,
                       style: TextStyle(
-                        fontSize: on ? AppFont.px17 : AppFont.px14,
+                        fontSize: immersive ? AppFont.px26 : (on ? AppFont.px17 : AppFont.px14),
                         fontWeight: on ? FontWeight.w700 : FontWeight.w400,
                         color: hover && !on ? palette.blue : mainColor,
                       ),
@@ -1005,10 +1074,11 @@ class _LyricsView extends ConsumerWidget {
                         line.translation!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
+                        textAlign: leftAligned ? TextAlign.left : TextAlign.center,
                         style: TextStyle(
-                          fontSize: AppFont.px11_5,
-                          color: on ? palette.accInk.withValues(alpha: 0.9) : palette.ink2.withValues(alpha: 0.6),
+                          fontSize: AppFont.px14,
+                          fontWeight: FontWeight.w400,
+                          color: palette.ink2.withValues(alpha: on ? 0.7 : 0.5),
                         ),
                       ),
                   ],
@@ -1267,14 +1337,16 @@ class _BottomBar extends ConsumerWidget {
             width: 190,
             child: Row(
               children: [
-                ibtn(
-                  LucideIcons.heart,
-                  l10n.musicLikeAria,
-                  () => ref.read(playerProvider.notifier).toggleLike(song),
-                  size: 17,
-                  on: liked,
-                ),
-                const SizedBox(width: 2),
+                if (song.platform != MusicPlatform.local) ...[
+                  ibtn(
+                    LucideIcons.heart,
+                    l10n.musicLikeAria,
+                    () => ref.read(playerProvider.notifier).toggleLike(song),
+                    size: 17,
+                    on: liked,
+                  ),
+                  const SizedBox(width: 2),
+                ],
                 ibtn(LucideIcons.palette, l10n.musicSkinTitle, () => _openSkin(context)),
                 // 「动态」仅在现代样式出现（N17 边界）。
                 if (skin == PlayerStyle.modern) ...[

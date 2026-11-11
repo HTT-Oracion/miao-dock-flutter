@@ -1,9 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// 音乐模块领域模型（design/music/ver1.0 `assets/data.js` 的 Dart 对应物）。
-///
-/// 数据全部来自 [DemoMusicRepository]（A 级 Fake，D-201）；字段与设计稿
-/// 演示数据一一对应，真实音源接入时只换 repository，模型不动。
+/// 音乐模块领域模型。
 
 /// 音乐平台来源。`local` 为本机文件，无平台品牌。
 enum MusicPlatform { netease, kugou, qq, migu, local }
@@ -85,8 +82,9 @@ class MusicPlaylist {
     required this.name,
     required this.trackCount,
     required this.seed,
-    this.playCount,
+    this.playCountValue,
     this.description,
+    this.coverUrl,
     this.special = false,
     this.author,
     this.subscribed = false,
@@ -96,10 +94,14 @@ class MusicPlaylist {
   final String name;
   final int trackCount;
   final String seed;
-  final String? playCount;
+
+  /// 播放量原始数值；UI 按当前语言格式化成「万 / 亿」（见 `formatMusicPlayCount`）。
+  /// null = 接口没给，不显示角标。
+  final int? playCountValue;
 
   /// 一句话说明（瓦片副行 / 详情 hero）。
   final String? description;
+  final String? coverUrl;
 
   /// 「我喜欢的音乐」：心动模式唯一合法队列来源（设计稿 N10/N24）。
   final bool special;
@@ -112,13 +114,14 @@ class MusicPlaylist {
   /// `false` = 自己创建（「创建的歌单」分组）。
   final bool subscribed;
 
-  MusicPlaylist copyWith({bool? special, String? author, bool? subscribed}) => MusicPlaylist(
+  MusicPlaylist copyWith({bool? special, String? author, bool? subscribed, String? coverUrl}) => MusicPlaylist(
     id: id,
     name: name,
     trackCount: trackCount,
     seed: seed,
-    playCount: playCount,
+    playCountValue: playCountValue,
     description: description,
+    coverUrl: coverUrl ?? this.coverUrl,
     special: special ?? this.special,
     author: author ?? this.author,
     subscribed: subscribed ?? this.subscribed,
@@ -148,6 +151,7 @@ class MusicChart {
     required this.updateMeta,
     required this.seed,
     required this.top,
+    this.coverUrl,
   });
 
   final String id;
@@ -157,6 +161,7 @@ class MusicChart {
   final String updateMeta;
   final String seed;
   final List<ChartTopEntry> top;
+  final String? coverUrl;
 }
 
 /// 发现页推荐栏竖卡（插画底 + 标题 + 彩色说明带，点卡整组播放）。
@@ -266,7 +271,6 @@ const Map<MusicPlatform, PlatformBrand> platformBrands = {
 ///
 /// 属**内容色**（封面图），与 [platformBrands] 同口径放在领域层：
 /// 不随深浅主题变化，所以不做成 `AppPalette` 字段。
-const List<Color> likedCoverColors = [Color(0xFFC2553F), Color(0xFF7A2C26)];
 
 /// 时长展示（mm:ss；表格与播放条共用同一口径）。
 String formatSongDuration(Duration d) {

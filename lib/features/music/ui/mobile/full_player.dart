@@ -451,15 +451,16 @@ class _FullMusicPlayerState extends ConsumerState<FullMusicPlayer> with TickerPr
               ),
             ),
           if (showTranslate) const Spacer(),
-          TapScaleButton(
-            onTap: () => ref.read(playerProvider.notifier).toggleLike(song),
-            semantics: l10n.musicLikeAria,
-            child: SizedBox(
-              width: 42,
-              height: 42,
-              child: Icon(LucideIcons.heart, size: 21, color: liked ? palette.bad : palette.ink),
+          if (song.platform != MusicPlatform.local)
+            TapScaleButton(
+              onTap: () => ref.read(playerProvider.notifier).toggleLike(song),
+              semantics: l10n.musicLikeAria,
+              child: SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(LucideIcons.heart, size: 21, color: liked ? palette.bad : palette.ink),
+              ),
             ),
-          ),
           TapScaleButton(
             onTap: _toggleComments,
             semantics: l10n.musicTabComments,

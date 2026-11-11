@@ -6,7 +6,6 @@ import '../../../core/theme/tokens.dart';
 import '../controller/music_player.dart';
 import '../controller/music_providers.dart';
 import '../controller/music_session.dart';
-import 'desktop/account_menu.dart';
 import 'desktop/desktop_lyrics.dart';
 import 'desktop/play_bar.dart';
 import 'desktop/queue_drawer.dart';
@@ -62,11 +61,11 @@ class _MusicScreenState extends ConsumerState<MusicScreen> {
           // 播放条（队列为空时整条隐藏）。
           if (hasPlayer) Positioned(left: 0, right: 0, bottom: 0, height: playBarH, child: const MusicPlayBar()),
           // 队列抽屉（不遮播放条：bottom 留播放条高度，N14）。
-          if (hasPlayer && ui.queueOpen) Positioned(top: 0, right: 0, bottom: playBarH, child: const QueueDrawer()),
+          if (hasPlayer && ui.queueOpen && !ui.immersiveOpen)
+            Positioned(top: 0, right: 0, bottom: playBarH, child: const QueueDrawer()),
           // 沉浸播放器覆盖整个应用，挂在壳层（见 app_shell.dart），不在此层叠。
           // 搜索 / 登录浮层挂**壳层**（要盖住侧栏与工具条，设计稿浮层覆盖全窗口）：
           // 见 app_shell.dart 的 _DesktopShell；这里只挂模块内浮层。
-          if (ui.accountMenuOpen) const Positioned.fill(child: AccountMenuPopover()),
           // 桌面歌词浮层：最顶层 + IgnorePointer（不挡桌面操作，N19）。
           const Positioned.fill(child: DesktopLyricsOverlay()),
         ],

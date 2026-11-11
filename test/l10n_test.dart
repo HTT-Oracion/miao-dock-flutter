@@ -41,6 +41,11 @@ void main() {
     expect(l10n.navAnime, '番剧');
     expect(l10n.navSettings, '设置');
     expect(l10n.brandTagline, isNotEmpty);
+    expect(l10n.musicMenuLike, '收藏');
+    expect(l10n.musicMenuUnlike, '取消收藏');
+    expect(l10n.musicWindowFullScreenAria, '进入全屏');
+    expect(l10n.musicWindowExitFullScreenAria, '退出全屏');
+    expect(l10n.musicPlLibraryLikedSummary(12), '我喜欢的音乐 12首');
   });
 
   testWidgets('视图词条与侧栏一致（不得出现英文占位）', (tester) async {

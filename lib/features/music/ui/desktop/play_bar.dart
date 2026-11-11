@@ -104,12 +104,13 @@ class MusicPlayBar extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    _BarIcon(
-                      icon: LucideIcons.heart,
-                      tooltip: liked ? l10n.musicMenuUnlike : l10n.musicMenuLike,
-                      color: liked ? palette.bad : null,
-                      onTap: () => ref.read(playerProvider.notifier).toggleLike(song),
-                    ),
+                    if (song.platform != MusicPlatform.local)
+                      _BarIcon(
+                        icon: LucideIcons.heart,
+                        tooltip: liked ? l10n.musicMenuUnlike : l10n.musicMenuLike,
+                        color: liked ? palette.bad : null,
+                        onTap: () => ref.read(playerProvider.notifier).toggleLike(song),
+                      ),
                   ],
                 ),
               ),
@@ -179,7 +180,7 @@ class MusicPlayBar extends ConsumerWidget {
                 ),
               ),
               SizedBox(
-                width: wide ? 258 : 218,
+                width: wide ? 334 : 258,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -209,6 +210,7 @@ class MusicPlayBar extends ConsumerWidget {
                       ),
                     ],
                     _BarIcon(
+                      key: const ValueKey('music-queue-btn'),
                       icon: LucideIcons.listMusic,
                       tooltip: l10n.musicSheetQueueAria,
                       on: ui.queueOpen,
@@ -366,34 +368,37 @@ class _VolumeRegionState extends ConsumerState<_VolumeRegion> {
         : player.volume > 55
         ? LucideIcons.volume2
         : LucideIcons.volume1;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _BarIcon(
-            icon: icon,
-            tooltip: player.muted ? l10n.musicVolumeUnmute : l10n.musicVolumeMute,
-            onTap: () => ref.read(playerProvider.notifier).toggleMute(),
-          ),
-          // 悬停滑出 78px 滑杆（设计稿 .vol .vslide）。
-          ClipRect(
-            child: AnimatedContainer(
-              duration: AppMotion.hover,
-              curve: AppMotion.morphCurve,
-              width: _hover ? 74 : 0,
-              height: 18,
-              child: MusicSeek(
-                thin: true,
-                value: player.muted ? 0 : player.volume / 100,
-                totalMs: 100,
-                showTip: false,
-                onRatio: (r) => ref.read(playerProvider.notifier).setVolume((r * 100).round()),
+    // 外层恒定占 108px：滑杆展开时不再把右侧队列/关闭按钮挤出固定区域。
+    return SizedBox(
+      key: const ValueKey('music-volume-region'),
+      width: 108,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: Row(
+          children: [
+            _BarIcon(
+              icon: icon,
+              tooltip: player.muted ? l10n.musicVolumeUnmute : l10n.musicVolumeMute,
+              onTap: () => ref.read(playerProvider.notifier).toggleMute(),
+            ),
+            ClipRect(
+              child: AnimatedContainer(
+                duration: AppMotion.hover,
+                curve: AppMotion.morphCurve,
+                width: _hover ? 74 : 0,
+                height: 18,
+                child: MusicSeek(
+                  thin: true,
+                  value: player.muted ? 0 : player.volume / 100,
+                  totalMs: 100,
+                  showTip: false,
+                  onRatio: (r) => ref.read(playerProvider.notifier).setVolume((r * 100).round()),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

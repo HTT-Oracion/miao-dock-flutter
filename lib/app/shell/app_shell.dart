@@ -21,9 +21,11 @@ import '../../features/music/controller/music_session.dart';
 import '../../features/music/domain/music_models.dart';
 import '../../features/music/controller/music_player.dart';
 import '../../features/music/ui/desktop/desktop_lyrics.dart';
+import '../../features/music/ui/desktop/account_menu.dart';
 import '../../features/music/ui/desktop/immersive_player.dart';
 import '../../features/music/ui/desktop/island.dart';
 import '../../features/music/ui/desktop/login_modal.dart';
+import '../../features/music/ui/desktop/queue_drawer.dart';
 import '../../features/music/ui/desktop/search_overlay.dart';
 import '../../features/music/ui/sidebar_mini_player.dart';
 import '../../features/music/ui/sidebar_source_group.dart';
@@ -34,7 +36,6 @@ import '../../shared/widgets/nav_rail.dart';
 import 'module_nav.dart';
 import 'shell_controller.dart';
 import 'sidebar_music_views.dart';
-import 'theme_toggle_button.dart';
 import 'view_labels.dart';
 import 'mobile_nav.dart';
 import 'view_tabs.dart';
@@ -259,9 +260,13 @@ class _DesktopShell extends ConsumerWidget {
               right: 0,
               child: const Center(child: DynamicIsland()),
             ),
+          if (location.moduleIndex == 1 && musicUi.accountMenuOpen) const Positioned.fill(child: AccountMenuPopover()),
           // 沉浸播放器覆盖整个应用（含侧栏 / 工具条 / 播放条，N16）。
           // 挂在壳层而非模块容器，才能盖住壳层；键盘 Esc 由播放器自身收口。
           if (location.moduleIndex == 1 && musicUi.immersiveOpen) const Positioned.fill(child: ImmersivePlayer()),
+          // 展开播放器的队列必须挂在同一壳层并后绘制，否则会被播放器整层盖住。
+          if (location.moduleIndex == 1 && musicUi.immersiveOpen && musicUi.queueOpen)
+            const Positioned(top: 0, right: 0, bottom: 0, child: QueueDrawer()),
           // 桌面歌词设置弹窗要在沉浸播放器之上（N19 从播放器底部齿轮进入）。
           if (location.moduleIndex == 1 && musicUi.lyricsSettingsOpen)
             const Positioned.fill(child: DesktopLyricsSettingsModal()),
@@ -451,8 +456,6 @@ class _MobileShellState extends ConsumerState<_MobileShell> {
                     activeId: location.viewId,
                     onSelect: (v) => _goView(context, location.moduleIndex, v),
                     actions: [
-                      // 音乐：主题三态按钮（N07 / M02 页签条最右）。
-                      if (location.moduleIndex == 1) const ThemeToggleButton(size: 32, iconSize: 16),
                       // 设计稿 `.vtabs .acts`：漫画库页签右侧「新建漫画」。
                       // 阅读器归到漫画库视图，但阅读时不该出现新建入口。
                       if (location.viewId == 'library' && !isReaderPath(widget.path)) const LibraryHeaderActions(),
@@ -514,48 +517,74 @@ class _MusicToolbarActions extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 6),
-        const ThemeToggleButton(),
-        const SizedBox(width: 6),
-        GestureDetector(
-          onTap: () => ref.read(musicUiProvider.notifier).setAccountMenu(true),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: Container(
-              height: 30,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: palette.card,
-                border: Border.all(color: palette.line2),
-                borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: account.logged ? palette.accSoft : palette.card,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: account.logged ? palette.acc : palette.line2),
-                    ),
-                    child: Text(
-                      account.logged ? (account.nick?.substring(0, 1) ?? '?') : '?',
-                      style: TextStyle(fontSize: AppFont.px9, color: account.logged ? palette.accInk : palette.mut),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    account.logged ? (account.nick ?? '') : l10n.musicNotLogged,
-                    style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        _AccountChip(
+          account: account,
+          onTap: () {
+            final box = _accountChipKey.currentContext?.findRenderObject() as RenderBox?;
+            if (box != null) {
+              ref.read(musicAccountAnchorProvider.notifier).set(box.localToGlobal(Offset.zero) & box.size);
+            }
+            ref.read(musicUiProvider.notifier).setAccountMenu(true);
+          },
         ),
         const SizedBox(width: 8),
       ],
+    );
+  }
+}
+
+/// 账号 chip 的 key：点击时用它取全局矩形，作为账号菜单的锚点。
+final GlobalKey _accountChipKey = GlobalKey();
+
+/// 顶栏账号 chip（头像 + 昵称 / 未登录）。
+class _AccountChip extends StatelessWidget {
+  const _AccountChip({required this.account, required this.onTap});
+
+  final MusicAccountState account;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final l10n = AppLocalizations.of(context);
+    return GestureDetector(
+      key: _accountChipKey,
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: palette.card,
+            border: Border.all(color: palette.line2),
+            borderRadius: BorderRadius.circular(AppMetrics.radiusPill),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: account.logged ? palette.accSoft : palette.card,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: account.logged ? palette.acc : palette.line2),
+                ),
+                child: Text(
+                  account.logged ? (account.nick?.substring(0, 1) ?? '?') : '?',
+                  style: TextStyle(fontSize: AppFont.px9, color: account.logged ? palette.accInk : palette.mut),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                account.logged ? (account.nick ?? '') : l10n.musicNotLogged,
+                style: TextStyle(fontSize: AppFont.px10, color: palette.ink2),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -89,8 +89,9 @@ class KugouApi {
             name: '${item['specialname'] ?? ''}',
             trackCount: (item['songcount'] as num?)?.toInt() ?? 0,
             seed: '${item['specialname'] ?? ''}',
-            playCount: _playCount((item['playcount'] as num?)),
+            playCountValue: (item['playcount'] as num?)?.round(),
             description: '${item['nickname'] ?? ''}',
+            coverUrl: '${item['imgurl'] ?? item['img'] ?? ''}',
           ),
     ];
   }
@@ -213,8 +214,9 @@ class KugouApi {
             name: '${item['rankname'] ?? ''}',
             trackCount: (item['songcount'] as num?)?.toInt() ?? 0,
             seed: '${item['rankname'] ?? ''}',
-            playCount: _playCount((item['playcount'] as num?)),
+            playCountValue: (item['playcount'] as num?)?.round(),
             description: '${item['update_frequency'] ?? ''}',
+            coverUrl: _coverUrl('${item['banner7url'] ?? item['imgurl'] ?? ''}'),
           ),
     ];
   }
@@ -408,12 +410,5 @@ class KugouApi {
       }
     }
     return cur;
-  }
-
-  static String? _playCount(num? n) {
-    if (n == null || n <= 0) return null;
-    if (n >= 100000000) return '${(n / 100000000).toStringAsFixed(1)}e8';
-    if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}w';
-    return '${n.toInt()}';
   }
 }

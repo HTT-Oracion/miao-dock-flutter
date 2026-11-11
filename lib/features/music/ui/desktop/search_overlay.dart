@@ -13,7 +13,6 @@ import '../../../../shared/widgets/toast.dart';
 import '../../controller/music_player.dart';
 import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
-import '../../data/demo_music_repository.dart';
 import '../../domain/music_models.dart';
 import '../widgets/music_shared.dart';
 
@@ -405,10 +404,7 @@ class _SearchBody extends ConsumerWidget {
             child: Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: [
-                for (final chip in DemoMusicRepository.recentSearches)
-                  _RecentChip(label: chip, onTap: () => onChip(chip)),
-              ],
+              children: [for (final chip in search.recent) _RecentChip(label: chip, onTap: () => onChip(chip))],
             ),
           ),
           _GroupLabel(l10n.musicSearchPicks),

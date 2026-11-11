@@ -21,6 +21,9 @@ class KugouSource implements MusicSource {
   bool get supportsRecommendPlaylists => false;
 
   @override
+  bool get supportsSimilarSongs => false;
+
+  @override
   Future<List<MusicSong>> searchSongs(String keywords, {int limit = 20, int offset = 0}) =>
       _api.searchSongs(keywords, limit: limit, offset: offset);
 
@@ -39,9 +42,9 @@ class KugouSource implements MusicSource {
   Future<List<MusicPlaylist>> userPlaylists() => _api.userPlaylists();
 
   @override
-  Future<List<({String id, String name, String updateMeta})>> charts() async {
+  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async {
     final list = await _api.rankList(limit: 6);
-    return [for (final r in list) (id: r.id, name: r.name, updateMeta: r.description ?? '')];
+    return [for (final r in list) (id: r.id, name: r.name, updateMeta: r.description ?? '', coverUrl: r.coverUrl)];
   }
 
   @override
@@ -52,6 +55,9 @@ class KugouSource implements MusicSource {
 
   @override
   Future<List<MusicSong>> dailySongs() async => const [];
+
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) async => const [];
 
   @override
   Future<List<MusicComment>> comments(String songId, {int limit = 20, int offset = 0}) async => const [];

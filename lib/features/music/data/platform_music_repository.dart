@@ -15,10 +15,8 @@ import 'sources/qq_source.dart';
 
 /// 真实音源仓库：按当前平台把 [MusicRepository] 的方法转给对应 [MusicSource]。
 ///
-/// 与 `DemoMusicRepository` 的分工：
-/// · 演示仓库 = A 级 Fake，离线可跑、覆盖设计稿全部状态；
-/// · 本仓库 = 真实四平台接口（Dart 移植自 miao-dock 的 Rust 客户端），
-///   失败一律**如实抛错**（不静默降级成演示数据，否则用户以为在听真歌）。
+/// 真实四平台接口（Dart 移植自 miao-dock 的 Rust 客户端）。
+/// 失败一律如实抛错，不静默回退本地演示数据。
 ///
 /// 歌词 / 评论 / 每日推荐三类能力各平台不一致，由 [MusicSource] 的能力位决定：
 /// 不支持时返回空集，而不是抛错 —— 空是「这个平台没有该功能」，不是故障。
@@ -105,7 +103,7 @@ class PlatformMusicRepository implements MusicRepository {
             seed: ch.name,
             icon: _recIcons[(i + 3) % _recIcons.length],
             songIds: const [],
-            playlistId: null,
+            playlistId: ch.id,
           ),
         );
       }
@@ -121,7 +119,14 @@ class PlatformMusicRepository implements MusicRepository {
     final charts = await _source.charts();
     return [
       for (final c in charts.take(6))
-        MusicPlaylist(id: c.id, name: c.name, trackCount: 0, seed: c.name, description: c.updateMeta),
+        MusicPlaylist(
+          id: c.id,
+          name: c.name,
+          trackCount: 0,
+          seed: c.name,
+          description: c.updateMeta,
+          coverUrl: c.coverUrl,
+        ),
     ];
   }, FailScope.playlists);
 
@@ -143,6 +148,7 @@ class PlatformMusicRepository implements MusicRepository {
           name: c.name,
           updateMeta: c.updateMeta,
           seed: c.name,
+          coverUrl: c.coverUrl,
           top: [for (final s in songs.take(3)) ChartTopEntry(title: s.title, artist: s.artist, trend: ChartTrend.flat)],
         ),
       );
@@ -179,6 +185,10 @@ class PlatformMusicRepository implements MusicRepository {
     // 真实音源的「我喜欢的音乐」需要登录；未登录时抛 loginRequired 由 UI 引导。
     throw const MusicRepositoryException(MusicRepositoryErrorCode.loginRequired);
   }, FailScope.playlists);
+
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) =>
+      _translate(() => _source.similarSongs(seed, limit: limit), FailScope.playlists);
 
   // ── 搜索 ────────────────────────────────────────────────────────────────
 
@@ -241,6 +251,7 @@ class PlatformMusicRepository implements MusicRepository {
   void resetFailScopes() => _fails.clear();
 
   /// 播放地址（供播放器在真实音源下取流；演示仓库返回 null）。
+  @override
   Future<String?> resolvePlayUrl(MusicSong song, QualityTier quality) async {
     try {
       return await _source.songUrl(song, quality);

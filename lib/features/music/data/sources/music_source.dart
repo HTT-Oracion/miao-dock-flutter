@@ -14,6 +14,7 @@ abstract interface class MusicSource {
   bool get supportsDailySongs;
   bool get supportsComments;
   bool get supportsRecommendPlaylists;
+  bool get supportsSimilarSongs;
 
   Future<List<MusicSong>> searchSongs(String keywords, {int limit, int offset});
 
@@ -27,7 +28,7 @@ abstract interface class MusicSource {
   Future<List<MusicPlaylist>> userPlaylists();
 
   /// 榜单清单（id 为平台原始 id）。
-  Future<List<({String id, String name, String updateMeta})>> charts();
+  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts();
 
   Future<({MusicPlaylist meta, List<MusicSong> songs})> playlistDetail(String id);
 
@@ -35,6 +36,9 @@ abstract interface class MusicSource {
 
   /// 每日推荐（仅网易云；其余平台抛 [UnsupportedError] 由仓库兜底）。
   Future<List<MusicSong>> dailySongs();
+
+  /// 按种子歌曲取相似歌曲；不支持的平台返回空列表。
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit});
 
   Future<List<MusicComment>> comments(String songId, {int limit, int offset});
 

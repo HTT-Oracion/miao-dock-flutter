@@ -6,8 +6,12 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:miao_dock_flutter/app/shell/mobile_nav.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_player.dart';
+import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
-import 'package:miao_dock_flutter/features/music/data/demo_music_repository.dart';
+
+import 'support/demo_music_repository.dart';
+import 'support/music_test_account.dart';
+
 import 'package:miao_dock_flutter/features/music/ui/mobile/mini_bar.dart';
 import 'package:miao_dock_flutter/features/music/ui/mobile/mobile_music_screen.dart';
 import 'package:miao_dock_flutter/features/music/ui/music_screen.dart';
@@ -25,6 +29,10 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 /// 也因此这里**不能 pumpAndSettle**（每次 tick 都会排一帧），用定长 pump。
 void main() {
   Widget host() => ProviderScope(
+    overrides: [
+      musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
+      musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
+    ],
     child: MaterialApp(
       theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
       localizationsDelegates: AppLocalizations.localizationsDelegates,

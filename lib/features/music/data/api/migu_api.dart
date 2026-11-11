@@ -91,6 +91,7 @@ class MiguApi {
             trackCount: _miguPlaylistCount(item),
             seed: name,
             description: '${item['summary'] ?? item['desc'] ?? ''}',
+            coverUrl: '${item['img'] ?? item['image'] ?? item['cover'] ?? ''}',
             subscribed: subscribed,
           ),
         );
@@ -306,8 +307,9 @@ class MiguApi {
               name: name,
               trackCount: (node['songCount'] as num?)?.toInt() ?? 0,
               seed: name,
-              playCount: _playCount(node['playCount'] as num?),
+              playCountValue: (node['playCount'] as num?)?.round(),
               description: '${node['summary'] ?? node['desc'] ?? ''}',
+              coverUrl: '${node['img'] ?? node['image'] ?? node['cover'] ?? ''}',
             ),
           );
         } else {
@@ -391,12 +393,5 @@ class MiguApi {
       }
     }
     return cur;
-  }
-
-  static String? _playCount(num? n) {
-    if (n == null || n <= 0) return null;
-    if (n >= 100000000) return '${(n / 100000000).toStringAsFixed(1)}e8';
-    if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}w';
-    return '${n.toInt()}';
   }
 }

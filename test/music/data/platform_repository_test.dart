@@ -1,5 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:miao_dock_flutter/features/music/controller/music_auth.dart';
+import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
 import 'package:miao_dock_flutter/features/music/data/music_repository.dart';
 import 'package:miao_dock_flutter/features/music/data/platform_music_repository.dart';
 import 'package:miao_dock_flutter/features/music/data/sources/music_source.dart';
@@ -22,6 +25,12 @@ MusicSong _song(String id, {String? mid}) => MusicSong(
 );
 
 void main() {
+  test('运行时音乐仓库固定装配真实平台实现', () {
+    final container = ProviderContainer(overrides: [musicAuthProvider.overrideWith(_NoAuth.new)]);
+    addTearDown(container.dispose);
+    expect(container.read(musicRepositoryProvider), isA<PlatformMusicRepository>());
+  });
+
   test('推荐歌单走平台实现；空结果回退榜单清单', () async {
     final source = _FakeSource(recommend: const [], chartCount: 3);
     final repo = PlatformMusicRepository(platform: MusicPlatform.kugou, source: source);
@@ -75,6 +84,11 @@ void main() {
   });
 }
 
+class _NoAuth extends MusicAuthNotifier {
+  @override
+  MusicAuthState build() => const MusicAuthState(loading: false);
+}
+
 class _FakeSource implements MusicSource {
   _FakeSource({this.recommend = const [], this.chartCount = 3, this.failingChartId, this.failSearch = false});
 
@@ -96,6 +110,9 @@ class _FakeSource implements MusicSource {
   bool get supportsRecommendPlaylists => recommend.isNotEmpty;
 
   @override
+  bool get supportsSimilarSongs => true;
+
+  @override
   Future<List<MusicSong>> searchSongs(String keywords, {int limit = 30, int offset = 0}) async {
     if (failSearch) throw StateError('boom');
     return [_song('s1')];
@@ -111,8 +128,8 @@ class _FakeSource implements MusicSource {
   Future<List<MusicPlaylist>> userPlaylists() async => const [];
 
   @override
-  Future<List<({String id, String name, String updateMeta})>> charts() async => [
-    for (var i = 0; i < chartCount; i++) (id: 'c$i', name: 'chart $i', updateMeta: 'daily'),
+  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async => [
+    for (var i = 0; i < chartCount; i++) (id: 'c$i', name: 'chart $i', updateMeta: 'daily', coverUrl: null),
   ];
 
   @override
@@ -130,6 +147,9 @@ class _FakeSource implements MusicSource {
 
   @override
   Future<List<MusicSong>> dailySongs() async => [_song('d1')];
+
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) async => [_song('similar')];
 
   @override
   Future<List<MusicComment>> comments(String songId, {int limit = 20, int offset = 0}) async => const [];

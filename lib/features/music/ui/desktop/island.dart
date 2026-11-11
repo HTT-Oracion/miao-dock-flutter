@@ -149,8 +149,13 @@ class _DynamicIslandState extends ConsumerState<DynamicIsland> {
   ) {
     final palette = AppPalette.of(context);
     final player = ref.watch(playerProvider);
-    final lyricLine = lyrics.lines[idx];
     final total = song.duration.inMilliseconds;
+    final lyricLines = lyrics.lines.isEmpty
+        ? <String>[song.title, song.artist]
+        : <String>[
+            lyrics.lines[idx.clamp(0, lyrics.lines.length - 1)].text,
+            if (idx + 1 < lyrics.lines.length) lyrics.lines[idx + 1].text,
+          ];
     String fmt(int ms) => formatSongDuration(Duration(milliseconds: ms));
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
@@ -183,23 +188,39 @@ class _DynamicIslandState extends ConsumerState<DynamicIsland> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // 歌词卡：当前句；播放卡：音质 + 时长摘要。
+          const SizedBox(height: 6),
+          // 歌词卡固定预留两行，进度条位于歌词窗口下方。
           if (_lyricCard)
-            Text(
-              lyricLine.text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: AppFont.px12, fontWeight: FontWeight.w600, color: palette.accInk),
+            SizedBox(
+              height: 34,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final (lineIndex, line) in lyricLines.take(2).indexed)
+                    Text(
+                      line,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: lineIndex == 0 ? AppFont.px12 : AppFont.px11,
+                        fontWeight: lineIndex == 0 ? FontWeight.w600 : FontWeight.w400,
+                        color: lineIndex == 0 ? palette.accInk : palette.mut,
+                      ),
+                    ),
+                ],
+              ),
             )
           else
-            Text(
-              l10n.musicSongInfoLine(song.album, song.qualityLabel ?? ''),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: AppFont.px12, fontWeight: FontWeight.w600, color: palette.accInk),
+            SizedBox(
+              height: 34,
+              child: Text(
+                l10n.musicSongInfoLine(song.album, song.qualityLabel ?? ''),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: AppFont.px12, fontWeight: FontWeight.w600, color: palette.accInk),
+              ),
             ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           // 进度：静态比例条（拖拽交给沉浸播放器）。
           Row(
             children: [

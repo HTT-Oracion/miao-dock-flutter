@@ -72,6 +72,10 @@ class MusicLoginController extends Notifier<MusicQrState> {
       state = const MusicQrState(phase: MusicQrPhase.idle);
       return;
     }
+    // 🔴 不能在 `initState` / `build` 期间同步改 provider（Riverpod 会抛
+    // 「Tried to modify a provider while the widget tree was building」）。
+    // 延迟到当前帧之后：弹窗先渲染「加载中」，下一帧再真正取 key。
+    await Future<void>.delayed(Duration.zero);
     state = const MusicQrState(phase: MusicQrPhase.loading);
     final api = NeteaseApi();
     try {
