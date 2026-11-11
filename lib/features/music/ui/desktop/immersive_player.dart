@@ -973,14 +973,16 @@ class _LyricsView extends ConsumerWidget {
             final on = i == idx;
             final past = i < idx;
             final mainColor = on ? palette.acc : (past ? palette.ink2.withValues(alpha: 0.42) : palette.ink2);
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
+            // N18：悬停行变蓝提示可点；鼠标离开恢复（用状态色 blue，不改正文色纪律 ——
+            // 歌词行是可交互元素，不是「用彩色表达状态」）。
+            return _HoverLyricLine(
+              lineHeight: lineH,
               onTap: () {
                 // 点击行 seek 并重置手动状态（N18 边界）。
                 host.resetManual();
                 ref.read(playerProvider.notifier).seekMs(line.t);
               },
-              child: Container(
+              builder: (hover) => Container(
                 height: lineH,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
                 child: Column(
@@ -995,7 +997,7 @@ class _LyricsView extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: on ? AppFont.px17 : AppFont.px14,
                         fontWeight: on ? FontWeight.w700 : FontWeight.w400,
-                        color: mainColor,
+                        color: hover && !on ? palette.blue : mainColor,
                       ),
                     ),
                     if (withTr && line.translation != null)
@@ -1016,6 +1018,34 @@ class _LyricsView extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// 歌词行 hover 包装（N18）：鼠标进入时把文字提蓝，离开恢复。
+///
+/// 不用 InkWell：歌词行没有底色 / 水波纹，只要颜色提示，避免在透明区域画 Material 层。
+class _HoverLyricLine extends StatefulWidget {
+  const _HoverLyricLine({required this.lineHeight, required this.onTap, required this.builder});
+
+  final double lineHeight;
+  final VoidCallback onTap;
+  final Widget Function(bool hover) builder;
+
+  @override
+  State<_HoverLyricLine> createState() => _HoverLyricLineState();
+}
+
+class _HoverLyricLineState extends State<_HoverLyricLine> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: widget.onTap, child: widget.builder(_hover)),
     );
   }
 }
