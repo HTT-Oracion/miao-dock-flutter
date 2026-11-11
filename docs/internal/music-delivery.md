@@ -192,7 +192,7 @@
 | 32 | 队列行：序号 / 歌名 / 歌手 / 时长 / ♪ | 保留 | `queue_drawer.dart` `_QueueRow`（序号 / 歌名 / 歌手 / 时长 / 当前行 ♪） |
 | 33 | 队列行点击播放 | 保留 | 同上 `onTap` → `playAt(i)` |
 | 34 | 队列清空 | 优化 | `queue_drawer.dart` `_clear` → `clearQueueKeepCurrent` + 6s `_QueueUndoBar` |
-| 35 | 队列拖动排序（ver1.0 无） | 新增 | `queue_drawer.dart` `ReorderableListView` + `music_player.dart` `moveQueue`（落点用 M3 位移反馈，见偏差 §4.3） |
+| 35 | 队列拖动排序（ver1.0 无） | 新增 | `queue_drawer.dart` `ReorderableListView` + `QueueDrawer._reorder`（整队列 `restoreQueue` 落回，落点用 M3 位移反馈，见偏差 §4.3） |
 | 36 | 队列单行移除（ver1.0 无） | 新增 | `queue_drawer.dart` `_QueueRow` 悬停 ✕ → `removeAt`（只剩一首时 `queueEmptyRemoveForbidden` 提示） |
 | 37 | 播放器收起 / 全屏化 | 保留 | `immersive_player.dart` `_TopBar`（收起 / 全屏按钮） |
 | 38 | 黑胶旋转，暂停停转 | 保留 | `immersive_player.dart` `_DiscPainter` + `_spin`（暂停停转） |
