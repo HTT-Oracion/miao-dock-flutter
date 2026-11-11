@@ -30,6 +30,8 @@
   按 `subscribed` 语义位拆开的「创建的歌单」「收藏的歌单」两个可折叠分组；桌面 4 列紧凑
   信息卡 / 移动单列行）→ 点条目下钻曲目详情（返回栏 + 类型胶囊 + 播放全部 / 收藏）。
   收藏歌单取消订阅后从分组移除，可再加回。
+- **交付与自测**：交互逐条对照、截图自测结论、清理清单与已知偏差见
+  [`docs/internal/music-delivery.md`](docs/internal/music-delivery.md)。
 - **数据源**：默认演示数据（离线可跑，覆盖全部状态）；设置 → 通用 → 「音乐数据源」切到
   「真实接口」后按当前音源请求四平台官方端点（`lib/features/music/data/api/` 下的
   `netease_api` / `qqmusic_api` / `kugou_api` / `migu_api`，移植自 miao-dock 的 Rust 客户端；

@@ -4404,4 +4404,6 @@
   `.tmp/music-selftest-logs/`（13 次运行日志）、`.tmp/music-design/`（设计稿对照截图）、
   `.tmp/design-run/shot-music-new.mjs` / `shot-music-fp.mjs` / `shot-music-states.mjs` /
   `shot-search.mjs` / `music-shots.mjs` / `music-shots2.mjs`。正式代码不引用任何自测脚本。
+- **交付说明**：`docs/internal/music-delivery.md`（功能覆盖对照表 / 截图自测结论 / 清理清单 /
+  已知偏差）。
 - **关联**：design/music/ver1.0（N41–N44 / M18）· D-201 · AGENTS §3/§4。
