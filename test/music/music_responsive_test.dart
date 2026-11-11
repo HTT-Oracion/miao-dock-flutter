@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/music/ui/mobile/mobile_music_screen.dart';
 import 'package:miao_dock_flutter/features/music/ui/music_screen.dart';
+import 'package:miao_dock_flutter/features/music/ui/views/music_detail.dart';
 import 'package:miao_dock_flutter/features/music/ui/widgets/song_row.dart';
 import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
@@ -67,6 +68,23 @@ void main() {
     await tester.pump();
     expect(tester.getSize(find.byType(SongRow)).height, 34);
     tester.view.reset();
+  });
+
+  testWidgets('桌面 sm（880）隐藏专辑列，表头与行同步（N32）', (tester) async {
+    tester.view.physicalSize = const Size(880, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      host(
+        const MusicDetailScreen(kind: MusicSourceKind.playlist, id: 'p1'),
+        size: const Size(880, 800),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 240));
+    final l10n = AppLocalizations.of(tester.element(find.byType(MusicDetailScreen)));
+    // 破坏点：只在行上隐藏专辑、表头仍渲染 → 表头有「专辑」而行没有，列宽错位。
+    expect(find.text(l10n.musicAlbumTag), findsNothing);
   });
 
   testWidgets('减少动态效果：魔法阵 / 波形不排新帧（不旋转）', (tester) async {

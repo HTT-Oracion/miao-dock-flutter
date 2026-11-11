@@ -4397,7 +4397,7 @@
   + `musicScrollMemoryProvider`，滚动即记、重建后回填，替代跨路由失效的 PageStorage）；
   重复点当前视图页签只回顶不重载（`musicScrollTopProvider`，壳层 `_goView` 拦截）。
 - **验证**：`flutter analyze` 0；`dart run tool/check_l10n.dart` 通过；`flutter test` 全绿
-  （跳过项为本机未启动 mangasvc 的 e2e）；`test/music` 39 passed；截图自测覆盖
+  （跳过项为本机未启动 mangasvc 的 e2e）；`test/music` 40 passed；截图自测覆盖
   双端 × 双主题 × 发现 / 歌单库 / 歌单详情 / 收藏歌单 / 本地 / 历史 / 搜索 / 账号抽屉 /
   队列 / 全屏播放器（光碟 / 歌词 / 评论）/ 沉浸播放器 / 加载 / 失败 / 空态。
 - **自测脚本与产物（已删除）**：`integration_test/music_selftest_test.dart`（含临时加的
