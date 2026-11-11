@@ -22,3 +22,13 @@ String moduleLabel(AppLocalizations l10n, int index) => switch (index) {
   1 => l10n.navMusic,
   _ => l10n.navAnime,
 };
+
+/// 移动端二级页签的短文案（设计稿 M02：发现 / 歌单 / 本地 / 历史）。
+///
+/// 桌面侧栏空间足够，仍用完整视图名；两端文案分列以免互相牵制。
+String mobileViewLabel(AppLocalizations l10n, String id) => switch (id) {
+  'playlist' => l10n.viewPlaylistShort,
+  'local' => l10n.viewLocalShort,
+  'history' => l10n.viewHistoryShort,
+  _ => viewLabel(l10n, id),
+};

@@ -56,6 +56,18 @@
   "@viewHistory": {
     "description": "音乐视图：播放历史"
   },
+  "viewPlaylistShort": "歌单",
+  "@viewPlaylistShort": {
+    "description": "音乐视图短标签：我的歌单（移动端顶部页签）"
+  },
+  "viewLocalShort": "本地",
+  "@viewLocalShort": {
+    "description": "音乐视图短标签：本地音乐（移动端顶部页签）"
+  },
+  "viewHistoryShort": "历史",
+  "@viewHistoryShort": {
+    "description": "音乐视图短标签：播放历史（移动端顶部页签）"
+  },
   "titleAnimePending": "番剧 · 待定",
   "@titleAnimePending": {
     "description": "番剧屏占位文案"
@@ -100,6 +112,19 @@
   "themeToDarkToast": "已切换为深色主题",
   "@themeToDarkToast": {
     "description": "切主题吐司"
+  },
+  "themeModeSystem": "跟随系统",
+  "@themeModeSystem": {
+    "description": "主题模式：跟随系统"
+  },
+  "themeModeTooltip": "主题：{mode}，点击切换",
+  "@themeModeTooltip": {
+    "description": "音乐模块顶栏主题按钮的提示",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
   },
   "queueTaskSubtitle": "{done} / {total} 页 · 第 {batch} 批",
   "@queueTaskSubtitle": {
@@ -639,22 +664,6 @@
         "type": "int"
       }
     }
-  },
-  "musicDiscoverEmpty": "官方榜单与推荐歌单需要接入音乐源后才可用。",
-  "@musicDiscoverEmpty": {
-    "description": "音乐发现：空态说明"
-  },
-  "musicLocalEmpty": "本地曲库尚未接入；接入后在此选择文件或文件夹导入。",
-  "@musicLocalEmpty": {
-    "description": "音乐本地：空态说明"
-  },
-  "musicHistoryEmpty": "播放历史随音乐域落地后在此展示。",
-  "@musicHistoryEmpty": {
-    "description": "音乐历史：空态说明"
-  },
-  "musicPlaylistEmpty": "歌单随音乐域落地后在此展示。",
-  "@musicPlaylistEmpty": {
-    "description": "音乐歌单：空态说明"
   },
   "animePending": "番剧 · 待定",
   "@animePending": {
@@ -1492,6 +1501,22 @@
   "@settingSidebarLabelsShow": {
     "description": "设置页文案"
   },
+  "settingMusicSource": "音乐数据源",
+  "@settingMusicSource": {
+    "description": "音乐模块：演示数据 / 真实平台接口"
+  },
+  "settingMusicSourceWhy": "演示数据离线可用、覆盖全部状态；真实接口直接请求四大平台，需要联网且受平台风控影响。",
+  "@settingMusicSourceWhy": {
+    "description": "音乐数据源说明"
+  },
+  "settingMusicSourceDemo": "演示数据",
+  "@settingMusicSourceDemo": {
+    "description": "音乐数据源：演示"
+  },
+  "settingMusicSourceOnline": "真实接口",
+  "@settingMusicSourceOnline": {
+    "description": "音乐数据源：线上"
+  },
   "settingLangZh": "简体中文",
   "@settingLangZh": {
     "description": "设置页文案"
@@ -1566,6 +1591,10 @@
   },
   "settingDark": "深色",
   "@settingDark": {
+    "description": "主题标签"
+  },
+  "settingFollowSystem": "跟随系统",
+  "@settingFollowSystem": {
     "description": "主题标签"
   },
   "svcCardLocalService": "本地服务",
@@ -5504,5 +5533,1252 @@
   "onlineSourceLibraryId": "仓库 ID",
   "@onlineSourceLibraryId": {
     "description": "在线漫画源详情：onlineSourceLibraryId"
+  },
+  "musicSecRecPlaylists": "推荐歌单",
+  "@musicSecRecPlaylists": {
+    "description": "发现页推荐歌单分区标题"
+  },
+  "musicSecCharts": "官方榜单",
+  "@musicSecCharts": {
+    "description": "发现页官方榜单分区标题"
+  },
+  "musicSecDaily": "推荐歌曲",
+  "@musicSecDaily": {
+    "description": "发现页每日推荐分区标题"
+  },
+  "musicRefreshBatch": "换一批",
+  "@musicRefreshBatch": {
+    "description": "推荐歌单 / 榜单分区右上角刷新按钮"
+  },
+  "musicRefreshing": "正在刷新…",
+  "@musicRefreshing": {
+    "description": "刷新中轻提示"
+  },
+  "musicRefreshed": "已更新推荐",
+  "@musicRefreshed": {
+    "description": "刷新成功轻提示"
+  },
+  "musicPlaysAria": "播放量 {count}",
+  "@musicPlaysAria": {
+    "description": "歌单瓦片播放量角标读法",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "musicCountSongs": "{count} 首",
+  "@musicCountSongs": {
+    "description": "歌单 / 队列 / 本地曲目计数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicTrendUp": "上升",
+  "@musicTrendUp": {
+    "description": "榜单趋势标记读法（红▲）"
+  },
+  "musicTrendNew": "新上榜",
+  "@musicTrendNew": {
+    "description": "榜单趋势标记读法（绿「新」）"
+  },
+  "musicTrendFlat": "持平",
+  "@musicTrendFlat": {
+    "description": "榜单趋势标记读法（灰「–」）"
+  },
+  "musicRecCardAria": "播放「{title}」",
+  "@musicRecCardAria": {
+    "description": "推荐卡整组播放读法",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "musicPlayAll": "播放全部",
+  "@musicPlayAll": {
+    "description": "歌单详情主按钮"
+  },
+  "musicMyCollectionBadge": "我的收藏",
+  "@musicMyCollectionBadge": {
+    "description": "推荐歌单首卡「我喜欢的音乐」封面上的收藏徽标"
+  },
+  "musicCollect": "收藏",
+  "@musicCollect": {
+    "description": "歌单详情收藏按钮（未收藏态）"
+  },
+  "musicCollected": "已收藏",
+  "@musicCollected": {
+    "description": "歌单详情收藏按钮（已收藏态）"
+  },
+  "musicCollectDone": "已收藏",
+  "@musicCollectDone": {
+    "description": "收藏成功轻提示"
+  },
+  "musicCollectOff": "已取消收藏",
+  "@musicCollectOff": {
+    "description": "取消收藏轻提示"
+  },
+  "musicKickerPlaylist": "歌单",
+  "@musicKickerPlaylist": {
+    "description": "歌单详情 hero 上方的小标签：普通歌单"
+  },
+  "musicKickerChart": "官方榜单",
+  "@musicKickerChart": {
+    "description": "歌单详情 hero 上方的小标签：榜单"
+  },
+  "musicKickerDaily": "每日推荐",
+  "@musicKickerDaily": {
+    "description": "歌单详情 hero 上方的小标签：每日推荐"
+  },
+  "musicDetailSourceLiked": "网易云 · 红心同步",
+  "@musicDetailSourceLiked": {
+    "description": "红心歌单详情的来源行"
+  },
+  "musicDetailSourcePlaylist": "网易云 · 由你创建",
+  "@musicDetailSourcePlaylist": {
+    "description": "普通歌单详情的来源行"
+  },
+  "musicDetailSourceChart": "网易云 · 官方榜单",
+  "@musicDetailSourceChart": {
+    "description": "榜单详情的来源行"
+  },
+  "musicDetailSourceDaily": "网易云 · 每日 06:00 更新",
+  "@musicDetailSourceDaily": {
+    "description": "每日推荐详情的来源行"
+  },
+  "musicDetailMeta": "{count} 首 · {desc} · {source}",
+  "@musicDetailMeta": {
+    "description": "歌单详情副行：曲目数 · 描述 · 来源",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "desc": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "musicDetailMetaSimple": "{count} 首 · {source}",
+  "@musicDetailMetaSimple": {
+    "description": "歌单详情副行（无描述）：曲目数 · 来源",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourceSongs": "{count} 首 · {source}",
+  "@musicSourceSongs": {
+    "description": "详情 hero 副行（曲目数与来源）",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "musicAlbumTag": "专辑",
+  "@musicAlbumTag": {
+    "description": "详情来源标注（专辑）"
+  },
+  "musicRowPlayAria": "播放 {title}",
+  "@musicRowPlayAria": {
+    "description": "歌曲行播放读法",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "musicRowMenuAria": "更多操作",
+  "@musicRowMenuAria": {
+    "description": "歌曲行 ⋯ 按钮读法"
+  },
+  "musicMenuPlay": "播放",
+  "@musicMenuPlay": {
+    "description": "歌曲菜单：播放"
+  },
+  "musicMenuNext": "下一首播放",
+  "@musicMenuNext": {
+    "description": "歌曲菜单：下一首播放"
+  },
+  "musicMenuLike": "红心",
+  "@musicMenuLike": {
+    "description": "歌曲菜单：红心（未红心态）"
+  },
+  "musicMenuUnlike": "取消红心",
+  "@musicMenuUnlike": {
+    "description": "歌曲菜单：红心（已红心态）"
+  },
+  "musicMenuAddTo": "加入歌单",
+  "@musicMenuAddTo": {
+    "description": "歌曲菜单：加入歌单"
+  },
+  "musicMenuCopyLink": "复制链接",
+  "@musicMenuCopyLink": {
+    "description": "歌曲菜单：复制链接"
+  },
+  "musicMenuViewAlbum": "查看专辑",
+  "@musicMenuViewAlbum": {
+    "description": "歌曲菜单：查看专辑"
+  },
+  "musicCopied": "已复制链接",
+  "@musicCopied": {
+    "description": "复制链接成功轻提示"
+  },
+  "musicAddedNext": "已加入下一首播放",
+  "@musicAddedNext": {
+    "description": "下一首播放成功轻提示"
+  },
+  "musicLiked": "已加入红心",
+  "@musicLiked": {
+    "description": "红心成功轻提示"
+  },
+  "musicUnliked": "已取消红心",
+  "@musicUnliked": {
+    "description": "取消红心轻提示"
+  },
+  "musicPlayingNow": "正在播放：{title}",
+  "@musicPlayingNow": {
+    "description": "点行播放轻提示",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "musicCurRowAria": "正在播放",
+  "@musicCurRowAria": {
+    "description": "当前播放行读法"
+  },
+  "musicModeList": "列表循环",
+  "@musicModeList": {
+    "description": "播放模式：列表循环"
+  },
+  "musicModeOne": "单曲循环",
+  "@musicModeOne": {
+    "description": "播放模式：单曲循环"
+  },
+  "musicModeShuffle": "随机播放",
+  "@musicModeShuffle": {
+    "description": "播放模式：随机播放"
+  },
+  "musicModeOrder": "顺序播放",
+  "@musicModeOrder": {
+    "description": "播放模式：顺序播放"
+  },
+  "musicModeHeartbeat": "心动模式",
+  "@musicModeHeartbeat": {
+    "description": "播放模式：心动模式"
+  },
+  "musicModeListDesc": "播完最后一首回到第一首",
+  "@musicModeListDesc": {
+    "description": "模式说明：列表循环"
+  },
+  "musicModeOneDesc": "当前这首反复播放",
+  "@musicModeOneDesc": {
+    "description": "模式说明：单曲循环"
+  },
+  "musicModeShuffleDesc": "在队列内随机取下一首",
+  "@musicModeShuffleDesc": {
+    "description": "模式说明：随机播放"
+  },
+  "musicModeOrderDesc": "播完最后一首就停下",
+  "@musicModeOrderDesc": {
+    "description": "模式说明：顺序播放"
+  },
+  "musicModeHeartbeatDesc": "按「我喜欢的音乐」口味插播",
+  "@musicModeHeartbeatDesc": {
+    "description": "模式说明：心动模式"
+  },
+  "musicModeAria": "{mode}，点击切换",
+  "@musicModeAria": {
+    "description": "模式按钮读法（当前档 + 提示）",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "musicHeartbeatExit": "心动模式已退出：队列不再是「我喜欢的音乐」",
+  "@musicHeartbeatExit": {
+    "description": "离开合法队列时自动退回顺序播放的轻提示"
+  },
+  "musicQualityAria": "音质",
+  "@musicQualityAria": {
+    "description": "音质胶囊读法"
+  },
+  "musicQualityStd": "标准",
+  "@musicQualityStd": {
+    "description": "音质档：标准"
+  },
+  "musicQualityHigh": "极高",
+  "@musicQualityHigh": {
+    "description": "音质档：极高"
+  },
+  "musicQualityLossless": "无损",
+  "@musicQualityLossless": {
+    "description": "音质档：无损"
+  },
+  "musicQualityHires": "高清臻音",
+  "@musicQualityHires": {
+    "description": "音质档：高清臻音"
+  },
+  "musicQualityMaster": "超清母带",
+  "@musicQualityMaster": {
+    "description": "音质档：超清母带"
+  },
+  "musicQualityKbps": "{kbps} kbps",
+  "@musicQualityKbps": {
+    "description": "音质码率标注",
+    "placeholders": {
+      "kbps": {
+        "type": "int"
+      }
+    }
+  },
+  "musicQualityFlac": "{kbps} kbps · FLAC",
+  "@musicQualityFlac": {
+    "description": "无损码率标注",
+    "placeholders": {
+      "kbps": {
+        "type": "int"
+      }
+    }
+  },
+  "musicQualityMasterSub": "母带级",
+  "@musicQualityMasterSub": {
+    "description": "母带档码率替代标注"
+  },
+  "musicQualityFree": "免费",
+  "@musicQualityFree": {
+    "description": "音质会员要求：免费"
+  },
+  "musicQualityVip": "会员",
+  "@musicQualityVip": {
+    "description": "音质会员要求：会员"
+  },
+  "musicQualitySvip": "SVIP",
+  "@musicQualitySvip": {
+    "description": "音质会员要求：SVIP"
+  },
+  "musicQualitySheetTitle": "音质",
+  "@musicQualitySheetTitle": {
+    "description": "音质弹层标题"
+  },
+  "musicQualityNow": "当前 {name}",
+  "@musicQualityNow": {
+    "description": "音质弹层当前档标注",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicVolumeAria": "音量",
+  "@musicVolumeAria": {
+    "description": "音量区读法"
+  },
+  "musicVolumeMute": "静音",
+  "@musicVolumeMute": {
+    "description": "静音按钮（未静音态）"
+  },
+  "musicVolumeUnmute": "取消静音",
+  "@musicVolumeUnmute": {
+    "description": "静音按钮（已静音态）"
+  },
+  "musicPlayAria": "播放",
+  "@musicPlayAria": {
+    "description": "播放按钮读法"
+  },
+  "musicPauseAria": "暂停",
+  "@musicPauseAria": {
+    "description": "暂停按钮读法"
+  },
+  "musicPrevAria": "上一曲",
+  "@musicPrevAria": {
+    "description": "上一曲按钮读法"
+  },
+  "musicNextAria": "下一曲",
+  "@musicNextAria": {
+    "description": "下一曲按钮读法"
+  },
+  "musicSeekAria": "播放进度",
+  "@musicSeekAria": {
+    "description": "进度条读法"
+  },
+  "musicSeekText": "{pos} / {total}",
+  "@musicSeekText": {
+    "description": "进度条 aria-valuetext",
+    "placeholders": {
+      "pos": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "musicClosePlayer": "关闭播放",
+  "@musicClosePlayer": {
+    "description": "播放条关闭按钮（停止但保留队列）"
+  },
+  "musicSearchHint": "搜索单曲 / 歌单 / 歌手",
+  "@musicSearchHint": {
+    "description": "搜索框占位与移动搜索条文案"
+  },
+  "musicSearchOpenAria": "打开搜索",
+  "@musicSearchOpenAria": {
+    "description": "搜索按钮读法（⌘K）"
+  },
+  "musicAccountMenuAria": "账号",
+  "@musicAccountMenuAria": {
+    "description": "账号 chip 读法"
+  },
+  "musicCurSourceAria": "{platform} · 当前音源",
+  "@musicCurSourceAria": {
+    "description": "平台 logo 读法（顶栏 / 抽屉）",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "musicIslandOpenAria": "展开灵动岛",
+  "@musicIslandOpenAria": {
+    "description": "灵动岛折叠态读法"
+  },
+  "musicIslandCloseAria": "收起灵动岛",
+  "@musicIslandCloseAria": {
+    "description": "灵动岛展开态收起读法"
+  },
+  "musicIslandLyricTab": "歌词卡",
+  "@musicIslandLyricTab": {
+    "description": "灵动岛展开态：歌词卡"
+  },
+  "musicIslandSingerTab": "播放卡",
+  "@musicIslandSingerTab": {
+    "description": "灵动岛展开态：播放卡"
+  },
+  "musicBadgeCur": "当前源",
+  "@musicBadgeCur": {
+    "description": "平台徽标：当前源"
+  },
+  "musicBadgeLogged": "已登录",
+  "@musicBadgeLogged": {
+    "description": "平台徽标：已登录"
+  },
+  "musicBadgeOff": "未登录",
+  "@musicBadgeOff": {
+    "description": "平台徽标：未登录"
+  },
+  "musicPlatCurTitle": "当前音源",
+  "@musicPlatCurTitle": {
+    "description": "音源行 title：当前源"
+  },
+  "musicPlatOffTitle": "未登录 · 点击登录",
+  "@musicPlatOffTitle": {
+    "description": "音源行 title：未登录"
+  },
+  "musicPlatLoggedTitle": "点击切换音源",
+  "@musicPlatLoggedTitle": {
+    "description": "音源行 title：已登录非当前源"
+  },
+  "musicAccountCurSource": "当前音源",
+  "@musicAccountCurSource": {
+    "description": "账号菜单副行：当前音源"
+  },
+  "musicLogout": "退出登录",
+  "@musicLogout": {
+    "description": "账号菜单退出登录"
+  },
+  "musicNotLogged": "未登录",
+  "@musicNotLogged": {
+    "description": "未登录占位文案"
+  },
+  "musicSwitchSourceToast": "已切换到 {platform}",
+  "@musicSwitchSourceToast": {
+    "description": "切音源成功轻提示",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "musicQueueTitle": "播放队列",
+  "@musicQueueTitle": {
+    "description": "队列抽屉 / 抽屉标题"
+  },
+  "musicQueueClear": "清空队列",
+  "@musicQueueClear": {
+    "description": "队列清空按钮"
+  },
+  "musicQueueCleared": "队列已清空",
+  "@musicQueueCleared": {
+    "description": "清空成功轻提示（带撤销）"
+  },
+  "musicUndo": "撤销",
+  "@musicUndo": {
+    "description": "清空类操作的撤销动作"
+  },
+  "musicQueueRemoveAria": "移除",
+  "@musicQueueRemoveAria": {
+    "description": "队列行移除按钮读法"
+  },
+  "musicQueueDragAria": "拖拽排序",
+  "@musicQueueDragAria": {
+    "description": "队列行拖拽把手读法"
+  },
+  "musicQueueRemoveForbidden": "队列只剩一首，不能再移除",
+  "@musicQueueRemoveForbidden": {
+    "description": "移除被拒轻提示"
+  },
+  "musicQueueEmptyTitle": "队列是空的",
+  "@musicQueueEmptyTitle": {
+    "description": "队列空态标题"
+  },
+  "musicQueueEmptyDesc": "从歌单或搜索里挑一首开始听",
+  "@musicQueueEmptyDesc": {
+    "description": "队列空态说明"
+  },
+  "musicImmersiveOpenAria": "打开沉浸播放器",
+  "@musicImmersiveOpenAria": {
+    "description": "封面 / 歌名点击展开播放器读法"
+  },
+  "musicImmersiveCloseAria": "收起播放器",
+  "@musicImmersiveCloseAria": {
+    "description": "沉浸播放器收起读法"
+  },
+  "musicFullscreenAria": "全屏",
+  "@musicFullscreenAria": {
+    "description": "沉浸播放器全屏按钮读法"
+  },
+  "musicPlayerCtx": "正在播放 · {platform}",
+  "@musicPlayerCtx": {
+    "description": "沉浸播放器顶部上下文行",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "musicNowPlayingTag": "正在播放",
+  "@musicNowPlayingTag": {
+    "description": "沉浸播放器顶栏第一行：正在播放"
+  },
+  "musicPlatformQuality": "{platform} · {quality}",
+  "@musicPlatformQuality": {
+    "description": "沉浸播放器顶栏第二行：音源 · 音质",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      },
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "musicDynamicLabel": "动态",
+  "@musicDynamicLabel": {
+    "description": "沉浸播放器「现代」样式下的动态氛围开关"
+  },
+  "musicTabLyrics": "歌词",
+  "@musicTabLyrics": {
+    "description": "播放器页签：歌词"
+  },
+  "musicTabComments": "评论",
+  "@musicTabComments": {
+    "description": "播放器页签：评论"
+  },
+  "musicLyricManual": "手动滚动",
+  "@musicLyricManual": {
+    "description": "歌词右上角状态标签（手动滚动）"
+  },
+  "musicLyricAuto": "自动跟随",
+  "@musicLyricAuto": {
+    "description": "歌词右上角状态标签（自动跟随）"
+  },
+  "musicTranslateOn": "译",
+  "@musicTranslateOn": {
+    "description": "翻译歌词开关（「译」）"
+  },
+  "musicCommentsEmpty": "还没有评论",
+  "@musicCommentsEmpty": {
+    "description": "评论空态"
+  },
+  "musicCommentHotAria": "热门评论",
+  "@musicCommentHotAria": {
+    "description": "热门评论角标读法"
+  },
+  "musicLikeAria": "点赞",
+  "@musicLikeAria": {
+    "description": "评论点赞按钮读法"
+  },
+  "musicSkinTitle": "播放器样式",
+  "@musicSkinTitle": {
+    "description": "样式弹层标题"
+  },
+  "musicSkinModern": "现代",
+  "@musicSkinModern": {
+    "description": "样式：现代"
+  },
+  "musicSkinModernDesc": "暖橙渐变，默认",
+  "@musicSkinModernDesc": {
+    "description": "样式说明：现代"
+  },
+  "musicSkinCover": "封面渐染",
+  "@musicSkinCover": {
+    "description": "样式：封面渐染"
+  },
+  "musicSkinCoverDesc": "封面主色向左晕开",
+  "@musicSkinCoverDesc": {
+    "description": "样式说明：封面渐染"
+  },
+  "musicSkinVinyl": "透明彩胶",
+  "@musicSkinVinyl": {
+    "description": "样式：透明彩胶"
+  },
+  "musicSkinVinylDesc": "大唱片 + 颗粒噪点",
+  "@musicSkinVinylDesc": {
+    "description": "样式说明：透明彩胶"
+  },
+  "musicSkinSpectrum": "音域回响",
+  "@musicSkinSpectrum": {
+    "description": "样式：音域回响"
+  },
+  "musicSkinSpectrumDesc": "频谱随拍律动",
+  "@musicSkinSpectrumDesc": {
+    "description": "样式说明：音域回响"
+  },
+  "musicSkinImmersive": "沉浸",
+  "@musicSkinImmersive": {
+    "description": "样式：沉浸"
+  },
+  "musicSkinImmersiveDesc": "同心涟漪，无封面干扰",
+  "@musicSkinImmersiveDesc": {
+    "description": "样式说明：沉浸"
+  },
+  "musicSkinGlass": "通透",
+  "@musicSkinGlass": {
+    "description": "样式：通透"
+  },
+  "musicSkinGlassDesc": "雾面玻璃，弱化背景",
+  "@musicSkinGlassDesc": {
+    "description": "样式说明：通透"
+  },
+  "musicSkinDynamic": "动态",
+  "@musicSkinDynamic": {
+    "description": "现代样式专属「动态」开关"
+  },
+  "musicSearchGroupSongs": "单曲",
+  "@musicSearchGroupSongs": {
+    "description": "搜索结果分组：单曲"
+  },
+  "musicSearchGroupPlaylists": "歌单",
+  "@musicSearchGroupPlaylists": {
+    "description": "搜索结果分组：歌单"
+  },
+  "musicSearchNoResult": "没有匹配的结果",
+  "@musicSearchNoResult": {
+    "description": "搜索空态标题"
+  },
+  "musicSearchNoResultHint": "换个关键词试试",
+  "@musicSearchNoResultHint": {
+    "description": "搜索空态说明"
+  },
+  "musicSearchRecent": "最近搜索",
+  "@musicSearchRecent": {
+    "description": "空关键词时显示最近搜索"
+  },
+  "musicSearchLoginTitle": "未登录不可搜",
+  "@musicSearchLoginTitle": {
+    "description": "未登录搜索说明标题"
+  },
+  "musicSearchLoginDesc": "登录后即可搜索全平台曲库",
+  "@musicSearchLoginDesc": {
+    "description": "未登录搜索说明正文"
+  },
+  "musicSearchGoLogin": "去登录",
+  "@musicSearchGoLogin": {
+    "description": "未登录搜索的登录入口"
+  },
+  "musicSearchCloseAria": "关闭搜索",
+  "@musicSearchCloseAria": {
+    "description": "搜索浮层关闭读法"
+  },
+  "musicLoginTitle": "登录",
+  "@musicLoginTitle": {
+    "description": "登录弹窗标题"
+  },
+  "musicLoginScanWith": "使用 {platform} App 扫码登录",
+  "@musicLoginScanWith": {
+    "description": "登录弹窗二维码区标题",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "musicLoginCountdown": "{sec}s 后自动刷新",
+  "@musicLoginCountdown": {
+    "description": "二维码倒计时",
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
+  "musicLoginRefreshAria": "刷新二维码",
+  "@musicLoginRefreshAria": {
+    "description": "刷新按钮读法"
+  },
+  "musicLoginPhone": "手机号登录",
+  "@musicLoginPhone": {
+    "description": "登录弹窗手机号页签"
+  },
+  "musicLoginPhonePlaceholder": "输入手机号",
+  "@musicLoginPhonePlaceholder": {
+    "description": "手机号输入框占位"
+  },
+  "musicLoginSimulate": "模拟登录成功",
+  "@musicLoginSimulate": {
+    "description": "登录弹窗模拟成功按钮（演示）"
+  },
+  "musicLoginSuccessToast": "登录成功",
+  "@musicLoginSuccessToast": {
+    "description": "登录成功轻提示"
+  },
+  "musicLoginQrWaiting": "等待扫码",
+  "@musicLoginQrWaiting": {
+    "description": "二维码状态：等待扫码"
+  },
+  "musicLoginQrScanned": "已扫码，请在手机上确认",
+  "@musicLoginQrScanned": {
+    "description": "二维码状态：已扫码"
+  },
+  "musicLoginQrExpired": "二维码已过期，请刷新",
+  "@musicLoginQrExpired": {
+    "description": "二维码状态：已过期"
+  },
+  "musicFailTitle": "加载失败了",
+  "@musicFailTitle": {
+    "description": "页面级失败态标题"
+  },
+  "musicFailReasonNetwork": "网络连接超时，已重试 2 次",
+  "@musicFailReasonNetwork": {
+    "description": "失败原因：网络超时"
+  },
+  "musicFailSourceDown": "音源服务未响应 · {platform} 接口异常",
+  "@musicFailSourceDown": {
+    "description": "失败原因：音源未响应",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "musicFailLastSync": "上次同步 {time}",
+  "@musicFailLastSync": {
+    "description": "失败态上次同步时间",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "musicFailQueueHint": "队列里还有 {count} 首可以播",
+  "@musicFailQueueHint": {
+    "description": "失败态可播数量提示",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicRetry": "重试",
+  "musicFailViewStatus": "看服务状态",
+  "@musicFailViewStatus": {
+    "description": "失败态出口：看服务状态"
+  },
+  "musicServiceStatusTitle": "服务状态",
+  "@musicServiceStatusTitle": {
+    "description": "服务状态弹窗标题"
+  },
+  "musicServiceStatusSource": "音源",
+  "@musicServiceStatusSource": {
+    "description": "服务状态行：音源"
+  },
+  "musicServiceStatusConnection": "连接",
+  "@musicServiceStatusConnection": {
+    "description": "服务状态行：连接"
+  },
+  "musicServiceStatusOffline": "超时 / 断开",
+  "@musicServiceStatusOffline": {
+    "description": "服务状态：连接失败"
+  },
+  "musicServiceStatusQueue": "队列缓存",
+  "@musicServiceStatusQueue": {
+    "description": "服务状态行：队列缓存"
+  },
+  "musicServiceStatusSync": "上次同步",
+  "@musicServiceStatusSync": {
+    "description": "服务状态行：上次同步时间"
+  },
+  "musicServiceStatusAck": "知道了",
+  "@musicServiceStatusAck": {
+    "description": "服务状态弹窗关闭按钮"
+  },
+  "@musicRetry": {
+    "description": "失败态重试按钮"
+  },
+  "musicFailSwitchLocal": "改听本地",
+  "@musicFailSwitchLocal": {
+    "description": "失败态出口：切本地"
+  },
+  "musicBannerFail": "推荐刷新失败",
+  "@musicBannerFail": {
+    "description": "局部失败横幅标题"
+  },
+  "musicBannerStaleHint": "旧内容已保留，可稍后重试",
+  "@musicBannerStaleHint": {
+    "description": "局部失败横幅说明"
+  },
+  "musicEmptyLocalTitle": "本地还没有歌曲",
+  "@musicEmptyLocalTitle": {
+    "description": "本地空态标题"
+  },
+  "musicEmptyLocalDesc": "支持拖入文件或整夹导入，文件只在本机读取、不上传",
+  "@musicEmptyLocalDesc": {
+    "description": "本地空态说明"
+  },
+  "musicEmptyLocalFormats": "支持 mp3 / flac / wav / m4a / ogg · 单文件上限 200 MB",
+  "@musicEmptyLocalFormats": {
+    "description": "本地空态支持的格式与大小限制"
+  },
+  "musicImportFiles": "选择文件",
+  "@musicImportFiles": {
+    "description": "本地导入：选择文件"
+  },
+  "musicImportFolder": "选择文件夹",
+  "@musicImportFolder": {
+    "description": "本地导入：选择文件夹"
+  },
+  "musicImporting": "导入中…",
+  "@musicImporting": {
+    "description": "导入进行中按钮态"
+  },
+  "musicImportDone": "已导入 {count} 首",
+  "@musicImportDone": {
+    "description": "导入成功轻提示",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicImportFail": "导入失败，保留原列表",
+  "@musicImportFail": {
+    "description": "导入失败轻提示"
+  },
+  "musicLocalClear": "清空",
+  "@musicLocalClear": {
+    "description": "本地列表清空按钮"
+  },
+  "musicLocalCleared": "列表已清空，文件未被删除",
+  "@musicLocalCleared": {
+    "description": "清空本地成功轻提示（带撤销）"
+  },
+  "musicHistoryClear": "清空",
+  "@musicHistoryClear": {
+    "description": "播放历史清空按钮"
+  },
+  "musicHistoryCleared": "历史已清空",
+  "@musicHistoryCleared": {
+    "description": "清空历史轻提示（带撤销）"
+  },
+  "musicToday": "今天",
+  "@musicToday": {
+    "description": "历史分组：今天"
+  },
+  "musicYesterday": "昨天",
+  "@musicYesterday": {
+    "description": "历史分组：昨天"
+  },
+  "musicEarlier": "更早",
+  "@musicEarlier": {
+    "description": "历史分组：更早"
+  },
+  "musicDailyLoginTitle": "登录后收听每日推荐",
+  "@musicDailyLoginTitle": {
+    "description": "未登录每日推荐 CTA 卡标题"
+  },
+  "musicDailyLoginDesc": "每日推荐需要账号口味数据；榜单与歌单无需登录也能听",
+  "@musicDailyLoginDesc": {
+    "description": "未登录每日推荐 CTA 说明"
+  },
+  "musicLoginAction": "立即登录",
+  "@musicLoginAction": {
+    "description": "登录 CTA 按钮"
+  },
+  "musicDlToggleAria": "桌面歌词",
+  "@musicDlToggleAria": {
+    "description": "桌面歌词开关读法"
+  },
+  "musicDlSettingsAria": "桌面歌词设置",
+  "@musicDlSettingsAria": {
+    "description": "桌面歌词设置入口读法"
+  },
+  "musicDlTitle": "桌面歌词设置",
+  "@musicDlTitle": {
+    "description": "设置弹窗标题"
+  },
+  "musicDlFontSize": "字号",
+  "@musicDlFontSize": {
+    "description": "桌面歌词设置：字号"
+  },
+  "musicDlHighlight": "高亮色",
+  "@musicDlHighlight": {
+    "description": "桌面歌词设置：高亮色"
+  },
+  "musicDlUnsing": "未唱色",
+  "@musicDlUnsing": {
+    "description": "桌面歌词设置：未唱色"
+  },
+  "musicDlLines": "行数",
+  "@musicDlLines": {
+    "description": "桌面歌词设置：行数"
+  },
+  "musicDlLine1": "单行",
+  "@musicDlLine1": {
+    "description": "行数：单行"
+  },
+  "musicDlLine2": "双行",
+  "@musicDlLine2": {
+    "description": "行数：双行"
+  },
+  "musicMiniExpandAria": "展开播放器",
+  "@musicMiniExpandAria": {
+    "description": "迷你条展开读法"
+  },
+  "musicMiniSwipeHint": "左右滑切歌",
+  "@musicMiniSwipeHint": {
+    "description": "迷你条手势读法（无障碍）"
+  },
+  "musicMoreAria": "更多",
+  "@musicMoreAria": {
+    "description": "全屏播放器右上更多读法"
+  },
+  "musicMoreAddTo": "加入歌单",
+  "@musicMoreAddTo": {
+    "description": "更多抽屉：加入歌单"
+  },
+  "musicMoreCopy": "复制链接",
+  "@musicMoreCopy": {
+    "description": "更多抽屉：复制链接"
+  },
+  "musicMoreRingtone": "设为铃声",
+  "@musicMoreRingtone": {
+    "description": "更多抽屉：设为铃声"
+  },
+  "musicMoreSleep": "睡眠定时",
+  "@musicMoreSleep": {
+    "description": "更多抽屉：睡眠定时"
+  },
+  "musicMoreInfo": "歌曲信息",
+  "@musicMoreInfo": {
+    "description": "更多抽屉：歌曲信息"
+  },
+  "musicMoreStyle": "播放器样式",
+  "@musicMoreStyle": {
+    "description": "更多抽屉：播放器样式"
+  },
+  "musicDiscTapAria": "轻点切换歌词",
+  "@musicDiscTapAria": {
+    "description": "光碟视图整块可点读法"
+  },
+  "musicLyricBackHint": "轻点歌词返回光碟",
+  "@musicLyricBackHint": {
+    "description": "歌词视图底部提示（跟随态）"
+  },
+  "musicLyricSeekHint": "松手后可点 ▶ 定位到该句",
+  "@musicLyricSeekHint": {
+    "description": "歌词视图底部提示（手动态）"
+  },
+  "musicLyricSeekAria": "定位到该句",
+  "@musicLyricSeekAria": {
+    "description": "歌词定位播放键读法"
+  },
+  "musicSheetQueueAria": "播放列表",
+  "@musicSheetQueueAria": {
+    "description": "移动迷你条队列键读法"
+  },
+  "musicSongInfoLine": "{album} · {quality}",
+  "@musicSongInfoLine": {
+    "description": "歌曲信息副行",
+    "placeholders": {
+      "album": {
+        "type": "String"
+      },
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSrcLocal": "本地",
+  "@musicSrcLocal": {
+    "description": "来源标注：本机文件"
+  },
+  "musicSrcGroup": "音源",
+  "@musicSrcGroup": {
+    "description": "侧栏音源组标题"
+  },
+  "musicColTitle": "标题",
+  "@musicColTitle": {
+    "description": "曲目表头：标题"
+  },
+  "musicColDuration": "时长",
+  "@musicColDuration": {
+    "description": "曲目表头：时长"
+  },
+  "musicAddedToDone": "已加入歌单",
+  "@musicAddedToDone": {
+    "description": "加入歌单成功轻提示"
+  },
+  "musicSearchFail": "搜索失败，请稍后重试",
+  "@musicSearchFail": {
+    "description": "搜索请求失败轻提示"
+  },
+  "musicQueueFooter": "播放结束后按当前模式继续",
+  "@musicQueueFooter": {
+    "description": "队列抽屉底部说明"
+  },
+  "musicQueueClose": "关闭队列",
+  "@musicQueueClose": {
+    "description": "队列抽屉关闭按钮读法"
+  },
+  "musicPlLibraryLikedTitle": "我喜欢的音乐",
+  "@musicPlLibraryLikedTitle": {
+    "description": "我的歌单库：系统歌单横卡标题"
+  },
+  "musicPlLibraryLikedDesc": "{count} 首 · 红心过的歌都在这里",
+  "@musicPlLibraryLikedDesc": {
+    "description": "我的歌单库：系统歌单横卡说明",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicPlLibraryLikedTag": "心动模式唯一来源",
+  "@musicPlLibraryLikedTag": {
+    "description": "我的歌单库：系统歌单横卡上的胶囊标签"
+  },
+  "musicPlLibraryAriaLiked": "打开我喜欢的音乐",
+  "@musicPlLibraryAriaLiked": {
+    "description": "我的歌单库：系统歌单横卡读法"
+  },
+  "musicPlLibraryCreated": "创建的歌单",
+  "@musicPlLibraryCreated": {
+    "description": "我的歌单库：第一组组头"
+  },
+  "musicPlLibraryCollected": "收藏的歌单",
+  "@musicPlLibraryCollected": {
+    "description": "我的歌单库：第二组组头"
+  },
+  "musicPlLibraryExpand": "展开{name}",
+  "@musicPlLibraryExpand": {
+    "description": "我的歌单库：组头折叠态读法",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicPlLibraryCollapse": "收起{name}",
+  "@musicPlLibraryCollapse": {
+    "description": "我的歌单库：组头展开态读法",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicPlLibraryCardMeta": "{author} · {count} 首",
+  "@musicPlLibraryCardMeta": {
+    "description": "我的歌单库：紧凑信息卡副行",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicPlLibraryAriaPlaylist": "打开歌单 {name}",
+  "@musicPlLibraryAriaPlaylist": {
+    "description": "我的歌单库：卡片读法（自建）",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicPlLibraryAriaCollected": "打开收藏歌单 {name}",
+  "@musicPlLibraryAriaCollected": {
+    "description": "我的歌单库：卡片读法（收藏）",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicPlLibraryEmpty": "还没有创建歌单",
+  "@musicPlLibraryEmpty": {
+    "description": "我的歌单库：整库空态"
+  },
+  "musicPlLibraryLoginTitle": "登录后查看我的歌单",
+  "@musicPlLibraryLoginTitle": {
+    "description": "我的歌单库：未登录 CTA 标题"
+  },
+  "musicPlLibraryLoginDesc": "歌单跟着音源账号同步；本地音乐与播放历史不受影响",
+  "@musicPlLibraryLoginDesc": {
+    "description": "我的歌单库：未登录 CTA 说明"
+  },
+  "musicPlLibraryLoginAction": "扫码登录",
+  "@musicPlLibraryLoginAction": {
+    "description": "我的歌单库：未登录 CTA 按钮"
+  },
+  "musicPlBack": "返回我的歌单",
+  "@musicPlBack": {
+    "description": "歌单详情返回栏按钮"
+  },
+  "musicPlChipLiked": "系统歌单",
+  "@musicPlChipLiked": {
+    "description": "歌单详情类型胶囊：我喜欢的音乐"
+  },
+  "musicPlChipPlaylist": "歌单",
+  "@musicPlChipPlaylist": {
+    "description": "歌单详情类型胶囊：自建歌单"
+  },
+  "musicPlChipCollected": "收藏歌单",
+  "@musicPlChipCollected": {
+    "description": "歌单详情类型胶囊：收藏的歌单"
+  },
+  "musicPlSourceCollected": "{author} · 已收藏",
+  "@musicPlSourceCollected": {
+    "description": "收藏歌单详情来源行",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "musicKickerCollected": "COLLECTED",
+  "@musicKickerCollected": {
+    "description": "歌单详情 hero 眉标：收藏歌单（设计稿英文眉标）"
+  },
+  "musicPlItemCount": "{count} 首",
+  "@musicPlItemCount": {
+    "description": "歌单详情副行的曲目数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicPlSubscribe": "已收藏「{name}」",
+  "@musicPlSubscribe": {
+    "description": "收藏歌单轻提示",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicPlUnsubscribe": "已取消收藏",
+  "@musicPlUnsubscribe": {
+    "description": "取消收藏收藏歌单轻提示"
+  },
+  "musicPlCardTitle": "打开歌单 {name}",
+  "@musicPlCardTitle": {
+    "description": "发现页 / 歌单库卡片读法",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicKickerLiked": "LIKED",
+  "@musicKickerLiked": {
+    "description": "歌单详情 hero 眉标：我喜欢的音乐（设计稿英文眉标）"
+  },
+  "musicKickerTokenPlaylist": "PLAYLIST",
+  "@musicKickerTokenPlaylist": {
+    "description": "歌单详情 hero 眉标：自建歌单（设计稿英文眉标）"
+  },
+  "musicPlChipChart": "官方榜单",
+  "@musicPlChipChart": {
+    "description": "歌单详情类型胶囊：官方榜单"
+  },
+  "musicPlChipDaily": "每日推荐",
+  "@musicPlChipDaily": {
+    "description": "歌单详情类型胶囊：每日推荐"
+  },
+  "musicDetailMetaCompact": "{count} 首 · {desc}",
+  "@musicDetailMetaCompact": {
+    "description": "移动端歌单详情副行（曲数 · 描述）",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "desc": {
+        "type": "String"
+      }
+    }
+  },
+  "musicCommentCount": "评论 · {count}",
+  "@musicCommentCount": {
+    "description": "评论视图头部计数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicCommentHot": "热门",
+  "@musicCommentHot": {
+    "description": "评论视图头部「热门」标签"
+  },
+  "musicHistoryEmptyTitle": "还没有播放记录",
+  "@musicHistoryEmptyTitle": {
+    "description": "播放历史空态标题"
+  },
+  "musicHistoryEmptyDesc": "听过的歌会自动记在这里，用来找回「昨天那首」",
+  "@musicHistoryEmptyDesc": {
+    "description": "播放历史空态说明"
+  },
+  "musicHistoryEmptyAction": "去发现页听听",
+  "@musicHistoryEmptyAction": {
+    "description": "播放历史空态动作"
+  },
+  "musicAccountSheetTitle": "账号与音源",
+  "@musicAccountSheetTitle": {
+    "description": "移动端账号与音源抽屉标题（M10）"
+  },
+  "musicSearchPicks": "点歌台",
+  "@musicSearchPicks": {
+    "description": "搜索浮层空关键词时的推荐歌曲分组（设计稿「点歌台」）"
   }
 }

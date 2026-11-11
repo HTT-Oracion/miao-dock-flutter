@@ -10,12 +10,23 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeMo
 
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
-  ThemeMode build() => readPersistedThemeMode() == 'light' ? ThemeMode.light : ThemeMode.dark;
+  ThemeMode build() => switch (readPersistedThemeMode()) {
+    'light' => ThemeMode.light,
+    'system' => ThemeMode.system,
+    _ => ThemeMode.dark,
+  };
+
+  /// 设计稿 N07 三态循环：跟随系统 → 深色 → 浅色 → 跟随系统。
+  void cycle() => set(switch (state) {
+    ThemeMode.system => ThemeMode.dark,
+    ThemeMode.dark => ThemeMode.light,
+    ThemeMode.light => ThemeMode.system,
+  });
 
   void toggle() => set(state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
 
   void set(ThemeMode mode) {
     state = mode;
-    persistThemeMode(mode == ThemeMode.light ? 'light' : 'dark');
+    persistThemeMode(mode.name);
   }
 }

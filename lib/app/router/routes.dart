@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,9 +11,12 @@ import '../../features/manga/ui/queue_screen.dart';
 import '../../features/manga/ui/reader_screen.dart';
 import '../../features/manga/online/ui/online_screen.dart';
 import '../../features/manga/online/ui/online_reader_screen.dart';
-import '../../features/music/ui/music_playlist_screen.dart';
+import '../../features/music/domain/music_models.dart';
+import '../../features/music/ui/mobile/mobile_music_screen.dart';
 import '../../features/music/ui/music_screen.dart';
+import '../../features/music/ui/views/music_detail.dart';
 import '../../features/settings/ui/settings_screen.dart';
+import '../../core/theme/tokens.dart' show AppMetrics;
 import '../shell/app_shell.dart';
 import '../shell/shell_controller.dart';
 
@@ -83,16 +87,47 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'discover',
-                    builder: (_, _) => const MusicScreen(view: MusicScreenView.discover),
+                    builder: (_, _) => const _MusicBranch(view: MusicScreenView.discover),
                   ),
-                  GoRoute(path: 'playlist', builder: (_, _) => const MusicPlaylistScreen()),
+                  // 「我的歌单」= 歌单库列表（N41/N44）；点条目才下钻 `playlist/:id`。
+                  GoRoute(
+                    path: 'playlist',
+                    builder: (_, _) => const _MusicBranch(view: MusicScreenView.playlist),
+                    // 歌单详情（歌单 / 专辑 / 推荐卡复用同一详情屏，N24）。
+                    // 详情仍套模块容器：底部播放条（桌面）/ 迷你条（移动）不消失。
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        builder: (_, state) => _MusicBranch(
+                          view: MusicScreenView.playlist,
+                          body: MusicDetailScreen(kind: MusicSourceKind.playlist, id: state.pathParameters['id']!),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // 榜单详情（N38：点整张卡进详情页）。
+                  GoRoute(
+                    path: 'chart/:id',
+                    builder: (_, state) => _MusicBranch(
+                      view: MusicScreenView.playlist,
+                      body: MusicDetailScreen(kind: MusicSourceKind.chart, id: state.pathParameters['id']!),
+                    ),
+                  ),
+                  // 每日推荐详情（登录 CTA 卡 / 推荐栏首卡入口）。
+                  GoRoute(
+                    path: 'daily',
+                    builder: (_, _) => const _MusicBranch(
+                      view: MusicScreenView.discover,
+                      body: MusicDetailScreen(kind: MusicSourceKind.daily, id: 'daily'),
+                    ),
+                  ),
                   GoRoute(
                     path: 'local',
-                    builder: (_, _) => const MusicScreen(view: MusicScreenView.local),
+                    builder: (_, _) => const _MusicBranch(view: MusicScreenView.local),
                   ),
                   GoRoute(
                     path: 'history',
-                    builder: (_, _) => const MusicScreen(view: MusicScreenView.history),
+                    builder: (_, _) => const _MusicBranch(view: MusicScreenView.history),
                   ),
                 ],
               ),
@@ -109,3 +144,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// 音乐四视图的双端分支（桌面 = [MusicScreen] 模块容器；移动 = [MobileMusicScreen]）。
+///
+/// 断点与壳层同源（[AppMetrics.breakpoint]，AGENTS §4 第 16 条唯一判据）。
+class _MusicBranch extends StatelessWidget {
+  const _MusicBranch({required this.view, this.body});
+
+  final MusicScreenView view;
+
+  /// 子页（歌单 / 榜单 / 每日推荐详情）覆盖内容区，容器外壳保持不卸载。
+  final Widget? body;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.sizeOf(context).width <= AppMetrics.breakpoint) {
+      return MobileMusicScreen(view: view, body: body);
+    }
+    return MusicScreen(view: view, body: body);
+  }
+}

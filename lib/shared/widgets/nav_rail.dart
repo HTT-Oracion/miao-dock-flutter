@@ -25,6 +25,8 @@ class NavRail extends StatelessWidget {
     required this.onOpenSettings,
     this.readiness = ReadinessLevel.unconfigured,
     this.miniPlayer,
+    this.sourceGroup,
+    this.viewGroup,
     this.topInset = 0,
   });
 
@@ -52,6 +54,15 @@ class NavRail extends StatelessWidget {
   /// MiniPlayer 槽位。音乐域尚未接真实播放状态时传 null —— **不渲染**，
   /// 绝不写死假曲目。
   final Widget? miniPlayer;
+
+  /// 模块附属组槽位（音乐模块 = 音源组，由壳层注入；shared 不 import features）。
+  final Widget? sourceGroup;
+
+  /// 模块内视图组槽位（音乐模块 = 发现 / 我的歌单 / 本地 / 历史）。
+  ///
+  /// 漫画模块的视图仍由工具条页签承担；音乐设计稿把视图放回侧栏，
+  /// 因此这里做成可选槽位，按模块注入，不强行改另一模块的信息架构。
+  final Widget? viewGroup;
 
   /// 顶部安全区 / 红绿灯避让高度（桌面 macOS 传红绿灯带，移动端传系统状态栏）。
   final double topInset;
@@ -84,6 +95,8 @@ class NavRail extends StatelessWidget {
               queueCount: queueCount,
               onOpenSettings: onOpenSettings,
               miniPlayer: miniPlayer,
+              sourceGroup: sourceGroup,
+              viewGroup: viewGroup,
               topInset: topInset,
             ),
           ),
@@ -106,6 +119,8 @@ class _RailBody extends StatelessWidget {
     required this.queueCount,
     required this.onOpenSettings,
     required this.miniPlayer,
+    required this.sourceGroup,
+    required this.viewGroup,
     required this.topInset,
   });
 
@@ -121,6 +136,12 @@ class _RailBody extends StatelessWidget {
 
   /// 「能否翻译」四色（D-012）—— 取代原「服务已启动」假绿点。
   final Widget? miniPlayer;
+
+  /// 模块附属组槽位（音乐模块 = 音源组）。
+  final Widget? sourceGroup;
+
+  /// 模块内视图组槽位（音乐模块）。
+  final Widget? viewGroup;
   final double topInset;
 
   @override
@@ -143,6 +164,10 @@ class _RailBody extends StatelessWidget {
               onSelectModule: onSelectModule,
               queueCount: queueCount,
             ),
+            // 模块内视图组（音乐设计稿把 4 个视图放在侧栏；漫画仍走工具条页签）。
+            if (viewGroup != null) ...[const _RailDivider(inset: 10), viewGroup!],
+            // 模块附属组：音乐模块激活时渲染音源组（收起态由壳层注入 mini 版）。
+            if (sourceGroup != null) ...[const _RailDivider(inset: 10), sourceGroup!],
             const Spacer(),
             // 迷你播放器：有播放状态渲染真数据；无状态渲染空态占位（设计稿
             // 「未在播放 · 迷你播放器」——不写死曲目，但让槽位在版面上可见）。

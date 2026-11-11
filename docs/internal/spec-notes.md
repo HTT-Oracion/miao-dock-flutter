@@ -4357,3 +4357,51 @@
   `detail-list` 按标签解析作者/状态/更新时间，不改变上游标准字段。
 - **验证**：真实排行页 HTML 快照离线跑通 4 tabs、50 条排行、作者/更新时间；
   `flutter test test/online` 17 passed；`--exclude-tags e2e` 318 passed。
+
+## D-201 · 音乐模块按 ver1.0 设计稿落地 + 四平台真实接口（2026-11-11）
+
+- **状态**：已实施。
+- **决策**：音乐模块 UI 以 `design/music/ver1.0`（desktop.html / mobile.html + #spec 面板 34 条交互说明）为唯一视觉与功能基准整体实现，取代 MusicScreen 空态占位（设计稿本身就是虚构演示数据集，Fake 属 A 级 Fake 客户端用法，落位 `features/music/data/`，非 UI 硬编码）。
+- **数据源双层**：`MusicRepository` 抽象接口下挂两个实现 —— `DemoMusicRepository`（A 级 Fake，逐条对齐 `assets/data.js`：12 曲目 / 9 推荐卡 / 9 歌单 / 6 榜单 / 评论 / 历史 / 逐句歌词）与 `PlatformMusicRepository`（真实四平台）。`musicSourceModeProvider` 默认 `demo`（离线可跑、状态自测不依赖外网），设置页「音乐数据源」可切 `online`；切源即按当前音源重建仓库，队列不清空（N04 边界）。
+- **接口移植（用户指定口径：先参照 miao-dock 的接口转 Dart，不满足再从开源项目补）**：`features/music/data/api/` 为四个平台客户端，逐一移植 `miao-dock/src-tauri/src/music/*.rs`：`netease_api`（明文 `/api/*`：搜索 / 歌单 / 歌词 / 评论 / 播放地址 / 明文二维码 801-803）、`qqmusic_api`（`musicu.fcg` + `qqSign`：SHA1 十六位重排 + 异或 + base64，逐字对齐 `qq_search_sign`；旧版 CGI 取歌单 / 榜单 / 歌词）、`kugou_api`（`song_search_v2` + `krcs` 两段式歌词 + H5 网关播放）、`migu_api`（明文 GET + `listen/v2.0` 字节混淆流解码）。外链参考实现未直接引入：四家开源服务（NeteaseCloudMusicApiEnhanced / QQMusicApi / KuGouMusicApi / MoeKoeMusic / miguMusic-api-enhanced）的端点与签名均已收敛在 Rust 客户端里，再经一次 JSON 服务反而多一跳、且移动端不能跑本地服务（AGENTS §2）。
+- **能力矩阵**：`MusicSource` 的能力位与 miao-dock `PLATFORM_CAPS` 对齐（每日推荐 / 评论仅网易云、推荐歌单网易云+咪咕+QQ）；不支持的能力返回空集而非抛错（空=没这个功能，不是故障）。平台异常统一映射 `MusicRepositoryException`，UI 只按错误码映射 ARB。
+- **播放**：仍为模拟时钟（500ms 步进）；真实音源已具备 `songUrl`（每平台按音质逐档降级、失败回 null 让播放器跳下一首），接 `just_audio` 做真实音频流属下一步独立改动（AGENTS §2 不提前引入依赖）。
+- **歌词**：`loadLyrics` 异步取并写入仓库缓存，`lyricsFor` 保持同步读（构建期取数口径不变）；播放器切曲时预取，缓存命中后歌词自然出现。
+- **登录**：线上模式下网易云走真实二维码（`qrcode/unikey` + `client/login` 轮询 801/802/803，成功回写 Cookie），Cookie 存系统安全存储（D-047）；其余三平台上游登录是网页 Cookie 回读 / 手机验证码，本期不伪造入口，弹窗保留演示流程并如实说明。二维码**图形**未渲染（Flutter 无内置 QR 编码器，新增 `qr_flutter` 需先过依赖确认），弹窗当前给出登录 URL 与状态，记入交付说明的已知偏差。
+- **状态覆盖**：加载（骨架）/ 失败（魔法阵 + 三个出口，含服务状态弹窗）/ 局部失败横幅（单行紧凑变体）/ 空（本地·历史·搜索无结果）/ 未登录 CTA；Demo 与线上仓库都带 scope 级故障注入（仅测试与自检用）。
+- **视觉修订（本轮比对设计稿后）**：封面渐变改为原型 `coverBg()` 的 FNV-1a 色相 + 四层渐变；推荐卡 / 歌单瓦片 / 榜单封面用设计稿 seed 色相；发现页列数按 6/4/3/2 四档；歌单详情桌面 152 封面 + 26 号标题、移动 78 封面 + 全宽双按钮；本地空态改为拖放区自带两个导入按钮；主题按钮补三态循环（跟随系统/深色/浅色）；桌面灵动岛与沉浸播放器上移壳层以覆盖侧栏与工具条；队列抽屉 372 宽。
+- **验证**：`flutter analyze` 0 issues；`dart run tool/check_l10n.dart` 通过；`flutter test --exclude-tags e2e` 336 passed；双端 × 双主题 × 加载/成功/空/失败截图自测（产物 `.tmp/music-selftest/`，交付前删除）；四平台接口用真实网络探针验证（各平台搜索 / 歌词 / 榜单均返回数据）。
+- **关联**：design/music/ver1.0 · AGENTS §3/§4 · 本文件 D-006（i18n）、D-047（凭据）。
+
+## D-202 · 音乐模块对齐 ver1.0 本轮评审稿（N41–N44 / M18）（2026-11-11）
+
+- **状态**：已实施。
+- **我的歌单两层**：`PlaylistLibraryView` 改为歌单库（系统歌单横卡 + 「创建的歌单」「收藏的
+  歌单」两个可折叠组），点条目下钻 `MusicDetailScreen`。分组按 `MusicPlaylist.subscribed`
+  语义位（对齐 miao-dock `Playlist.subscribed`），不靠数组下标；组头折叠态与取消订阅状态
+  放 `playlistLibraryProvider`，跨视图保留。桌面 4 列紧凑卡（60 封面 / 两行标题 / 作者·N 首）、
+  sm <900 降 2 列、移动单列 52 高行；空分组连组头一起不渲染；页内大标题与总数按 N44 移除。
+- **详情**：桌面返回栏（← 返回我的歌单 + 类型胶囊）、移动返回箭头移到壳层顶栏（M18，
+  歌单库本身不显示）；眉标 PLAYLIST / LIKED / COLLECTED / CHART，收藏歌单来源行
+  「作者 · 已收藏」；收藏按钮对 `subscribed` 歌单走取消订阅（从收藏组移除、可再加回），
+  自建歌单 / 榜单只记本地收藏回执。详情路由改由 `MusicScreen` / `MobileMusicScreen`
+  的 `body` 覆盖内容区，播放条 / 迷你条不再因下钻而消失。
+- **数据与接口**：`MusicRepository.userPlaylists()` 新增，四平台客户端各补一条上游实现
+  （网易云 `/api/user/playlist`、QQ 自建 + 收藏、酷狗 H5 网关、咪咕 `user/home-page`）；
+  演示数据按 `data.js` 补 4 条收藏歌单与 `pick` 偏移（曲目首曲按 pick，不按下标）。
+- **同轮视觉修正**：移动端全屏播放器补封面色氛围层、浅色唱针改深色 + 浅描边、歌词区隐藏
+  滚动条、评论头「评论 · N / 热门」；移动搜索改整屏浮层（壳层隐藏底部导航）；账号抽屉
+  改听 `accountSheetOpen`（此前点顶栏 logo 无反应）；本地空态移动端改「单环 + 音符轨道」
+  整宽按钮、桌面改 1.5px 虚线拖放区；历史空态补插画与「去发现页」动作；`SkeletonRows`
+  尾部条改 Flexible，修 390 宽下溢出 30px；四视图补滚动位置记忆（N03：`MusicScrollMemory`
+  + `musicScrollMemoryProvider`，滚动即记、重建后回填，替代跨路由失效的 PageStorage）。
+- **验证**：`flutter analyze` 0；`dart run tool/check_l10n.dart` 通过；`flutter test` 全绿
+  （跳过项为本机未启动 mangasvc 的 e2e）；`test/music` 38 passed；截图自测覆盖
+  双端 × 双主题 × 发现 / 歌单库 / 歌单详情 / 收藏歌单 / 本地 / 历史 / 搜索 / 账号抽屉 /
+  队列 / 全屏播放器（光碟 / 歌词 / 评论）/ 沉浸播放器 / 加载 / 失败 / 空态。
+- **自测脚本与产物（已删除）**：`integration_test/music_selftest_test.dart`（含临时加的
+  `integration_test` dev 依赖与 lock 项，已还原）、`.tmp/music-selftest/`（34 张自测截图）、
+  `.tmp/music-selftest-logs/`（13 次运行日志）、`.tmp/music-design/`（设计稿对照截图）、
+  `.tmp/design-run/shot-music-new.mjs` / `shot-music-fp.mjs` / `shot-music-states.mjs` /
+  `shot-search.mjs` / `music-shots.mjs` / `music-shots2.mjs`。正式代码不引用任何自测脚本。
+- **关联**：design/music/ver1.0（N41–N44 / M18）· D-201 · AGENTS §3/§4。

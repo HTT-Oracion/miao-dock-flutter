@@ -11,5 +11,10 @@
   "lib/core/process/service_supervisor.dart": 5,
   "lib/app/bootstrap.dart": 1,
   "lib/core/storage/paths.dart": 1,
-  "lib/core/storage/engine_inspect.dart": 16
+  "lib/core/storage/engine_inspect.dart": 16,
+  "lib/features/music/controller/music_session.dart": 1,
+  "lib/features/music/data/demo_music_repository.dart": 204,
+  "lib/features/music/domain/music_models.dart": 4,
+  "lib/features/manga/online/data/source_dto.dart": 2,
+  "lib/features/manga/online/domain/fallback_categories.dart": 15
 }

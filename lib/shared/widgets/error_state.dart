@@ -45,13 +45,22 @@ enum ErrorKind {
 
 /// 红色横幅 —— 有旧数据时叠在顶部，**不遮挡旧数据**。
 class ErrorBanner extends StatefulWidget {
-  const ErrorBanner({super.key, required this.error, required this.onRetry, this.showStaleHint = false});
+  const ErrorBanner({
+    super.key,
+    required this.error,
+    required this.onRetry,
+    this.showStaleHint = false,
+    this.compact = false,
+  });
 
   final Object? error;
   final VoidCallback onRetry;
 
   /// 下方是否还展示着上次成功的数据（true 时加一行说明，避免用户误以为是实时数据）。
   final bool showStaleHint;
+
+  /// 单行紧凑横幅（音乐设计稿 `.banner`）：图标 + 原因 + 一行旧数据说明 + 重试。
+  final bool compact;
 
   @override
   State<ErrorBanner> createState() => _ErrorBannerState();
@@ -67,6 +76,59 @@ class _ErrorBannerState extends State<ErrorBanner> {
     final kind = ErrorKind.of(widget.error);
     final text = _textOf(l10n, kind);
     final danger = palette.bad;
+
+    if (widget.compact) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+        decoration: BoxDecoration(
+          color: danger.withValues(alpha: 0.10),
+          border: Border.all(color: danger.withValues(alpha: 0.45)),
+          borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
+        ),
+        child: Row(
+          children: [
+            Icon(LucideIcons.cloudOff, size: 14, color: danger),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: text.title,
+                      style: TextStyle(fontSize: AppFont.px11_5, fontWeight: FontWeight.w600, color: danger),
+                    ),
+                    TextSpan(
+                      text: ' · ',
+                      style: TextStyle(fontSize: AppFont.px11, color: palette.textMuted),
+                    ),
+                    TextSpan(
+                      text: text.hint,
+                      style: TextStyle(fontSize: AppFont.px11, color: palette.textMuted),
+                    ),
+                    if (widget.showStaleHint)
+                      TextSpan(
+                        text: ' · ${l10n.errorStaleData}',
+                        style: TextStyle(fontSize: AppFont.px11, color: palette.textMuted),
+                      ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            AppButton(
+              label: l10n.errorRetry,
+              onTap: widget.onRetry,
+              variant: AppButtonVariant.link,
+              color: danger,
+              fontSize: AppFont.px11_5,
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

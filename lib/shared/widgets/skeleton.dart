@@ -49,8 +49,10 @@ class SkeletonRows extends StatelessWidget {
                 children: [
                   const SkeletonBox(width: 70, height: 12),
                   const SizedBox(width: 14),
+                  // 尾部条用 Flexible 收窄：窄屏（390）容器只有 358 宽，
+                  // 四个定宽条 + 间距会溢出 30px（移动端评论骨架实测）。
                   for (final w in const [52.0, 52.0, 52.0, 64.0]) ...[
-                    SkeletonBox(width: w, height: 10),
+                    Flexible(child: SkeletonBox(width: w, height: 10)),
                     const SizedBox(width: 14),
                   ],
                 ],

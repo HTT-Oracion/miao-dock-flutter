@@ -14,3 +14,12 @@ extension AppResponsive on BuildContext {
   /// 页面可用宽度（`LayoutBuilder` 之外的快捷方式）。
   double get viewportWidth => MediaQuery.sizeOf(this).width;
 }
+
+/// 系统「减少动态效果」判据（设计稿 N34 / M06）。
+///
+/// Flutter 把该无障碍偏好转成 `MediaQuery.disableAnimations`；动效实现应读它，
+/// 不要自己去读平台通道。降级口径与设计稿一致：位移 / 旋转 / 条纹动画归零，
+/// 只保留透明度与颜色变化。
+extension AppMotionPreference on BuildContext {
+  bool get reduceMotion => MediaQuery.maybeDisableAnimationsOf(this) ?? false;
+}

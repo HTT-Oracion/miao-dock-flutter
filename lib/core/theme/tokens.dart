@@ -31,6 +31,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.shadow,
     required this.coverEnd,
     required this.coverEndDeep,
+    required this.coverInk,
+    required this.coverScrim,
+    required this.vinylBase,
     required this.paperCard,
     required this.onBtn,
     required this.accInk,
@@ -93,6 +96,15 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// 书籍卡片封面渐变的尾色（设计稿 `#3A2C14`，比播放器封面的 [coverEnd] 更深）。
   final Color coverEndDeep;
 
+  /// 封面上的文字 / 图标（角标、播放量、收藏徽标）：内容色，不随主题变化。
+  final Color coverInk;
+
+  /// 封面角标底（半透明黑，保证深浅主题下都压得住彩色封面）。
+  final Color coverScrim;
+
+  /// 黑胶盘底（设计稿固定深色，属内容不随主题）。
+  final Color vinylBase;
+
   /// 纸面底（设计稿 `.pcard{background:#f5f2ea}`）：页卡在看原图前的衬纸，
   /// 深浅主题都不变——它是**图片的纸**，不是界面层级。
   final Color paperCard;
@@ -124,6 +136,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     shadow: Color(0x73000000),
     coverEnd: Color(0xFF6B4423),
     coverEndDeep: Color(0xFF3A2C14),
+    coverInk: Color(0xFFFFFFFF),
+    coverScrim: Color(0x85080A0D),
+    vinylBase: Color(0xFF14181D),
     paperCard: Color(0xFFF5F2EA),
     onBtn: Color(0xFF1A1305),
     accInk: Color(0xFFE8A44C),
@@ -150,6 +165,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     shadow: Color(0x2E504015),
     coverEnd: Color(0xFF8A5A2E),
     coverEndDeep: Color(0xFF5C4420),
+    coverInk: Color(0xFFFFFFFF),
+    coverScrim: Color(0x85080A0D),
+    vinylBase: Color(0xFF14181D),
     paperCard: Color(0xFFF5F2EA),
     onBtn: Color(0xFF1A1204),
     accInk: Color(0xFF8A5416),
@@ -206,6 +224,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? shadow,
     Color? coverEnd,
     Color? coverEndDeep,
+    Color? coverInk,
+    Color? coverScrim,
+    Color? vinylBase,
     Color? paperCard,
     Color? onBtn,
     Color? accInk,
@@ -230,6 +251,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
       shadow: shadow ?? this.shadow,
       coverEnd: coverEnd ?? this.coverEnd,
       coverEndDeep: coverEndDeep ?? this.coverEndDeep,
+      coverInk: coverInk ?? this.coverInk,
+      coverScrim: coverScrim ?? this.coverScrim,
+      vinylBase: vinylBase ?? this.vinylBase,
       paperCard: paperCard ?? this.paperCard,
       onBtn: onBtn ?? this.onBtn,
       accInk: accInk ?? this.accInk,
@@ -259,6 +283,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
       shadow: Color.lerp(shadow, other.shadow, t)!,
       coverEnd: Color.lerp(coverEnd, other.coverEnd, t)!,
       coverEndDeep: Color.lerp(coverEndDeep, other.coverEndDeep, t)!,
+      coverInk: Color.lerp(coverInk, other.coverInk, t)!,
+      coverScrim: Color.lerp(coverScrim, other.coverScrim, t)!,
+      vinylBase: Color.lerp(vinylBase, other.vinylBase, t)!,
       paperCard: Color.lerp(paperCard, other.paperCard, t)!,
       onBtn: Color.lerp(onBtn, other.onBtn, t)!,
       accInk: Color.lerp(accInk, other.accInk, t)!,
@@ -326,6 +353,14 @@ abstract final class AppMetrics {
   /// 响应式断点：`@media (max-width:768px)`。
   static const double breakpoint = 768;
 
+  /// 音乐模块桌面示意断点（设计稿 N13/N32）：灵动岛在 ≤1120 隐藏，
+  /// 避免与搜索 / 账号挤在同一行；不是移动端断点，移动端仍用 [breakpoint]。
+  static const double musicIslandBreakpoint = 1120;
+
+  /// 音乐模块桌面窄窗断点（设计稿 N32 三档：lg ≥1120 / md 900–1119 / sm <900）。
+  /// 只用于桌面内容降列与按钮取舍，不作为移动端判据。
+  static const double musicNarrowBreakpoint = 900;
+
   /// macOS 原生红绿灯占位带：侧栏品牌行与工具条都从它下方开始，
   /// 避免 logo / 内容压在红绿灯上。
   static const double macTrafficLightBand = 28;
@@ -388,8 +423,11 @@ abstract final class AppFont {
   /// 详情 hero 标题。
   static const double px18 = 18;
 
-  /// 引导卡大标题（最大字号）。
+  /// 引导卡大标题。
   static const double px19 = 19;
+
+  /// 详情页大标题（设计稿 `.pl-hero h2` 26，最大字号）。
+  static const double px26 = 26;
 }
 
 /// 动效规范（design.html §06）。
