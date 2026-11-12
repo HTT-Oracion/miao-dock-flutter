@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:dio/dio.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 
 import '../../domain/music_models.dart';
 import 'lrc.dart';
@@ -9,10 +12,13 @@ import 'music_http.dart';
 
 /// 网易云音乐客户端（移植自 `miao-dock/src-tauri/src/music/netease.rs`）。
 ///
-/// 端口选择说明：原实现里「搜索 / 歌单 / 歌词 / 评论」走**明文 API**
-/// （`music.163.com/api/*`），只有二维码登录与每日推荐走 EAPI 加密。
-/// Dart 侧同样只保留明文接口 + 明文二维码轮询（已实测 `client/login` 返回 801/802/803），
-/// 加密路径（EAPI / weapi）在客户端只需 Cookie，不必重复实现 AES + RSA。
+/// 端口选择说明：
+/// · 「搜索 / 歌单 / 歌词 / 评论」走**明文 API**（`music.163.com/api/*`）；
+/// · **二维码登录必须走 EAPI 加密通道**（`interface3.music.163.com/eapi/*`）。
+///
+/// 🔴 明文 `client/login` 能返回 801/802/803，但 **803 的 `Set-Cookie` 不下发
+/// `MUSIC_U`**（只有 `NMTID` 统计串）。表现为「手机显示登录成功、应用里仍是未登录」。
+/// EAPI 通道与 miao-dock 的 `post_eapi_full` 一致：AES-128-ECB + 大写十六进制。
 class NeteaseApi {
   NeteaseApi({MusicHttp? http, this.cookie = ''})
     : _http =
@@ -296,10 +302,67 @@ class NeteaseApi {
 
   // ── 二维码登录 ───────────────────────────────────────────────────────────
 
-  /// 获取二维码 key（明文接口，实测可用）。
+  // ── EAPI 加密通道（二维码登录专用）────────────────────────────────────────
+
+  static const _eapiBase = 'https://interface3.music.163.com/eapi';
+
+  /// EAPI 固定 AES 密钥（与 miao-dock `NETEASE_EAPI_KEY` 一致）。
+  static const _eapiKey = 'e82ckenh8dichen8';
+
+  /// EAPI 请求签名：`nobody{path}use{json}md5forencrypt` → 拼装 → AES-128-ECB →
+  /// **大写十六进制**（不是 base64；发 base64 服务端回空 body）。
+  @visibleForTesting
+  static String eapiParams(String path, Map<String, dynamic> payload) {
+    final text = jsonEncode(payload);
+    final digest = md5.convert(utf8.encode('nobody${path}use${text}md5forencrypt')).toString();
+    final raw = '$path-36cd479b6b5-$text-36cd479b6b5-$digest';
+    final engine = enc.Encrypter(enc.AES(enc.Key.fromUtf8(_eapiKey), mode: enc.AESMode.ecb, padding: 'PKCS7'));
+    final bytes = engine.encrypt(raw, iv: enc.IV.fromLength(0)).bytes;
+    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join().toUpperCase();
+  }
+
+  /// EAPI 请求头（作为 payload 的 `header` 字段下发，不是 HTTP 头）。
+  static Map<String, dynamic> _eapiHeader() {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    return {
+      '__csrf': '',
+      'appver': '8.0.0',
+      'buildver': '${nowMs ~/ 1000}',
+      'channel': '',
+      'deviceId': '',
+      'mobilename': '',
+      'resolution': '1920x1080',
+      'os': 'android',
+      'osver': '',
+      'requestId': '${nowMs}_${nowMs % 1000}',
+      'versioncode': '140',
+      // 必须留空：真 MUSIC_U 由 Cookie 头携带，这里非空会顶掉真实登录态。
+      'MUSIC_U': '',
+    };
+  }
+
+  /// 发一次 EAPI 请求，返回 JSON 与本次响应的 Set-Cookie。
+  Future<({dynamic json, List<String> cookies})> _eapiPost(String path, Map<String, dynamic> payload) async {
+    final body = {...payload, 'header': jsonEncode(_eapiHeader())};
+    final resp = await _http.dio.post<String>(
+      '$_eapiBase${path.substring(4)}',
+      data: {'params': eapiParams(path, body)},
+      options: Options(
+        responseType: ResponseType.plain,
+        contentType: Headers.formUrlEncodedContentType,
+        validateStatus: (_) => true,
+      ),
+    );
+    final json = resp.data == null ? null : _tryDecode(resp.data!);
+    return (json: json, cookies: resp.headers['set-cookie'] ?? const <String>[]);
+  }
+
+  /// 获取二维码 key。
+  ///
+  /// 走 EAPI：明文 `unikey` 拿到的 key 也能扫码，但配套的 803 不下发登录票据。
   Future<String> qrKey() async {
-    final json = await _client.postForm('$_base/api/login/qrcode/unikey', {'type': 1, 'csrf_token': ''});
-    final key = _dig(json, ['unikey']) as String?;
+    final r = await _eapiPost('/api/login/qrcode/unikey', {'type': 1});
+    final key = _dig(r.json, ['unikey']) as String?;
     if (key == null || key.isEmpty) {
       throw MusicApiException.business('netease', 'qr_key_failed');
     }
@@ -308,32 +371,31 @@ class NeteaseApi {
 
   /// 轮询扫码状态：801 等待 / 802 待确认 / 803 成功（成功时回写 cookie）。
   ///
-  /// 🔴 必须是**表单**编码：同一个接口用 JSON body 会返回
-  /// `{"code":400,"message":"参数错误"}`（2026-11 实测），表现为二维码一直不刷新、
-  /// 扫码后也不会跳成功 —— 这是「二维码扫不了」的真正原因。
+  /// 走 EAPI：与 [qrKey] 同一条加密通道，803 才会下发 `MUSIC_U`。
   ///
   /// Cookie 有两个来源，缺一不可：
   /// · 响应头 `Set-Cookie`（`MUSIC_U` / `__csrf` 在这里，登录成功才下发）；
   /// · 响应体 `cookie` 字段（部分节点会把整串塞回 body）。
   /// 轮询是多次请求，每次可能只下发一部分，因此按 key 累积合并后再交给登录收口。
-  Future<({int code, String message, String? cookie})> qrCheck(String key) async {
-    final resp = await _http.dio.post<String>(
-      '$_base/api/login/qrcode/client/login',
-      data: {'key': key, 'type': 1, 'csrf_token': ''},
-      options: diagOptions().copyWith(contentType: Headers.formUrlEncodedContentType),
-    );
-    final json = resp.data == null ? null : _tryDecode(resp.data!);
+  Future<({int code, String message, String? cookie, String raw})> qrCheck(String key) async {
+    final r = await _eapiPost('/api/login/qrcode/client/login', {'key': key, 'type': 1});
+    final json = r.json;
     final code = (json is Map ? json['code'] as num? : null)?.toInt() ?? -1;
     final message = (json is Map ? '${json['message'] ?? ''}' : '');
     final jar = _qrCookies.putIfAbsent(key, () => <String, String>{});
-    _mergeCookies(jar, resp.headers['set-cookie'] ?? const <String>[]);
+    _mergeCookies(jar, r.cookies);
     if (json is Map && json['cookie'] is String) _mergeCookieText(jar, json['cookie'] as String);
-    if (jar.isEmpty) return (code: code, message: message, cookie: null);
-    return (code: code, message: message, cookie: jar.entries.map((e) => '${e.key}=${e.value}').join('; '));
+    final merged = jar.entries.map((e) => '${e.key}=${e.value}').join('; ');
+    return (code: code, message: message, cookie: jar.isEmpty ? null : merged, raw: '${r.json ?? ''}');
   }
 
   /// 每个扫码 key 一份 Cookie 罐：轮询期间累积，成功或废弃后丢弃。
   final Map<String, Map<String, String>> _qrCookies = {};
+
+  /// 丢掉某个 key 的 Cookie 罐（重新扫码 / 关闭弹窗时调用，防止旧票串台）。
+  void dropQrCookies(String? key) {
+    if (key != null) _qrCookies.remove(key);
+  }
 
   static void _mergeCookies(Map<String, String> jar, List<String> setCookie) {
     for (final raw in setCookie) {

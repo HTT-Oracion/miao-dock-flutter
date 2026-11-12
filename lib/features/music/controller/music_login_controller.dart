@@ -105,6 +105,7 @@ class MusicLoginController extends Notifier<MusicQrState> {
     state = state.copyWith(secondsLeft: left);
     final result = await _tryCheck(api, key);
     if (result == null) return; // 单拍失败不打断：有效期 4 分钟，下一拍继续
+    debugPrint('[music.login] code=${result.code} msg=${result.message} raw=${result.raw}');
     switch (result.code) {
       case 802:
         if (state.phase != MusicQrPhase.scanned) {
@@ -120,7 +121,7 @@ class MusicLoginController extends Notifier<MusicQrState> {
     }
   }
 
-  Future<({int code, String message, String? cookie})?> _tryCheck(NeteaseApi api, String key) async {
+  Future<({int code, String message, String? cookie, String raw})?> _tryCheck(NeteaseApi api, String key) async {
     try {
       return await api.qrCheck(key);
     } on Object {
@@ -134,7 +135,12 @@ class MusicLoginController extends Notifier<MusicQrState> {
   /// 卡在「扫了码但没登录」——这正是之前扫码后应用状态不更新的根因。
   Future<void> _finishLogin(String? cookie) async {
     if (!NeteaseApi.cookieHasLogin(cookie)) {
-      state = state.copyWith(phase: MusicQrPhase.failed, message: 'cookie_missing');
+      // 803 但没拿到 MUSIC_U：把实际收到的 cookie 名打进 message，便于定位是
+      // 通道问题（只有 NMTID）还是服务端未授权。
+      final names = cookie == null || cookie.isEmpty
+          ? 'none'
+          : cookie.split(';').map((e) => e.split('=').first.trim()).where((e) => e.isNotEmpty).join(',');
+      state = state.copyWith(phase: MusicQrPhase.failed, message: 'cookie_missing:$names');
       return;
     }
     await ref.read(musicAuthProvider.notifier).save(MusicPlatform.netease, cookie!);
@@ -157,6 +163,8 @@ class MusicLoginController extends Notifier<MusicQrState> {
 
   void reset() {
     _poll?.cancel();
+    final key = state.key;
+    if (key != null) createApi().dropQrCookies(key);
     state = const MusicQrState();
   }
 }

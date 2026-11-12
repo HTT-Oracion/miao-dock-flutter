@@ -181,7 +181,8 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     final statusText = switch (qr?.phase) {
       MusicQrPhase.loading => l10n.onlineLoading,
       MusicQrPhase.expired => l10n.musicLoginQrExpired,
-      MusicQrPhase.failed => l10n.musicLoginQrExpired,
+      // 失败不是「过期」：之前复用过期文案，用户以为只是超时，实际是拿不到登录票据。
+      MusicQrPhase.failed => l10n.musicLoginQrFailed,
       _ => switch (phase) {
         _QrPhase.waiting => l10n.musicLoginQrWaiting,
         _QrPhase.scanned => _cd <= 0 ? l10n.musicLoginQrExpired : l10n.musicLoginQrScanned,

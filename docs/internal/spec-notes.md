@@ -4456,3 +4456,19 @@
 - **验证**：新增 `music_login_flow_test`（803 成功、昵称失败降级、仅 NMTID 不算登录、Cookie
   解析、弹窗自动关闭）、`music_cover_test`（桌面行封面 / 曲目表 / 歌单瓦片）、
   `music_cover_mapping_test`（QQ 收藏图与字段顺序）；均做过反证轮（还原缺陷后对应断言变红）。
+
+## D-206 · 网易云扫码登录改走 EAPI 通道（2026-11-12）
+
+- **状态**：已实施。
+- **根因**：明文 `/api/login/qrcode/client/login` 能返回 801/802/803，但 **803 的
+  `Set-Cookie` 不下发 `MUSIC_U`**（只有 `NMTID` 统计串）。表现为手机显示「登录成功」，
+  应用里仍是未登录。上一轮加的 `MUSIC_U` 校验因此把成功判成失败，用户只看到
+  「二维码已过期」。
+- **修复**：二维码 key / 轮询改走 EAPI 加密通道
+  （`interface3.music.163.com/eapi/*`，AES-128-ECB + 大写十六进制，与 miao-dock
+  `post_eapi_full` 同算法）；请求体带 `header` 字段（`MUSIC_U` 必须留空，否则顶掉真实登录态）。
+- **依赖**：新增 `encrypt`（AES-ECB 实现，1 个直接依赖，运行时；`crypto` 已在用）。
+- **诊断**：失败态不再复用「二维码已过期」文案，新增 `musicLoginQrFailed`；803 缺票据时把
+  实际收到的 cookie 名写进 `message`，并 `debugPrint` 每次轮询的原始响应。
+- **验证**：`netease_eapi_test` 交叉比对参考实现的大写 hex 输出（改 base64 即失败）；
+  真实接口探针确认 eapi `unikey` 返回 200、轮询返回 801。**真机扫码仍需人工复验**。

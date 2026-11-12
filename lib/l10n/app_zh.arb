@@ -6253,6 +6253,10 @@
   "@musicLoginQrExpired": {
     "description": "二维码状态：已过期"
   },
+  "musicLoginQrFailed": "扫码登录未完成，请刷新二维码重试",
+  "@musicLoginQrFailed": {
+    "description": "扫码登录失败：服务端未下发登录票据"
+  },
   "musicFailTitle": "加载失败了",
   "@musicFailTitle": {
     "description": "页面级失败态标题"

@@ -28,8 +28,8 @@ class _FakeApi extends NeteaseApi {
   Future<String> qrKey() async => 'key-1';
 
   @override
-  Future<({int code, String message, String? cookie})> qrCheck(String key) async =>
-      (code: 803, message: '', cookie: qrCookie);
+  Future<({int code, String message, String? cookie, String raw})> qrCheck(String key) async =>
+      (code: 803, message: '', cookie: qrCookie, raw: '{"code":803}');
 
   @override
   Future<({bool loggedIn, String userId, String nick})> loginStatus() async {
