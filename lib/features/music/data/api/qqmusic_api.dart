@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../../domain/music_models.dart';
 import 'lrc.dart';
+import 'music_cover_url.dart';
 import 'music_api_error.dart';
 import 'music_http.dart';
 
@@ -149,7 +150,7 @@ class QqMusicApi {
             seed: '${item['dissname'] ?? ''}',
             playCountValue: (item['listennum'] as num?)?.round(),
             description: '${_dig(item, ['creator', 'name']) ?? ''}',
-            coverUrl: '${item['imgurl'] ?? item['logo'] ?? ''}',
+            coverUrl: normalizeCoverUrl(item['imgurl'] ?? item['logo']),
           ),
     ];
   }
@@ -238,7 +239,9 @@ class QqMusicApi {
       description: creator.isEmpty ? null : creator,
       // 「我喜欢」歌单没有自己的封面，接口也不给图 —— 用平台官方收藏图兜底，
       // 否则列表里那张卡永远是渐变占位（miao-dock 同口径）。
-      coverUrl: liked ? _likedCover : _coalesceCover([m['logo'], m['picurl'], m['diss_cover'], m['cover']]),
+      coverUrl: liked
+          ? _likedCover
+          : normalizeCoverUrl(_coalesceCover([m['logo'], m['picurl'], m['diss_cover'], m['cover']])),
       author: creator.isEmpty ? null : creator,
       special: liked,
       subscribed: subscribed && !liked,
@@ -305,6 +308,8 @@ class QqMusicApi {
         seed: '${cd['dissname'] ?? ''}',
         playCountValue: (cd['visitnum'] as num?)?.round(),
         description: '${_dig(cd, ['creator', 'name']) ?? ''}',
+        // 歌单详情页的 hero / 列表封面都取这里；漏掉就是整个详情页没有封面。
+        coverUrl: normalizeCoverUrl(cd['logo'] ?? cd['diss_cover'] ?? cd['picurl']),
       ),
       songs: <MusicSong>[
         if (songs is List)

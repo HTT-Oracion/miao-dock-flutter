@@ -31,6 +31,19 @@ void main() {
     expect(container.read(musicRepositoryProvider), isA<PlatformMusicRepository>());
   });
 
+  test('详情缺封面时用列表元数据回填（酷狗/QQ 详情只给曲目）', () async {
+    final source = _FakeSource(chartCount: 2);
+    final repo = PlatformMusicRepository(platform: MusicPlatform.kugou, source: source);
+
+    // 先走列表（缓存元数据），再取详情。
+    await repo.recommendedPlaylists();
+    final detail = await repo.sourceDetail(MusicSourceKind.chart, 'c0');
+
+    // 破坏点：不做回填 → 详情 meta.coverUrl 为 null，详情页整页没有封面。
+    expect(detail.meta.coverUrl, source.chartCover);
+    expect(detail.meta.name, isNotEmpty);
+  });
+
   test('推荐歌单走平台实现；空结果回退榜单清单', () async {
     final source = _FakeSource(recommend: const [], chartCount: 3);
     final repo = PlatformMusicRepository(platform: MusicPlatform.kugou, source: source);
@@ -92,6 +105,9 @@ class _NoAuth extends MusicAuthNotifier {
 class _FakeSource implements MusicSource {
   _FakeSource({this.recommend = const [], this.chartCount = 3, this.failingChartId, this.failSearch = false});
 
+  /// 榜单清单返回的封面（详情接口故意不给，用于验证回填）。
+  final String chartCover = 'https://example.invalid/chart.jpg';
+
   final List<MusicPlaylist> recommend;
   final int chartCount;
   final String? failingChartId;
@@ -129,7 +145,7 @@ class _FakeSource implements MusicSource {
 
   @override
   Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async => [
-    for (var i = 0; i < chartCount; i++) (id: 'c$i', name: 'chart $i', updateMeta: 'daily', coverUrl: null),
+    for (var i = 0; i < chartCount; i++) (id: 'c$i', name: 'chart $i', updateMeta: 'daily', coverUrl: chartCover),
   ];
 
   @override

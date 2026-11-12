@@ -35,6 +35,13 @@ class PlatformMusicRepository implements MusicRepository {
   /// 失败注入（仅自测用，与演示仓库同口径）。
   final Set<FailScope> _fails = {};
 
+  /// 列表页见过的歌单 / 榜单元数据（按 id）。
+  ///
+  /// 为什么要缓存：部分平台的**详情接口只给曲目**（酷狗 `special/song`、`rank/song`
+  /// 的 data 里没有 specialname / 封面），详情页因此拿不到标题与封面。
+  /// 列表页本来就有这些字段，记下来在详情时回填，比再猜一个接口可靠。
+  final Map<String, MusicPlaylist> _metaCache = {};
+
   static MusicSource _buildSource(MusicPlatform platform, String cookie) => switch (platform) {
     MusicPlatform.netease => NeteaseSource(api: NeteaseApi(cookie: cookie)),
     MusicPlatform.qq => QqSource(api: QqMusicApi(cookie: cookie)),
@@ -116,10 +123,10 @@ class PlatformMusicRepository implements MusicRepository {
   @override
   Future<List<MusicPlaylist>> recommendedPlaylists() => _translate(() async {
     final list = await _source.recommendedPlaylists(limit: 6);
-    if (list.isNotEmpty) return list;
+    if (list.isNotEmpty) return _remember(list);
     // 平台无推荐歌单能力（酷狗 / 无 cookie 的 QQ）：退回榜单清单，保证首页有入口。
     final charts = await _source.charts();
-    return [
+    return _remember([
       for (final c in charts.take(6))
         MusicPlaylist(
           id: c.id,
@@ -129,7 +136,7 @@ class PlatformMusicRepository implements MusicRepository {
           description: c.updateMeta,
           coverUrl: c.coverUrl,
         ),
-    ];
+    ]);
   }, FailScope.playlists);
 
   @override
@@ -170,8 +177,9 @@ class PlatformMusicRepository implements MusicRepository {
   Future<({MusicPlaylist meta, List<MusicSong> songs})> sourceDetail(MusicSourceKind kind, String id) =>
       _translate(() async {
         return switch (kind) {
-          MusicSourceKind.playlist => _source.playlistDetail(id),
-          MusicSourceKind.chart => _source.chartDetail(id),
+          // 详情接口可能只给曲目，用列表页记住的元数据补齐标题 / 封面。
+          MusicSourceKind.playlist => _mergeMeta(await _source.playlistDetail(id)),
+          MusicSourceKind.chart => _mergeMeta(await _source.chartDetail(id)),
           MusicSourceKind.daily => (
             meta: MusicPlaylist(id: 'daily', name: '', trackCount: 0, seed: '', special: true),
             songs: await _source.dailySongs(),
@@ -179,8 +187,38 @@ class PlatformMusicRepository implements MusicRepository {
         };
       }, kind == MusicSourceKind.chart ? FailScope.charts : FailScope.playlists);
 
+  /// 记下列表元数据（只记有名字的，避免用空壳覆盖好数据）。
+  List<MusicPlaylist> _remember(List<MusicPlaylist> list) {
+    for (final p in list) {
+      if (p.id.isNotEmpty && p.name.isNotEmpty) _metaCache[p.id] = p;
+    }
+    return list;
+  }
+
+  /// 用缓存补齐详情元数据：详情给了的字段优先，缺的（尤其封面）从列表补。
+  ({MusicPlaylist meta, List<MusicSong> songs}) _mergeMeta(({MusicPlaylist meta, List<MusicSong> songs}) d) {
+    final cached = _metaCache[d.meta.id];
+    if (cached == null) return d;
+    return (
+      meta: MusicPlaylist(
+        id: d.meta.id,
+        name: d.meta.name.isNotEmpty ? d.meta.name : cached.name,
+        trackCount: d.meta.trackCount > 0 ? d.meta.trackCount : cached.trackCount,
+        seed: d.meta.seed.isNotEmpty ? d.meta.seed : cached.seed,
+        playCountValue: d.meta.playCountValue ?? cached.playCountValue,
+        description: (d.meta.description ?? '').isNotEmpty ? d.meta.description : cached.description,
+        coverUrl: d.meta.coverUrl ?? cached.coverUrl,
+        special: d.meta.special,
+        author: d.meta.author ?? cached.author,
+        subscribed: d.meta.subscribed,
+      ),
+      songs: d.songs,
+    );
+  }
+
   @override
-  Future<List<MusicPlaylist>> userPlaylists() => _translate(_source.userPlaylists, FailScope.playlists);
+  Future<List<MusicPlaylist>> userPlaylists() =>
+      _translate(() async => _remember(await _source.userPlaylists()), FailScope.playlists);
 
   @override
   Future<MusicPlaylist> likedPlaylist() => _translate(() async {
@@ -211,7 +249,7 @@ class PlatformMusicRepository implements MusicRepository {
     } on Object {
       playlists = const [];
     }
-    return (songs: songs, playlists: playlists);
+    return (songs: songs, playlists: _remember(playlists));
   }, FailScope.search);
 
   // ── 歌词 / 评论 ─────────────────────────────────────────────────────────

@@ -4533,3 +4533,23 @@
 - **验证**：`music_login_flow_test` 新增二维码状态机用例（超时后 `keyCalls` 不增加）；
   把超时代码改回自动 `start()` 即变红。真实接口探针：interfacepc + type=3 +
   Cookie 头 + timestamp 返回 801。
+
+## D-210 · 封面缺失的系统性修复（2026-11-12）
+
+- **状态**：已实施。
+- **根因一（最主要）**：`Image.network` 在 macOS / iOS / Android 默认拒绝明文 `http://`。
+  酷狗、QQ、咪咕的歌单封面大量返回 `http://`，且酷狗给的是 `.../{size}/...` 模板串 ——
+  未规范化时整块加载失败，只剩渐变占位。新增 `music_cover_url.dart`
+  （`normalizeCoverUrl`：http→https、`//`→https、`{size}`→300、空串→null），四平台统一接入。
+- **根因二**：咪咕歌单广场卡片换了结构 —— 标题在 `txt`、封面在 `img`、
+  id 在 `logEvent.contentId`（`contentType=2021`）。旧解析只认 `playlistId`/`playlistName`，
+  整块漏掉（推荐歌单有卡片没封面）。
+- **根因三**：详情接口只给曲目、不给元数据（酷狗 `special/song`、`rank/song`；
+  QQ 歌单详情此前完全没设 `coverUrl`）。仓库层新增列表元数据缓存，
+  详情时按 id 回填标题 / 封面。
+- **根因四**：酷狗榜单详情连榜单名都是空串 —— 改从 `rank/list` 按 id 取回元数据。
+- **验证**：`music_cover_url_test`（4 条）、`music_cover_mapping_test` 新增咪咕卡片解析、
+  `platform_repository_test` 新增详情回填用例；三条均做过反证轮。
+  真实接口探针：网易云 / 酷狗 / QQ / 咪咕 的推荐歌单、搜索结果、详情封面均为 `https://` 且无 `{size}`。
+- **已知边界**：QQ 推荐接口偶发返回无效 `disstid`（详情回 `playlist_not_found`），属上游数据问题，
+  已由仓库层如实抛错、UI 走失败态，不做兜底伪造。

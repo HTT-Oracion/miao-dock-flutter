@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:miao_dock_flutter/features/music/data/api/migu_api.dart';
 import 'package:miao_dock_flutter/features/music/data/api/qqmusic_api.dart';
 
 /// 封面字段映射：真实接口的图字段散落在多处，只取第一处会漏掉大量老数据。
@@ -32,7 +33,22 @@ void main() {
     expect(onlyCover.coverUrl, 'https://example.invalid/d.jpg');
 
     final none = QqMusicApi.userPlaylistFromMap({'dirid': 6, 'diss_name': '无图歌单', 'dissid': '78'}, subscribed: false);
-    // 没有图就留空，由 UI 回落渐变（不能编造地址）。
-    expect(none.coverUrl, isEmpty);
+    // 没有图就是 null（规范化后空串归一为 null），由 UI 回落渐变，不编造地址。
+    expect(none.coverUrl, isNull);
+  });
+
+  test('咪咕歌单广场卡片：txt / img / logEvent.contentId 能解析出封面', () {
+    final p = MiguApi.playlistFromNode({
+      'txt': '欧美精选：播放即心动',
+      'img': 'https://d.musicapp.migu.cn/data/oss/x.jpeg',
+      'view': 'ZJ-SongList-Item',
+      'logEvent': {'contentId': '237306957', 'contentType': '2021'},
+    });
+
+    // 破坏点：只认旧的 playlistId / playlistName → 解析为 null，推荐歌单整块没封面。
+    expect(p, isNotNull);
+    expect(p!.id, '237306957');
+    expect(p.name, '欧美精选：播放即心动');
+    expect(p.coverUrl, 'https://d.musicapp.migu.cn/data/oss/x.jpeg');
   });
 }

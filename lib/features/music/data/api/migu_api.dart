@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../../domain/music_models.dart';
 import 'lrc.dart';
+import 'music_cover_url.dart';
 import 'music_http.dart';
 
 /// 咪咕音乐客户端（移植自 `miao-dock/src-tauri/src/music/migu.rs`）。
@@ -91,7 +94,7 @@ class MiguApi {
             trackCount: _miguPlaylistCount(item),
             seed: name,
             description: '${item['summary'] ?? item['desc'] ?? ''}',
-            coverUrl: '${item['img'] ?? item['image'] ?? item['cover'] ?? ''}',
+            coverUrl: normalizeCoverUrl(item['img'] ?? item['image'] ?? item['cover']),
             subscribed: subscribed,
           ),
         );
@@ -133,6 +136,12 @@ class MiguApi {
         trackCount: songs.length,
         seed: name,
         description: data is Map ? '${data['summary'] ?? data['desc'] ?? ''}' : '',
+        // 详情页 hero / 封面色块取这里；漏掉就是整个歌单详情没有封面。
+        // 字段口径与列表一致（img / image / cover），另兼容歌单详情特有的
+        // coverUrl / picUrl —— 不同接口版本命名不统一。
+        coverUrl: data is Map
+            ? normalizeCoverUrl(data['img'] ?? data['image'] ?? data['cover'] ?? data['coverUrl'] ?? data['picUrl'])
+            : null,
       ),
       songs: songs,
     );
@@ -155,6 +164,9 @@ class MiguApi {
         name: name is String && name.isNotEmpty ? name : '',
         trackCount: songs.length,
         seed: name is String && name.isNotEmpty ? name : '',
+        coverUrl: normalizeCoverUrl(
+          _dig(json, ['data', 'columnInfo', 'columnPicUrl']) ?? _dig(json, ['data', 'columnInfo', 'columnSmallpicUrl']),
+        ),
       ),
       songs: songs,
     );
@@ -313,36 +325,60 @@ class MiguApi {
 
   List<MusicPlaylist> _findPlaylists(dynamic json) {
     final out = <MusicPlaylist>[];
+    final seen = <String>{};
+
     void walk(dynamic node) {
       if (node is List) {
         for (final item in node) {
           walk(item);
         }
-      } else if (node is Map<String, dynamic>) {
-        final id = node['playlistId'] ?? node['id'];
-        final name = node['playlistName'] ?? node['name'];
-        if (id != null && name is String && name.isNotEmpty) {
-          out.add(
-            MusicPlaylist(
-              id: '$id',
-              name: name,
-              trackCount: (node['songCount'] as num?)?.toInt() ?? 0,
-              seed: name,
-              playCountValue: (node['playCount'] as num?)?.round(),
-              description: '${node['summary'] ?? node['desc'] ?? ''}',
-              coverUrl: '${node['img'] ?? node['image'] ?? node['cover'] ?? ''}',
-            ),
-          );
-        } else {
-          for (final v in node.values) {
-            walk(v);
-          }
-        }
+        return;
+      }
+      if (node is! Map<String, dynamic>) return;
+
+      final parsed = _playlistFromNode(node);
+      if (parsed != null && seen.add(parsed.id)) {
+        out.add(parsed);
+        return; // 命中歌单节点后不再下钻，避免把内部字段当新歌单
+      }
+      for (final v in node.values) {
+        walk(v);
       }
     }
 
     walk(json);
     return out;
+  }
+
+  /// 歌单广场的节点有两套命名：
+  /// · 老口径 `playlistId` / `playlistName`；
+  /// · 现网 `ZJ-SongList-Item` 卡片：标题在 `txt`、封面在 `img`、
+  ///   id 在 `logEvent.resourceId`（`contentType=2021` 才是歌单）。
+  /// 只认老口径会整块漏掉，表现为「推荐歌单有卡片但没有封面」。
+  @visibleForTesting
+  static MusicPlaylist? playlistFromNode(Map<String, dynamic> node) => _playlistFromNode(node);
+
+  static MusicPlaylist? _playlistFromNode(Map<String, dynamic> node) {
+    final logEvent = node['logEvent'];
+    final resourceType = logEvent is Map ? '${logEvent['contentType'] ?? ''}' : '';
+    final isCard = resourceType == '2021' || '${node['view'] ?? ''}' == 'ZJ-SongList-Item';
+
+    final id =
+        node['playlistId'] ??
+        (isCard && logEvent is Map ? logEvent['contentId'] ?? logEvent['resourceId'] : null) ??
+        node['id'];
+    final name = node['playlistName'] ?? node['name'] ?? (isCard ? node['txt'] : null);
+    if (id == null || name is! String || name.isEmpty) return null;
+
+    return MusicPlaylist(
+      id: '$id',
+      name: name,
+      trackCount: (node['songCount'] as num?)?.toInt() ?? 0,
+      seed: name,
+      playCountValue: (node['playCount'] as num?)?.round(),
+      description: '${node['summary'] ?? node['desc'] ?? ''}',
+      coverUrl: normalizeCoverUrl(node['img'] ?? node['img2'] ?? node['image'] ?? node['cover']),
+    );
   }
 
   static String? _findAudioUrl(dynamic json) {

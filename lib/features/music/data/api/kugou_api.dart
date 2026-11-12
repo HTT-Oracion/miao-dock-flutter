@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 
 import '../../domain/music_models.dart';
 import 'lrc.dart';
+import 'music_cover_url.dart';
 import 'music_http.dart';
 
 /// 酷狗音乐客户端（移植自 `miao-dock/src-tauri/src/music/kugou.rs`）。
@@ -91,7 +92,7 @@ class KugouApi {
             seed: '${item['specialname'] ?? ''}',
             playCountValue: (item['playcount'] as num?)?.round(),
             description: '${item['nickname'] ?? ''}',
-            coverUrl: '${item['imgurl'] ?? item['img'] ?? ''}',
+            coverUrl: normalizeCoverUrl(item['imgurl'] ?? item['img']),
           ),
     ];
   }
@@ -216,7 +217,7 @@ class KugouApi {
             seed: '${item['rankname'] ?? ''}',
             playCountValue: (item['playcount'] as num?)?.round(),
             description: '${item['update_frequency'] ?? ''}',
-            coverUrl: _coverUrl('${item['banner7url'] ?? item['imgurl'] ?? ''}'),
+            coverUrl: normalizeCoverUrl(item['banner7url'] ?? item['imgurl']),
           ),
     ];
   }
@@ -252,14 +253,36 @@ class KugouApi {
       query: {'format': 'json', 'rankid': id, 'page': 1, 'pagesize': 50, 'version': 8990},
     );
     final info = _dig(json, ['data', 'info']);
+    // rank/song 只给曲目，没有榜单名与封面 —— 从 rank/list 里按 id 取回元数据。
+    final meta = await _rankMeta(id);
     return (
-      meta: MusicPlaylist(id: id, name: '', trackCount: info is List ? info.length : 0, seed: ''),
+      meta: MusicPlaylist(
+        id: id,
+        name: meta?.name ?? '',
+        trackCount: info is List ? info.length : 0,
+        seed: meta?.name ?? '',
+        description: meta?.description ?? '',
+        coverUrl: meta?.coverUrl,
+      ),
       songs: <MusicSong>[
         if (info is List)
           for (final item in info)
             if (item is Map<String, dynamic>) _songFromV3(item),
       ],
     );
+  }
+
+  /// 按 id 从榜单清单里取元数据（名称 / 说明 / 封面）；失败返回 null，不打断详情。
+  Future<MusicPlaylist?> _rankMeta(String id) async {
+    try {
+      final all = await rankList(limit: 100);
+      for (final p in all) {
+        if (p.id == id) return p;
+      }
+    } on Object {
+      // 榜单清单失败不影响曲目展示，只是没有标题与封面。
+    }
+    return null;
   }
 
   // ── 歌词 ────────────────────────────────────────────────────────────────
@@ -406,11 +429,7 @@ class KugouApi {
   }
 
   /// 酷狗封面占位符 `{size}` 替换成 300（接口给的是模板串）。
-  static String? _coverUrl(String raw) {
-    final v = raw.trim();
-    if (v.isEmpty) return null;
-    return v.replaceAll('{size}', '300').replaceFirst('http://', 'https://');
-  }
+  static String? _coverUrl(String raw) => normalizeCoverUrl(raw);
 
   static String? _kugouQuality(Map<String, dynamic> m) {
     final sq = '${m['SQFileHash'] ?? ''}';
