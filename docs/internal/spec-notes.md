@@ -4470,5 +4470,7 @@
 - **依赖**：新增 `encrypt`（AES-ECB 实现，1 个直接依赖，运行时；`crypto` 已在用）。
 - **诊断**：失败态不再复用「二维码已过期」文案，新增 `musicLoginQrFailed`；803 缺票据时把
   实际收到的 cookie 名写进 `message`，并 `debugPrint` 每次轮询的原始响应。
+- **昵称**：803 响应体已带 `nickname` 时直接使用，不再额外调 `loginStatus`（少一个失败点）；
+  只有响应没带昵称才补取，且失败只影响昵称展示。
 - **验证**：`netease_eapi_test` 交叉比对参考实现的大写 hex 输出（改 base64 即失败）；
   真实接口探针确认 eapi `unikey` 返回 200、轮询返回 801。**真机扫码仍需人工复验**。

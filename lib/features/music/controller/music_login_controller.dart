@@ -113,7 +113,7 @@ class MusicLoginController extends Notifier<MusicQrState> {
         }
       case 803:
         _poll?.cancel();
-        await _finishLogin(result.cookie);
+        await _finishLogin(result.cookie, result.nick);
       case 800:
         _poll?.cancel();
         state = state.copyWith(phase: MusicQrPhase.expired, secondsLeft: 0);
@@ -121,7 +121,10 @@ class MusicLoginController extends Notifier<MusicQrState> {
     }
   }
 
-  Future<({int code, String message, String? cookie, String raw})?> _tryCheck(NeteaseApi api, String key) async {
+  Future<({int code, String message, String? cookie, String? nick, String raw})?> _tryCheck(
+    NeteaseApi api,
+    String key,
+  ) async {
     try {
       return await api.qrCheck(key);
     } on Object {
@@ -133,7 +136,7 @@ class MusicLoginController extends Notifier<MusicQrState> {
   ///
   /// 昵称是展示增强，`loginStatus` 失败（接口风控 / 老 Cookie）不能让用户
   /// 卡在「扫了码但没登录」——这正是之前扫码后应用状态不更新的根因。
-  Future<void> _finishLogin(String? cookie) async {
+  Future<void> _finishLogin(String? cookie, String? nickFromCheck) async {
     if (!NeteaseApi.cookieHasLogin(cookie)) {
       // 803 但没拿到 MUSIC_U：把实际收到的 cookie 名打进 message，便于定位是
       // 通道问题（只有 NMTID）还是服务端未授权。
@@ -144,8 +147,11 @@ class MusicLoginController extends Notifier<MusicQrState> {
       return;
     }
     await ref.read(musicAuthProvider.notifier).save(MusicPlatform.netease, cookie!);
-    ref.read(musicAccountProvider.notifier).login(MusicPlatform.netease, '');
-    state = state.copyWith(phase: MusicQrPhase.succeeded);
+    final initial = nickFromCheck ?? '';
+    ref.read(musicAccountProvider.notifier).login(MusicPlatform.netease, initial);
+    state = state.copyWith(phase: MusicQrPhase.succeeded, nick: initial.isEmpty ? null : initial);
+    // 803 已带昵称就不再打 loginStatus；没带才补一次（失败也只是缺昵称）。
+    if (initial.isNotEmpty) return;
     final nick = await _fetchNick(cookie);
     if (nick.isEmpty) return;
     ref.read(musicAccountProvider.notifier).login(MusicPlatform.netease, nick);
