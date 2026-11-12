@@ -26,7 +26,11 @@ class MusicAuthState {
 class MusicAuthNotifier extends Notifier<MusicAuthState> {
   static const _keyPrefix = 'music.cookie.';
 
-  final SecureStore _store = SecureStore();
+  /// 存储实现（测试覆盖为内存替身）。
+  @protected
+  SecureStore createStore() => SecureStore();
+
+  late final SecureStore _store = createStore();
 
   @override
   MusicAuthState build() {
@@ -34,19 +38,37 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
     return const MusicAuthState();
   }
 
+  /// 启动读盘。
+  ///
+  /// 🔴 必须**合并**到当前内存态，不能整体替换：读盘是异步的，而扫码登录可能
+  /// 在它返回前就完成了 `save()`。整体替换会把刚写入的登录 Cookie 覆盖成启动时
+  /// 读到的旧值（空），表现为「手机显示登录成功、应用仍是未登录」。
+  /// 只在本轮修复前，这一行为是扫码登录失败的真因之一。
   Future<void> _restore() async {
     final restored = <MusicPlatform, String>{};
     for (final p in MusicPlatform.values.where((p) => p != MusicPlatform.local)) {
       final v = await _store.read('$_keyPrefix${p.name}');
       if (v != null && v.isNotEmpty) restored[p] = v;
     }
-    state = state.copyWith(cookies: restored, loading: false);
+    if (!ref.mounted) return; // 读盘期间 provider 可能已释放
+    state = state.copyWith(
+      // 内存态优先（期间可能已登录 / 已登出）。
+      cookies: {...restored, ...state.cookies},
+      loading: false,
+    );
   }
 
   Future<void> save(MusicPlatform p, String cookie) async {
     if (cookie.trim().isEmpty) return;
     state = state.copyWith(cookies: {...state.cookies, p: cookie});
     await _store.write('$_keyPrefix${p.name}', cookie);
+    // 写盘后再回读校验：某些平台（缺 keychain 权限）会静默失败，
+    // 不校验的话用户会看到「已登录」而重启后消失。
+    final readBack = await _store.read('$_keyPrefix${p.name}');
+    if (readBack == null || readBack.isEmpty) {
+      state = state.copyWith(cookies: {...state.cookies}..remove(p));
+      throw const MusicCredentialStoreException();
+    }
   }
 
   Future<void> clear(MusicPlatform p) async {
@@ -54,6 +76,16 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
     state = state.copyWith(cookies: next);
     await _store.delete('$_keyPrefix${p.name}');
   }
+}
+
+/// 凭据落盘失败（Keychain / Credential Manager 不可用或被拒）。
+///
+/// 与"接口失败"区分：这类失败重试网络没用，必须提示用户检查系统权限。
+class MusicCredentialStoreException implements Exception {
+  const MusicCredentialStoreException();
+
+  @override
+  String toString() => 'MusicCredentialStoreException: credential was not persisted';
 }
 
 final musicAuthProvider = NotifierProvider<MusicAuthNotifier, MusicAuthState>(MusicAuthNotifier.new);

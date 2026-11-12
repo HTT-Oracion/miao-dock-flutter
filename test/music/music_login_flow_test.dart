@@ -18,18 +18,26 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 /// · Cookie 合并漏掉 `MUSIC_U` → 用例失败（只收到 NMTID 不算登录）；
 /// · 成功态没有回到 UI（phase 不是 succeeded）→ 弹窗关闭断言失败。
 class _FakeApi extends NeteaseApi {
-  _FakeApi({this.qrCookie = 'MUSIC_U=abc; __csrf=xyz', this.statusThrows = false});
+  _FakeApi({this.qrCookie = 'MUSIC_U=abc; __csrf=xyz', this.statusThrows = false, this.code = 803});
 
   /// 轮询下发的 Cookie（藏在私有字段里，避免与 [NeteaseApi.cookie] 撞名）。
   final String qrCookie;
   final bool statusThrows;
+  final int code;
+
+  int keyCalls = 0;
 
   @override
-  Future<String> qrKey() async => 'key-1';
+  Future<String> qrKey() async {
+    keyCalls += 1;
+    return 'key-1';
+  }
 
   @override
-  Future<({int code, String message, String? cookie, String? nick, String raw})> qrCheck(String key) async =>
-      (code: 803, message: '', cookie: qrCookie, nick: null, raw: '{"code":803}');
+  Future<({int code, String message, String? cookie, String? nick, String raw})> qrCheck(
+    String key, {
+    bool noCookie = false,
+  }) async => (code: code, message: '', cookie: qrCookie, nick: null, raw: '{"code":$code}');
 
   @override
   Future<({bool loggedIn, String userId, String nick})> loginStatus() async {
@@ -55,6 +63,9 @@ class _ControlledLogin extends MusicLoginController {
 
   @override
   NeteaseApi createApi({String cookie = ''}) => api;
+
+  /// 把倒计时压到只剩一拍，方便用例驱动超时。
+  void forceSecondsLeft(int v) => state = state.copyWith(secondsLeft: v);
 }
 
 /// 弹窗用例专用：不启动真实轮询（否则 fake async 里的 2s 定时器会悬挂），
@@ -67,6 +78,8 @@ class _ManualLogin extends MusicLoginController {
   Future<void> start(MusicPlatform platform) async {}
 
   void succeed() => state = state.copyWith(phase: MusicQrPhase.succeeded, nick: 'n');
+
+  void fail(String reason) => state = state.copyWith(phase: MusicQrPhase.failed, message: reason);
 }
 
 class _OpenLoginUi extends MusicUiNotifier {
@@ -98,7 +111,7 @@ void main() {
     final container = containerWith(_FakeApi());
     await container.read(musicLoginProvider.notifier).start(MusicPlatform.netease);
     // 等轮询一拍（start 内部 2s 定时器；这里直接驱动首拍）。
-    await Future<void>.delayed(const Duration(milliseconds: 2100));
+    await Future<void>.delayed(const Duration(milliseconds: 5400)); // 首拍在 5s
 
     final login = container.read(musicLoginProvider);
     final account = container.read(musicAccountProvider);
@@ -112,7 +125,7 @@ void main() {
   test('扫码 803：loginStatus 失败也要登录成功（昵称缺失可接受）', () async {
     final container = containerWith(_FakeApi(statusThrows: true));
     await container.read(musicLoginProvider.notifier).start(MusicPlatform.netease);
-    await Future<void>.delayed(const Duration(milliseconds: 2100));
+    await Future<void>.delayed(const Duration(milliseconds: 5400)); // 首拍在 5s
 
     // 破坏点：把 loginStatus 放在置登录之前并让它抛错吞掉成功 → 这里失败。
     expect(container.read(musicLoginProvider).phase, MusicQrPhase.succeeded);
@@ -122,10 +135,22 @@ void main() {
   test('只有 NMTID 没有 MUSIC_U：不算登录成功', () async {
     final container = containerWith(_FakeApi(qrCookie: 'NMTID=only-stats'));
     await container.read(musicLoginProvider.notifier).start(MusicPlatform.netease);
-    await Future<void>.delayed(const Duration(milliseconds: 2100));
+    await Future<void>.delayed(const Duration(milliseconds: 5400)); // 首拍在 5s
 
     // 破坏点：不做 MUSIC_U 校验 → 统计 Cookie 被当成登录态，账号误报已登录。
     expect(container.read(musicLoginProvider).phase, MusicQrPhase.failed);
+    expect(container.read(musicAccountProvider).logged, isFalse);
+  });
+
+  test('风控 8821：立即失败并停轮询（不再空等到超时）', () async {
+    final container = containerWith(_FakeApi(code: 8821));
+    await container.read(musicLoginProvider.notifier).start(MusicPlatform.netease);
+    await Future<void>.delayed(const Duration(milliseconds: 5400)); // 首拍在 5s
+
+    final s = container.read(musicLoginProvider);
+    // 破坏点：8821 落进 default 被忽略 → phase 仍是 waiting / 最终 expired。
+    expect(s.phase, MusicQrPhase.failed);
+    expect(s.message, 'risk_control');
     expect(container.read(musicAccountProvider).logged, isFalse);
   });
 
@@ -155,6 +180,65 @@ void main() {
     expect(container.read(musicUiProvider).loginOpen, isFalse);
 
     // 成功轻提示自带 3.2s 自动消失定时器：卸载后把它跑完再收尾。
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 4));
+  });
+
+  testWidgets('二维码状态：等待态画码、不显示重试；过期后转重试态且不自动换码', (tester) async {
+    final api = _FakeApi();
+    final container = ProviderContainer(
+      overrides: [
+        musicAuthProvider.overrideWith(_FakeAuth.new),
+        // 用真实控制器 + 假接口：这样「超时是否重新取 key」能被 api.k 次数观测到。
+        musicLoginProvider.overrideWith(() => _ControlledLogin(api)),
+        musicUiProvider.overrideWith(_OpenLoginUi.new),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(container: container, child: host(const LoginModal())));
+    await tester.pump();
+    // 等首码下来（start 里有 Future.delayed(zero) + 取 key）。
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.byKey(const ValueKey('music-login-qr')), findsOneWidget);
+    expect(find.byKey(const ValueKey('music-login-qr-retry')), findsNothing);
+    final keyCallsBefore = api.keyCalls;
+
+    // 把剩余时间压到只剩一拍，驱动超时。
+    final notifier = container.read(musicLoginProvider.notifier) as _ControlledLogin;
+    notifier.forceSecondsLeft(5);
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pump();
+
+    // 超时：进入重试态，且**没有**再取新 key。
+    expect(container.read(musicLoginProvider).phase, MusicQrPhase.expired);
+    expect(find.byKey(const ValueKey('music-login-qr-retry')), findsOneWidget);
+    // 破坏点：超时自动重新取码 → keyCalls 增加，本条失败。
+    expect(api.keyCalls, keyCallsBefore, reason: '超时后不得自动换码');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 4));
+  });
+  testWidgets('登录失败：弹 toast 且二维码进入失败态（不关弹窗）', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        musicAuthProvider.overrideWith(_FakeAuth.new),
+        musicLoginProvider.overrideWith(_ManualLogin.new),
+        musicUiProvider.overrideWith(_OpenLoginUi.new),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(container: container, child: host(const LoginModal())));
+    await tester.pump();
+
+    (container.read(musicLoginProvider.notifier) as _ManualLogin).fail('risk_control');
+    await tester.pump();
+
+    // 破坏点：失败不提示 / 关掉弹窗 → 用户不知道发生了什么。
+    final l10n = AppLocalizations.of(tester.element(find.byType(LoginModal)));
+    expect(find.text(l10n.musicLoginRiskControl), findsWidgets);
+    expect(container.read(musicUiProvider).loginOpen, isTrue, reason: '失败时弹窗应保留供重试');
+
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 4));
   });

@@ -39,6 +39,18 @@ void main() {
     expect(RegExp(r'^[0-9A-F]+$').hasMatch(actual), isTrue);
   });
 
+  test('EAPI 请求头必须带稳定非空 deviceId', () {
+    final h1 = NeteaseApi.eapiHeader();
+    final h2 = NeteaseApi.eapiHeader();
+
+    // 破坏点：deviceId 传空串（修复前就是这样）→ 扫码确认后服务端回 8821 风控。
+    expect('${h1['deviceId']}'.trim(), isNotEmpty);
+    expect(h1['deviceId'], h2['deviceId'], reason: '同一进程内必须稳定');
+    // MUSIC_U 必须留空，否则顶掉 Cookie 头里的真实登录态。
+    expect(h1['MUSIC_U'], '');
+    expect(h1['os'], 'iPhone OS');
+  });
+
   test('EAPI 加密确定性，且随 payload 变化', () {
     const path = '/api/login/qrcode/client/login';
     final a = NeteaseApi.eapiParams(path, {'key': 'k1', 'type': 1});

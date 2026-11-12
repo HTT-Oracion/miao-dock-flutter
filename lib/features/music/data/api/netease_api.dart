@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' show Random;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
@@ -304,7 +305,11 @@ class NeteaseApi {
 
   // ── EAPI 加密通道（二维码登录专用）────────────────────────────────────────
 
-  static const _eapiBase = 'https://interface3.music.163.com/eapi';
+  /// eapi 域名：参考实现 (`util/config.json` APP_CONF.eapiDomain) 用 interfacepc。
+  static const _eapiBase = 'https://interfacepc.music.163.com/eapi';
+
+  /// 参考实现 `userAgentMap.api.iphone`：登录走 App 身份，不用桌面浏览器 UA。
+  static const _eapiUserAgent = 'NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)';
 
   /// EAPI 固定 AES 密钥（与 miao-dock `NETEASE_EAPI_KEY` 一致）。
   static const _eapiKey = 'e82ckenh8dichen8';
@@ -321,29 +326,70 @@ class NeteaseApi {
     return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join().toUpperCase();
   }
 
+  /// 本次客户端的稳定设备标识（进程内固定）。
+  ///
+  /// 🔴 `deviceId` 传空串是**风控的直接诱因**：扫码确认后服务端会回
+  /// `{"code":8821,"message":"请切换其他登录方式或升级新版本再试"}`。
+  /// 参考实现（NeteaseCloudMusicApiEnhanced）始终带一个稳定的 deviceId，
+  /// 这里按同样口径生成一次并复用整个进程生命周期。
+  static final String _deviceId = _newDeviceId();
+
+  static String _newDeviceId() {
+    final rand = Random.secure();
+    const hex = '0123456789ABCDEF';
+    final buf = StringBuffer();
+    for (var i = 0; i < 32; i++) {
+      buf.write(hex[rand.nextInt(16)]);
+    }
+    return buf.toString();
+  }
+
   /// EAPI 请求头（作为 payload 的 `header` 字段下发，不是 HTTP 头）。
+  @visibleForTesting
+  static Map<String, dynamic> eapiHeader() => _eapiHeader();
+
   static Map<String, dynamic> _eapiHeader() {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     return {
       '__csrf': '',
-      'appver': '8.0.0',
-      'buildver': '${nowMs ~/ 1000}',
-      'channel': '',
-      'deviceId': '',
-      'mobilename': '',
-      'resolution': '1920x1080',
-      'os': 'android',
-      'osver': '',
-      'requestId': '${nowMs}_${nowMs % 1000}',
+      // 对齐参考实现 processCookieObject 的默认画像（osMap.iphone）。
+      'os': 'iPhone OS',
+      'osver': '16.2',
+      'appver': '9.0.90',
+      'channel': 'distribution',
+      'deviceId': _deviceId,
       'versioncode': '140',
+      'mobilename': '',
+      'buildver': '${nowMs ~/ 1000}',
+      'resolution': '1920x1080',
+      'requestId': '${nowMs}_${(nowMs % 1000).toString().padLeft(4, '0')}',
       // 必须留空：真 MUSIC_U 由 Cookie 头携带，这里非空会顶掉真实登录态。
       'MUSIC_U': '',
     };
   }
 
+  /// header 里除 MUSIC_U 外的字段**同时**要编码成 HTTP Cookie 头。
+  ///
+  /// 🔴 参考实现 `createHeaderCookie(header)` 就是这么发的：服务端靠 Cookie 里的
+  /// os / deviceId / appver 判断客户端身份。此前我们只把它塞进 payload.header，
+  /// Cookie 头是空的 —— 相当于无状态调用登录接口，是 8821 风控的直接诱因之一。
+  static Map<String, String> _eapiCookieHeader() {
+    final header = {..._eapiHeader()}..remove('MUSIC_U');
+    return {
+      for (final e in header.entries)
+        if ('${e.value}'.isNotEmpty) e.key: '${e.value}',
+    };
+  }
+
   /// 发一次 EAPI 请求，返回 JSON 与本次响应的 Set-Cookie。
-  Future<({dynamic json, List<String> cookies})> _eapiPost(String path, Map<String, dynamic> payload) async {
-    final body = {...payload, 'header': jsonEncode(_eapiHeader())};
+  Future<({dynamic json, List<String> cookies})> _eapiPost(
+    String path,
+    Map<String, dynamic> payload, {
+    bool withCookieHeader = true,
+  }) async {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    // 文档：二维码三个接口「调用务必带上时间戳，防止缓存」。
+    final body = {...payload, 'timestamp': nowMs, 'header': jsonEncode(_eapiHeader())};
     final resp = await _http.dio.post<String>(
       '$_eapiBase${path.substring(4)}',
       data: {'params': eapiParams(path, body)},
@@ -351,6 +397,10 @@ class NeteaseApi {
         responseType: ResponseType.plain,
         contentType: Headers.formUrlEncodedContentType,
         validateStatus: (_) => true,
+        headers: {
+          'User-Agent': _eapiUserAgent,
+          if (withCookieHeader) 'Cookie': _eapiCookieHeader().entries.map((e) => '${e.key}=${e.value}').join('; '),
+        },
       ),
     );
     final json = resp.data == null ? null : _tryDecode(resp.data!);
@@ -361,7 +411,7 @@ class NeteaseApi {
   ///
   /// 走 EAPI：明文 `unikey` 拿到的 key 也能扫码，但配套的 803 不下发登录票据。
   Future<String> qrKey() async {
-    final r = await _eapiPost('/api/login/qrcode/unikey', {'type': 1});
+    final r = await _eapiPost('/api/login/qrcode/unikey', {'type': 3});
     final key = _dig(r.json, ['unikey']) as String?;
     if (key == null || key.isEmpty) {
       throw MusicApiException.business('netease', 'qr_key_failed');
@@ -377,8 +427,16 @@ class NeteaseApi {
   /// · 响应头 `Set-Cookie`（`MUSIC_U` / `__csrf` 在这里，登录成功才下发）；
   /// · 响应体 `cookie` 字段（部分节点会把整串塞回 body）。
   /// 轮询是多次请求，每次可能只下发一部分，因此按 key 累积合并后再交给登录收口。
-  Future<({int code, String message, String? cookie, String? nick, String raw})> qrCheck(String key) async {
-    final r = await _eapiPost('/api/login/qrcode/client/login', {'key': key, 'type': 1});
+  Future<({int code, String message, String? cookie, String? nick, String raw})> qrCheck(
+    String key, {
+    bool noCookie = false,
+  }) async {
+    final r = await _eapiPost(
+      '/api/login/qrcode/client/login',
+      {'key': key, 'type': 3},
+      // 文档：扫码后返回 502 时，加 noCookie 再查一次。
+      withCookieHeader: !noCookie,
+    );
     final json = r.json;
     final code = (json is Map ? json['code'] as num? : null)?.toInt() ?? -1;
     final message = (json is Map ? '${json['message'] ?? ''}' : '');

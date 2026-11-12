@@ -6257,6 +6257,23 @@
   "@musicLoginQrFailed": {
     "description": "扫码登录失败：服务端未下发登录票据"
   },
+  "musicLoginRiskControl": "登录被网易云风控拦截，请换用手机号登录或稍后重试",
+  "@musicLoginRiskControl": {
+    "description": "扫码登录被风控拒绝（8821）"
+  },
+  "musicLoginRetry": "点击重试",
+  "@musicLoginRetry": {
+    "description": "二维码过期 / 失败后的重试按钮"
+  },
+  "musicLoginFailToast": "登录失败：{reason}",
+  "@musicLoginFailToast": {
+    "description": "登录失败轻提示",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "musicFailTitle": "加载失败了",
   "@musicFailTitle": {
     "description": "页面级失败态标题"

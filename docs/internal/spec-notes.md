@@ -4474,3 +4474,62 @@
   只有响应没带昵称才补取，且失败只影响昵称展示。
 - **验证**：`netease_eapi_test` 交叉比对参考实现的大写 hex 输出（改 base64 即失败）；
   真实接口探针确认 eapi `unikey` 返回 200、轮询返回 801。**真机扫码仍需人工复验**。
+
+## D-207 · 修正凭据读盘覆盖登录写入（2026-11-12）
+
+- **状态**：已实施。
+- **根因**：`MusicAuthNotifier._restore()` 用 `copyWith(cookies: restored)` **整体替换**
+  内存态。读盘是异步的，扫码登录若在它返回前完成 `save()`，刚写入的登录 Cookie 会
+  被启动时读到的**空快照**覆盖 —— 手机显示登录成功、应用仍是未登录。前两轮修的是
+  通道与收口，没有触及这条数据竞态，所以现象未变。
+- **修复**：`_restore()` 改为**合并**（内存态优先）：`{...restored, ...state.cookies}`；
+  并对已释放的 provider 做 `ref.mounted` 保护。
+- **落盘校验**：`save()` 写盘后回读，读不到就抛 `MusicCredentialStoreException` 并回滚
+  内存态 —— Keychain 静默失败时不再假装登录成功（重启才掉线更难查）。
+- **可测性**：`createStore()` 收口为可覆盖方法，用例用可挂起的内存仓库精确制造
+  「读盘慢于写入」的时序。
+- **验证**：`music_auth_restore_test` 两条用例；把 `_restore` 改回整体替换即变红，把
+  `save` 的回读校验去掉也变红。
+
+## D-208 · 扫码 8821 风控与登录失败反馈（2026-11-12）
+
+- **状态**：已实施。
+- **真实现象**：扫码确认后服务端回 `802`（已带昵称 / 头像），随后回
+  `{"code":8821,"message":"请切换其他登录方式或升级新版本再试"}`。
+- **缺陷**：8821 落在 `switch` 的 default 分支被**静默忽略** —— 轮询继续空转到
+  超时，界面无任何反馈，用户只看到「扫了码没反应」。
+- **风控画像**：EAPI `header` 此前 `deviceId` 为空串、`appver` 写 `8.0.0`、
+  `osver` / `channel` 为空，被判为非官方客户端。改为参考实现的 android 画像
+  （稳定 `deviceId` + `sDeviceId`、`appver=8.20.20.231215173437`、`osver=14`、
+  `channel=xiaomi`）。
+- **失败反馈**：非 801/802/803/800 的业务码立即收口为 `failed` 并带归因标签
+  （`risk_control` 等）；弹窗保留供重试，二维码压暗并显示刷新图标，同时弹
+  `musicLoginFailToast` 失败提示。
+- **验证**：8821 收口、失败 toast / 二维码失败态、eapi header 的 deviceId 稳定性
+  均有反证用例；去掉 default 收口即变红。
+- **已知边界**：8821 属服务端风控，客户端只能对齐画像降低触发率，**不保证必然解除**；
+  换网络 / 换账号 / 隔一段时间再试仍是被禁时的现实办法。
+
+## D-209 · 二维码登录对齐参考实现 + 二维码状态机（2026-11-12）
+
+- **状态**：已实施。
+- **对齐参考实现**（`music-api/NeteaseCloudMusicApiEnhanced`，本地完整源码核对）：
+  · eapi 域名 `interface3` → `interfacepc`（`APP_CONF.eapiDomain`）；
+  · `unikey` / `client/login` 的 `type` 由 `1` 改为 `3`；
+  · **header 字段同时编码成 HTTP Cookie 头**（参考 `createHeaderCookie`）——
+    此前只塞进 payload.header，服务端拿不到设备 Cookie；
+  · UA 换 `NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)`，header 画像对齐
+    `osMap.iphone`（os=iPhone OS / osver=16.2 / appver=9.0.90 / channel=distribution）；
+  · 三个二维码接口带 `timestamp` 防缓存；502 时带 `noCookie` 重试一次。
+- **轮询降频**：2s → 5s。官方文档明确「不要频繁调登录接口，不然可能会被风控」，
+  原实现 4 分钟窗口内打 120 次，是 8821 的诱因之一。
+- **二维码状态机**：`waiting` / `scanned` / `succeeded` / `expired` / `failed`；
+  UI 收敛为 loading / waiting / scanned / retry 四态。
+- **超时不自动刷新**：倒计时归零停在 `expired`（retry 态）等用户点重试 ——
+  自动换码会让正在扫的码突然失效，且频繁取码会触发风控。
+- **修复「一打开就显示重试」**：原实现把 `expired` 与 `failed` 都画成重试图标，
+  且超时后没有任何可见过渡；现在只有真正进入 retry 态才压暗并显示重试按钮，
+  等待 / 已扫码态二维码保持清晰可扫。
+- **验证**：`music_login_flow_test` 新增二维码状态机用例（超时后 `keyCalls` 不增加）；
+  把超时代码改回自动 `start()` 即变红。真实接口探针：interfacepc + type=3 +
+  Cookie 头 + timestamp 返回 801。
