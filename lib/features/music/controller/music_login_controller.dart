@@ -130,7 +130,6 @@ class MusicLoginController extends Notifier<MusicQrState> {
     state = state.copyWith(secondsLeft: left);
     final result = await _tryCheck(api, key);
     if (result == null) return; // 单拍失败不打断：有效期 4 分钟，下一拍继续
-    debugPrint('[music.login] code=${result.code} msg=${result.message} raw=${result.raw}');
     switch (result.code) {
       case 801:
         // 等待扫码：若之前误标成 scanned（用户取消授权），退回 waiting。
@@ -151,7 +150,6 @@ class MusicLoginController extends Notifier<MusicQrState> {
         // 文档：扫码后返回 502 时需带 noCookie 再查一次。
         final retried = await _tryCheck(api, key, noCookie: true);
         if (retried == null) return;
-        debugPrint('[music.login] noCookie retry code=${retried.code} raw=${retried.raw}');
         await _handleCode(api, key, retried);
       default:
         // 其余业务码（8821 风控 / 8811 等）必须**立即收口**：之前落在 default 分支
@@ -167,7 +165,7 @@ class MusicLoginController extends Notifier<MusicQrState> {
   Future<void> _handleCode(
     NeteaseApi api,
     String key,
-    ({int code, String message, String? cookie, String? nick, String raw}) r,
+    ({int code, String message, String? cookie, String? nick}) r,
   ) async {
     switch (r.code) {
       case 802 || 803:
@@ -197,7 +195,7 @@ class MusicLoginController extends Notifier<MusicQrState> {
     _ => 'unknown:$code',
   };
 
-  Future<({int code, String message, String? cookie, String? nick, String raw})?> _tryCheck(
+  Future<({int code, String message, String? cookie, String? nick})?> _tryCheck(
     NeteaseApi api,
     String key, {
     bool noCookie = false,

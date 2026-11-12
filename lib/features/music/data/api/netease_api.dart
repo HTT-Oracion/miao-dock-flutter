@@ -427,7 +427,7 @@ class NeteaseApi {
   /// · 响应头 `Set-Cookie`（`MUSIC_U` / `__csrf` 在这里，登录成功才下发）；
   /// · 响应体 `cookie` 字段（部分节点会把整串塞回 body）。
   /// 轮询是多次请求，每次可能只下发一部分，因此按 key 累积合并后再交给登录收口。
-  Future<({int code, String message, String? cookie, String? nick, String raw})> qrCheck(
+  Future<({int code, String message, String? cookie, String? nick})> qrCheck(
     String key, {
     bool noCookie = false,
   }) async {
@@ -446,13 +446,7 @@ class NeteaseApi {
     _mergeCookies(jar, r.cookies);
     if (json is Map && json['cookie'] is String) _mergeCookieText(jar, json['cookie'] as String);
     final merged = jar.entries.map((e) => '${e.key}=${e.value}').join('; ');
-    return (
-      code: code,
-      message: message,
-      cookie: jar.isEmpty ? null : merged,
-      nick: nick.isEmpty ? null : nick,
-      raw: '${r.json ?? ''}',
-    );
+    return (code: code, message: message, cookie: jar.isEmpty ? null : merged, nick: nick.isEmpty ? null : nick);
   }
 
   /// 每个扫码 key 一份 Cookie 罐：轮询期间累积，成功或废弃后丢弃。
