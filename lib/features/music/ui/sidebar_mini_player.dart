@@ -6,6 +6,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../controller/music_player.dart';
 import '../controller/music_session.dart';
+import 'widgets/music_shared.dart';
 
 /// 侧栏迷你播放器（设计稿 N35 修订稿：整卡可点，播放键 / 封面 / 文案 /
 /// 底部进度条在同一张卡里；点播放键只切播放态，点卡片其它区域进入沉浸播放器）。
@@ -133,6 +134,7 @@ class _Cover extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
+          headers: musicImageHeaders,
           errorBuilder: (_, _, _) => const SizedBox.shrink(),
         ),
       );

@@ -47,6 +47,21 @@ void main() {
     coverUrl: 'https://example.invalid/cover.jpg',
   );
 
+  testWidgets('封面 Image 必须带浏览器 UA（否则网易云图床回 403）', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(host(SizedBox(width: 900, child: SongRow(song: song, index: 0))));
+    await tester.pump();
+
+    final img = tester.widget<Image>(find.byType(Image).first);
+    final provider = img.image as NetworkImage;
+    // 破坏点：不给 headers → Image.network 发 Dart/3.x UA，网易云图床 403，
+    // 封面整片变渐变占位（真实故障现象）。
+    expect(provider.headers, isNotNull);
+    expect(provider.headers!['User-Agent'], contains('Mozilla/5.0'));
+  });
+
   testWidgets('桌面歌曲行也渲染封面（不是只有移动端）', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;

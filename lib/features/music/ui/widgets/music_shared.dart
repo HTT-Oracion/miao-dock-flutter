@@ -106,6 +106,19 @@ class SeedGradient extends StatelessWidget {
   }
 }
 
+/// 封面图片请求头（所有 `Image.network` 统一使用）。
+///
+/// 🔴 为什么必须显式给 UA：Flutter 的 `Image.network` 默认发送
+/// `Dart/3.x (dart:io)`。网易云 / QQ / 酷狗 / 咪咕 的图床都会把非浏览器 UA
+/// 判为爬虫并回 **403**，而 `errorBuilder` 会把失败吞掉、只露出渐变占位 ——
+/// 现象就是「接口明明有封面 URL，但界面上一个封面都不显示」。
+const musicImageHeaders = {
+  'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+};
+
 /// 演示封面：定尺寸 + 圆角 + 可选图标（推荐卡 / 歌曲行 / 播放器复用）。
 class SeedCover extends StatelessWidget {
   const SeedCover({
@@ -157,6 +170,9 @@ class SeedCover extends StatelessWidget {
                   height: size,
                   fit: BoxFit.cover,
                   gaplessPlayback: true,
+                  // 🔴 必须带浏览器 UA：`Image.network` 默认发 `Dart/3.x (dart:io)`，
+                  // 网易云 / QQ 图床会直接回 **403**，表现为「所有封面都不显示」。
+                  headers: musicImageHeaders,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),

@@ -4553,3 +4553,17 @@
   真实接口探针：网易云 / 酷狗 / QQ / 咪咕 的推荐歌单、搜索结果、详情封面均为 `https://` 且无 `{size}`。
 - **已知边界**：QQ 推荐接口偶发返回无效 `disstid`（详情回 `playlist_not_found`），属上游数据问题，
   已由仓库层如实抛错、UI 走失败态，不做兜底伪造。
+
+## D-211 · 封面 Image 请求必须带浏览器 UA（2026-11-12）
+
+- **状态**：已实施。
+- **根因**：`Image.network` 默认发送 `User-Agent: Dart/3.x (dart:io)`。网易云图床
+  （`p1/p2.music.126.net`）对非浏览器 UA 直接回 **403**，而 `SeedCover` 的
+  `errorBuilder` 把失败吞掉、只露出渐变底 —— 现象是「接口明明有封面 URL，界面上
+  一个封面都不显示」。实测对照：`Dart` UA → 403，浏览器 UA → 200。
+- **说明**：此前几轮修的是「封面 URL 取不到 / 未规范化」，与本次是**不同层**的问题；
+  QQ / 酷狗 / 咪咕 图床不校验 UA，只有网易云会拦。
+- **修复**：新增 `musicImageHeaders`（浏览器 UA + Accept），所有音乐域
+  `Image.network`（`SeedCover`、推荐卡、侧栏迷你播放器）统一带上。
+- **验证**：`music_cover_test` 新增「封面 Image 必须带浏览器 UA」用例；去掉 headers
+  即变红。真实 HttpClient 探针：带 headers 的两个网易云封面 URL 均返回 200 并取到图片字节。

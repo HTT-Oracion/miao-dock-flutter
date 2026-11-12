@@ -424,6 +424,7 @@ class _RecCard extends ConsumerWidget {
                               card.coverUrl!,
                               fit: BoxFit.cover,
                               gaplessPlayback: true,
+                              headers: musicImageHeaders,
                               errorBuilder: (_, _, _) => const SizedBox.shrink(),
                             ),
                           ),
