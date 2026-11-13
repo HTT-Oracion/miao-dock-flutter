@@ -140,7 +140,7 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
     final song = player.current;
     if (song == null) return;
     final ui = ref.read(musicUiProvider);
-    final lyrics = ref.read(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = ref.read(currentLyricsProvider);
     final idx = _lyricIndexOf(lyrics, player.positionMs);
     final lineH = _lineHeight(lyrics, ui.translateOn, ref.read(playerStyleProvider));
     final target = (idx * lineH + lineH / 2 - _lyrCtrl.position.viewportDimension / 2).clamp(
@@ -179,7 +179,7 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
 
     _syncSpin(player.playing);
 
-    final lyrics = ref.watch(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = ref.watch(currentLyricsProvider);
     final lyricIdx = _lyricIndexOf(lyrics, player.positionMs);
     final lineH = _lineHeight(lyrics, ui.translateOn, skin);
     final plainLayout = skin == PlayerStyle.modern || skin == PlayerStyle.glass;
@@ -1009,8 +1009,7 @@ class _LyricsView extends ConsumerWidget {
     final palette = AppPalette.of(context);
     final player = ref.watch(playerProvider);
     final ui = ref.watch(musicUiProvider);
-    final song = player.current!;
-    final lyrics = ref.watch(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = ref.watch(currentLyricsProvider);
     final withTr = lyrics.hasTranslation && ui.translateOn;
     final lineH = host._lineHeight(lyrics, ui.translateOn, skin);
     final idx = _ImmersivePlayerState._lyricIndexOf(lyrics, player.positionMs);

@@ -54,7 +54,7 @@ void main() {
     expect(find.text('设置'), findsNothing);
   });
 
-  testWidgets('移动端歌曲行高 48、桌面 34（触控热区 M08）', (tester) async {
+  testWidgets('移动端歌曲行高 48、桌面 58（触控热区 + 封面留白）', (tester) async {
     const song = MusicSong(
       id: 'x',
       title: 't',
@@ -76,7 +76,9 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     await tester.pumpWidget(host(SongRow(song: song, index: 0), size: const Size(1280, 800)));
     await tester.pump();
-    expect(tester.getSize(find.byType(SongRow)).height, 34);
+    // 桌面 58 = 封面 38 + 上下 padding 各 10（与 miao-dock 曲目表同口径）。
+    // 破坏点：退回 34 → 封面被压扁、整列过度紧凑（用户实测反馈）。
+    expect(tester.getSize(find.byType(SongRow)).height, 58);
     tester.view.reset();
   });
 

@@ -203,7 +203,17 @@ class _DetailBackBar extends StatelessWidget {
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () => GoRouter.of(context).go('/music/playlist'),
+              // 有真实来源就回退到来源（发现页 / 某个列表），否则回「我的歌单」。
+              // 之前硬编码 go('/music/playlist')：从发现页点进来的歌单，返回会莫名其妙
+              // 落到「我的歌单」，未登录时更是直接顶出一张登录引导，像被踢出去。
+              onTap: () {
+                final router = GoRouter.of(context);
+                if (router.canPop()) {
+                  router.pop();
+                } else {
+                  router.go('/music/discover');
+                }
+              },
               behavior: HitTestBehavior.opaque,
               child: SizedBox(
                 height: 26,

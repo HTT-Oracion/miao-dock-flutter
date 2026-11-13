@@ -5,6 +5,7 @@ import '../data/music_repository.dart';
 import '../data/platform_music_repository.dart';
 import '../domain/music_models.dart';
 import 'music_auth.dart';
+import 'music_player.dart';
 import 'music_session.dart';
 
 /// 仓库装配：始终按当前音源连接真实平台接口；切音源即换仓库，队列不清空。
@@ -16,6 +17,20 @@ final musicRepositoryProvider = Provider<MusicRepository>((ref) {
 
 /// 收藏集合由真实账号同步前保持为空，不预置演示歌曲。
 final likedSeedsProvider = Provider<Set<String>>((ref) => const {});
+
+/// 当前曲目的歌词（**会自动随歌词加载完成而刷新**）。
+///
+/// 🔴 为什么不能直接用 `musicRepositoryProvider.lyricsFor(song)`：
+/// 真实音源的歌词是异步预取的，`lyricsFor` 只是同步读缓存。缓存填好之后仓库本身
+/// 没有任何状态变化，UI 不会重建 —— 表现就是「歌词一直是空轴」/「点了『译』没反应」。
+/// 这里显式依赖 `playerProvider.lyricsRevision`，歌词一落缓存就重新求值。
+final currentLyricsProvider = Provider<SongLyrics>((ref) {
+  final song = ref.watch(playerProvider.select((s) => s.current));
+  // 版本号参与依赖：值本身不用，但变化会触发本 provider 重算。
+  ref.watch(playerProvider.select((s) => s.lyricsRevision));
+  if (song == null) return const SongLyrics(lines: []);
+  return ref.watch(musicRepositoryProvider).lyricsFor(song);
+});
 
 // ── 发现页各分区（加载 / 失败 / 空三态，AsyncValue 直达 UI）──────────────────
 

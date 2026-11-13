@@ -66,7 +66,7 @@ class DesktopLyricsOverlay extends ConsumerWidget {
     final prefs = ref.watch(desktopLyricsPrefsProvider);
     final palette = AppPalette.of(context);
 
-    final lyrics = ref.watch(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = ref.watch(currentLyricsProvider);
     var idx = 0;
     for (final (k, line) in lyrics.lines.indexed) {
       if (player.positionMs >= line.t) idx = k;

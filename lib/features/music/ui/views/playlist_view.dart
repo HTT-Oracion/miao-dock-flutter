@@ -35,7 +35,24 @@ class PlaylistLibraryView extends ConsumerWidget {
     final library = ref.watch(playlistLibraryProvider);
     final playlists = ref.watch(userPlaylistsProvider);
 
-    if (!logged) return const _LoginCta();
+    // 未登录：不整页替换成登录页。
+    // 之前直接从歌单详情返回会「突然变成登录提示」，看起来像被踢出去了；
+    // 这里保留页面骨架，只在内容区给一张引导卡（与发现页「每日推荐」同一口径）。
+    if (!logged) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(context.isMobile ? 8 : 0, 0, context.isMobile ? 8 : 0, 12),
+            child: Text(
+              AppLocalizations.of(context).viewPlaylist,
+              style: TextStyle(fontSize: AppFont.px15, fontWeight: FontWeight.w700, color: AppPalette.of(context).ink),
+            ),
+          ),
+          const Expanded(child: _LoginCta()),
+        ],
+      );
+    }
 
     final firstLoadFail = playlists.hasError && playlists.value == null;
     if (firstLoadFail) {
@@ -532,7 +549,7 @@ class _LoginCta extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.logOut, size: mobile ? 20 : 22, color: palette.mut),
+            Icon(LucideIcons.userRound, size: mobile ? 20 : 22, color: palette.mut),
             const SizedBox(height: 9),
             Text(
               l10n.musicPlLibraryLoginTitle,

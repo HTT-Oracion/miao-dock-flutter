@@ -42,7 +42,7 @@ class _DynamicIslandState extends ConsumerState<DynamicIsland> {
     final l10n = AppLocalizations.of(context);
     final expanded = _expanded;
 
-    final lyrics = ref.watch(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = ref.watch(currentLyricsProvider);
     var idx = 0;
     for (final (k, line) in lyrics.lines.indexed) {
       if (player.positionMs >= line.t) idx = k;

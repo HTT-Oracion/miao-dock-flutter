@@ -349,8 +349,8 @@ class MusicSongTableHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final style = TextStyle(fontSize: AppFont.px10_5, letterSpacing: 1.2, color: palette.mut);
     return Container(
-      height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: palette.line)),
       ),
@@ -571,9 +571,11 @@ class _SongRowState extends ConsumerState<SongRow> {
     final l10n = AppLocalizations.of(context);
     final song = widget.song;
     final on = widget.current;
-    // 移动端行高 48、徽标热区 36（M08：触控热区 ≥48 / ≥40）；桌面保持 34 的紧凑行。
+    // 移动端行高 48（M08 触控热区 ≥48）；桌面 58 —— 与 miao-dock 曲目表同口径：
+    // 封面 38 + 上下 padding 各 10，否则行高 34 装不下封面、整列挤成一片。
     final mobile = context.isMobile;
-    final rowHeight = mobile ? 48.0 : 34.0;
+    final rowHeight = mobile ? 48.0 : 58.0;
+    final verticalPad = mobile ? 0.0 : 10.0;
 
     final titleColor = on ? palette.accInk : palette.ink;
     final numColor = on ? palette.acc : palette.mut;
@@ -613,7 +615,7 @@ class _SongRowState extends ConsumerState<SongRow> {
         },
         child: Container(
           height: rowHeight,
-          padding: EdgeInsets.symmetric(horizontal: mobile ? 4 : 10),
+          padding: EdgeInsets.symmetric(horizontal: mobile ? 4 : 14, vertical: verticalPad),
           decoration: BoxDecoration(
             // hover 只铺一层极淡底色（N23）；当前行不加底色，用文字色 + ♪ 表达。
             color: _hover ? palette.card.withValues(alpha: 0.6) : Colors.transparent,

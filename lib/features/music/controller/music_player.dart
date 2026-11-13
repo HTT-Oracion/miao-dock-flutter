@@ -30,6 +30,7 @@ class MusicPlayerState {
     required this.likedHeartbeatOn,
     this.heartbeatRestore,
     this.queueTitle,
+    this.lyricsRevision = 0,
   });
 
   /// 初始态（设计稿演示口径：正在播放 s1，进度 63s）。
@@ -72,6 +73,13 @@ class MusicPlayerState {
   /// 首次进入心动前的原队列，用于退出心动时恢复。
   final HeartbeatQueueSnapshot? heartbeatRestore;
 
+  /// 歌词加载完成的版本号。
+  ///
+  /// 🔴 为什么需要它：`lyricsFor` 是**同步读缓存**（构建期调用），真实音源的歌词是
+  /// 异步取的。取回后如果不触发一次状态变更，UI 不会重建 —— 表现就是「歌词停留在
+  /// 空轴 /「译」按钮看起来没反应」。每次歌词落缓存就把版本 +1。
+  final int lyricsRevision;
+
   /// 当前队列来源标题（每日推荐 / 我喜欢的音乐 / 具体歌单名）。
   ///
   /// 移动全屏播放器顶栏显示它（M04）；播放器不自行拼文案，只存数据。
@@ -99,6 +107,7 @@ class MusicPlayerState {
     HeartbeatQueueSnapshot? heartbeatRestore,
     bool clearHeartbeatRestore = false,
     String? queueTitle,
+    int? lyricsRevision,
   }) => MusicPlayerState(
     queue: queue ?? this.queue,
     idx: idx ?? this.idx,
@@ -114,6 +123,7 @@ class MusicPlayerState {
     likedHeartbeatOn: likedHeartbeatOn ?? this.likedHeartbeatOn,
     heartbeatRestore: clearHeartbeatRestore ? null : (heartbeatRestore ?? this.heartbeatRestore),
     queueTitle: queueTitle ?? this.queueTitle,
+    lyricsRevision: lyricsRevision ?? this.lyricsRevision,
   );
 }
 
@@ -294,17 +304,23 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
     state = state.copyWith(queue: queue, idx: idx);
   }
 
-  void _startCurrent() {
+  /// 开始播放当前曲。
+  ///
+  /// [resumeAtMs] 非空表示「从该进度继续」（暂停后恢复），此时**不重置进度、
+  /// 不重复记播放历史**；切歌 / 首次播放传 null 走完整起播。
+  void _startCurrent({int? resumeAtMs}) {
     final song = state.current!;
     final serial = ++_audioLoadSerial;
     _audioActive = false;
     final engine = _engine;
     if (engine != null && engine.isReal) unawaited(engine.stop());
-    state = state.copyWith(positionMs: 0, playing: true);
-    ref.read(historyFeedProvider.notifier).append(song);
+    final resume = resumeAtMs != null && resumeAtMs > 0 && resumeAtMs < song.duration.inMilliseconds;
+    state = state.copyWith(positionMs: resume ? resumeAtMs : 0, playing: true);
+    // 恢复播放不是「又听了一次」，不重复记历史。
+    if (!resume) ref.read(historyFeedProvider.notifier).append(song);
     _prefetchLyrics(song);
     _syncTicker();
-    unawaited(_loadAudio(song, serial));
+    unawaited(_loadAudio(song, serial, startAtMs: resume ? resumeAtMs : null));
   }
 
   /// 取播放地址 → 交给 just_audio。失败时的收口策略：
@@ -313,7 +329,7 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
   ///   弹一次「无法播放」提示，**不自动连跳**（连跳会让用户以为播放器抽风）；
   /// · 取到地址但解码失败 → 同上，但会降一档音质重试一次（无损换 320K 常见于会员限制）；
   /// · URL 是 http：just_audio 在 macOS/Android 默认拒绝明文，统一升 https（各平台 CDN 均支持）。
-  Future<void> _loadAudio(MusicSong song, int serial) async {
+  Future<void> _loadAudio(MusicSong song, int serial, {int? startAtMs}) async {
     bool stale() => serial != _audioLoadSerial || state.current?.id != song.id;
     final repo = ref.read(musicRepositoryProvider);
     var quality = state.quality;
@@ -349,6 +365,12 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
         headers: _streamHeaders(song.platform),
         volume: state.muted ? 0 : state.volume / 100,
         play: state.playing,
+        // 后台通知 / 锁屏 / 系统媒体面板展示的元数据。
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        artUri: _artUri(song.coverUrl),
+        duration: song.duration,
       );
       if (stale()) return;
       if (!ok) {
@@ -357,6 +379,10 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
         return;
       }
       _audioActive = true;
+      // 恢复播放：加载完成后定位回暂停时的进度（否则会从 0 开始）。
+      if (startAtMs != null && startAtMs > 0) {
+        await engine.seek(Duration(milliseconds: startAtMs));
+      }
       _stopTicker();
     } on Object {
       if (stale()) return;
@@ -365,6 +391,13 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
       _syncTicker();
       _notice(PlayerNoticeKind.playbackUnavailable);
     }
+  }
+
+  /// 封面 URL → 后台通知用的 artUri（无效 / 缺失则不传）。
+  static Uri? _artUri(String? coverUrl) {
+    if (coverUrl == null || coverUrl.trim().isEmpty) return null;
+    final uri = Uri.tryParse(coverUrl.trim());
+    return uri != null && uri.hasScheme ? uri : null;
   }
 
   Future<String?> _resolveQuietly(MusicRepository repo, MusicSong song, QualityTier quality) async {
@@ -388,7 +421,17 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
   /// 播放进度每 500ms 推进一帧，届时 `lyricsFor` 自然读到缓存，不必改 UI 取数口径。
   void _prefetchLyrics(MusicSong? song) {
     if (song == null) return;
-    ref.read(musicRepositoryProvider).loadLyrics(song).catchError((Object _) => const SongLyrics(lines: []));
+    final id = song.id;
+    unawaited(() async {
+      try {
+        await ref.read(musicRepositoryProvider).loadLyrics(song);
+        if (!ref.mounted || state.current?.id != id) return;
+        // 歌词已进缓存：bump 版本号让 UI 重建并读到真歌词（含翻译轨）。
+        state = state.copyWith(lyricsRevision: state.lyricsRevision + 1);
+      } on Object {
+        // 歌词失败不打断播放；UI 继续显示空轴。
+      }
+    }());
   }
 
   void playAt(int i) {
@@ -401,13 +444,19 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
     if (state.current == null) return;
     final next = !state.playing;
     final engine = _engine;
-    if (next && engine == null) {
-      // 首次点播放（引擎还没接上）→ 走完整加载流程，别只翻图标。
-      _startCurrent();
+
+    // 要「开始播放」，但音频还没真正接上引擎（首次点 / 上次加载失败 / 静默回落）
+    // → 必须重新走加载流程。只翻 playing 标志会出现「图标在跳、没有声音」。
+    //
+    // 🔴 必须带上当前进度：否则「暂停 → 播放」会从头开始（用户实测反馈）。
+    if (next && (engine == null || !_audioActive)) {
+      _startCurrent(resumeAtMs: state.positionMs);
       return;
     }
+
     state = state.copyWith(playing: next);
     if (_audioActive && engine != null) {
+      // play() 的 Future 要等播放停止才完成，不能 await（同 AudioEngine.load 的坑）。
       unawaited(next ? engine.play() : engine.pause());
     }
     _syncTicker();
@@ -478,7 +527,10 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
     if (song == null) return;
     state = state.copyWith(positionMs: ms.clamp(0, song.duration.inMilliseconds));
     final engine = _engine;
-    if (_audioActive && engine != null) unawaited(engine.seek(Duration(milliseconds: state.positionMs)));
+    // 只要音频已经加载进引擎就 seek —— 暂停状态下拖动进度条同样要生效。
+    if (_audioActive && engine != null) {
+      unawaited(engine.seek(Duration(milliseconds: state.positionMs)));
+    }
   }
 
   void seekRatio(double ratio) {
@@ -583,14 +635,13 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
 
   void setVolume(int v) {
     state = state.copyWith(volume: v.clamp(0, 100), muted: false);
-    final engine = _engine;
-    if (_audioActive && engine != null) unawaited(engine.setVolume(state.volume / 100));
+    // 不判 _audioActive：引擎已建好就同步（加载中 / 刚暂停时也要生效）。
+    _engine?.setVolume(state.volume / 100);
   }
 
   void toggleMute() {
     state = state.copyWith(muted: !state.muted);
-    final engine = _engine;
-    if (_audioActive && engine != null) unawaited(engine.setVolume(state.muted ? 0 : state.volume / 100));
+    _engine?.setVolume(state.muted ? 0 : state.volume / 100);
   }
 
   /// 关闭播放（N：停止但保留队列，进度归零）。

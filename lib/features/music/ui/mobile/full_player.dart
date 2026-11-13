@@ -160,7 +160,7 @@ class _FullMusicPlayerState extends ConsumerState<FullMusicPlayer> with TickerPr
 
   /// 行前缀偏移（两种固定槽高，供中心定位换算）。
   List<double> _linePrefix(MusicSong? song) {
-    final lyrics = song == null ? const SongLyrics(lines: []) : ref.read(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = song == null ? const SongLyrics(lines: []) : ref.read(currentLyricsProvider);
     final translateOn = ref.read(musicUiProvider).translateOn;
     final offsets = <double>[0];
     for (final l in lyrics.lines) {
@@ -177,7 +177,7 @@ class _FullMusicPlayerState extends ConsumerState<FullMusicPlayer> with TickerPr
   int _indexOf(int positionMs) {
     final song = ref.read(playerProvider).current;
     if (song == null) return 0;
-    final lyrics = ref.read(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = ref.read(currentLyricsProvider);
     var idx = 0;
     for (var i = 0; i < lyrics.lines.length; i++) {
       if (positionMs >= lyrics.lines[i].t) idx = i;
@@ -398,7 +398,7 @@ class _FullMusicPlayerState extends ConsumerState<FullMusicPlayer> with TickerPr
   // ── 底部第一行：信息（或「译」）+ 爱心 + 评论（M13）───────────────────────
   Widget _infoRow(BuildContext context, MusicSong song, AppLocalizations l10n, bool liked) {
     final palette = AppPalette.of(context);
-    final lyrics = ref.watch(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = ref.watch(currentLyricsProvider);
     final translateOn = ref.watch(musicUiProvider.select((s) => s.translateOn));
     final showTranslate = _tab == _FullTab.lyrics && lyrics.hasTranslation;
 
@@ -873,7 +873,7 @@ class _LyricsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
-    final lyrics = ref.watch(musicRepositoryProvider).lyricsFor(song);
+    final lyrics = ref.watch(currentLyricsProvider);
     final positionMs = ref.watch(playerProvider.select((p) => p.positionMs));
     final lines = lyrics.lines;
     final cur = _indexOf(lines, positionMs);

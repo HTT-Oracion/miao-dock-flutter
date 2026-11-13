@@ -6659,9 +6659,9 @@
   "@musicPlLibraryLoginAction": {
     "description": "我的歌单库：未登录 CTA 按钮"
   },
-  "musicPlBack": "返回我的歌单",
+  "musicPlBack": "返回",
   "@musicPlBack": {
-    "description": "歌单详情返回栏按钮"
+    "description": "歌单详情返回栏按钮（回到来源页）"
   },
   "musicPlChipLiked": "系统歌单",
   "@musicPlChipLiked": {
