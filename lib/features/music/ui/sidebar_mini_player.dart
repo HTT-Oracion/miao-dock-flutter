@@ -6,7 +6,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../controller/music_player.dart';
 import '../controller/music_session.dart';
-import 'widgets/music_shared.dart';
+import 'widgets/remote_cover_image.dart';
 
 /// 侧栏迷你播放器（设计稿 N35 修订稿：整卡可点，播放键 / 封面 / 文案 /
 /// 底部进度条在同一张卡里；点播放键只切播放态，点卡片其它区域进入沉浸播放器）。
@@ -129,14 +129,7 @@ class _Cover extends StatelessWidget {
     if (url != null && url.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(6),
-        child: Image.network(
-          url,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          headers: musicImageHeaders,
-          errorBuilder: (_, _, _) => const SizedBox.shrink(),
-        ),
+        child: RemoteCoverImage(url: url, width: size, height: size, fit: BoxFit.cover),
       );
     }
     return Container(

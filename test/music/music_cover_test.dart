@@ -8,6 +8,7 @@ import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 import 'package:miao_dock_flutter/features/music/ui/views/discover_view.dart';
 import 'package:miao_dock_flutter/features/music/ui/widgets/music_shared.dart';
+import 'package:miao_dock_flutter/features/music/ui/widgets/remote_cover_image.dart';
 import 'package:miao_dock_flutter/features/music/ui/widgets/song_row.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 
@@ -47,19 +48,18 @@ void main() {
     coverUrl: 'https://example.invalid/cover.jpg',
   );
 
-  testWidgets('封面 Image 必须带浏览器 UA（否则网易云图床回 403）', (tester) async {
+  testWidgets('封面走自管下载组件（请求头可控，不依赖 Image.network）', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(host(SizedBox(width: 900, child: SongRow(song: song, index: 0))));
     await tester.pump();
 
-    final img = tester.widget<Image>(find.byType(Image).first);
-    final provider = img.image as NetworkImage;
-    // 破坏点：不给 headers → Image.network 发 Dart/3.x UA，网易云图床 403，
-    // 封面整片变渐变占位（真实故障现象）。
-    expect(provider.headers, isNotNull);
-    expect(provider.headers!['User-Agent'], contains('Mozilla/5.0'));
+    // 破坏点：退回 Image.network / NetworkImage → 找不到 RemoteCoverImage，
+    // 且请求头不再受我们控制（网易云图床会 403）。
+    expect(find.byType(RemoteCoverImage), findsWidgets);
+    // 请求头常量必须带浏览器 UA（纯 dart 侧已验证 200/403 差异）。
+    expect(musicImageHeaders['User-Agent'], contains('Mozilla/5.0'));
   });
 
   testWidgets('桌面歌曲行也渲染封面（不是只有移动端）', (tester) async {

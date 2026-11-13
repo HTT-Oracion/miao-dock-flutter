@@ -22,6 +22,7 @@ import '../../domain/music_models.dart';
 import '../widgets/fail_magic.dart';
 import '../widgets/music_scroll_memory.dart';
 import '../widgets/music_shared.dart';
+import '../widgets/remote_cover_image.dart';
 import '../widgets/song_row.dart';
 
 /// 发现页（N21/N37 顺序固定：推荐栏 → 推荐歌单 → 官方榜单 → 推荐歌曲）。
@@ -420,13 +421,7 @@ class _RecCard extends ConsumerWidget {
                       children: [
                         if (card.coverUrl != null && card.coverUrl!.isNotEmpty)
                           Positioned.fill(
-                            child: Image.network(
-                              card.coverUrl!,
-                              fit: BoxFit.cover,
-                              gaplessPlayback: true,
-                              headers: musicImageHeaders,
-                              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                            ),
+                            child: RemoteCoverImage(url: card.coverUrl!, fit: BoxFit.cover),
                           ),
                         Positioned(
                           right: mobile ? -8 : -12,
