@@ -15,6 +15,7 @@ import '../../controller/music_player.dart';
 import '../../controller/music_providers.dart';
 import '../../domain/music_models.dart';
 import '../widgets/fail_magic.dart';
+import '../widgets/music_shared.dart';
 import '../widgets/music_scroll_memory.dart';
 import '../widgets/music_empty_state.dart';
 
@@ -269,24 +270,24 @@ class _DaySeparator extends StatelessWidget {
 
 /// 历史行：平台色点 + 来源与时间分列 + 时长右对齐；点行重播（N26）。
 /// 历史行不是歌曲行 —— 不弹右键菜单（N36 边界）。
-class _HistoryRow extends StatefulWidget {
+class _HistoryRow extends ConsumerStatefulWidget {
   const _HistoryRow({required this.data, required this.onReplay});
 
   final HistoryRowData data;
   final VoidCallback onReplay;
 
   @override
-  State<_HistoryRow> createState() => _HistoryRowState();
+  ConsumerState<_HistoryRow> createState() => _HistoryRowState();
 }
 
-class _HistoryRowState extends State<_HistoryRow> {
+class _HistoryRowState extends ConsumerState<_HistoryRow> {
   bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final song = widget.data.entry.song;
-    final brand = platformBrands[song.platform];
+    final badgeInfo = platformInfoById(song.platformId, ref.watch(musicPlatformInfosProvider));
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
@@ -311,12 +312,12 @@ class _HistoryRowState extends State<_HistoryRow> {
                     Container(
                       width: 6,
                       height: 6,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: brand?.color ?? palette.mut),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: badgeInfo.color ?? palette.mut),
                     ),
                     const SizedBox(width: 5),
                     Expanded(
                       child: Text(
-                        brand?.label ?? '',
+                        badgeInfo.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: AppFont.px11, color: palette.ink2),

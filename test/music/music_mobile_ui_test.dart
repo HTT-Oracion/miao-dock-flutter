@@ -7,7 +7,7 @@ import 'package:miao_dock_flutter/app/shell/mobile_nav.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_player.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_platform_info.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 
 import 'support/demo_music_repository.dart';
@@ -28,10 +28,12 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 /// 🔴 播放器有 500ms 周期 ticker（Timer）与模拟推进：用例结束前必须把
 /// 播放态暂停（toggle），否则 "Timer still pending" 断言失败；
 /// 也因此这里**不能 pumpAndSettle**（每次 tick 都会排一帧），用定长 pump。
+MusicPlatformInfo _neteaseInfo() => const MusicPlatformInfo(id: 'netease', label: '网易云', builtIn: true);
+
 void main() {
   Widget host() => ProviderScope(
     overrides: [
-      availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+      musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
       musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
       musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
     ],
@@ -191,6 +193,5 @@ void main() {
 /// 未登录替身（无源场景下账号态同样未登录）。
 class _LoggedOutAccount extends MusicAccountNotifier {
   @override
-  MusicAccountState build() =>
-      const MusicAccountState(cur: MusicPlatform.netease, logged: false, nick: null, extra: {});
+  MusicAccountState build() => const MusicAccountState(cur: 'netease', logged: false, nick: null, extra: {});
 }

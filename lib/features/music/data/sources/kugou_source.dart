@@ -9,7 +9,7 @@ class KugouSource implements MusicSource {
   final KugouApi _api;
 
   @override
-  MusicPlatform get platform => MusicPlatform.kugou;
+  String get platformId => 'kugou';
 
   @override
   bool get supportsDailySongs => false;

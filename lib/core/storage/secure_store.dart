@@ -80,6 +80,9 @@ class SecureStore {
 
   static const String _prefix = 'miao.';
 
+  /// 读取全部键值（启动扫描用：凭据键随导入的平台动态增长）。
+  Future<Map<String, String>> readAll() => _storage.readAll();
+
   Future<String?> read(String key) async {
     try {
       return await _storage.read(key: '$_prefix$key');

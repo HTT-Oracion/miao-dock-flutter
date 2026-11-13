@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/webview/kugou_cookie_auth.dart';
 import '../../data/webview/webview_cookie.dart';
-import '../../domain/music_models.dart';
 import '../../data/webview/webview_login_config.dart';
 import 'webview_login_launcher.dart';
 
@@ -105,7 +104,7 @@ class DesktopWebviewLoginLauncher implements WebviewLoginLauncher {
         if (raw.isEmpty) return;
         // 酷狗 warmup（对齐 miao-dock）：有登录态但缺播放票据（token）时，
         // 导航到个人中心触发更多 Cookie 写入，否则拿到的是"半张票"。
-        if (config.platform == MusicPlatform.kugou && config.warmupUrl != null && !warmupStarted) {
+        if (config.platformId == 'kugou' && config.warmupUrl != null && !warmupStarted) {
           final auth = extractKugouCookieAuth(raw.map((c) => (name: c.name, value: c.value)).toList());
           if (auth.loggedIn && !auth.playbackReady) {
             warmupStarted = true;

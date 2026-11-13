@@ -7,7 +7,9 @@ import 'package:miao_dock_flutter/features/music/controller/music_providers.dart
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_cookie.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_login_config.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_platform_info.dart';
+import 'package:miao_dock_flutter/features/music/domain/js_music_source.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_source_manifest.dart';
 import 'package:miao_dock_flutter/features/music/ui/desktop/login_modal.dart';
 import 'package:miao_dock_flutter/features/music/ui/widgets/music_state_box.dart';
 import 'package:miao_dock_flutter/features/music/ui/login/webview_login_launcher.dart';
@@ -30,7 +32,7 @@ class _CountingLauncher implements WebviewLoginLauncher {
 
 class _OpenLoginUi extends MusicUiNotifier {
   @override
-  MusicUiState build() => const MusicUiState(loginOpen: true, loginPlatform: MusicPlatform.netease);
+  MusicUiState build() => const MusicUiState(loginOpen: true, loginPlatform: 'netease');
 }
 
 Widget host(Widget child) => MaterialApp(
@@ -40,12 +42,15 @@ Widget host(Widget child) => MaterialApp(
   home: Scaffold(body: child),
 );
 
+MusicPlatformInfo _neteaseInfo() => const MusicPlatformInfo(id: 'netease', label: '网易云', builtIn: true);
+
 void main() {
+  orderTests();
   testWidgets('弹窗打开即自动拉起登录窗口（无需再点按钮）', (tester) async {
     final launcher = _CountingLauncher();
     final container = ProviderContainer(
       overrides: [
-        availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+        musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
         musicUiProvider.overrideWith(_OpenLoginUi.new),
         webviewLoginLauncherProvider.overrideWithValue(launcher),
       ],
@@ -59,7 +64,7 @@ void main() {
 
     // 破坏点：只在按钮 onTap 里开窗 → 这里 opens 为 0。
     expect(launcher.opens, 1);
-    expect(launcher.lastConfig?.platform, MusicPlatform.netease);
+    expect(launcher.lastConfig?.platformId, 'netease');
   });
 
   testWidgets('平台 logo 用真实品牌字形，只列已导入源的平台', (tester) async {
@@ -69,7 +74,7 @@ void main() {
         musicUiProvider.overrideWith(_OpenLoginUi.new),
         webviewLoginLauncherProvider.overrideWithValue(launcher),
         // 🔴 登录弹窗只列**已导入源**的平台（源体系口径）；注入一个源 → 只有一个 pick。
-        availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+        musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
       ],
     );
     addTearDown(container.dispose);
@@ -94,5 +99,47 @@ void main() {
     // 破坏点：无源时不显示引导、还渲染平台行 → 用户对着空平台点登录。
     expect(find.byType(PlatformLogo), findsNothing);
     expect(find.byType(MusicNoSourcePrompt), findsOneWidget);
+  });
+}
+
+/// 平台顺序（用户口径：侧栏 / 登录弹窗顺序 = 数据源里已启用源的顺序）。
+class _RegistryStub extends JsMusicSourceRegistry {
+  _RegistryStub(this.sources);
+
+  final List<JsMusicSource> sources;
+
+  @override
+  List<JsMusicSource> build() => sources;
+}
+
+JsMusicSource _sourceOf(String id, String name, String platform) {
+  final (manifest, issues) = manifestFromScript(
+    "class S extends MusicSourceBase {\n  name = '$name';\n  platform = '$platform';\n"
+        "  key = '$id';\n  version = '1.0.0';\n  baseUrl = 'https://x.example.com';\n"
+        "  async searchSongs(args) { return { songs: [] }; }\n}",
+    '$id.js',
+  );
+  assert(issues.isEmpty, '$issues');
+  return JsMusicSource(manifest: manifest!, capabilities: {'searchSongs'});
+}
+
+void orderTests() {
+  test('musicPlatformInfosProvider 保序：顺序 = 源注册表顺序', () {
+    final container = ProviderContainer(
+      overrides: [
+        jsMusicSourceRegistryProvider.overrideWith(
+          () => _RegistryStub([
+            _sourceOf('kugou', '酷狗', 'kugou'),
+            _sourceOf('netease', '网易云', 'netease'),
+            _sourceOf('bilibili', '哔哩哔哩', 'bilibili'),
+          ]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final ids = container.read(musicPlatformInfosProvider).map((i) => i.id).toList();
+    // 破坏点：装配层按枚举 / 字母序排序 → 侧栏与数据源页顺序不一致。
+    expect(ids, ['kugou', 'netease', 'bilibili']);
   });
 }

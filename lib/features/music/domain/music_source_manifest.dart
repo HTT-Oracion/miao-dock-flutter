@@ -1,5 +1,3 @@
-import 'music_models.dart';
-
 /// 音乐源运行时清单 —— **字段从 JS 源自身推导**（与漫画源同口径）。
 ///
 /// JS 类字段是唯一事实源：源作者只写一份 JS，name / key / version / baseUrl /
@@ -18,6 +16,9 @@ class MusicSourceManifest {
     required this.entryClass,
     required this.sourceFile,
     required this.hosts,
+    this.logoUrl,
+    this.colorHex,
+    this.login,
     this.timeoutMs = 15000,
     this.headers = const {},
     this.rateLimitIntervalMs = 300,
@@ -32,14 +33,29 @@ class MusicSourceManifest {
   final String entryClass;
   final String sourceFile;
   final List<String> hosts;
+
+  /// 源声明的平台 logo（JS `logo = 'https://…'`）；null = 用内置品牌或派生兜底。
+  final String? logoUrl;
+
+  /// 源声明的平台主色（JS `color = '#RRGGBB'`）。
+  final String? colorHex;
+
+  /// 源声明的 WebView 登录配置（新平台必需，内置四平台有静态表兜底）。
+  final MusicSourceLoginConfig? login;
+
   final int timeoutMs;
   final Map<String, String> headers;
   final int rateLimitIntervalMs;
+}
 
-  MusicPlatform? get resolvedPlatform {
-    final parsed = MusicPlatform.values.where((p) => p.name == platform).toList();
-    return (parsed.isEmpty || parsed.first == MusicPlatform.local) ? null : parsed.first;
-  }
+/// 源声明的 WebView 登录配置（`loginUrl` / `loginCookieDomains` /
+/// `loginCookieNames` 三个类字段）——新平台据此接入「打开官方页 → 回读 Cookie」流程。
+class MusicSourceLoginConfig {
+  const MusicSourceLoginConfig({required this.url, required this.cookieDomains, required this.cookieNames});
+
+  final String url;
+  final List<String> cookieDomains;
+  final List<String> cookieNames;
 }
 
 /// 从 JS 源文本推导清单。
@@ -73,6 +89,23 @@ class MusicSourceManifest {
   final name = scanString('name') ?? catalogName ?? '';
   final version = scanString('version') ?? catalogVersion ?? '1.0.0';
   final baseUrl = scanString('baseUrl') ?? '';
+  // 可选展示字段：logo / 主色。
+  final logoUrl = scanString('logo');
+  final colorHex = scanString('color');
+  // 可选登录声明（新平台接入 WebView 登录用，逗号分隔列表）。
+  final loginUrl = scanString('loginUrl');
+  final loginDomainsRaw = scanString('loginCookieDomains');
+  final loginNamesRaw = scanString('loginCookieNames');
+  MusicSourceLoginConfig? login;
+  if (loginUrl != null && loginUrl.isNotEmpty) {
+    final domains =
+        loginDomainsRaw?.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() ?? const <String>[];
+    final names =
+        loginNamesRaw?.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() ?? const <String>[];
+    if (domains.isNotEmpty && names.isNotEmpty) {
+      login = MusicSourceLoginConfig(url: loginUrl, cookieDomains: domains, cookieNames: names);
+    }
+  }
 
   if (platform.isEmpty) issues.add('platform');
   if (key.isEmpty) issues.add('key');
@@ -99,10 +132,16 @@ class MusicSourceManifest {
     entryClass: entryClass,
     sourceFile: sourceFile,
     hosts: hosts.toList(),
+    logoUrl: logoUrl,
+    colorHex: colorHex,
+    login: login,
     timeoutMs: timeoutMs ?? 15000,
     headers: headers,
   );
-  if (manifest.resolvedPlatform == null) issues.add('platform');
+  // platform 只要是合法的小写标识符即可（新平台任意命名）；'local' 保留给本地曲目。
+  if (RegExp(r'^[a-z][a-z0-9_]{1,31}$').hasMatch(manifest.platform) == false || manifest.platform == 'local') {
+    issues.add('platform');
+  }
   if (manifest.hosts.isEmpty) issues.add('hosts');
   return (issues.isEmpty ? manifest : null, issues);
 }

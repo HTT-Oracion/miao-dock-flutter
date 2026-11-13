@@ -1,10 +1,8 @@
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 
 class LoggedInMusicAccount extends MusicAccountNotifier {
   @override
-  MusicAccountState build() =>
-      const MusicAccountState(cur: MusicPlatform.netease, logged: true, nick: 'tester', extra: {});
+  MusicAccountState build() => const MusicAccountState(cur: 'netease', logged: true, nick: 'tester', extra: {});
 }
 
 /// 已登录但**昵称为空**：WebView 登录成功后昵称回读尚未完成 / 回读失败的真实状态。
@@ -13,5 +11,5 @@ class LoggedInMusicAccount extends MusicAccountNotifier {
 /// 登录后发现页顶部出现红色错误横幅）。
 class LoggedInEmptyNickAccount extends MusicAccountNotifier {
   @override
-  MusicAccountState build() => const MusicAccountState(cur: MusicPlatform.netease, logged: true, nick: '', extra: {});
+  MusicAccountState build() => const MusicAccountState(cur: 'netease', logged: true, nick: '', extra: {});
 }

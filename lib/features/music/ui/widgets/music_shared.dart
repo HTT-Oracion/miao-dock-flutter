@@ -7,6 +7,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../../controller/music_player.dart';
 import '../../domain/music_models.dart';
+import '../../domain/music_platform_info.dart';
 import 'remote_cover_image.dart';
 
 /// 音乐域共用小组件：种子封面 / 播放器通知桥 / 播放模式与音质映射。
@@ -256,5 +257,25 @@ String _groupThousands(int value) {
 }
 
 /// 平台显示名（侧栏音源组 / 账号菜单 / 行来源共用）。
-String platformLabel(AppLocalizations l10n, MusicPlatform p) =>
-    p == MusicPlatform.local ? l10n.musicSrcLocal : platformBrands[p]!.label;
+/// 平台展示名：本地曲目 → 「本地」；内置品牌 → 品牌名；其余按已导入源信息，兜底 id。
+String platformLabel(AppLocalizations l10n, String platformId, {List<MusicPlatformInfo> infos = const []}) {
+  if (platformId == 'local') return l10n.musicSrcLocal;
+  final brand = platformBrands[platformId];
+  if (brand != null) return brand.label;
+  for (final info in infos) {
+    if (info.id == platformId) return info.label;
+  }
+  return platformId;
+}
+
+/// 按 id 找平台描述符；找不到时走内置品牌兜底，最后派生（供歌级徽章用）。
+MusicPlatformInfo platformInfoById(String platformId, List<MusicPlatformInfo> infos) {
+  for (final info in infos) {
+    if (info.id == platformId) return info;
+  }
+  final brand = platformBrands[platformId];
+  if (brand != null) {
+    return MusicPlatformInfo(id: platformId, label: brand.label, color: brand.color, builtIn: true);
+  }
+  return MusicPlatformInfo(id: platformId, label: platformId, color: derivedPlatformColor(platformId));
+}

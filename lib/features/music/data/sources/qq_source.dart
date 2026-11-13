@@ -9,7 +9,7 @@ class QqSource implements MusicSource {
   final QqMusicApi _api;
 
   @override
-  MusicPlatform get platform => MusicPlatform.qq;
+  String get platformId => 'qq';
 
   @override
   bool get supportsDailySongs => false;

@@ -9,6 +9,7 @@ import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
 import '../widgets/music_source_manager.dart';
+import '../widgets/music_shared.dart';
 import '../widgets/platform_logo.dart';
 import '../widgets/song_row.dart';
 
@@ -108,7 +109,7 @@ class _MenuBody extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final account = ref.watch(musicAccountProvider);
 
-    String badgeOf(MusicPlatform p) {
+    String badgeOf(String p) {
       if (p == account.cur) return l10n.musicBadgeCur;
       return account.isLogged(p) ? l10n.musicBadgeLogged : l10n.musicBadgeOff;
     }
@@ -161,13 +162,13 @@ class _MenuBody extends ConsumerWidget {
             const MusicMenuDivider(),
             // 🔴 平台行只列**已导入 JS 源**的平台：内置实现不再出现在选择 UI 里。
             ...[
-              for (final MusicPlatform p in ref.watch(availableMusicPlatformsProvider))
+              for (final info in ref.watch(musicPlatformInfosProvider))
                 MusicMenuTile(
-                  leading: PlatformLogo(platform: p, size: 14),
-                  label: platformBrands[p]?.label ?? '',
-                  sub: badgeOf(p),
-                  checked: p == account.cur,
-                  onTap: () => _onPlatformTap(context, ref, p),
+                  leading: MusicPlatformBadge(info: info, size: 14),
+                  label: info.label,
+                  sub: badgeOf(info.id),
+                  checked: info.id == account.cur,
+                  onTap: () => _onPlatformTap(context, ref, info.id),
                 ),
             ],
             MusicMenuTile(
@@ -196,7 +197,7 @@ class _MenuBody extends ConsumerWidget {
     );
   }
 
-  void _onPlatformTap(BuildContext context, WidgetRef ref, MusicPlatform p) {
+  void _onPlatformTap(BuildContext context, WidgetRef ref, String p) {
     final account = ref.read(musicAccountProvider);
     final l10n = AppLocalizations.of(context);
     // 未登录优先：当前源（如网易云）未登录时点它，也要拉起登录弹窗（用户口径）。
@@ -211,6 +212,10 @@ class _MenuBody extends ConsumerWidget {
     }
     ref.read(musicAccountProvider.notifier).switchPlatform(p);
     onClose();
-    showAppToast(context, l10n.musicSwitchSourceToast(platformBrands[p]?.label ?? ''), tone: ToastTone.good);
+    showAppToast(
+      context,
+      l10n.musicSwitchSourceToast(platformInfoById(p, ref.read(musicPlatformInfosProvider)).label),
+      tone: ToastTone.good,
+    );
   }
 }

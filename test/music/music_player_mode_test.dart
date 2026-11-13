@@ -83,7 +83,7 @@ void main() {
       artist: '',
       album: '',
       duration: Duration.zero,
-      platform: MusicPlatform.local,
+      platformId: 'local',
     );
     container.read(playerProvider.notifier).toggleLike(local);
     expect(container.read(playerProvider).likedIds, isNot(contains(local.id)));

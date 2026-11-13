@@ -35,7 +35,7 @@ class PlaylistLibraryView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final logged = ref.watch(musicAccountProvider.select((a) => a.logged));
     // 🔴 未导入任何音乐源：不发起数据请求，直接给导入引导（与发现页同口径）。
-    if (ref.watch(availableMusicPlatformsProvider).isEmpty) {
+    if (ref.watch(musicPlatformInfosProvider).isEmpty) {
       return const MusicNoSourcePrompt();
     }
     final library = ref.watch(playlistLibraryProvider);

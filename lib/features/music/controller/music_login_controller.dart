@@ -7,7 +7,6 @@ import '../data/api/netease_api.dart';
 import '../data/webview/kugou_cookie_auth.dart';
 import '../data/webview/webview_cookie.dart';
 import '../data/webview/webview_login_config.dart';
-import '../domain/music_models.dart';
 import 'music_auth.dart';
 import 'music_session.dart';
 
@@ -38,15 +37,12 @@ enum MusicLoginPhase {
 
 @immutable
 class MusicLoginState {
-  const MusicLoginState({
-    this.phase = MusicLoginPhase.idle,
-    this.platform = MusicPlatform.netease,
-    this.message = '',
-    this.nick,
-  });
+  const MusicLoginState({this.phase = MusicLoginPhase.idle, this.platformId = 'netease', this.message = '', this.nick});
 
   final MusicLoginPhase phase;
-  final MusicPlatform platform;
+
+  /// 目标平台 id（字符串身份）。
+  final String platformId;
 
   /// 诊断标签（UI 映射为 ARB 文案，不直接展示服务端原文）。
   final String message;
@@ -58,10 +54,10 @@ class MusicLoginState {
   bool get isFinished =>
       phase == MusicLoginPhase.succeeded || phase == MusicLoginPhase.cancelled || phase == MusicLoginPhase.failed;
 
-  MusicLoginState copyWith({MusicLoginPhase? phase, MusicPlatform? platform, String? message, String? nick}) =>
+  MusicLoginState copyWith({MusicLoginPhase? phase, String? platformId, String? message, String? nick}) =>
       MusicLoginState(
         phase: phase ?? this.phase,
-        platform: platform ?? this.platform,
+        platformId: platformId ?? this.platformId,
         message: message ?? this.message,
         nick: nick ?? this.nick,
       );
@@ -79,15 +75,16 @@ class MusicLoginController extends Notifier<MusicLoginState> {
   MusicLoginState build() => const MusicLoginState();
 
   /// 某个平台是否支持 WebView 登录。
-  static bool supports(MusicPlatform platform) => supportsWebviewLogin(platform);
+  /// 该平台是否有 WebView 登录配置（内置四平台静态表 / 新平台的源内声明）。
+  static bool supports(String platformId) => supportsWebviewLogin(platformId);
 
   /// 开始登录：记录目标平台，进入「等待用户在官方页面完成登录」。
-  void begin(MusicPlatform platform) {
-    if (!supports(platform)) {
-      state = MusicLoginState(phase: MusicLoginPhase.failed, platform: platform, message: 'unsupported');
+  void begin(String platformId) {
+    if (!supports(platformId)) {
+      state = MusicLoginState(phase: MusicLoginPhase.failed, platformId: platformId, message: 'unsupported');
       return;
     }
-    state = MusicLoginState(phase: MusicLoginPhase.awaiting, platform: platform);
+    state = MusicLoginState(phase: MusicLoginPhase.awaiting, platformId: platformId);
   }
 
   /// WebView 轮询到 Cookie 后调用。
@@ -95,15 +92,15 @@ class MusicLoginController extends Notifier<MusicLoginState> {
   /// 返回 true 表示「已登录并落盘」，调用方据此关闭登录窗口。
   Future<bool> submitCookies(Iterable<RawWebviewCookie> cookies) async {
     if (state.phase != MusicLoginPhase.awaiting) return false;
-    final platform = state.platform;
-    final config = webviewLoginConfigs[platform];
+    final platformId = state.platformId;
+    final config = webviewLoginConfigs[platformId];
     if (config == null) return false;
 
     final collector = WebviewCookieCollector(config);
     // 酷狗用专用解析：登录票据主要在复合 Cookie KuGoo 里，通用判定漏判
     // （用户实测：窗口里已登录、应用一直等不到）。判定口径与 miao-dock 一致：
     // 有登录态即可收口，播放票据不足时由 warmup 补（见 launcher）。
-    final ready = platform == MusicPlatform.kugou
+    final ready = platformId == 'kugou'
         ? extractKugouCookieAuth(cookies.map((c) => (name: c.name, value: c.value)).toList()).loggedIn
         : collector.hasLogin(cookies);
     if (!ready) return false; // 还没登录完，继续等
@@ -113,32 +110,32 @@ class MusicLoginController extends Notifier<MusicLoginState> {
 
     // 诊断：抓到票据时打印 names 与长度（不含值，避免泄漏凭据）。
     debugPrint(
-      '[music.login] ticket hit: platform=$platform len=${cookie.length} '
+      '[music.login] ticket hit: platform=$platformId len=${cookie.length} '
       'names=${cookies.where((c) => config.ownsDomain(c.domain)).map((c) => c.name).toSet().toList()}',
     );
 
     state = state.copyWith(phase: MusicLoginPhase.saving);
     try {
-      await ref.read(musicAuthProvider.notifier).save(platform, cookie);
+      await ref.read(musicAuthProvider.notifier).save(platformId, cookie);
     } on MusicCredentialStoreException {
       // 落盘失败：不假装登录成功（重启就掉线，比直接报错更难查）。
       state = state.copyWith(phase: MusicLoginPhase.failed, message: 'credential_store_failed');
       return false;
     }
-    ref.read(musicAccountProvider.notifier).login(platform, '');
+    ref.read(musicAccountProvider.notifier).login(platformId, '');
     state = state.copyWith(phase: MusicLoginPhase.succeeded);
     // 昵称只是展示增强：回读失败不影响登录态（头像兜底显示「?」）。
-    unawaited(_fetchNick(platform, cookie));
+    unawaited(_fetchNick(platformId, cookie));
     return true;
   }
 
   /// 回读昵称（仅网易云有稳定接口；其它平台留空，头像显示「?」）。
-  Future<void> _fetchNick(MusicPlatform platform, String cookie) async {
-    if (platform != MusicPlatform.netease) return;
+  Future<void> _fetchNick(String platformId, String cookie) async {
+    if (platformId != 'netease') return;
     try {
       final info = await NeteaseApi(cookie: cookie).loginStatus();
       if (info.nick.isEmpty || !ref.mounted) return;
-      ref.read(musicAccountProvider.notifier).login(platform, info.nick);
+      ref.read(musicAccountProvider.notifier).login(platformId, info.nick);
       state = state.copyWith(nick: info.nick);
     } on Object {
       // 拿不到昵称就算了：登录态已经成立。

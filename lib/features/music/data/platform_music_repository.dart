@@ -21,10 +21,10 @@ import 'sources/qq_source.dart';
 /// 歌词 / 评论 / 每日推荐三类能力各平台不一致，由 [MusicSource] 的能力位决定：
 /// 不支持时返回空集，而不是抛错 —— 空是「这个平台没有该功能」，不是故障。
 class PlatformMusicRepository implements MusicRepository {
-  PlatformMusicRepository({required this.platform, MusicSource? source, this.cookie = ''})
-    : _source = source ?? _buildSource(platform, cookie);
+  PlatformMusicRepository({required this.platformId, MusicSource? source, this.cookie = ''})
+    : _source = source ?? _buildSource(platformId, cookie);
 
-  final MusicPlatform platform;
+  final String platformId;
   final MusicSource _source;
   final String cookie;
 
@@ -42,12 +42,12 @@ class PlatformMusicRepository implements MusicRepository {
   /// 列表页本来就有这些字段，记下来在详情时回填，比再猜一个接口可靠。
   final Map<String, MusicPlaylist> _metaCache = {};
 
-  static MusicSource _buildSource(MusicPlatform platform, String cookie) => switch (platform) {
-    MusicPlatform.netease => NeteaseSource(api: NeteaseApi(cookie: cookie)),
-    MusicPlatform.qq => QqSource(api: QqMusicApi(cookie: cookie)),
-    MusicPlatform.kugou => KugouSource(api: KugouApi(cookie: cookie)),
-    MusicPlatform.migu => MiguSource(),
-    MusicPlatform.local => throw ArgumentError('local platform has no remote source'),
+  static MusicSource _buildSource(String platformId, String cookie) => switch (platformId) {
+    'netease' => NeteaseSource(api: NeteaseApi(cookie: cookie)),
+    'qq' => QqSource(api: QqMusicApi(cookie: cookie)),
+    'kugou' => KugouSource(api: KugouApi(cookie: cookie)),
+    'migu' => MiguSource(),
+    _ => throw ArgumentError('platform has no remote source: \$platformId'),
   };
 
   void _guard(FailScope scope) {

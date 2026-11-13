@@ -6,9 +6,9 @@ import '../../../domain/music_source_manifest.dart';
 ///
 /// 容错口径：单条解析失败**跳过该条**而不是整体失败（上游偶尔会给脏数据）。
 class MusicSourceDto {
-  const MusicSourceDto({required this.platform});
+  const MusicSourceDto({required this.platformId});
 
-  final MusicPlatform platform;
+  final String platformId;
 
   // ── 歌曲 ───────────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ class MusicSourceDto {
       artist: _s(m['artist']),
       album: _s(m['album']),
       duration: Duration(milliseconds: durationMs),
-      platform: platform,
+      platformId: platformId,
       qualityLabel: _optS(m['qualityLabel']),
       mediaId: _optS(m['mediaId']),
       coverUrl: _optS(m['coverUrl']),

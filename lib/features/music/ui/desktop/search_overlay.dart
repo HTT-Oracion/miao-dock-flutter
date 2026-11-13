@@ -76,7 +76,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     final logged = ref.watch(musicAccountProvider.select((a) => a.logged));
     final search = ref.watch(musicSearchProvider);
     // 🔴 未导入音乐源：不提供搜索，给导入引导（与发现 / 我的同口径）。
-    if (!ref.watch(availableMusicPlatformsProvider).contains(ref.watch(musicAccountProvider).cur)) {
+    if (!ref.watch(musicPlatformInfosProvider).any((i) => i.id == ref.watch(musicAccountProvider).cur)) {
       return Material(
         color: palette.bg,
         child: SafeArea(

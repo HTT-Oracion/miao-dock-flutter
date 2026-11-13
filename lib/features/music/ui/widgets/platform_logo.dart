@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../domain/music_platform_info.dart';
 import '../../domain/music_models.dart';
+import 'remote_cover_image.dart';
 
 /// 平台品牌圆底 logo（设计稿 N40 / icons.js `platSvg` 最终稿）：
 /// 扁平圆底 + 稍浅品牌纯色 + 白色识别符号，无渐变、无高光、无投影。
@@ -8,14 +11,15 @@ import '../../domain/music_models.dart';
 /// 符号几何与设计稿 SVG 一比一（24 视框）：网易云音符+云卷、酷狗 K、
 /// QQ 音乐音符、咪咕 M。未知平台回退灰圆底 + 音符。
 class PlatformLogo extends StatelessWidget {
-  const PlatformLogo({super.key, required this.platform, this.size = 18});
+  const PlatformLogo({super.key, required this.platformId, this.size = 18});
 
-  final MusicPlatform platform;
+  /// 平台 id（字符串身份）；查内置品牌表绘制，未收录平台回退灰圆底音符。
+  final String platformId;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final brand = platformBrands[platform];
+    final brand = platformBrands[platformId];
     return SizedBox(
       width: size,
       height: size,
@@ -125,4 +129,43 @@ class _BrandLogoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BrandLogoPainter old) => old.brand != brand;
+}
+
+/// 平台徽章（源体系口径）：**三层兜底**渲染。
+///
+/// 1. 源声明了 [MusicPlatformInfo.logoUrl] → 网络图；
+/// 2. 项目内置品牌（netease / kugou / qq / migu）→ 真实品牌字形；
+/// 3. 都没有 → 稳定派生色圆底 + eighth-note 图标。
+class MusicPlatformBadge extends StatelessWidget {
+  const MusicPlatformBadge({super.key, required this.info, this.size = 18});
+
+  final MusicPlatformInfo info;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    // 1) 源声明 logo：网络图优先。
+    if (info.logoUrl != null && info.logoUrl!.isNotEmpty) {
+      return ClipOval(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: RemoteCoverImage(url: info.logoUrl!, width: size, height: size),
+        ),
+      );
+    }
+    // 2) 项目内置品牌字形。
+    if (info.builtIn) {
+      return PlatformLogo(platformId: info.id, size: size);
+    }
+    // 3) 派生兜底：稳定色圆底 + eighth-note。
+    final color = info.color ?? derivedPlatformColor(info.id);
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: Icon(LucideIcons.eighthNote, size: size * 0.52, color: Colors.white),
+    );
+  }
 }

@@ -17,7 +17,7 @@ class JsMusicSourceAdapter implements MusicSource {
   String? cookie;
 
   @override
-  MusicPlatform get platform => source.platform;
+  String get platformId => source.platformId;
 
   @override
   bool get supportsDailySongs => source.capabilities.contains('dailySongs');

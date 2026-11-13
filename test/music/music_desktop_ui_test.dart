@@ -17,6 +17,7 @@ import 'support/music_test_account.dart';
 
 import 'package:miao_dock_flutter/features/music/data/music_repository.dart';
 import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_platform_info.dart';
 import 'package:miao_dock_flutter/features/music/ui/desktop/account_menu.dart';
 import 'package:miao_dock_flutter/features/music/ui/desktop/immersive_player.dart';
 import 'package:miao_dock_flutter/features/music/ui/desktop/play_bar.dart';
@@ -33,6 +34,8 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 /// (c) 未登录 → 推荐歌曲分区呈现登录 CTA；
 /// (d) 播放器：注入队列 → 播放条出现 + 模式键循环档位（N10）；
 /// (e) 搜索浮层：未登录说明态（N06 边界）。
+MusicPlatformInfo _neteaseInfo() => const MusicPlatformInfo(id: 'netease', label: '网易云', builtIn: true);
+
 void main() {
   /// 公共主题挂载：MaterialApp + AppPalette 深色 + zh 词条
   /// （与 test/library_visual_test.dart 同范式）。
@@ -50,7 +53,7 @@ void main() {
 
   Widget demoHost(Widget child, {DemoMusicRepository? repo, bool logged = true}) => ProviderScope(
     overrides: [
-      availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+      musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
       musicRepositoryProvider.overrideWithValue(repo ?? DemoMusicRepository()),
       if (logged) musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
       if (!logged) musicAccountProvider.overrideWith(_LoggedOutAccount.new),
@@ -117,7 +120,7 @@ void main() {
       ProviderScope(
         overrides: [
           musicRepositoryProvider.overrideWithValue(repo),
-          availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+          musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
         ],
         child: baseApp(const MusicScreen(view: MusicScreenView.discover)),
       ),
@@ -267,7 +270,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
-        availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+        musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
         musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
       ],
     );
@@ -344,7 +347,7 @@ void main() {
         overrides: [
           musicAccountProvider.overrideWith(_LoggedOutAccount.new),
           // 源体系口径：侧栏只列已导入平台，本用例注入网易云源。
-          availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+          musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
         ],
         child: baseApp(const SidebarSourceGroup()),
       ),
@@ -355,7 +358,7 @@ void main() {
     await tester.tap(find.text('网易云'));
     await tester.pump();
     expect(container.read(musicUiProvider).loginOpen, isTrue);
-    expect(container.read(musicUiProvider).loginPlatform, MusicPlatform.netease);
+    expect(container.read(musicUiProvider).loginPlatform, 'netease');
   });
 
   testWidgets('(l2) 侧栏：无已导入源时整组不渲染', (tester) async {
@@ -400,7 +403,7 @@ void main() {
         key: UniqueKey(),
         overrides: [
           musicAccountProvider.overrideWith(_LoggedOutAccount.new),
-          availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+          musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
         ],
         child: MaterialApp(
           theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
@@ -468,6 +471,5 @@ class _AccountChipForTestState extends State<_AccountChipForTest> {
 /// 未登录会话替身（覆盖 musicAccountProvider 的 build）。
 class _LoggedOutAccount extends MusicAccountNotifier {
   @override
-  MusicAccountState build() =>
-      const MusicAccountState(cur: MusicPlatform.netease, logged: false, nick: null, extra: {});
+  MusicAccountState build() => const MusicAccountState(cur: 'netease', logged: false, nick: null, extra: {});
 }

@@ -9,7 +9,6 @@ import '../../../../l10n/app_localizations.dart';
 import '../../data/webview/kugou_cookie_auth.dart';
 import '../../data/webview/webview_cookie.dart';
 import '../../data/webview/webview_login_config.dart';
-import '../../domain/music_models.dart';
 
 /// 移动端 WebView 登录页：**全屏推入**，内嵌平台官方登录页。
 ///
@@ -88,7 +87,7 @@ class _MobileWebviewLoginPageState extends State<MobileWebviewLoginPage> {
       }
       if (raw.isEmpty) return;
       // 酷狗 warmup：有登录态缺播放票据 → 导航个人中心补 Cookie（对齐桌面端）。
-      if (widget.config.platform == MusicPlatform.kugou && widget.config.warmupUrl != null && !_warmupStarted) {
+      if (widget.config.platformId == 'kugou' && widget.config.warmupUrl != null && !_warmupStarted) {
         final auth = extractKugouCookieAuth(raw.map((c) => (name: c.name, value: c.value)).toList());
         if (auth.loggedIn && !auth.playbackReady) {
           _warmupStarted = true;

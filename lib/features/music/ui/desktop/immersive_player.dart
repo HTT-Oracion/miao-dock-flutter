@@ -17,6 +17,7 @@ import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../../domain/music_models.dart';
+import '../../domain/music_platform_info.dart';
 import '../widgets/fail_magic.dart';
 import '../widgets/music_shared.dart';
 import '../widgets/song_row.dart';
@@ -220,6 +221,7 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
               children: [
                 _TopBar(
                   song: song,
+                  infos: ref.watch(musicPlatformInfosProvider),
                   quality: player.quality,
                   topInset: topInset,
                   lyricsOn: ui.desktopLyricsOn,
@@ -244,6 +246,7 @@ class _ImmersivePlayerState extends ConsumerState<ImmersivePlayer> with TickerPr
                             child: _ArtColumn(
                               song: song,
                               quality: player.quality,
+                              infos: ref.watch(musicPlatformInfosProvider),
                               playing: player.playing,
                               spin: _spin,
                               size: 300,
@@ -599,10 +602,11 @@ class _DiscPainter extends CustomPainter {
 
 // ── 顶栏 ─────────────────────────────────────────────────────────────────────
 
-class _TopBar extends StatelessWidget {
+class _TopBar extends ConsumerWidget {
   const _TopBar({
     required this.song,
     required this.quality,
+    required this.infos,
     required this.topInset,
     required this.lyricsOn,
     required this.onClose,
@@ -612,6 +616,7 @@ class _TopBar extends StatelessWidget {
     required this.onToggleFullScreen,
   });
 
+  final List<MusicPlatformInfo> infos;
   final MusicSong song;
   final QualityTier quality;
   final double topInset;
@@ -623,7 +628,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onToggleFullScreen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     Widget ibtn(IconData icon, String tip, VoidCallback onTap, {bool on = false, Key? key}) => GestureDetector(
@@ -664,7 +669,10 @@ class _TopBar extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    l10n.musicPlatformQuality(platformLabel(l10n, song.platform), qualityLabel(l10n, quality)),
+                    l10n.musicPlatformQuality(
+                      platformLabel(l10n, song.platformId, infos: infos),
+                      qualityLabel(l10n, quality),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: AppFont.px10_5, color: palette.ink2),
@@ -699,11 +707,13 @@ class _ArtColumn extends StatelessWidget {
     required this.playing,
     required this.spin,
     required this.size,
+    required this.infos,
     required this.onDiscTap,
   });
 
   final MusicSong song;
   final QualityTier quality;
+  final List<MusicPlatformInfo> infos;
   final bool playing;
   final Animation<double> spin;
   final double size;
@@ -773,7 +783,11 @@ class _ArtColumn extends StatelessWidget {
             const SizedBox(width: 6),
             _MetaChip(label: formatSongDuration(song.duration)),
             const SizedBox(width: 6),
-            _MetaChip(label: platformLabel(l10n, song.platform), icon: LucideIcons.headphones, accent: true),
+            _MetaChip(
+              label: platformLabel(l10n, song.platformId, infos: infos),
+              icon: LucideIcons.headphones,
+              accent: true,
+            ),
           ],
         ),
       ],
@@ -1336,7 +1350,7 @@ class _BottomBar extends ConsumerWidget {
             width: 190,
             child: Row(
               children: [
-                if (song.platform != MusicPlatform.local) ...[
+                if (song.platformId != 'local') ...[
                   ibtn(
                     LucideIcons.heart,
                     l10n.musicLikeAria,

@@ -15,22 +15,23 @@ import 'music_auth.dart';
 class MusicAccountState {
   const MusicAccountState({required this.cur, required this.logged, required this.nick, required this.extra});
 
-  final MusicPlatform cur;
+  /// 当前平台 id（字符串身份，见 js_music_source.dart 的口径说明）。
+  final String cur;
   final bool logged;
   final String? nick;
 
   /// 非当前平台的登录态（当前平台的登录态由 [logged] 表达）。
-  final Map<MusicPlatform, bool> extra;
+  final Map<String, bool> extra;
 
   static const initial = MusicAccountState(
-    cur: MusicPlatform.netease,
+    cur: 'netease',
     logged: false,
     nick: null,
-    extra: {MusicPlatform.qq: false, MusicPlatform.kugou: false, MusicPlatform.migu: false},
+    extra: {'qq': false, 'kugou': false, 'migu': false},
   );
 
   /// 平台徽标三态（core.js platBadge）：当前源 / 已登录 / 未登录。
-  bool isLogged(MusicPlatform p) => p == cur ? logged : (extra[p] ?? false);
+  bool isLogged(String p) => p == cur ? logged : (extra[p] ?? false);
 
   /// 头像占位字：昵称首字符；空昵称 / 未登录兜底「?」。
   ///
@@ -43,17 +44,16 @@ class MusicAccountState {
   /// 头像旁的展示名：已登录显示昵称（可为空串，由 UI 兜底），未登录显示「未登录」由 UI 层取词条。
   String get displayName => logged ? (nick ?? '') : '';
 
-  MusicAccountState copyWith({MusicPlatform? cur, bool? logged, String? nick, Map<MusicPlatform, bool>? extra}) =>
-      MusicAccountState(
-        cur: cur ?? this.cur,
-        logged: logged ?? this.logged,
-        nick: nick ?? this.nick,
-        extra: extra ?? this.extra,
-      );
+  MusicAccountState copyWith({String? cur, bool? logged, String? nick, Map<String, bool>? extra}) => MusicAccountState(
+    cur: cur ?? this.cur,
+    logged: logged ?? this.logged,
+    nick: nick ?? this.nick,
+    extra: extra ?? this.extra,
+  );
 }
 
 class MusicAccountNotifier extends Notifier<MusicAccountState> {
-  MusicPlatform _current = MusicPlatform.netease;
+  String _current = 'netease';
   String? _nick;
 
   @override
@@ -65,9 +65,9 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
       logged: logged,
       nick: logged ? _nick : null,
       extra: {
-        for (final platform in MusicPlatform.values)
-          if (platform != MusicPlatform.local && platform != _current)
-            platform: (auth.cookieOf(platform) ?? '').isNotEmpty,
+        // 会话枚举退役：extra 由已导入源的平台集合填充（providers 侧）。
+        for (final entry in auth.cookies.entries)
+          if (entry.key != _current && entry.value.isNotEmpty) entry.key: true,
       },
     );
     // 🔴 Cookie 从 Keychain 恢复后昵称是空的（昵称只存内存）：不回读的话
@@ -79,7 +79,7 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
   }
 
   /// 切音源：未登录 → 由 UI 拉起登录弹窗；已登录 → 直接切；已是当前源 → 不动（N04）。
-  void switchPlatform(MusicPlatform p) {
+  void switchPlatform(String p) {
     if (p == state.cur) return;
     final wasLogged = state.isLogged(p);
     _current = p;
@@ -95,7 +95,7 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
   ///
   /// Cookie 已失效（接口回未登录）时同步撤下登录态：宁可显示未登录，
   /// 也不能「顶着 ? 的已登录」——那会让用户以为账号异常。
-  Future<void> _restoreNick(MusicPlatform p, String cookie) async {
+  Future<void> _restoreNick(String p, String cookie) async {
     if (cookie.isEmpty) return;
     try {
       final info = await createApi(cookie: cookie).loginStatus();
@@ -119,7 +119,7 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
   }
 
   /// 登录成功（真实平台状态回读）。
-  void login(MusicPlatform p, String nick) {
+  void login(String p, String nick) {
     if (p == state.cur) {
       _nick = nick;
       state = state.copyWith(logged: true, nick: nick);
@@ -191,7 +191,7 @@ class MusicUiState {
     this.accountSheetOpen = false,
     this.loginOpen = false,
 
-    this.loginPlatform = MusicPlatform.netease,
+    this.loginPlatform = 'netease',
     this.songMenuSongId,
     this.qualitySheetOpen = false,
     this.styleSheetOpen = false,
@@ -209,7 +209,7 @@ class MusicUiState {
   /// 移动端「账号与音源」抽屉（M10）。
   final bool accountSheetOpen;
   final bool loginOpen;
-  final MusicPlatform loginPlatform;
+  final String loginPlatform;
 
   /// 歌曲行菜单当前曲目（右键 / 长按 / ⋯ 共用一份菜单，N23/M15）。
   final String? songMenuSongId;
@@ -231,7 +231,7 @@ class MusicUiState {
     bool? accountMenuOpen,
     bool? accountSheetOpen,
     bool? loginOpen,
-    MusicPlatform? loginPlatform,
+    String? loginPlatform,
     String? songMenuSongId,
     bool clearSongMenu = false,
     bool? qualitySheetOpen,
@@ -267,7 +267,7 @@ class MusicUiNotifier extends Notifier<MusicUiState> {
   void setIsland(bool v) => state = state.copyWith(islandOpen: v);
   void setAccountMenu(bool v) => state = state.copyWith(accountMenuOpen: v);
   void setAccountSheet(bool v) => state = state.copyWith(accountSheetOpen: v);
-  void openLogin(MusicPlatform p) => state = state.copyWith(loginOpen: true, loginPlatform: p);
+  void openLogin(String p) => state = state.copyWith(loginOpen: true, loginPlatform: p);
   void closeLogin() => state = state.copyWith(loginOpen: false);
   void openSongMenu(String songId) => state = state.copyWith(songMenuSongId: songId);
   void closeSongMenu() => state = state.copyWith(clearSongMenu: true);

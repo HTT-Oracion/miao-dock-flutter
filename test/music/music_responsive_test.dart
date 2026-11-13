@@ -61,7 +61,7 @@ void main() {
       artist: 'a',
       album: 'al',
       duration: Duration(seconds: 100),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
     );
 
     tester.view.physicalSize = const Size(390, 844);
@@ -123,7 +123,7 @@ void main() {
       artist: '',
       album: '',
       duration: Duration.zero,
-      platform: MusicPlatform.local,
+      platformId: 'local',
     );
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;

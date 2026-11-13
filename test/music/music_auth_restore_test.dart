@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:miao_dock_flutter/core/storage/secure_store.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_auth.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 
 /// 启动读盘与登录写入的竞态。
 ///
@@ -23,15 +22,15 @@ void main() {
     c.read(musicAuthProvider);
 
     // 挂起期间完成登录写入。
-    await c.read(musicAuthProvider.notifier).save(MusicPlatform.netease, 'MUSIC_U=real');
-    expect(c.read(musicAuthProvider).cookieOf(MusicPlatform.netease), 'MUSIC_U=real');
+    await c.read(musicAuthProvider.notifier).save('netease', 'MUSIC_U=real');
+    expect(c.read(musicAuthProvider).cookieOf('netease'), 'MUSIC_U=real');
 
     // 放行读盘：它带回的是登录前的空快照。
     store.gate!.complete();
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     // 破坏点：_restore 整体替换 → 这里回退成 null（登录状态丢失）。
-    expect(c.read(musicAuthProvider).cookieOf(MusicPlatform.netease), 'MUSIC_U=real');
+    expect(c.read(musicAuthProvider).cookieOf('netease'), 'MUSIC_U=real');
     c.dispose();
   });
 
@@ -42,10 +41,10 @@ void main() {
 
     // 破坏点：去掉回读校验 → 这里不会抛，登录会在重启后静默失效。
     await expectLater(
-      c.read(musicAuthProvider.notifier).save(MusicPlatform.netease, 'MUSIC_U=real'),
+      c.read(musicAuthProvider.notifier).save('netease', 'MUSIC_U=real'),
       throwsA(isA<MusicCredentialStoreException>()),
     );
-    expect(c.read(musicAuthProvider).cookieOf(MusicPlatform.netease), isNull);
+    expect(c.read(musicAuthProvider).cookieOf('netease'), isNull);
   });
 }
 
@@ -70,20 +69,25 @@ class _MemoryStore implements SecureStore {
   final bool rejectWrites;
   final Map<String, String> _data = {};
 
-  /// 非空时，第一次 read 会等待它被 complete。
+  /// 非空时，第一次 readAll（还原路径）会等待它被 complete。
+  /// 🔴 还原已改为 readAll 扫描：挂起必须挂在 readAll 上，否则 save() 的
+  /// readBack 会误挂（测试超时的真因）。
   Completer<void>? gate;
-  bool _firstRead = true;
+  bool _firstReadAll = true;
 
   @override
-  Future<String?> read(String key) async {
-    if (gate != null && _firstRead) {
-      _firstRead = false;
-      final snapshot = _data[key]; // 先取快照（此时还没有登录写入）
+  Future<Map<String, String>> readAll() async {
+    if (gate != null && _firstReadAll) {
+      _firstReadAll = false;
+      final snapshot = Map<String, String>.from(_data); // 先取快照（此时还没有登录写入）
       await gate!.future; // 挂起，等测试放行
       return snapshot; // 返回**旧快照**，模拟慢读
     }
-    return _data[key];
+    return Map<String, String>.from(_data);
   }
+
+  @override
+  Future<String?> read(String key) async => _data[key];
 
   @override
   Future<void> write(String key, String value) async {

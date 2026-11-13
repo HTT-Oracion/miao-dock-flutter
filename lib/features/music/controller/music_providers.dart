@@ -10,6 +10,7 @@ import '../domain/music_source_engine.dart';
 import '../data/sources/js_music_source_adapter.dart';
 import '../data/platform_music_repository.dart';
 import '../domain/music_models.dart';
+import '../domain/music_platform_info.dart';
 import 'music_auth.dart';
 import 'music_player.dart';
 import 'music_session.dart';
@@ -17,13 +18,29 @@ import 'music_session.dart';
 /// 已导入且可用的 JS 音乐源覆盖的平台集合。
 ///
 /// 🔴 音乐模块的平台清单**只认 JS 源**（与漫画源同口径）：内置 Dart 实现
+/// 已导入且可用的 JS 音乐源的**平台描述符**（顺序 = 源注册表顺序，即用户导入
+/// / 目录清单顺序）。
+///
+/// 🔴 音乐模块的平台清单**只认 JS 源**（与漫画源同口径）：内置 Dart 实现
 /// 仅作为删除前的兼容保留，不再出现在任何平台选择 UI 里；未导入源时
 /// 发现 / 我的呈现导入引导，而不是悄悄回退内置实现。
-final availableMusicPlatformsProvider = Provider<Set<MusicPlatform>>((ref) {
-  return {
-    for (final source in ref.watch(jsMusicSourceRegistryProvider))
-      if (source.isAvailable) source.platform,
-  };
+///
+/// 描述符三层兜底：源声明（logo / color）→ 内置品牌（四平台 label/色）→ id 派生。
+final musicPlatformInfosProvider = Provider<List<MusicPlatformInfo>>((ref) {
+  final infos = <MusicPlatformInfo>[];
+  for (final source in ref.watch(jsMusicSourceRegistryProvider)) {
+    if (!source.isAvailable) continue;
+    if (infos.any((i) => i.id == source.platformId)) continue;
+    var info = source.info;
+    final brand = platformBrands[info.id];
+    if (brand != null) {
+      info = info.copyWith(label: brand.label, color: brand.color, builtIn: true);
+    } else {
+      info = info.copyWith(color: info.color ?? derivedPlatformColor(info.id));
+    }
+    infos.add(info);
+  }
+  return infos;
 });
 
 /// 仓库装配：按当前音源接 JS 源；该平台没有已导入源时返回 stub 仓库
@@ -33,19 +50,19 @@ final musicRepositoryProvider = Provider<MusicRepository>((ref) {
   final cookie = ref.watch(musicAuthProvider).cookieOf(account.cur) ?? '';
   JsMusicSource? jsSource;
   for (final candidate in ref.watch(jsMusicSourceRegistryProvider)) {
-    if (candidate.isAvailable && candidate.platform == account.cur) {
+    if (candidate.isAvailable && candidate.platformId == account.cur) {
       jsSource = candidate;
       break;
     }
   }
   if (jsSource != null) {
     return PlatformMusicRepository(
-      platform: account.cur,
+      platformId: account.cur,
       cookie: cookie,
       source: JsMusicSourceAdapter(source: jsSource, engine: ref.watch(musicSourceEngineProvider), cookie: cookie),
     );
   }
-  return PlatformMusicRepository(platform: account.cur, source: const _NoSourceMusicSource(), cookie: cookie);
+  return PlatformMusicRepository(platformId: account.cur, source: const _NoSourceMusicSource(), cookie: cookie);
 });
 
 /// 未导入源时的兜底仓库：所有能力返回空（UI 空态拦截后不应被调用到）。
@@ -53,7 +70,7 @@ class _NoSourceMusicSource implements MusicSource {
   const _NoSourceMusicSource();
 
   @override
-  MusicPlatform get platform => MusicPlatform.local;
+  String get platformId => 'local';
 
   @override
   bool get supportsDailySongs => false;
@@ -250,7 +267,7 @@ class _LocalNotifier extends AsyncNotifier<List<MusicSong>> {
           artist: '',
           album: '',
           duration: Duration.zero,
-          platform: MusicPlatform.local,
+          platformId: 'local',
         ),
     ];
     state = AsyncData([...current, ...additions]);

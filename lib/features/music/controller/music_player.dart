@@ -197,16 +197,17 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
   }
 
   /// 各平台 CDN 对 UA / Referer 的校验不同；缺头时酷狗 / QQ 会直接 403。
-  static Map<String, String> _streamHeaders(MusicPlatform platform) {
+  /// 播放流请求头：内置四平台按 id 给 Referer（防盗链）；其余平台通用 UA。
+  static Map<String, String> _streamHeaders(String platformId) {
     const ua =
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
         '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    return switch (platform) {
-      MusicPlatform.netease => {'User-Agent': ua, 'Referer': 'https://music.163.com/'},
-      MusicPlatform.qq => {'User-Agent': ua, 'Referer': 'https://y.qq.com/'},
-      MusicPlatform.kugou => {'User-Agent': ua, 'Referer': 'https://www.kugou.com/'},
-      MusicPlatform.migu => {'User-Agent': ua, 'Referer': 'https://music.migu.cn/'},
-      MusicPlatform.local => const {},
+    return switch (platformId) {
+      'netease' => {'User-Agent': ua, 'Referer': 'https://music.163.com/'},
+      'qq' => {'User-Agent': ua, 'Referer': 'https://y.qq.com/'},
+      'kugou' => {'User-Agent': ua, 'Referer': 'https://www.kugou.com/'},
+      'migu' => {'User-Agent': ua, 'Referer': 'https://music.migu.cn/'},
+      _ => {'User-Agent': ua},
     };
   }
 
@@ -362,7 +363,7 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
     try {
       final ok = await engine.load(
         url: resolved,
-        headers: _streamHeaders(song.platform),
+        headers: _streamHeaders(song.platformId),
         volume: state.muted ? 0 : state.volume / 100,
         play: state.playing,
         // 后台通知 / 锁屏 / 系统媒体面板展示的元数据。
@@ -551,7 +552,7 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
     _setPlayMode(next);
   }
 
-  bool get _canUseHeartbeat => state.queueFromLiked && ref.read(musicAccountProvider).cur == MusicPlatform.netease;
+  bool get _canUseHeartbeat => state.queueFromLiked && ref.read(musicAccountProvider).cur == 'netease';
 
   void _setPlayMode(PlayMode mode) {
     if (mode == PlayMode.heartbeat) {
@@ -689,7 +690,7 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
 
   // ── 红心 ──────────────────────────────────────────────────────────────────
   void toggleLike(MusicSong song) {
-    if (song.platform == MusicPlatform.local) return;
+    if (song.platformId == 'local') return;
     final liked = {...state.likedIds};
     liked.contains(song.id) ? liked.remove(song.id) : liked.add(song.id);
     state = state.copyWith(likedIds: liked);

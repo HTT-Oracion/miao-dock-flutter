@@ -7,7 +7,7 @@ import 'package:miao_dock_flutter/features/music/data/sources/js/music_source_dt
 ///
 /// 破坏点：映射错字段（ar/artists、dt/duration 混淆）→ 列表显示空 / 时长 0。
 void main() {
-  const dto = MusicSourceDto(platform: MusicPlatform.netease);
+  const dto = MusicSourceDto(platformId: 'netease');
 
   test('搜索歌曲：归一化契约字段映射', () {
     // JS 源负责把平台字段（ar/al/dt）映射成契约字段；DTO 只认契约。
@@ -32,7 +32,7 @@ void main() {
     expect(s.album, '有点野');
     expect(s.duration.inMilliseconds, 319039);
     expect(s.coverUrl, 'http://p1.music.126.net/abc.jpg');
-    expect(s.platform, MusicPlatform.netease);
+    expect(s.platformId, 'netease');
   });
 
   test('平台原始字段不进 DTO：映射职责在 JS 源', () {

@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/secure_store.dart';
-import '../domain/music_models.dart';
 
 /// 四平台登录 Cookie 的内存态 + 安全存储（D-047：凭据不进偏好明文）。
 ///
@@ -14,14 +13,15 @@ import '../domain/music_models.dart';
 class MusicAuthState {
   const MusicAuthState({this.cookies = const {}, this.loading = true});
 
-  final Map<MusicPlatform, String> cookies;
+  /// 平台 id → Cookie（字符串键，键名与旧枚举 name 一致，历史凭据兼容）。
+  final Map<String, String> cookies;
 
   /// 首次从安全存储读盘期间为 true（UI 据此避免先闪「未登录」）。
   final bool loading;
 
-  String? cookieOf(MusicPlatform p) => cookies[p];
+  String? cookieOf(String p) => cookies[p];
 
-  MusicAuthState copyWith({Map<MusicPlatform, String>? cookies, bool? loading}) =>
+  MusicAuthState copyWith({Map<String, String>? cookies, bool? loading}) =>
       MusicAuthState(cookies: cookies ?? this.cookies, loading: loading ?? this.loading);
 }
 
@@ -49,10 +49,23 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
   /// 读到的旧值（空），表现为「手机显示登录成功、应用仍是未登录」。
   /// 只在本轮修复前，这一行为是扫码登录失败的真因之一。
   Future<void> _restore() async {
-    final restored = <MusicPlatform, String>{};
-    for (final p in MusicPlatform.values.where((p) => p != MusicPlatform.local)) {
-      final v = await _store.read('$_keyPrefix${p.name}');
-      if (v != null && v.isNotEmpty) restored[p] = v;
+    // 🔴 读盘改为按目录扫描：凭据键随平台 id 动态增长（新导入的平台也有登录态），
+    // 不能再枚举固定四键。
+    final restored = <String, String>{};
+    try {
+      for (final key in (await _store.readAll()).keys) {
+        if (!key.startsWith(_keyPrefix)) continue;
+        final id = key.substring(_keyPrefix.length);
+        if (id.isEmpty || id == 'local') continue;
+        final v = await _store.read(key);
+        if (v != null && v.isNotEmpty) restored[id] = v;
+      }
+    } catch (_) {
+      // readAll 不可用（平台差异）时退化为逐平台读取 —— 内置四平台保底。
+      for (final id in const ['netease', 'kugou', 'qq', 'migu']) {
+        final v = await _store.read('$_keyPrefix$id');
+        if (v != null && v.isNotEmpty) restored[id] = v;
+      }
     }
     if (!ref.mounted) return; // 读盘期间 provider 可能已释放
     state = state.copyWith(
@@ -62,18 +75,18 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
     );
   }
 
-  Future<void> save(MusicPlatform p, String cookie) async {
+  Future<void> save(String p, String cookie) async {
     if (cookie.trim().isEmpty) return;
     state = state.copyWith(cookies: {...state.cookies, p: cookie});
-    await _store.write('$_keyPrefix${p.name}', cookie);
+    await _store.write('$_keyPrefix$p', cookie);
     // 写盘后再回读校验：某些平台（缺 keychain 权限）会静默失败，
     // 不校验的话用户会看到「已登录」而重启后消失。
-    final readBack = await _store.read('$_keyPrefix${p.name}');
+    final readBack = await _store.read('$_keyPrefix$p');
     if (readBack == null || readBack.isEmpty) {
       // 诊断：把期望长度带出来，能区分「完全没写入」与「写入被截断」。
       debugPrint(
-        '[music.auth] keychain read-back empty: platform=${p.name} '
-        'expectedLen=${cookie.length} key=$_keyPrefix${p.name}',
+        '[music.auth] keychain read-back empty: platform=\$p '
+        'expectedLen=${cookie.length} key=$_keyPrefix$p',
       );
       state = state.copyWith(cookies: {...state.cookies}..remove(p));
       throw const MusicCredentialStoreException();
@@ -83,10 +96,10 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
     }
   }
 
-  Future<void> clear(MusicPlatform p) async {
+  Future<void> clear(String p) async {
     final next = {...state.cookies}..remove(p);
     state = state.copyWith(cookies: next);
-    await _store.delete('$_keyPrefix${p.name}');
+    await _store.delete('$_keyPrefix$p');
   }
 }
 

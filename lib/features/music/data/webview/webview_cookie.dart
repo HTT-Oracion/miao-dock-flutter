@@ -1,4 +1,3 @@
-import '../../domain/music_models.dart';
 import 'webview_login_config.dart';
 
 /// WebView 里读到的一条 Cookie（与具体插件解耦）。
@@ -72,4 +71,4 @@ class WebviewCookieCollector {
 }
 
 /// 该平台是否支持 WebView 登录。
-bool supportsWebviewLogin(MusicPlatform platform) => webviewLoginConfigs.containsKey(platform);
+bool supportsWebviewLogin(String platformId) => webviewLoginConfigs.containsKey(platformId);

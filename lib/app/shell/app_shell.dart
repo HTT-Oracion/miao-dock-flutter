@@ -30,6 +30,7 @@ import '../../features/music/ui/desktop/queue_drawer.dart';
 import '../../features/music/ui/desktop/search_overlay.dart';
 import '../../features/music/ui/sidebar_mini_player.dart';
 import '../../features/music/ui/sidebar_source_group.dart';
+import '../../features/music/ui/widgets/music_shared.dart';
 import '../../features/music/ui/widgets/platform_logo.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_title_bar.dart';
@@ -208,7 +209,7 @@ class _DesktopShell extends ConsumerWidget {
                 // 音乐模块附属组：音源（四平台 + 三态徽标，设计稿 N04）。
                 // 音乐模块附属组：音源（只列**已导入源**的平台；一个都没有时
                 // 整组连同分隔线都不出现 —— 用户口径）。
-                sourceGroup: location.moduleIndex == 1 && ref.watch(availableMusicPlatformsProvider).isNotEmpty
+                sourceGroup: location.moduleIndex == 1 && ref.watch(musicPlatformInfosProvider).isNotEmpty
                     ? (collapsed ? const SidebarSourceMini() : const SidebarSourceGroup())
                     : null,
                 topInset: topInset,
@@ -658,7 +659,7 @@ class _MusicMobileHeader extends ConsumerWidget {
             onTap: () => ref.read(musicUiProvider.notifier).setAccountSheet(true),
             child: Tooltip(
               message: l10n.musicCurSourceAria(platformBrands[cur]!.label),
-              child: PlatformLogo(platform: cur, size: 28),
+              child: MusicPlatformBadge(info: platformInfoById(cur, ref.watch(musicPlatformInfosProvider)), size: 28),
             ),
           ),
         ],

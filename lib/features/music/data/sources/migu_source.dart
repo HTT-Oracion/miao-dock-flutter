@@ -9,7 +9,7 @@ class MiguSource implements MusicSource {
   final MiguApi _api;
 
   @override
-  MusicPlatform get platform => MusicPlatform.migu;
+  String get platformId => 'migu';
 
   @override
   bool get supportsDailySongs => false;

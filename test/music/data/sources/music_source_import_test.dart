@@ -31,6 +31,7 @@ class ProbeSource extends MusicSourceBase {
 
 void main() {
   testBundledPackages();
+  newPlatformTests();
 
   late Directory tempDir;
   late MusicSourceImporter importer;
@@ -89,7 +90,7 @@ void main() {
     final sources = importer.installedSources();
     expect(sources.length, 1);
     expect(sources.first.id, 'probe');
-    expect(sources.first.platform.name, 'netease');
+    expect(sources.first.platformId, 'netease');
   });
 
   test('本地目录导入：index.json 按 file:// 解析同目录 JS', () async {
@@ -148,7 +149,63 @@ void testBundledPackages() {
       // 跑真实导入校验（platform 推导 / hosts 扫描 / 入口类）。
       final result = await MusicSourceImporter().importScript(js, fileName: '$pkg.js');
       expect(result.ok, isTrue, reason: '$pkg 导入校验失败：${result.errors}');
-      expect(result.source!.manifest.resolvedPlatform, isNotNull);
+      expect(result.source!.platformId, isNotEmpty);
     });
   }
+}
+
+/// 🔴 平台身份字符串化后的新能力：**任意新平台**可导入。
+///
+/// 破坏点：清单校验回退到「必须是内置枚举成员」→ 新平台（bilibili）导入被拒，
+/// 源体系退化回内置四平台。
+void newPlatformTests() {
+  late Directory tempDir;
+  late MusicSourceImporter importer;
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('music-source-newplat');
+    importer = MusicSourceImporter(rootResolver: () => tempDir);
+  });
+  tearDown(() {
+    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+  });
+
+  const bilibiliJs = '''
+class BilibiliSource extends MusicSourceBase {
+  name = '哔哩哔哩';
+  platform = 'bilibili';
+  key = 'bilibili';
+  version = '1.0.0';
+  baseUrl = 'https://www.bilibili.com';
+  logo = 'https://www.bilibili.com/favicon.ico';
+  color = '#FB7299';
+  async searchSongs(args) { return { songs: [] }; }
+  async songUrl(args) { return { url: null }; }
+}
+''';
+
+  test('新平台（bilibili）导入：platformId / logo / color 全部生效', () async {
+    final result = await importer.importScript(bilibiliJs, fileName: 'bilibili.js');
+    expect(result.ok, isTrue, reason: '${result.errors}');
+    final source = result.source!;
+    // 破坏点 1：platformId 校验回退到内置枚举 → 新平台被拒。
+    expect(source.platformId, 'bilibili');
+    // 破坏点 2：logo / color 声明丢失 → 平台徽章退化为派生色。
+    expect(source.manifest.logoUrl, 'https://www.bilibili.com/favicon.ico');
+    expect(source.manifest.colorHex, '#FB7299');
+    expect(source.info.logoUrl, isNotNull);
+    expect(source.info.color, isNotNull);
+  });
+
+  test('新平台未声明 logo / color：info 留空（由注册表派生兜底）', () async {
+    final plain = bilibiliJs
+        .replaceAll("logo = 'https://www.bilibili.com/favicon.ico';", '')
+        .replaceAll("color = '#FB7299';", '');
+    final result = await importer.importScript(plain, fileName: 'bilibili.js');
+    expect(result.ok, isTrue);
+    // 破坏点：派生兜底在导入期强塞 → 覆盖注册表的三层兜底逻辑。
+    expect(result.source!.manifest.logoUrl, isNull);
+    expect(result.source!.manifest.colorHex, isNull);
+    expect(result.source!.info.logoUrl, isNull);
+    expect(result.source!.info.color, isNull);
+  });
 }

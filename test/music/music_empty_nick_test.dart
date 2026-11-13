@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 
 /// 登录后空昵称不崩溃。
 ///
@@ -11,7 +10,7 @@ import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 /// 防护收敛在 `MusicAccountState.avatarInitial`，所有取首字的地方统一走它。
 void main() {
   MusicAccountState stateOf(String? nick) =>
-      MusicAccountState(cur: MusicPlatform.netease, logged: true, nick: nick, extra: const {});
+      MusicAccountState(cur: 'netease', logged: true, nick: nick, extra: const {});
 
   test('空昵称：头像占位为「?」，不抛 RangeError', () {
     final s = stateOf('');
@@ -31,6 +30,6 @@ void main() {
   test('displayName：已登录返回昵称（可为空），未登录返回空串', () {
     expect(stateOf('abc').displayName, 'abc');
     expect(stateOf('').displayName, '');
-    expect(MusicAccountState(cur: MusicPlatform.netease, logged: false, nick: null, extra: const {}).displayName, '');
+    expect(MusicAccountState(cur: 'netease', logged: false, nick: null, extra: const {}).displayName, '');
   });
 }

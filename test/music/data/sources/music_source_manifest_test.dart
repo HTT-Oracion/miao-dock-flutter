@@ -23,7 +23,7 @@ void main() {
     expect(issues, isEmpty, reason: '$issues');
     expect(m!.id, 'netease');
     expect(m.platform, 'netease');
-    expect(m.resolvedPlatform?.name, 'netease');
+    expect(m.platform, 'netease');
     expect(m.name, '网易云');
     expect(m.version, '1.0.0');
     expect(m.baseUrl, 'https://music.163.com');
@@ -55,11 +55,27 @@ class X extends MusicSourceBase {
     expect(issues, contains('platform'));
   });
 
-  test('platform 不是内置平台：拒绝', () {
+  test('platform 为任意合法标识符：接受（重构目标：支持新平台）', () {
     final js = goodJs.replaceFirst("platform = 'netease';", "platform = 'bilibili';");
     final (m, issues) = manifestFromScript(js, 'netease.js');
+    expect(issues, isEmpty, reason: '$issues');
+    expect(m!.platform, 'bilibili');
+  });
+
+  test('platform 格式非法 / local：拒绝', () {
+    final (m, issues) = manifestFromScript(
+      goodJs.replaceFirst("platform = 'netease';", "platform = 'Local Rock';"),
+      'netease.js',
+    );
     expect(m, isNull);
     expect(issues, contains('platform'));
+
+    final (m2, issues2) = manifestFromScript(
+      goodJs.replaceFirst("platform = 'netease';", "platform = 'local';"),
+      'netease.js',
+    );
+    expect(m2, isNull);
+    expect(issues2, contains('platform'));
   });
 
   test('入口类缺失 / 不继承 MusicSourceBase：拒绝', () {

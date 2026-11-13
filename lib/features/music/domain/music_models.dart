@@ -38,7 +38,7 @@ class MusicSong {
     required this.artist,
     required this.album,
     required this.duration,
-    required this.platform,
+    required this.platformId,
     this.qualityLabel,
     this.mediaId,
     this.coverUrl,
@@ -49,7 +49,9 @@ class MusicSong {
   final String artist;
   final String album;
   final Duration duration;
-  final MusicPlatform platform;
+
+  /// 平台 id（源体系口径：字符串身份，内置四平台 = netease/kugou/qq/migu）。
+  final String platformId;
 
   /// 行内音质角标文案（如「无损」「320K」）；null = 不显示。
   final String? qualityLabel;
@@ -67,7 +69,7 @@ class MusicSong {
     artist: artist,
     album: album,
     duration: duration,
-    platform: platform,
+    platformId: platformId,
     qualityLabel: qualityLabel ?? this.qualityLabel,
     mediaId: mediaId ?? this.mediaId,
     coverUrl: coverUrl ?? this.coverUrl,
@@ -264,11 +266,11 @@ class PlatformBrand {
 }
 
 /// 平台品牌表（色值对齐设计稿 icons.js `PLAT_BRANDS` 最终稿：圆底稍浅纯色）。
-const Map<MusicPlatform, PlatformBrand> platformBrands = {
-  MusicPlatform.netease: PlatformBrand(label: '网易云', color: Color(0xFFE06058), glyph: BrandGlyph.noteCloud),
-  MusicPlatform.kugou: PlatformBrand(label: '酷狗', color: Color(0xFF4FA3F0), glyph: BrandGlyph.letterK),
-  MusicPlatform.qq: PlatformBrand(label: 'QQ 音乐', color: Color(0xFF3FBF72), glyph: BrandGlyph.note),
-  MusicPlatform.migu: PlatformBrand(label: '咪咕', color: Color(0xFFF0668E), glyph: BrandGlyph.letterM),
+const Map<String, PlatformBrand> platformBrands = {
+  'netease': PlatformBrand(label: '网易云', color: Color(0xFFE06058), glyph: BrandGlyph.noteCloud),
+  'kugou': PlatformBrand(label: '酷狗', color: Color(0xFF4FA3F0), glyph: BrandGlyph.letterK),
+  'qq': PlatformBrand(label: 'QQ 音乐', color: Color(0xFF3FBF72), glyph: BrandGlyph.note),
+  'migu': PlatformBrand(label: '咪咕', color: Color(0xFFF0668E), glyph: BrandGlyph.letterM),
 };
 
 /// 「我喜欢的音乐」封面渐变（设计稿 `.lk-cover`：`linear-gradient(140deg,#C2553F,#7A2C26)`）。

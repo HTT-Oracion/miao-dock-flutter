@@ -344,7 +344,7 @@ class NeteaseApi {
       artist: artists.isEmpty ? '${m['artist'] ?? ''}' : artists.join(' / '),
       album: '${album['name'] ?? ''}',
       duration: Duration(milliseconds: dt?.toInt() ?? 0),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
       qualityLabel: _qualityLabel(m),
       // 专辑封面缺失时退回歌手头像：在线音源里 al.picUrl 偶发为空（老歌 / 冷门曲），
       // 直接留空会让列表与播放器整块变渐变占位，用户以为没加载出来。

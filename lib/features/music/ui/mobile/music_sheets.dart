@@ -762,15 +762,15 @@ class _AccountBody extends ConsumerWidget {
     final palette = AppPalette.of(context);
     final acc = ref.watch(musicAccountProvider);
 
-    String badgeOf(MusicPlatform p) {
+    String badgeOf(String p) {
       if (p == acc.cur) return l10n.musicBadgeCur;
       return acc.isLogged(p) ? l10n.musicBadgeLogged : l10n.musicBadgeOff;
     }
 
     // 🔴 平台行只列**已导入源**的平台；无源时整个平台列表换成导入入口。
-    final available = ref.watch(availableMusicPlatformsProvider);
+    final available = ref.watch(musicPlatformInfosProvider);
 
-    void tapPlatform(MusicPlatform p) {
+    void tapPlatform(String p) {
       final notifier = ref.read(musicUiProvider.notifier);
       // 未登录优先：当前源未登录（如网易云）点自己也要能拉起登录。
       if (!acc.isLogged(p)) {
@@ -781,7 +781,7 @@ class _AccountBody extends ConsumerWidget {
       if (p == acc.cur) return;
       // 到这里一定是「已登录且不是当前源」：切换并播报。
       ref.read(musicAccountProvider.notifier).switchPlatform(p);
-      showAppToast(context, l10n.musicSwitchSourceToast(platformLabel(l10n, p)));
+      showAppToast(context, l10n.musicSwitchSourceToast(platformLabel(l10n, p, infos: available)));
       notifier.setAccountSheet(false);
     }
 
@@ -792,7 +792,7 @@ class _AccountBody extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
           child: Row(
             children: [
-              PlatformLogo(platform: acc.cur, size: 40),
+              MusicPlatformBadge(info: platformInfoById(acc.cur, available), size: 40),
               const SizedBox(width: 11),
               Expanded(
                 child: Column(
@@ -824,15 +824,15 @@ class _AccountBody extends ConsumerWidget {
             },
           )
         else
-          for (final p in MusicPlatform.values.where((p) => p != MusicPlatform.local && available.contains(p)))
+          for (final info in available)
             _SheetOption(
-              leading: PlatformLogo(platform: p, size: 18),
-              title: platformLabel(l10n, p),
+              leading: MusicPlatformBadge(info: info, size: 18),
+              title: info.label,
               trailing: Text(
-                badgeOf(p),
-                style: TextStyle(fontSize: AppFont.px10_5, color: p == acc.cur ? palette.accInk : palette.mut),
+                badgeOf(info.id),
+                style: TextStyle(fontSize: AppFont.px10_5, color: info.id == acc.cur ? palette.accInk : palette.mut),
               ),
-              onTap: () => tapPlatform(p),
+              onTap: () => tapPlatform(info.id),
             ),
         if (acc.logged) ...[
           Container(height: 1, color: palette.line, margin: const EdgeInsets.symmetric(vertical: 6)),

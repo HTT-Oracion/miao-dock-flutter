@@ -9,7 +9,7 @@ class NeteaseSource implements MusicSource {
   final NeteaseApi _api;
 
   @override
-  MusicPlatform get platform => MusicPlatform.netease;
+  String get platformId => 'netease';
 
   @override
   bool get supportsDailySongs => true;

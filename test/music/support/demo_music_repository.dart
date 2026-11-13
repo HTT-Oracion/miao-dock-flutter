@@ -46,7 +46,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: 'YOASOBI',
       album: 'THE BOOK',
       duration: Duration(seconds: 250),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
       qualityLabel: '无损',
     ),
     MusicSong(
@@ -55,7 +55,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: '周杰伦',
       album: '叶惠美',
       duration: Duration(seconds: 269),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
       qualityLabel: '320K',
     ),
     MusicSong(
@@ -64,7 +64,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: '买辣椒也用券',
       album: '起风了',
       duration: Duration(seconds: 313),
-      platform: MusicPlatform.qq,
+      platformId: 'qq',
       qualityLabel: '无损',
     ),
     MusicSong(
@@ -73,7 +73,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: '邓紫棋',
       album: '光年之外',
       duration: Duration(seconds: 235),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
       qualityLabel: '320K',
     ),
     MusicSong(
@@ -82,7 +82,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: '朴树',
       album: '猎户星座',
       duration: Duration(seconds: 301),
-      platform: MusicPlatform.kugou,
+      platformId: 'kugou',
       qualityLabel: '无损',
     ),
     MusicSong(
@@ -91,7 +91,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: '周杰伦',
       album: '魔杰座',
       duration: Duration(seconds: 222),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
       qualityLabel: '320K',
     ),
     MusicSong(
@@ -100,7 +100,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: '米津玄師',
       album: 'Lemon',
       duration: Duration(seconds: 256),
-      platform: MusicPlatform.kugou,
+      platformId: 'kugou',
       qualityLabel: '无损',
     ),
     MusicSong(
@@ -109,7 +109,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: 'DAOKO × 米津玄師',
       album: '打上花火',
       duration: Duration(seconds: 291),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
       qualityLabel: '320K',
     ),
     MusicSong(
@@ -118,7 +118,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: 'ヨルシカ',
       album: '盗作',
       duration: Duration(seconds: 240),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
       qualityLabel: '无损',
     ),
     MusicSong(
@@ -127,7 +127,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: 'Beyond',
       album: '乐与怒',
       duration: Duration(seconds: 325),
-      platform: MusicPlatform.migu,
+      platformId: 'migu',
       qualityLabel: '无损',
     ),
     MusicSong(
@@ -136,7 +136,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: '周杰伦',
       album: '范特西',
       duration: Duration(seconds: 256),
-      platform: MusicPlatform.netease,
+      platformId: 'netease',
       qualityLabel: '320K',
     ),
     MusicSong(
@@ -145,7 +145,7 @@ class DemoMusicRepository implements MusicRepository {
       artist: '陈奕迅',
       album: '孤勇者',
       duration: Duration(seconds: 256),
-      platform: MusicPlatform.qq,
+      platformId: 'qq',
       qualityLabel: '无损',
     ),
   ];
@@ -604,7 +604,7 @@ class DemoMusicRepository implements MusicRepository {
         artist: '本地文件',
         album: '本机',
         duration: Duration(seconds: 200 + 17 * i),
-        platform: MusicPlatform.local,
+        platformId: 'local',
       ),
   ];
 
@@ -625,7 +625,7 @@ class DemoMusicRepository implements MusicRepository {
           artist: '本地文件',
           album: '本机',
           duration: const Duration(seconds: 210),
-          platform: MusicPlatform.local,
+          platformId: 'local',
         ),
       );
       i++;

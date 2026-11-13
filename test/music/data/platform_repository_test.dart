@@ -20,7 +20,7 @@ MusicSong _song(String id, {String? mid}) => MusicSong(
   artist: 'a',
   album: 'al',
   duration: const Duration(seconds: 100),
-  platform: MusicPlatform.netease,
+  platformId: 'netease',
   mediaId: mid,
 );
 
@@ -33,7 +33,7 @@ void main() {
 
   test('详情缺封面时用列表元数据回填（酷狗/QQ 详情只给曲目）', () async {
     final source = _FakeSource(chartCount: 2);
-    final repo = PlatformMusicRepository(platform: MusicPlatform.kugou, source: source);
+    final repo = PlatformMusicRepository(platformId: 'kugou', source: source);
 
     // 先走列表（缓存元数据），再取详情。
     await repo.recommendedPlaylists();
@@ -46,25 +46,25 @@ void main() {
 
   test('推荐歌单走平台实现；空结果回退榜单清单', () async {
     final source = _FakeSource(recommend: const [], chartCount: 3);
-    final repo = PlatformMusicRepository(platform: MusicPlatform.kugou, source: source);
+    final repo = PlatformMusicRepository(platformId: 'kugou', source: source);
     final list = await repo.recommendedPlaylists();
     expect(list.length, 3);
     expect(list.first.id, 'c0');
   });
 
   test('每日推荐：平台不支持时返回空集而不是抛错', () async {
-    final repo = PlatformMusicRepository(platform: MusicPlatform.qq, source: _FakeSource());
+    final repo = PlatformMusicRepository(platformId: 'qq', source: _FakeSource());
     expect(await repo.dailySongs(), isEmpty);
   });
 
   test('评论：平台不支持时返回空集', () async {
-    final repo = PlatformMusicRepository(platform: MusicPlatform.migu, source: _FakeSource());
+    final repo = PlatformMusicRepository(platformId: 'migu', source: _FakeSource());
     expect(await repo.comments('x'), isEmpty);
   });
 
   test('榜单卡组装 Top3；单张取详情失败只丢该卡 Top3，不影响其他卡', () async {
     final source = _FakeSource(chartCount: 2, failingChartId: 'c1');
-    final repo = PlatformMusicRepository(platform: MusicPlatform.netease, source: source);
+    final repo = PlatformMusicRepository(platformId: 'netease', source: source);
     final charts = await repo.charts();
     expect(charts.length, 2);
     expect(charts.first.top.length, 3);
@@ -72,7 +72,7 @@ void main() {
   });
 
   test('平台异常映射成仓库错误（网络类 → network）', () async {
-    final repo = PlatformMusicRepository(platform: MusicPlatform.netease, source: _FakeSource(failSearch: true));
+    final repo = PlatformMusicRepository(platformId: 'netease', source: _FakeSource(failSearch: true));
     await expectLater(
       repo.search('x'),
       throwsA(isA<MusicRepositoryException>().having((e) => e.code, 'code', MusicRepositoryErrorCode.network)),
@@ -80,7 +80,7 @@ void main() {
   });
 
   test('歌词：首次同步读为空、loadLyrics 后缓存命中', () async {
-    final repo = PlatformMusicRepository(platform: MusicPlatform.netease, source: _FakeSource());
+    final repo = PlatformMusicRepository(platformId: 'netease', source: _FakeSource());
     final s = _song('1');
     expect(repo.lyricsFor(s).lines, isEmpty);
     final loaded = await repo.loadLyrics(s);
@@ -89,7 +89,7 @@ void main() {
   });
 
   test('故障注入：指定 scope 抛 network，重置后恢复', () async {
-    final repo = PlatformMusicRepository(platform: MusicPlatform.netease, source: _FakeSource());
+    final repo = PlatformMusicRepository(platformId: 'netease', source: _FakeSource());
     repo.setFailScope(FailScope.search, true);
     await expectLater(repo.search('x'), throwsA(isA<MusicRepositoryException>()));
     repo.resetFailScopes();
@@ -114,7 +114,7 @@ class _FakeSource implements MusicSource {
   final bool failSearch;
 
   @override
-  MusicPlatform get platform => MusicPlatform.netease;
+  String get platformId => 'netease';
 
   @override
   bool get supportsDailySongs => false;

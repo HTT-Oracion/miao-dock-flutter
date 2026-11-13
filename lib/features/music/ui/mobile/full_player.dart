@@ -442,7 +442,7 @@ class _FullMusicPlayerState extends ConsumerState<FullMusicPlayer> with TickerPr
                   ),
                   const SizedBox(height: 1),
                   Text(
-                    '${song.artist} · ${platformLabel(l10n, song.platform)}',
+                    '${song.artist} · ${platformLabel(l10n, song.platformId, infos: ref.watch(musicPlatformInfosProvider))}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: AppFont.px11, color: palette.mut),
@@ -451,7 +451,7 @@ class _FullMusicPlayerState extends ConsumerState<FullMusicPlayer> with TickerPr
               ),
             ),
           if (showTranslate) const Spacer(),
-          if (song.platform != MusicPlatform.local)
+          if (song.platformId != 'local')
             TapScaleButton(
               onTap: () => ref.read(playerProvider.notifier).toggleLike(song),
               semantics: l10n.musicLikeAria,

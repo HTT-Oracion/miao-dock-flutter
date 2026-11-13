@@ -4864,3 +4864,28 @@
   `AppShell` 类一度丢失 —— 已 `git checkout` 恢复并重放本轮改动。教训：多文件
   写回的脚本必须逐文件核验写入目标。
 - **验证**：全仓 448 用例绿；analyze 无问题；macOS 构建通过。
+
+## D-229 · 平台身份字符串化：支持任意新数据源（2026-11-14）
+
+- **状态**：已实施（枚举退役重构完成）。
+- **做了什么**：
+  · `MusicSong.platform: MusicPlatform` → `platformId: String`（全 UI / 控制器同步）；
+  · 会话 `cur` / `extra`、凭据键（`music.cookie.<id>`）全部字符串化；凭据读盘改为
+    `readAll` 扫描（凭据键随导入平台动态增长，SecureStore 补 readAll 透传）；
+  · 清单校验放宽：`platform` 接受任意 `[a-z][a-z0-9_]{1,31}` 标识符（'local' 保留）；
+  · 新增 `MusicPlatformInfo`（id / label / logoUrl / color / builtIn）与
+    `musicPlatformInfosProvider`（**保序** = 源注册表顺序 → 侧栏与登录弹窗顺序与
+    数据源页一致，用户口径）；
+  · `MusicPlatformBadge` 三层兜底渲染：源声明 logo（网络图）→ 内置品牌字形 →
+    稳定派生色圆底 + eighth-note 图标；
+  · 源可声明 logo / color / 登录配置（`logo` / `color` / `loginUrl` /
+    `loginCookieDomains` / `loginCookieNames` 类字段）；登录配置查询
+    `loginConfigFor(id)`：内置静态表 → 源声明 → null；
+  · 登录弹窗平台行：**最多同屏 4 个**，超出横向滚动（固定宽 pick + SingleChildScrollView）；
+  · `platformBrands` 表键枚举 → 字符串 id。
+- **验证**：新平台（bilibili）导入测试（platformId / logo / color 全生效 + 无声明时
+  留空给注册表兜底）；保序测试（registry stub 三源乱序输入 → provider 原序输出）；
+  全仓 449 用例绿；探针（外部仓库四平台）全链路复验；macOS 构建通过。
+- **坑**：批量替换把 `'local,',` 写进字符串字面量（双逗号）；`\$p` 转义陷阱把 auth
+  键写成字面量 `$p`（全平台共用一键 + save 回读被 fake gate 卡死 30s 超时）——
+  均已修复并全量回归。

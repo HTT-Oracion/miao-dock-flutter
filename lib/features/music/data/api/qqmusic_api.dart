@@ -481,7 +481,7 @@ class QqMusicApi {
       artist: singers.isEmpty ? _stripHtml('${m['singer'] ?? ''}') : singers.join(' / '),
       album: _stripHtml('${album['name'] ?? m['albumname'] ?? ''}'),
       duration: Duration(seconds: interval),
-      platform: MusicPlatform.qq,
+      platformId: 'qq',
       qualityLabel: _qqQualityLabel(m),
       coverUrl: _albumCover('${album['mid'] ?? ''}'),
       mediaId:

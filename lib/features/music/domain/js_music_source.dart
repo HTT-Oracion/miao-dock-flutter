@@ -1,10 +1,15 @@
-import 'music_models.dart';
+import 'package:flutter/material.dart';
+
+import 'music_platform_info.dart';
 import 'music_source_manifest.dart';
 
 /// 已导入的 JS 音乐源（清单 + 运行时状态）。
 ///
 /// [capabilities] 由导入试跑静态扫描 `sourceFile` 得到；上层据此隐藏入口，
 /// 不给「点了没反应」的按钮。连续失败达到 3 次熔断（与漫画源同口径）。
+///
+/// 🔴 平台身份是**字符串** [platformId]（= 清单 platform 字段）：内置四平台的
+/// id 与旧枚举名一致（netease / kugou / qq / migu），新平台任意合法标识符。
 class JsMusicSource {
   const JsMusicSource({
     required this.manifest,
@@ -21,9 +26,23 @@ class JsMusicSource {
   final DateTime? lastUsedAt;
 
   String get id => manifest.id;
+
+  /// 平台 id（内置四平台 = netease / kugou / qq / migu；新平台任意标识符）。
+  String get platformId => manifest.platform;
+
   String get name => manifest.name;
-  MusicPlatform get platform => manifest.resolvedPlatform!;
   bool get isAvailable => enabled && consecutiveFailures < 3;
+
+  /// 源的展示描述符：label / logo / 颜色三层兜底（声明 → 内置品牌 → 派生）。
+  MusicPlatformInfo get info {
+    Color? declared;
+    final hex = manifest.colorHex;
+    if (hex != null && RegExp(r'^#?[0-9a-fA-F]{6,8}$').hasMatch(hex)) {
+      final digits = hex.replaceFirst('#', '');
+      declared = Color(int.parse(digits.length == 6 ? 'FF$digits' : digits, radix: 16));
+    }
+    return MusicPlatformInfo(id: platformId, label: name, logoUrl: manifest.logoUrl, color: declared);
+  }
 
   JsMusicSource withFailure() => JsMusicSource(
     manifest: manifest,

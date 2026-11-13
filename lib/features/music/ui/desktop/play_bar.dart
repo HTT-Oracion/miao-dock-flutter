@@ -8,6 +8,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../../controller/music_player.dart';
+import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
 import '../widgets/music_shared.dart';
@@ -94,7 +95,9 @@ class MusicPlayBar extends ConsumerWidget {
                                 margin: const EdgeInsets.only(right: 5),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: platformBrands[song.platform]?.color ?? palette.mut,
+                                  color:
+                                      platformInfoById(song.platformId, ref.watch(musicPlatformInfosProvider)).color ??
+                                      palette.mut,
                                 ),
                               ),
                               Expanded(
@@ -110,7 +113,7 @@ class MusicPlayBar extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    if (song.platform != MusicPlatform.local)
+                    if (song.platformId != 'local')
                       _BarIcon(
                         icon: LucideIcons.heart,
                         tooltip: liked ? l10n.musicMenuUnlike : l10n.musicMenuLike,

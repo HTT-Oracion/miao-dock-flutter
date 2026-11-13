@@ -522,7 +522,7 @@ class _SongRowState extends ConsumerState<SongRow> {
                 (widget.onNext ?? _defaultNext)();
               },
             ),
-            if (widget.song.platform != MusicPlatform.local) ...[
+            if (widget.song.platformId != 'local') ...[
               const MusicMenuDivider(),
               MusicMenuTile(
                 icon: LucideIcons.heart,

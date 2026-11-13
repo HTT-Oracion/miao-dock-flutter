@@ -44,7 +44,7 @@ void main() {
     artist: '歌手',
     album: '专辑',
     duration: Duration(seconds: 200),
-    platform: MusicPlatform.netease,
+    platformId: 'netease',
     coverUrl: 'https://example.invalid/cover.jpg',
   );
 

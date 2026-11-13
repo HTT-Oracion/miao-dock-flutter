@@ -13,7 +13,8 @@ import '../../controller/music_login_controller.dart';
 import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../data/webview/webview_login_config.dart';
-import '../../domain/music_models.dart';
+import '../../domain/music_platform_info.dart';
+import '../widgets/music_shared.dart';
 import '../widgets/music_state_box.dart';
 import '../widgets/platform_logo.dart';
 import '../login/mobile_webview_login_page.dart';
@@ -35,8 +36,8 @@ class LoginModal extends ConsumerStatefulWidget {
 }
 
 class _LoginModalState extends ConsumerState<LoginModal> {
-  /// 弹窗内选中的平台（仅弹窗局部态；确定后才写入 session）。
-  late MusicPlatform _platform = ref.read(musicUiProvider).loginPlatform;
+  /// 弹窗内选中的平台 id（仅弹窗局部态；确定后才写入 session）。
+  late String _platformId = ref.read(musicUiProvider).loginPlatform;
 
   bool _launching = false;
 
@@ -58,7 +59,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final login = ref.watch(musicLoginProvider);
-    final available = ref.watch(availableMusicPlatformsProvider);
+    final available = ref.watch(musicPlatformInfosProvider);
 
     // 登录成功：关弹窗 + 轻提示。
     ref.listen(musicLoginProvider.select((s) => s.phase), (prev, next) {
@@ -103,19 +104,28 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                   if (available.isEmpty)
                     Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: MusicNoSourcePrompt())
                   else ...[
-                    Row(
-                      children: [
-                        for (final MusicPlatform p in available) ...[
-                          Expanded(
-                            child: _PlatformPick(
-                              platform: p,
-                              selected: p == _platform,
-                              onTap: () => _selectPlatform(p),
-                            ),
-                          ),
-                          if (p != available.last) const SizedBox(width: 6),
-                        ],
-                      ],
+                    // 🔴 平台行**最多同屏 4 个**，超出横向滚动（用户口径）：
+                    // 固定宽度 pick + 横向 SingleChildScrollView。
+                    SizedBox(
+                      height: 46,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final info in available) ...[
+                              SizedBox(
+                                width: 86,
+                                child: _PlatformPick(
+                                  info: info,
+                                  selected: info.id == _platformId,
+                                  onTap: () => _selectPlatform(info.id),
+                                ),
+                              ),
+                              if (info != available.last) const SizedBox(width: 6),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 18),
                     ..._body(context, palette, l10n, login),
@@ -130,8 +140,8 @@ class _LoginModalState extends ConsumerState<LoginModal> {
   }
 
   List<Widget> _body(BuildContext context, AppPalette palette, AppLocalizations l10n, MusicLoginState login) {
-    final brand = platformBrands[_platform];
-    final supported = MusicLoginController.supports(_platform);
+    final info = platformInfoById(_platformId, ref.watch(musicPlatformInfosProvider));
+    final supported = MusicLoginController.supports(_platformId);
 
     if (!supported) {
       return [
@@ -154,12 +164,12 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     final waiting = _launching && !saving;
     return [
       Center(
-        child: SizedBox(width: 158, height: 158, child: SeedCoverPlaceholder(brand: brand?.label ?? '')),
+        child: SizedBox(width: 158, height: 158, child: SeedCoverPlaceholder(brand: info.label)),
       ),
       const SizedBox(height: 14),
       Center(
         child: Text(
-          waiting ? l10n.musicLoginWindowOpen : l10n.musicLoginOpenOfficial(brand?.label ?? ''),
+          waiting ? l10n.musicLoginWindowOpen : l10n.musicLoginOpenOfficial(info.label),
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: AppFont.px12, color: palette.ink2, height: 1.5),
         ),
@@ -199,8 +209,8 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     if (_launching) return;
     final seq = ++_loginSeq;
     setState(() => _launching = true);
-    ref.read(musicLoginProvider.notifier).begin(_platform);
-    final config = webviewLoginConfigs[_platform];
+    ref.read(musicLoginProvider.notifier).begin(_platformId);
+    final config = loginConfigFor(_platformId);
     if (config == null) {
       setState(() => _launching = false);
       return;
@@ -228,9 +238,9 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     }
   }
 
-  void _selectPlatform(MusicPlatform platform) {
-    if (_platform == platform) return;
-    setState(() => _platform = platform);
+  void _selectPlatform(String platformId) {
+    if (_platformId == platformId) return;
+    setState(() => _platformId = platformId);
     // 让上一次登录流程失效（旧窗口稍后返回也不会改状态）。
     _loginSeq++;
     _launching = false;
@@ -308,16 +318,15 @@ class _Header extends StatelessWidget {
 /// 🔴 logo 必须用 [PlatformLogo]（各平台真实品牌字形），
 /// 不要用通用 Lucide 图标代替 —— 那会让用户分不清平台。
 class _PlatformPick extends StatelessWidget {
-  const _PlatformPick({required this.platform, required this.selected, required this.onTap});
+  const _PlatformPick({required this.info, required this.selected, required this.onTap});
 
-  final MusicPlatform platform;
+  final MusicPlatformInfo info;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final brand = platformBrands[platform];
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -330,11 +339,11 @@ class _PlatformPick extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            PlatformLogo(platform: platform, size: 18),
+            MusicPlatformBadge(info: info, size: 18),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
-                brand?.label ?? '',
+                info.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(

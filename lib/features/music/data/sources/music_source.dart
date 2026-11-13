@@ -8,7 +8,8 @@ import '../../domain/music_models.dart';
 /// 能力矩阵与 `miao-dock/src/modules/music/platform.ts` 的 `PLATFORM_CAPS` 对齐：
 /// 每日推荐仅网易云、评论仅网易云、歌单推荐网易云 / 咪咕 / QQ。
 abstract interface class MusicSource {
-  MusicPlatform get platform;
+  /// 平台 id（字符串身份；内置四平台 = netease/kugou/qq/migu）。
+  String get platformId;
 
   /// 是否具备某能力（UI 据此隐藏入口，而不是给一个点了没反应的按钮）。
   bool get supportsDailySongs;

@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_auth.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/features/music/data/api/netease_api.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 
 /// Cookie 从 Keychain 恢复后，昵称必须回读补齐。
 ///
@@ -16,10 +15,10 @@ class _FakeAuth extends MusicAuthNotifier {
   bool cleared = false;
 
   @override
-  MusicAuthState build() => MusicAuthState(cookies: {MusicPlatform.netease: cookie}, loading: false);
+  MusicAuthState build() => MusicAuthState(cookies: {'netease': cookie}, loading: false);
 
   @override
-  Future<void> clear(MusicPlatform p) async {
+  Future<void> clear(String p) async {
     cleared = true;
     state = state.copyWith(cookies: {...state.cookies}..remove(p));
   }
@@ -100,7 +99,7 @@ void main() {
   });
 
   test('avatarInitial 渲染防护：空昵称兜底「?」', () {
-    final s = MusicAccountState(cur: MusicPlatform.netease, logged: true, nick: '', extra: const {});
+    final s = MusicAccountState(cur: 'netease', logged: true, nick: '', extra: const {});
     expect(s.avatarInitial, '?');
     expect(s.displayName, '');
   });

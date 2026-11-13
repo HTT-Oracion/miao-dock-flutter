@@ -39,7 +39,7 @@ class DiscoverView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     // 🔴 未导入任何音乐源：不发起任何数据请求，直接给导入引导（与漫画在线模块同交互）。
-    if (ref.watch(availableMusicPlatformsProvider).isEmpty) {
+    if (ref.watch(musicPlatformInfosProvider).isEmpty) {
       return const MusicNoSourcePrompt();
     }
     final recs = ref.watch(recCardsProvider);
@@ -1132,7 +1132,7 @@ class _DailySkeleton extends StatelessWidget {
 class MusicLoginCtaCard extends ConsumerWidget {
   const MusicLoginCtaCard({super.key, required this.cur});
 
-  final MusicPlatform cur;
+  final String cur;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

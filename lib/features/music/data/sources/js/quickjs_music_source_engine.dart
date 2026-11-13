@@ -391,25 +391,25 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
     int offset = 0,
   }) async {
     final raw = await _call(source, 'searchSongs', {'keyword': keyword, 'limit': limit, 'offset': offset}, (r) => r);
-    return _dto(platform: source.platform).songs(raw);
+    return _dto(platformId: source.platformId).songs(raw);
   }
 
   @override
   Future<List<MusicPlaylist>> searchPlaylists(JsMusicSource source, {required String keyword, int limit = 12}) async {
     final raw = await _call(source, 'searchPlaylists', {'keyword': keyword, 'limit': limit}, (r) => r);
-    return _dto(platform: source.platform).playlists(raw);
+    return _dto(platformId: source.platformId).playlists(raw);
   }
 
   @override
   Future<List<MusicChart>> charts(JsMusicSource source) async {
     final raw = await _call(source, 'charts', const {}, (r) => r);
-    return _dto(platform: source.platform).charts(raw);
+    return _dto(platformId: source.platformId).charts(raw);
   }
 
   @override
   Future<({MusicPlaylist meta, List<MusicSong> songs})> chartDetail(JsMusicSource source, {required String id}) async {
     final raw = await _call(source, 'chartDetail', {'id': id}, (r) => r);
-    return _dto(platform: source.platform).detail(raw);
+    return _dto(platformId: source.platformId).detail(raw);
   }
 
   @override
@@ -418,13 +418,13 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
     required String id,
   }) async {
     final raw = await _call(source, 'playlistDetail', {'id': id}, (r) => r);
-    return _dto(platform: source.platform).detail(raw);
+    return _dto(platformId: source.platformId).detail(raw);
   }
 
   @override
   Future<SongLyrics> lyrics(JsMusicSource source, {required MusicSong song}) async {
     final raw = await _call(source, 'lyrics', {'id': song.id, 'mediaId': song.mediaId ?? song.id}, (r) => r);
-    return _dto(platform: source.platform).lyrics(raw);
+    return _dto(platformId: source.platformId).lyrics(raw);
   }
 
   @override
@@ -443,7 +443,7 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
   Future<List<MusicSong>> dailySongs(JsMusicSource source) async {
     if (source.capabilities.contains('dailySongs') == false) return const [];
     final raw = await _call(source, 'dailySongs', const {}, (r) => r);
-    return _dto(platform: source.platform).songs(raw);
+    return _dto(platformId: source.platformId).songs(raw);
   }
 
   @override
@@ -455,14 +455,14 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
   }) async {
     if (source.capabilities.contains('comments') == false) return const [];
     final raw = await _call(source, 'comments', {'songId': songId, 'limit': limit, 'offset': offset}, (r) => r);
-    return _dto(platform: source.platform).comments(raw);
+    return _dto(platformId: source.platformId).comments(raw);
   }
 
   @override
   Future<List<MusicPlaylist>> userPlaylists(JsMusicSource source) async {
     if (source.capabilities.contains('userPlaylists') == false) return const [];
     final raw = await _call(source, 'userPlaylists', const {}, (r) => r);
-    return _dto(platform: source.platform).playlists(raw);
+    return _dto(platformId: source.platformId).playlists(raw);
   }
 
   @override
@@ -481,7 +481,7 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
     _resetRuntime();
   }
 
-  MusicSourceDto _dto({required MusicPlatform platform}) => MusicSourceDto(platform: platform);
+  MusicSourceDto _dto({required String platformId}) => MusicSourceDto(platformId: platformId);
 }
 
 /// 引擎错误（code 与漫画源同枚举口径：NETWORK / TIMEOUT / PARSE / SPEC_UNSUPPORTED /

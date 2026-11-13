@@ -6,7 +6,6 @@ import 'package:miao_dock_flutter/features/music/controller/music_login_controll
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_cookie.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_login_config.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 
 /// WebView 登录：配置、Cookie 汇总与登录收口。
 ///
@@ -19,7 +18,7 @@ class _FakeAuth extends MusicAuthNotifier {
   MusicAuthState build() => const MusicAuthState(cookies: {}, loading: false);
 
   @override
-  Future<void> save(MusicPlatform p, String cookie) async {
+  Future<void> save(String p, String cookie) async {
     state = state.copyWith(cookies: {...state.cookies, p: cookie});
   }
 }
@@ -32,7 +31,7 @@ void main() {
   }
 
   test('四平台都有 WebView 登录配置（含登录页与域名）', () {
-    for (final p in [MusicPlatform.netease, MusicPlatform.kugou, MusicPlatform.qq, MusicPlatform.migu]) {
+    for (final p in ['netease', 'kugou', 'qq', 'migu']) {
       final cfg = webviewLoginConfigs[p];
       expect(cfg, isNotNull, reason: '$p 缺登录配置');
       expect(cfg!.url, startsWith('https://'));
@@ -42,7 +41,7 @@ void main() {
   });
 
   test('Cookie 按域名过滤：只收本平台域，且跳过空值', () {
-    final cfg = webviewLoginConfigs[MusicPlatform.netease]!;
+    final cfg = webviewLoginConfigs['netease']!;
     final out = WebviewCookieCollector(cfg).collect(const [
       RawWebviewCookie(name: 'MUSIC_U', value: 'abc', domain: '.music.163.com'),
       RawWebviewCookie(name: 'NMTID', value: 'x', domain: 'music.163.com'),
@@ -58,19 +57,19 @@ void main() {
   });
 
   test('登录票据判定按平台各自的 cookie 名', () {
-    final ne = WebviewCookieCollector(webviewLoginConfigs[MusicPlatform.netease]!);
+    final ne = WebviewCookieCollector(webviewLoginConfigs['netease']!);
     // 破坏点：网易云用 token 判 → 这里会误判为已登录。
     expect(ne.hasLogin(const [RawWebviewCookie(name: 'token', value: 't', domain: 'music.163.com')]), isFalse);
     expect(ne.hasLogin(const [RawWebviewCookie(name: 'MUSIC_U', value: 'u', domain: 'music.163.com')]), isTrue);
 
-    final kg = WebviewCookieCollector(webviewLoginConfigs[MusicPlatform.kugou]!);
+    final kg = WebviewCookieCollector(webviewLoginConfigs['kugou']!);
     expect(kg.hasLogin(const [RawWebviewCookie(name: 'token', value: 't', domain: 'kugou.com')]), isTrue);
   });
 
   test('拿到票据即登录成功并落盘', () async {
     final c = make();
     final nm = c.read(musicLoginProvider.notifier);
-    nm.begin(MusicPlatform.netease);
+    nm.begin('netease');
     expect(c.read(musicLoginProvider).phase, MusicLoginPhase.awaiting);
 
     final ok = await nm.submitCookies(const [
@@ -80,14 +79,14 @@ void main() {
     expect(ok, isTrue);
     expect(c.read(musicLoginProvider).phase, MusicLoginPhase.succeeded);
     // 破坏点：不落盘 → 重启掉线。
-    expect(c.read(musicAuthProvider).cookieOf(MusicPlatform.netease), contains('MUSIC_U=real'));
+    expect(c.read(musicAuthProvider).cookieOf('netease'), contains('MUSIC_U=real'));
     expect(c.read(musicAccountProvider).logged, isTrue);
   });
 
   test('没有票据时不算登录，保持等待', () async {
     final c = make();
     final nm = c.read(musicLoginProvider.notifier);
-    nm.begin(MusicPlatform.netease);
+    nm.begin('netease');
 
     final ok = await nm.submitCookies(const [
       RawWebviewCookie(name: 'NMTID', value: 'only-stats', domain: 'music.163.com'),
@@ -101,7 +100,7 @@ void main() {
   test('用户关闭窗口 → 取消（不算登录）', () {
     final c = make();
     final nm = c.read(musicLoginProvider.notifier);
-    nm.begin(MusicPlatform.kugou);
+    nm.begin('kugou');
     nm.cancel();
     expect(c.read(musicLoginProvider).phase, MusicLoginPhase.cancelled);
     expect(c.read(musicAccountProvider).logged, isFalse);

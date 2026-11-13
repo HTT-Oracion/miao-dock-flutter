@@ -259,7 +259,7 @@ class MiguApi {
       artist: singers.isEmpty ? '${item['singerName'] ?? ''}' : singers.join(' / '),
       album: '${item['album'] ?? item['albumName'] ?? ''}',
       duration: Duration(seconds: durationSec),
-      platform: MusicPlatform.migu,
+      platformId: 'migu',
       qualityLabel: _miguQuality(item),
       mediaId: '${item['contentId'] ?? item['copyrightId'] ?? ''}',
       coverUrl: _miguCover(item),
