@@ -11,6 +11,7 @@ import '../../domain/music_models.dart';
 import '../widgets/music_source_manager.dart';
 import '../widgets/music_shared.dart';
 import '../widgets/platform_logo.dart';
+import '../widgets/remote_cover_image.dart';
 import '../widgets/song_row.dart';
 
 /// 账号菜单（N05）：头像 / 昵称 / 当前音源 / 四平台状态 / 退出登录。
@@ -129,14 +130,22 @@ class _MenuBody extends ConsumerWidget {
                   CircleAvatar(
                     radius: 17,
                     backgroundColor: account.logged ? palette.acc : palette.hi,
-                    child: Text(
-                      account.avatarInitial,
-                      style: TextStyle(
-                        fontSize: AppFont.px13,
-                        fontWeight: FontWeight.w700,
-                        color: account.logged ? palette.onAcc : palette.mut,
-                      ),
-                    ),
+                    child: account.avatarUrl != null && account.avatarUrl!.isNotEmpty
+                        ? ClipOval(
+                            child: SizedBox(
+                              width: 30,
+                              height: 30,
+                              child: RemoteCoverImage(url: account.avatarUrl!, width: 30, height: 30),
+                            ),
+                          )
+                        : Text(
+                            account.avatarInitial,
+                            style: TextStyle(
+                              fontSize: AppFont.px13,
+                              fontWeight: FontWeight.w700,
+                              color: account.logged ? palette.onAcc : palette.mut,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

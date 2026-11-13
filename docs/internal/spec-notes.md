@@ -4969,3 +4969,17 @@
 - **验证**：新增反证用例「已装副本是旧 JS（无登录声明）：内置兜底仍可登录」
   （模拟用户场景：剥离登录声明字段 → 兜底删除即变红）。全量 123 用例绿（音乐+壳层），
   macOS 构建通过。
+
+## D-234 · 头像回显 + 封面 403 修复（2026-11-14）
+
+- **状态**：已实施（需用户重新导入源后实测）。
+- **做了什么**：
+  · netease.js 新增 `picUrl` 工具（http→https + `?param=300y300`，与内置 Dart 口径一致），
+    应用到歌曲封面 / 歌单封面 / 榜单封面 / 头像——修复播放器 artUri 403
+    （just_audio_background 的缓存管理器不带自定义头，http 直连网易云 CDN 被拒）；
+  · loginInfo 返回 `avatarUrl`（profile.avatarUrl 经 picUrl）；MusicLoginInfo / 引擎解析 /
+    `MusicAccountState.avatarUrl` 字段全链路；
+  · 头像渲染三层：**源回读头像图** → 「?」占位（桌面 chip / 账号菜单 / 移动端抽屉头部）。
+- **根因记录（用户实测）**：已安装副本是旧版 JS（导入早于 loginInfo / dailySongs /
+  recommendedPlaylists / referer / 登录声明等能力）——**重新导入即升级**（覆盖确认已实现）。
+- **验证**：全仓 424 用例绿；analyze 无问题；macOS 构建通过。头像 / 每日推荐需登录实测。

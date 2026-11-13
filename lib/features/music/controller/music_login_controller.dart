@@ -157,7 +157,7 @@ class MusicLoginController extends Notifier<MusicLoginState> {
       await engine.setSessionCookie(source, cookie);
       final info = await engine.loginInfo(source);
       if (info == null || !info.loggedIn || info.nick.isEmpty || !ref.mounted) return;
-      ref.read(musicAccountProvider.notifier).login(platformId, info.nick);
+      ref.read(musicAccountProvider.notifier).login(platformId, info.nick, avatarUrl: info.avatarUrl);
       state = state.copyWith(nick: info.nick);
     } on Object {
       // 拿不到昵称就算了：登录态已经成立。

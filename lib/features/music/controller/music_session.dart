@@ -15,10 +15,19 @@ import 'music_auth.dart';
 /// 当前音源与真实 Cookie 登录状态。
 @immutable
 class MusicAccountState {
-  const MusicAccountState({required this.cur, required this.logged, required this.nick, required this.extra});
+  const MusicAccountState({
+    required this.cur,
+    required this.logged,
+    required this.nick,
+    required this.extra,
+    this.avatarUrl,
+  });
 
   /// 当前平台 id（字符串身份，见 js_music_source.dart 的口径说明）。
   final String cur;
+
+  /// 当前平台用户的头像地址（源 loginInfo 回读；null = 无头像，显示「?」占位）。
+  final String? avatarUrl;
   final bool logged;
   final String? nick;
 
@@ -46,11 +55,18 @@ class MusicAccountState {
   /// 头像旁的展示名：已登录显示昵称（可为空串，由 UI 兜底），未登录显示「未登录」由 UI 层取词条。
   String get displayName => logged ? (nick ?? '') : '';
 
-  MusicAccountState copyWith({String? cur, bool? logged, String? nick, Map<String, bool>? extra}) => MusicAccountState(
+  MusicAccountState copyWith({
+    String? cur,
+    bool? logged,
+    String? nick,
+    Map<String, bool>? extra,
+    String? Function()? avatarUrl,
+  }) => MusicAccountState(
     cur: cur ?? this.cur,
     logged: logged ?? this.logged,
     nick: nick ?? this.nick,
     extra: extra ?? this.extra,
+    avatarUrl: avatarUrl != null ? avatarUrl() : this.avatarUrl,
   );
 }
 
@@ -130,20 +146,17 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
         await ref.read(musicAuthProvider.notifier).clear(p);
         return;
       }
-      if (info.nick.isNotEmpty) {
-        _nick = info.nick;
-        state = state.copyWith(nick: info.nick);
-      }
+      state = state.copyWith(nick: info.nick.isNotEmpty ? info.nick : null, avatarUrl: () => info.avatarUrl);
     } on Object {
       // 网络失败：保持现状（已登录 + 「?」），下一轮再试。
     }
   }
 
   /// 登录成功（真实平台状态回读）。
-  void login(String p, String nick) {
+  void login(String p, String nick, {String? avatarUrl}) {
     if (p == state.cur) {
       _nick = nick;
-      state = state.copyWith(logged: true, nick: nick);
+      state = state.copyWith(logged: true, nick: nick, avatarUrl: () => avatarUrl);
       return;
     }
     state = state.copyWith(extra: {...state.extra, p: true});

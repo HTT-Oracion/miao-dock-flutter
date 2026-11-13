@@ -32,6 +32,7 @@ import '../../features/music/ui/sidebar_mini_player.dart';
 import '../../features/music/ui/sidebar_source_group.dart';
 import '../../features/music/ui/widgets/music_shared.dart';
 import '../../features/music/ui/widgets/platform_logo.dart';
+import '../../features/music/ui/widgets/remote_cover_image.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_title_bar.dart';
 import '../../shared/widgets/nav_rail.dart';
@@ -566,6 +567,7 @@ class _AccountChip extends StatelessWidget {
           ),
           child: Row(
             children: [
+              // 头像三层兜底：源回读头像图 → 「?」占位（未登录 / 回读失败）。
               Container(
                 width: 20,
                 height: 20,
@@ -575,11 +577,18 @@ class _AccountChip extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: account.logged ? palette.acc : palette.line2),
                 ),
-                child: Text(
-                  // 昵称可能为空（登录成功但昵称回读失败），substring(0,1) 对空串抛 RangeError。
-                  account.logged && (account.nick?.isNotEmpty ?? false) ? account.nick!.substring(0, 1) : '?',
-                  style: TextStyle(fontSize: AppFont.px9, color: account.logged ? palette.accInk : palette.mut),
-                ),
+                child: account.avatarUrl != null && account.avatarUrl!.isNotEmpty
+                    ? ClipOval(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: RemoteCoverImage(url: account.avatarUrl!, width: 18, height: 18),
+                        ),
+                      )
+                    : Text(
+                        account.avatarInitial,
+                        style: TextStyle(fontSize: AppFont.px9, color: account.logged ? palette.accInk : palette.mut),
+                      ),
               ),
               const SizedBox(width: 6),
               Text(
