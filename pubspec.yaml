@@ -33,7 +33,11 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   go_router: ^16.0.0
   html: ^0.15.6
+  # 音频会话：后台播放 / 锁屏控制 / 与其它 App 的音频焦点协调
+  audio_session: ^0.1.24
   just_audio: ^0.10.6
+  # 后台/锁屏继续播放：just_audio 的后台支持插件（含音频焦点与会话）
+  just_audio_background: ^0.0.1-beta.17
   lucide_icons_flutter: ^4.0.1
   # 移动端偏好落盘目录（path_provider 官方包）；桌面端仍走 HOME 推导（D-005）
   path_provider: ^2.1.5

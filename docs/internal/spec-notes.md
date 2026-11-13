@@ -4567,3 +4567,23 @@
   `Image.network`（`SeedCover`、推荐卡、侧栏迷你播放器）统一带上。
 - **验证**：`music_cover_test` 新增「封面 Image 必须带浏览器 UA」用例；去掉 headers
   即变红。真实 HttpClient 探针：带 headers 的两个网易云封面 URL 均返回 200 并取到图片字节。
+
+## D-212 · 音乐后台播放与锁屏控制（2026-11-13）
+
+- **状态**：已实施。
+- **依赖**：新增 `just_audio_background ^0.0.1-beta.17`（内部依赖 `audio_service 0.18.19`）
+  与显式声明的 `audio_session ^0.1.24`（原为传递依赖，因直接用其 API 而提为直接依赖）。
+  两者均为运行时依赖，纯 Dart + 原生插件，无额外体积资产。
+- **为什么必须在 runApp 之前初始化**：`JustAudioBackground.init` 要向系统注册后台音频会话；
+  晚于首帧注册时 Android 拿不到前台服务、iOS/macOS 拿不到后台音频通道，切后台即被系统掐断。
+- **平台配置**：
+  · Android：manifest 加 `WAKE_LOCK` / `FOREGROUND_SERVICE` /
+    `FOREGROUND_SERVICE_MEDIA_PLAYBACK` 权限，注册 `AudioService` 服务与
+    `MediaButtonReceiver`；`MainActivity` 改为继承 `AudioServiceActivity`
+    （保留原有 folder_picker 通道逻辑）；
+  · iOS / macOS：`Info.plist` 加 `UIBackgroundModes: [audio]`；
+  · macOS Podfile 已满足 `audio_service` 的 10.12.2+ 要求（现为 12.0）。
+- **元数据**：`MusicAudioEngine.load` 增加 `title / artist / album / artUri / duration`，
+  由 `AudioSource.uri` 的 `tag: MediaItem` 承载 —— 通知栏 / 锁屏 / 系统媒体面板靠它展示。
+- **验证**：`flutter build macos` 通过、应用启动无崩溃；音乐域 + l10n 91 个用例全绿。
+- **已知边界**：后台播放属系统级行为，**真机锁屏验证仍需人工确认**（本轮未做真机验证）。

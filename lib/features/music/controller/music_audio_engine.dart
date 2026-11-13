@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart' as ja;
+import 'package:just_audio_background/just_audio_background.dart';
 
 /// 播放引擎抽象：把「有没有真实音频后端」与播放器状态机解耦。
 ///
@@ -17,11 +18,18 @@ abstract interface class MusicAudioEngine {
   bool get isReal;
 
   /// 加载并播放；返回 false 表示这次没接上（调用方自行决定停住还是模拟）。
+  ///
+  /// [title] / [artist] / [album] / [artUri] 用于后台通知与锁屏的媒体信息。
   Future<bool> load({
     required String url,
     required Map<String, String> headers,
     required double volume,
     required bool play,
+    String? title,
+    String? artist,
+    String? album,
+    Uri? artUri,
+    Duration? duration,
   });
 
   Future<void> play();
@@ -64,10 +72,33 @@ class JustAudioEngine implements MusicAudioEngine {
     required Map<String, String> headers,
     required double volume,
     required bool play,
+    String? title,
+    String? artist,
+    String? album,
+    Uri? artUri,
+    Duration? duration,
   }) async {
-    await _player.setAudioSource(ja.AudioSource.uri(Uri.parse(url), headers: headers));
+    await _player.setAudioSource(
+      ja.AudioSource.uri(
+        Uri.parse(url),
+        headers: headers,
+        // 后台通知 / 锁屏 / 系统媒体面板靠这个 tag 取元数据。
+        tag: MediaItem(
+          id: url,
+          title: title ?? '',
+          artist: artist ?? '',
+          album: album ?? '',
+          artUri: artUri,
+          duration: duration,
+        ),
+      ),
+    );
     await _player.setVolume(volume);
-    if (play) await _player.play();
+    // 🔴 绝对不能 `await _player.play()`：just_audio 的 `play()` 返回的 Future
+    // 要等**播放停止 / 暂停**才完成（内部 await playCompleter.future）。这里 await
+    // 会让 load() 一直挂着 → 调用方的 `_audioActive = true` 永远执行不到 →
+    // 播放/暂停、进度拖动、音量全部因为「引擎未激活」而被跳过。
+    if (play) unawaited(_player.play());
     return true;
   }
 
@@ -111,6 +142,11 @@ class SilentAudioEngine implements MusicAudioEngine {
     required Map<String, String> headers,
     required double volume,
     required bool play,
+    String? title,
+    String? artist,
+    String? album,
+    Uri? artUri,
+    Duration? duration,
   }) async => false;
 
   @override

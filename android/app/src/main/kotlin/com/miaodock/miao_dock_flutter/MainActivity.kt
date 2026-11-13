@@ -4,12 +4,12 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
     private val channelName = "miao_dock/folder_picker"
     private val folderRequestCode = 9201
     private var pendingFolderResult: MethodChannel.Result? = null

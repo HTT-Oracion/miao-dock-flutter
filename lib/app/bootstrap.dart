@@ -19,6 +19,7 @@ import '../../features/manga/domain/platform_caps.dart';
 import '../../features/manga/data/http_manga_svc_client.dart';
 import '../../features/manga/data/mobile_mirror_store.dart';
 import 'engine_autostart.dart';
+import 'music_autostart.dart';
 import 'remote_autostart.dart';
 
 /// 启动装配收口（AGENTS §3）：桌面 / 移动平台分支与 Fake / 真客户端注入只在这里发生，
@@ -32,6 +33,9 @@ import 'remote_autostart.dart';
 /// `--dart-define=MIAO_SVC_TOKEN=...` 注入配对令牌。
 Future<void> bootstrap(Widget app) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 音乐后台播放必须在 runApp 之前初始化：它要注册 audio_service 的后台会话，
+  // 晚于首帧会拿不到前台服务，锁屏 / 切后台就会被系统掐断。
+  await initMusicBackgroundPlayback();
   // 偏好先预热（移动端目录解析是异步的）：后面 readEngineDir / 远程地址读的都是它。
   await ensureShellPrefsLoaded();
   await initDesktopWindow();
