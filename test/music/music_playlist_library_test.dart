@@ -8,7 +8,6 @@ import 'package:miao_dock_flutter/features/music/controller/music_playlist_libra
 import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_platform_info.dart';
 import 'package:miao_dock_flutter/features/music/ui/mobile/mobile_music_screen.dart';
 import 'package:miao_dock_flutter/features/music/ui/music_screen.dart';
 import 'package:miao_dock_flutter/features/music/ui/views/music_detail.dart';
@@ -19,6 +18,7 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 
 import 'support/demo_music_repository.dart';
 import 'support/music_test_account.dart';
+import 'support/stub_registry.dart';
 
 /// 我的歌单库（N41/N42/N43/N44/M18）断言。
 ///
@@ -28,12 +28,10 @@ import 'support/music_test_account.dart';
 /// · 收藏歌单取消订阅不落到屏级状态 → 返回库列表后收藏组仍 4 条；
 /// · 未登录仍渲染库列表 → 登录 CTA 断言失败；
 /// · 移动端退回 4 列卡片 → 390×844 下出现 `_PlaylistCard` 而不是行。
-MusicPlatformInfo _neteaseInfo() => const MusicPlatformInfo(id: 'netease', label: '网易云', builtIn: true);
-
 void main() {
   Widget host(Widget child, {Size size = const Size(1440, 900), bool logged = true}) => ProviderScope(
     overrides: [
-      musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
+      musicPlatformInfosProvider.overrideWith((_) => [neteaseSourceFromRepo().info]),
       musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
       if (logged) musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
       if (!logged) musicAccountProvider.overrideWith(_LoggedOutAccount.new),

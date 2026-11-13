@@ -61,6 +61,12 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
   @override
   MusicAccountState build() {
     final auth = ref.watch(musicAuthProvider);
+    // 🔴 当前平台默认取**第一个已导入源**（源体系口径）；
+    // 之前写死 netease —— 只导入新平台时 cur 不在清单里，侧栏/徽章全失效。
+    final infos = ref.watch(musicPlatformInfosProvider);
+    if (infos.isNotEmpty && infos.any((i) => i.id == _current) == false) {
+      _current = infos.first.id;
+    }
     final logged = (auth.cookieOf(_current) ?? '').isNotEmpty;
     final state = MusicAccountState(
       cur: _current,

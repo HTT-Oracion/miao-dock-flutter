@@ -51,6 +51,7 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
   Future<void> _restore() async {
     // 🔴 读盘改为按目录扫描：凭据键随平台 id 动态增长（新导入的平台也有登录态），
     // 不能再枚举固定四键。
+    // readAll 异常（插件缺失 / 存储不可用）按「无凭据」处理 —— 不能让启动崩溃。
     final restored = <String, String>{};
     try {
       for (final key in (await _store.readAll()).keys) {
@@ -61,12 +62,9 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
         if (v != null && v.isNotEmpty) restored[id] = v;
       }
     } catch (_) {
-      // readAll 不可用（平台差异）时退化为逐平台读取 —— 内置四平台保底。
-      for (final id in const ['netease', 'kugou', 'qq', 'migu']) {
-        final v = await _store.read('$_keyPrefix$id');
-        if (v != null && v.isNotEmpty) restored[id] = v;
-      }
+      // 存储不可用：按无凭据恢复。
     }
+
     if (!ref.mounted) return; // 读盘期间 provider 可能已释放
     state = state.copyWith(
       // 内存态优先（期间可能已登录 / 已登出）。

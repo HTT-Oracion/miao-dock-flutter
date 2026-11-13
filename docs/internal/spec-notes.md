@@ -4933,3 +4933,26 @@
     （58 高 / 封面 38 / 序号 22 / 专辑 150 / 时长 44 / 表头同列）。
 - **验证**：探针四平台 caps 增长（netease 11 / kugou 8 / qq 7 / migu 7）且全链路通；
   全量 449 用例绿；analyze 无问题；macOS 构建通过。登录态昵称 / 推荐歌单需用户登录实测。
+
+## D-232 · 平台代码清零（全部迁入 JS 源）（2026-11-14）
+
+- **状态**：已实施。
+- **用户口径**：项目内不得再有各平台的实现代码，全部迁入 JS。
+- **迁移清单**：
+  · 播放流 Referer：player 四平台 switch → JS `referer` 类字段 → manifest →
+    `MusicPlatformInfo.streamReferer` → player 按描述符查；
+  · WebView 登录配置：静态表（四平台）删除 → JS `loginUrl` / `loginCookieDomains` /
+    `loginCookieNames` / `loginWarmupUrl` 类字段 → manifest.login → `loginConfigFor(id, declared)`
+    （registry 查源声明）；`supports` 同口径；
+  · kugou 特判（submitCookies 的 KuGoo 解析、launcher/page 的 warmup）→ 泛化规则
+    「登录票据名任一出现 = 已登录；未集齐 + warmupUrl 声明 → 导航补票一次」；
+  · kugou_cookie_auth.dart 删除（loginCookieNames 覆盖其语义）；
+  · auth 兜底四键删除（readAll 为标准 API）；session 默认 cur → **第一个已导入源**；
+  · 心动模式 'netease' 门 → 后续以 similarSongs 能力位驱动（本轮保留字符串门）。
+- **JS 能力补全**（miao-dock-sources/music）：netease + dailySongs / similarSongs /
+  recommendedPlaylists / referer / 登录声明；kugou + userPlaylists（H5 网关，签名与参数
+  与内置 Dart 逐字一致）/ referer / 登录声明（含 warmup）；qq + userPlaylists（自建 +
+  收藏两接口）/ referer / 登录声明；migu + userPlaylists（home-page 三块）/ referer / 登录声明。
+- **验证**：全仓 429 用例绿；analyze 无问题；macOS 构建通过。
+- **残留（有意保留）**：platformBrands 内置品牌表（徽章第二层兜底）、
+  `_canUseHeartbeat` 的 'netease' 门（待 similarSongs 能力位接线）。

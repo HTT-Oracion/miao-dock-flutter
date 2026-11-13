@@ -35,7 +35,7 @@ final musicPlatformInfosProvider = Provider<List<MusicPlatformInfo>>((ref) {
     if (brand != null) {
       info = info.copyWith(label: brand.label, color: brand.color, builtIn: true);
     } else {
-      info = info.copyWith(color: info.color ?? derivedPlatformColor(info.id));
+      info = info.copyWith(color: info.color ?? derivedPlatformColor(info.id), streamReferer: info.streamReferer);
     }
     infos.add(info);
   }

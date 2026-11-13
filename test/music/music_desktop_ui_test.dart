@@ -14,6 +14,7 @@ import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 
 import 'support/demo_music_repository.dart';
 import 'support/music_test_account.dart';
+import 'support/stub_registry.dart';
 
 import 'package:miao_dock_flutter/features/music/data/music_repository.dart';
 import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
@@ -53,7 +54,7 @@ void main() {
 
   Widget demoHost(Widget child, {DemoMusicRepository? repo, bool logged = true}) => ProviderScope(
     overrides: [
-      musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
+      musicPlatformInfosProvider.overrideWith((_) => [neteaseSourceFromRepo().info]),
       musicRepositoryProvider.overrideWithValue(repo ?? DemoMusicRepository()),
       if (logged) musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
       if (!logged) musicAccountProvider.overrideWith(_LoggedOutAccount.new),
@@ -120,7 +121,7 @@ void main() {
       ProviderScope(
         overrides: [
           musicRepositoryProvider.overrideWithValue(repo),
-          musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
+          musicPlatformInfosProvider.overrideWith((_) => [neteaseSourceFromRepo().info]),
         ],
         child: baseApp(const MusicScreen(view: MusicScreenView.discover)),
       ),

@@ -18,6 +18,7 @@ class MusicSourceManifest {
     required this.hosts,
     this.logoUrl,
     this.colorHex,
+    this.streamReferer,
     this.login,
     this.timeoutMs = 15000,
     this.headers = const {},
@@ -40,6 +41,9 @@ class MusicSourceManifest {
   /// 源声明的平台主色（JS `color = '#RRGGBB'`）。
   final String? colorHex;
 
+  /// 源声明的播放流 Referer（音频 CDN 防盗链；JS `referer = '…'`）。
+  final String? streamReferer;
+
   /// 源声明的 WebView 登录配置（新平台必需，内置四平台有静态表兜底）。
   final MusicSourceLoginConfig? login;
 
@@ -51,11 +55,19 @@ class MusicSourceManifest {
 /// 源声明的 WebView 登录配置（`loginUrl` / `loginCookieDomains` /
 /// `loginCookieNames` 三个类字段）——新平台据此接入「打开官方页 → 回读 Cookie」流程。
 class MusicSourceLoginConfig {
-  const MusicSourceLoginConfig({required this.url, required this.cookieDomains, required this.cookieNames});
+  const MusicSourceLoginConfig({
+    required this.url,
+    required this.cookieDomains,
+    required this.cookieNames,
+    this.warmupUrl,
+  });
 
   final String url;
   final List<String> cookieDomains;
   final List<String> cookieNames;
+
+  /// 登录后导航的补 Cookie 页（酷狗个人中心同款机制）；null = 无 warmup。
+  final String? warmupUrl;
 }
 
 /// 从 JS 源文本推导清单。
@@ -96,6 +108,7 @@ class MusicSourceLoginConfig {
   final loginUrl = scanString('loginUrl');
   final loginDomainsRaw = scanString('loginCookieDomains');
   final loginNamesRaw = scanString('loginCookieNames');
+  final loginWarmupUrl = scanString('loginWarmupUrl');
   MusicSourceLoginConfig? login;
   if (loginUrl != null && loginUrl.isNotEmpty) {
     final domains =
@@ -103,7 +116,12 @@ class MusicSourceLoginConfig {
     final names =
         loginNamesRaw?.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() ?? const <String>[];
     if (domains.isNotEmpty && names.isNotEmpty) {
-      login = MusicSourceLoginConfig(url: loginUrl, cookieDomains: domains, cookieNames: names);
+      login = MusicSourceLoginConfig(
+        url: loginUrl,
+        cookieDomains: domains,
+        cookieNames: names,
+        warmupUrl: loginWarmupUrl,
+      );
     }
   }
 
@@ -134,6 +152,7 @@ class MusicSourceLoginConfig {
     hosts: hosts.toList(),
     logoUrl: logoUrl,
     colorHex: colorHex,
+    streamReferer: scanString('referer'),
     login: login,
     timeoutMs: timeoutMs ?? 15000,
     headers: headers,

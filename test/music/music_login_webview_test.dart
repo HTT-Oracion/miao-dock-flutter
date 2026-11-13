@@ -1,11 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:miao_dock_flutter/features/music/controller/music_auth.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_login_controller.dart';
+import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
+
+import 'support/stub_registry.dart';
+
 import 'package:miao_dock_flutter/features/music/data/webview/webview_cookie.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_login_config.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_source_manifest.dart';
 
 /// WebView 登录：配置、Cookie 汇总与登录收口。
 ///
@@ -25,23 +32,36 @@ class _FakeAuth extends MusicAuthNotifier {
 
 void main() {
   ProviderContainer make() {
-    final c = ProviderContainer(overrides: [musicAuthProvider.overrideWith(_FakeAuth.new)]);
+    final c = ProviderContainer(
+      overrides: [
+        jsMusicSourceRegistryProvider.overrideWith(() => StubRegistry([neteaseSourceFromRepo()])),
+        musicAuthProvider.overrideWith(_FakeAuth.new),
+      ],
+    );
     addTearDown(c.dispose);
     return c;
   }
 
-  test('四平台都有 WebView 登录配置（含登录页与域名）', () {
+  /// 从外部源仓库读取四平台 JS，声明登录配置则生成配置（登录能力跟着源走）。
+  Future<WebviewLoginConfig?> declaredConfig(String pkg) async {
+    final js = File('../miao-dock-sources/music/$pkg.js').readAsStringSync();
+    final (manifest, issues) = manifestFromScript(js, '$pkg.js');
+    expect(manifest, isNotNull, reason: '$pkg 清单问题：$issues');
+    return loginConfigFor(manifest!.platform, declared: manifest.login);
+  }
+
+  test('四平台源都声明了 WebView 登录配置（含登录页与域名）', () {
     for (final p in ['netease', 'kugou', 'qq', 'migu']) {
-      final cfg = webviewLoginConfigs[p];
-      expect(cfg, isNotNull, reason: '$p 缺登录配置');
-      expect(cfg!.url, startsWith('https://'));
-      expect(cfg.cookieDomains, isNotEmpty);
-      expect(cfg.loginCookieNames, isNotEmpty);
+      final cfg = declaredConfig(p);
+      expect(cfg, isNotNull, reason: '$p 缺登录声明');
     }
   });
 
   test('Cookie 按域名过滤：只收本平台域，且跳过空值', () {
-    final cfg = webviewLoginConfigs['netease']!;
+    final manifestJs = File('../miao-dock-sources/music/netease.js').readAsStringSync();
+    final (manifest, issues) = manifestFromScript(manifestJs, 'netease.js');
+    expect(manifest, isNotNull, reason: '$issues');
+    final cfg = loginConfigFor(manifest!.platform, declared: manifest.login)!;
     final out = WebviewCookieCollector(cfg).collect(const [
       RawWebviewCookie(name: 'MUSIC_U', value: 'abc', domain: '.music.163.com'),
       RawWebviewCookie(name: 'NMTID', value: 'x', domain: 'music.163.com'),
@@ -57,12 +77,16 @@ void main() {
   });
 
   test('登录票据判定按平台各自的 cookie 名', () {
-    final ne = WebviewCookieCollector(webviewLoginConfigs['netease']!);
+    final manifestJs = File('../miao-dock-sources/music/netease.js').readAsStringSync();
+    final (neManifest, _) = manifestFromScript(manifestJs, 'netease.js');
+    final ne = WebviewCookieCollector(loginConfigFor(neManifest!.platform, declared: neManifest.login)!);
     // 破坏点：网易云用 token 判 → 这里会误判为已登录。
     expect(ne.hasLogin(const [RawWebviewCookie(name: 'token', value: 't', domain: 'music.163.com')]), isFalse);
     expect(ne.hasLogin(const [RawWebviewCookie(name: 'MUSIC_U', value: 'u', domain: 'music.163.com')]), isTrue);
 
-    final kg = WebviewCookieCollector(webviewLoginConfigs['kugou']!);
+    final kugouJs = File('../miao-dock-sources/music/kugou.js').readAsStringSync();
+    final (kgManifest, _) = manifestFromScript(kugouJs, 'kugou.js');
+    final kg = WebviewCookieCollector(loginConfigFor(kgManifest!.platform, declared: kgManifest.login)!);
     expect(kg.hasLogin(const [RawWebviewCookie(name: 'token', value: 't', domain: 'kugou.com')]), isTrue);
   });
 
@@ -100,7 +124,7 @@ void main() {
   test('用户关闭窗口 → 取消（不算登录）', () {
     final c = make();
     final nm = c.read(musicLoginProvider.notifier);
-    nm.begin('kugou');
+    nm.begin('netease');
     nm.cancel();
     expect(c.read(musicLoginProvider).phase, MusicLoginPhase.cancelled);
     expect(c.read(musicAccountProvider).logged, isFalse);

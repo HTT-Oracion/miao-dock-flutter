@@ -7,8 +7,10 @@ import 'package:miao_dock_flutter/features/music/controller/music_providers.dart
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_cookie.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_login_config.dart';
-import 'package:miao_dock_flutter/features/music/domain/music_platform_info.dart';
 import 'package:miao_dock_flutter/features/music/domain/js_music_source.dart';
+
+import 'support/stub_registry.dart';
+
 import 'package:miao_dock_flutter/features/music/domain/music_source_manifest.dart';
 import 'package:miao_dock_flutter/features/music/ui/desktop/login_modal.dart';
 import 'package:miao_dock_flutter/features/music/ui/widgets/music_state_box.dart';
@@ -42,15 +44,15 @@ Widget host(Widget child) => MaterialApp(
   home: Scaffold(body: child),
 );
 
-MusicPlatformInfo _neteaseInfo() => const MusicPlatformInfo(id: 'netease', label: '网易云', builtIn: true);
-
 void main() {
+  // orderTests 使用共享 stub。
   orderTests();
   testWidgets('弹窗打开即自动拉起登录窗口（无需再点按钮）', (tester) async {
     final launcher = _CountingLauncher();
     final container = ProviderContainer(
       overrides: [
-        musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
+        musicPlatformInfosProvider.overrideWith((_) => [neteaseSourceFromRepo().info]),
+        jsMusicSourceRegistryProvider.overrideWith(() => StubRegistry([neteaseSourceFromRepo()])),
         musicUiProvider.overrideWith(_OpenLoginUi.new),
         webviewLoginLauncherProvider.overrideWithValue(launcher),
       ],
@@ -74,7 +76,8 @@ void main() {
         musicUiProvider.overrideWith(_OpenLoginUi.new),
         webviewLoginLauncherProvider.overrideWithValue(launcher),
         // 🔴 登录弹窗只列**已导入源**的平台（源体系口径）；注入一个源 → 只有一个 pick。
-        musicPlatformInfosProvider.overrideWith((_) => [_neteaseInfo()]),
+        musicPlatformInfosProvider.overrideWith((_) => [neteaseSourceFromRepo().info]),
+        jsMusicSourceRegistryProvider.overrideWith(() => StubRegistry([neteaseSourceFromRepo()])),
       ],
     );
     addTearDown(container.dispose);
@@ -83,9 +86,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    // 破坏点 1：把 PlatformLogo 换成 Lucide 通用图标 → 找不到品牌 logo。
+    // 破坏点 1：把品牌徽章换成 Lucide 通用图标 → 找不到平台徽章。
     // 破坏点 2：平台行仍列全部内置平台（未导入源也显示）→ 数量是 4。
-    expect(find.byType(PlatformLogo), findsNWidgets(1));
+    expect(find.byType(MusicPlatformBadge), findsNWidgets(1));
   });
 
   testWidgets('无已导入源：登录弹窗整体变为导入引导', (tester) async {
@@ -97,21 +100,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     // 破坏点：无源时不显示引导、还渲染平台行 → 用户对着空平台点登录。
-    expect(find.byType(PlatformLogo), findsNothing);
+    expect(find.byType(MusicPlatformBadge), findsNothing);
     expect(find.byType(MusicNoSourcePrompt), findsOneWidget);
+    // 吸收 begin failed → toast 的定时器。
+    await tester.pump(const Duration(seconds: 4));
   });
 }
 
 /// 平台顺序（用户口径：侧栏 / 登录弹窗顺序 = 数据源里已启用源的顺序）。
-class _RegistryStub extends JsMusicSourceRegistry {
-  _RegistryStub(this.sources);
-
-  final List<JsMusicSource> sources;
-
-  @override
-  List<JsMusicSource> build() => sources;
-}
-
 JsMusicSource _sourceOf(String id, String name, String platform) {
   final (manifest, issues) = manifestFromScript(
     "class S extends MusicSourceBase {\n  name = '$name';\n  platform = '$platform';\n"
@@ -128,7 +124,7 @@ void orderTests() {
     final container = ProviderContainer(
       overrides: [
         jsMusicSourceRegistryProvider.overrideWith(
-          () => _RegistryStub([
+          () => StubRegistry([
             _sourceOf('kugou', '酷狗', 'kugou'),
             _sourceOf('netease', '网易云', 'netease'),
             _sourceOf('bilibili', '哔哩哔哩', 'bilibili'),

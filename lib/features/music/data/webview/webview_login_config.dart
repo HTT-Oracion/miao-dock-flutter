@@ -52,52 +52,16 @@ class WebviewLoginConfig {
   }
 }
 
-/// 内置四平台的静态配置（键 = 平台 id 字符串）。
-const webviewLoginConfigs = <String, WebviewLoginConfig>{
-  'netease': WebviewLoginConfig(
-    platformId: 'netease',
-    url: 'https://music.163.com/#/login',
-    title: '网易云音乐登录',
-    cookieDomains: ['music.163.com', '163.com', 'netease.com'],
-    loginCookieNames: ['MUSIC_U'],
-  ),
-  'kugou': WebviewLoginConfig(
-    platformId: 'kugou',
-    url: 'https://www.kugou.com/',
-    title: '酷狗音乐登录',
-    cookieDomains: ['kugou.com'],
-    loginCookieNames: ['token'],
-    warmupUrl: 'https://www.kugou.com/newuc/user/uc/type=edit',
-  ),
-  'qq': WebviewLoginConfig(
-    platformId: 'qq',
-    url: 'https://y.qq.com/n/ryqq/profile',
-    title: 'QQ 音乐登录',
-    cookieDomains: ['qq.com', 'y.qq.com'],
-    loginCookieNames: ['qm_keyst'],
-  ),
-  'migu': WebviewLoginConfig(
-    platformId: 'migu',
-    url: 'https://music.migu.cn/v5/',
-    title: '咪咕音乐登录',
-    cookieDomains: ['migu.cn'],
-    // 咪咕没有稳定登录票据，靠 userid / uid 判定。
-    loginCookieNames: ['userid', 'uid'],
-  ),
-};
-
-/// 平台登录配置查询：内置静态表优先，其次源声明（新平台）。
+/// 平台登录配置查询：**只走源声明**（JS `loginUrl` 等类字段，导入期解析进
+/// manifest.login）。静态表已随内置播放实现一起移除 —— 登录能力跟着源走。
 WebviewLoginConfig? loginConfigFor(String platformId, {MusicSourceLoginConfig? declared}) {
-  final builtin = webviewLoginConfigs[platformId];
-  if (builtin != null) return builtin;
-  if (declared != null) {
-    return WebviewLoginConfig(
-      platformId: platformId,
-      url: declared.url,
-      title: '$platformId 登录',
-      cookieDomains: declared.cookieDomains,
-      loginCookieNames: declared.cookieNames,
-    );
-  }
-  return null;
+  if (declared == null) return null;
+  return WebviewLoginConfig(
+    platformId: platformId,
+    url: declared.url,
+    title: '$platformId 登录',
+    cookieDomains: declared.cookieDomains,
+    loginCookieNames: declared.cookieNames,
+    warmupUrl: declared.warmupUrl,
+  );
 }

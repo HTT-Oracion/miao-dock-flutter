@@ -197,18 +197,21 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
   }
 
   /// 各平台 CDN 对 UA / Referer 的校验不同；缺头时酷狗 / QQ 会直接 403。
-  /// 播放流请求头：内置四平台按 id 给 Referer（防盗链）；其余平台通用 UA。
-  static Map<String, String> _streamHeaders(String platformId) {
+  /// 播放流请求头：源声明 referer（防盗链）优先，未声明则只带通用 UA。
+  Map<String, String> _streamHeaders(String platformId) {
     const ua =
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
         '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    return switch (platformId) {
-      'netease' => {'User-Agent': ua, 'Referer': 'https://music.163.com/'},
-      'qq' => {'User-Agent': ua, 'Referer': 'https://y.qq.com/'},
-      'kugou' => {'User-Agent': ua, 'Referer': 'https://www.kugou.com/'},
-      'migu' => {'User-Agent': ua, 'Referer': 'https://music.migu.cn/'},
-      _ => {'User-Agent': ua},
-    };
+    final headers = {'User-Agent': ua};
+    String? referer;
+    for (final info in ref.read(musicPlatformInfosProvider)) {
+      if (info.id == platformId) {
+        referer = info.streamReferer;
+        break;
+      }
+    }
+    if (referer != null && referer.isNotEmpty) headers['Referer'] = referer;
+    return headers;
   }
 
   // ── 时钟 ─────────────────────────────────────────────────────────────────

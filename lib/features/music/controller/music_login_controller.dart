@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/webview/kugou_cookie_auth.dart';
 import '../data/webview/webview_cookie.dart';
 import '../domain/js_music_source.dart';
+import '../domain/music_source_manifest.dart';
 import 'music_providers.dart';
 import '../data/webview/webview_login_config.dart';
 import 'music_auth.dart';
@@ -77,11 +77,22 @@ class MusicLoginController extends Notifier<MusicLoginState> {
 
   /// 某个平台是否支持 WebView 登录。
   /// 该平台是否有 WebView 登录配置（内置四平台静态表 / 新平台的源内声明）。
-  static bool supports(String platformId) => supportsWebviewLogin(platformId);
+  static bool supports(String platformId, {MusicSourceLoginConfig? declared}) =>
+      supportsWebviewLogin(platformId, declared: declared);
+
+  /// 找平台对应的源声明登录配置（registry 内查）。
+  MusicSourceLoginConfig? _declaredLogin(String platformId) {
+    for (final candidate in ref.read(jsMusicSourceRegistryProvider)) {
+      if (candidate.isAvailable && candidate.platformId == platformId) {
+        return candidate.manifest.login;
+      }
+    }
+    return null;
+  }
 
   /// 开始登录：记录目标平台，进入「等待用户在官方页面完成登录」。
   void begin(String platformId) {
-    if (!supports(platformId)) {
+    if (!supports(platformId, declared: _declaredLogin(platformId))) {
       state = MusicLoginState(phase: MusicLoginPhase.failed, platformId: platformId, message: 'unsupported');
       return;
     }
@@ -94,16 +105,16 @@ class MusicLoginController extends Notifier<MusicLoginState> {
   Future<bool> submitCookies(Iterable<RawWebviewCookie> cookies) async {
     if (state.phase != MusicLoginPhase.awaiting) return false;
     final platformId = state.platformId;
-    final config = webviewLoginConfigs[platformId];
+    final config = loginConfigFor(platformId, declared: _declaredLogin(platformId));
     if (config == null) return false;
 
     final collector = WebviewCookieCollector(config);
     // 酷狗用专用解析：登录票据主要在复合 Cookie KuGoo 里，通用判定漏判
     // （用户实测：窗口里已登录、应用一直等不到）。判定口径与 miao-dock 一致：
     // 有登录态即可收口，播放票据不足时由 warmup 补（见 launcher）。
-    final ready = platformId == 'kugou'
-        ? extractKugouCookieAuth(cookies.map((c) => (name: c.name, value: c.value)).toList()).loggedIn
-        : collector.hasLogin(cookies);
+    // ready 判定泛化：登录票据名**任一出现**即视为已登录（对齐 miao-dock logged_in）。
+    // 酷狗的 KuGoo 复合票据由 loginCookieNames 覆盖（token,userid）—— 名单在配置里。
+    final ready = collector.hasLogin(cookies);
     if (!ready) return false; // 还没登录完，继续等
 
     final cookie = collector.collect(cookies);

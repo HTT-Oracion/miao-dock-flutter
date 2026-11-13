@@ -6,7 +6,6 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../data/webview/kugou_cookie_auth.dart';
 import '../../data/webview/webview_cookie.dart';
 import '../../data/webview/webview_login_config.dart';
 
@@ -86,10 +85,16 @@ class _MobileWebviewLoginPageState extends State<MobileWebviewLoginPage> {
         }
       }
       if (raw.isEmpty) return;
-      // 酷狗 warmup：有登录态缺播放票据 → 导航个人中心补 Cookie（对齐桌面端）。
-      if (widget.config.platformId == 'kugou' && widget.config.warmupUrl != null && !_warmupStarted) {
-        final auth = extractKugouCookieAuth(raw.map((c) => (name: c.name, value: c.value)).toList());
-        if (auth.loggedIn && !auth.playbackReady) {
+      // warmup 泛化（对齐 miao-dock）：有登录态但登录票据未集齐时，
+      // 导航到源声明的 warmup 页触发更多 Cookie 写入，否则拿到的是"半张票"。
+      if (widget.config.warmupUrl != null && !_warmupStarted) {
+        final jar = <String, String>{};
+        for (final c in raw) {
+          jar.putIfAbsent(c.name, () => c.value);
+        }
+        final anyTicket = widget.config.loginCookieNames.any((n) => (jar[n] ?? '').isNotEmpty);
+        final allTickets = widget.config.loginCookieNames.every((n) => (jar[n] ?? '').isNotEmpty);
+        if (anyTicket && !allTickets) {
           _warmupStarted = true;
           await _controller.loadRequest(Uri.parse(widget.config.warmupUrl!));
           return;

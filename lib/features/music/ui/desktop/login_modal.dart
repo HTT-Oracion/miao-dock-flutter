@@ -14,6 +14,7 @@ import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../data/webview/webview_login_config.dart';
 import '../../domain/music_platform_info.dart';
+import '../../domain/music_source_manifest.dart';
 import '../widgets/music_shared.dart';
 import '../widgets/music_state_box.dart';
 import '../widgets/platform_logo.dart';
@@ -210,7 +211,14 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     final seq = ++_loginSeq;
     setState(() => _launching = true);
     ref.read(musicLoginProvider.notifier).begin(_platformId);
-    final config = loginConfigFor(_platformId);
+    MusicSourceLoginConfig? declared;
+    for (final candidate in ref.watch(jsMusicSourceRegistryProvider)) {
+      if (candidate.isAvailable && candidate.platformId == _platformId) {
+        declared = candidate.manifest.login;
+        break;
+      }
+    }
+    final config = loginConfigFor(_platformId, declared: declared);
     if (config == null) {
       setState(() => _launching = false);
       return;

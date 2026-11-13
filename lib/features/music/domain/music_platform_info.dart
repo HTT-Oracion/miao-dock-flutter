@@ -5,7 +5,14 @@ import 'package:flutter/material.dart';
 /// 平台身份是**字符串 id**（源体系口径）：内置四平台的 id 与枚举名一致
 /// （netease / kugou / qq / migu），新平台任意合法标识符。
 class MusicPlatformInfo {
-  const MusicPlatformInfo({required this.id, required this.label, this.logoUrl, this.color, this.builtIn = false});
+  const MusicPlatformInfo({
+    required this.id,
+    required this.label,
+    this.logoUrl,
+    this.color,
+    this.streamReferer,
+    this.builtIn = false,
+  });
 
   /// 平台 id（= JS 源的 key；cookie 键 / 会话状态都以它为键）。
   final String id;
@@ -18,6 +25,9 @@ class MusicPlatformInfo {
 
   /// 平台主色（JS `color = '#RRGGBB'` 声明 / 内置品牌色 / id 哈希派生）。
   final Color? color;
+
+  /// 播放流 Referer（源声明；null = 通用 UA 不带防盗链头）。
+  final String? streamReferer;
 
   /// 是否为项目内置品牌（决定 logo 渲染走内置字形还是声明/派生）。
   final bool builtIn;
@@ -35,13 +45,15 @@ class MusicPlatformInfo {
     return first;
   }
 
-  MusicPlatformInfo copyWith({String? label, String? logoUrl, Color? color, bool? builtIn}) => MusicPlatformInfo(
-    id: id,
-    label: label ?? this.label,
-    logoUrl: logoUrl ?? this.logoUrl,
-    color: color ?? this.color,
-    builtIn: builtIn ?? this.builtIn,
-  );
+  MusicPlatformInfo copyWith({String? label, String? logoUrl, Color? color, String? streamReferer, bool? builtIn}) =>
+      MusicPlatformInfo(
+        id: id,
+        label: label ?? this.label,
+        logoUrl: logoUrl ?? this.logoUrl,
+        color: color ?? this.color,
+        streamReferer: streamReferer ?? this.streamReferer,
+        builtIn: builtIn ?? this.builtIn,
+      );
 }
 
 /// 稳定派生色：同 id 永远同色（不是每次启动随机）——
