@@ -572,7 +572,8 @@ class _AccountChip extends StatelessWidget {
                   border: Border.all(color: account.logged ? palette.acc : palette.line2),
                 ),
                 child: Text(
-                  account.logged ? (account.nick?.substring(0, 1) ?? '?') : '?',
+                  // 昵称可能为空（登录成功但昵称回读失败），substring(0,1) 对空串抛 RangeError。
+                  account.logged && (account.nick?.isNotEmpty ?? false) ? account.nick!.substring(0, 1) : '?',
                   style: TextStyle(fontSize: AppFont.px9, color: account.logged ? palette.accInk : palette.mut),
                 ),
               ),

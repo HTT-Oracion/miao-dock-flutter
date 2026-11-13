@@ -76,6 +76,9 @@ class PlaylistLibraryView extends ConsumerWidget {
             storageKey: 'playlist',
             builder: (context, controller) => SingleChildScrollView(
               controller: controller,
+              // 顶部留呼吸空间：横卡 hover 会上移 2px 并扩散阴影（miao-dock 同款动效），
+              // 外层 Stack / 模块 Padding 会裁掉越界绘制，不留空间时上边框被削掉。
+              padding: const EdgeInsets.only(top: 8),
               child: playlists.value == null
                   ? const PlaylistLibrarySkeleton()
                   : _LibraryBody(groups: groupPlaylists(playlists.value!, library.unsubscribed), state: library),

@@ -4587,3 +4587,104 @@
   由 `AudioSource.uri` 的 `tag: MediaItem` 承载 —— 通知栏 / 锁屏 / 系统媒体面板靠它展示。
 - **验证**：`flutter build macos` 通过、应用启动无崩溃；音乐域 + l10n 91 个用例全绿。
 - **已知边界**：后台播放属系统级行为，**真机锁屏验证仍需人工确认**（本轮未做真机验证）。
+
+## D-214 · 登录改为 WebView 官方页面（2026-11-13）
+
+- **状态**：已实施（桌面 + 移动）；真机验证待人工确认。
+- **回退**：`733c68f`（酷狗扫码登录 + 适配层）已 revert；二维码与手机验证码登录代码、
+  ARB 词条与相关测试全部移除（`music_login_qr_test` / `music_login_flow_test` /
+  `netease_eapi_test` / `kugou_qr_login_test`）。
+- **为什么改方向**：自己生成二维码 = 逆向 App 协议，必须伪造 `deviceId` / `appver` /
+  `kg-*` 指纹头；网易云实测回 `8821 请切换其他登录方式`。WebView 让**官方页面在真实
+  浏览器内核里**完成登录，服务端看到正常浏览器环境，不需要任何伪造。
+- **新增依赖**：`desktop_webview_window ^0.4.2`（macOS/Windows/Linux 独立窗口，
+  含 `getAllCookies()`）与 `webview_flutter ^4.14.1`（Android/iOS，
+  `WebViewCookieManager.getCookies(domain:)`）。均为原生插件，运行时依赖。
+- **桌面交互**：点登录 → 开 940×760 子窗口加载官方登录页 → 每 2 秒读 Cookie →
+  命中登录票据即落盘关窗 → 5 分钟超时。与 miao-dock `open_*_login_window` 同流程。
+- **移动交互**：全屏推入 `MobileWebviewLoginPage`（标题栏 + 关闭 + 加载进度条 +
+  WebView）；`onPageStarted` / `onPageFinished` 与 2 秒定时器共同触发 Cookie 读取；
+  成功后自动返回并关闭；用户关闭窗口时 `clearCookies()` 清理，避免串号。
+- **Cookie 收口**：`WebviewCookieCollector` 按平台域名后缀过滤、按优先级排序、
+  同名保留首个、跳过空值；登录票据判定按平台各自 cookie 名
+  （网易云 `MUSIC_U` / 酷狗 `token` / QQ `qm_keyst` / 咪咕 `userid|uid`）。
+- **验证**：`music_login_webview_test` 6 条（含域名过滤与票据判定反证）；
+  `flutter build macos` 通过、应用启动无崩溃；音乐域 + l10n 84 个用例全绿。
+- **自动开窗**：登录弹窗出现即自动拉起官方登录窗口（`initState` 的 postFrameCallback），
+  切换平台也会自动重开；用递增 `_loginSeq` 让旧窗口的返回结果失效，避免并发窗口互相改写状态。
+  原「打开登录窗口」按钮保留为「重新打开」，供用户关窗后重试。
+- **开窗前清空浏览数据**：`WebviewWindow.clearAll()`（对齐 miao-dock
+  `clear_all_browsing_data`）。不清的话 WebView 里残留上次的登录态，下次开窗
+  2 秒内被「自动登录」顶掉——用户没操作、也没机会换账号。
+- **Keychain 静默失败修复**：macOS 默认 data protection keychain 需要下
+  `keychain-access-groups` entitlement，缺失时**写入假成功、实际为空**
+  （flutter_secure_storage README 明示）。本应用非沙盒本地工具，按官方口径改用
+  `MacOsOptions(usesDataProtectionKeychain: false)` 回落传统 Keychain，无需 entitlement。
+  该缺陷表现为「WebView 抓到票据（ticket hit 日志）但落盘失败 → 登录未完成」。
+- **等待态语义**：窗口等待期不再显示 loading 转圈（那是等用户操作，不是应用加载），
+  改为「请在弹出的窗口里完成登录」；仅落盘凭据时转圈。
+- **Cookie 双来源**：WKWebView 的 `httpCookieStore` 与页面 `document.cookie` 不是
+  同一存储，SPA 登录可能只写 JS 层；两处都读（诊断日志区分 native / js）。
+- **平台 logo**：必须用 `PlatformLogo`（各平台品牌字形）。此前误换成通用 Lucide 图标，
+  会让四个平台难以区分，已改回并有断言锁住。
+- **已知边界**：移动端 WebView 读 Cookie 存在同步延迟（已在页面跳转 + 定时器双触发
+  中缓解）；Windows 需 WebView2 运行时，缺失时 `isWebviewAvailable()` 返回 false 并降级提示。
+
+## D-215 · 登录后空昵称引发 RangeError（2026-11-13）
+
+- **状态**：已实施。
+- **现象**：WebView 登录成功后，发现页顶部出现整条红色错误横幅
+  `RangeError (end): Invalid value: Only valid value is 0: 1`，且右缘 OVERFLOWED 标记。
+- **根因**：顶栏头像区 `account.nick?.substring(0, 1)` —— WebView 登录收口先置
+  `login(platform, '')`（昵称靠回读补），回读失败 / 未完成时 `nick` 就是**空串**，
+  `substring(0, 1)` 对空串抛 RangeError，把整帧渲染打断。
+- **修复**：
+  · 收口收敛为 `MusicAccountState.avatarInitial`（空昵称 / null / 未登录统一兜底「?」），
+    顶栏与账号菜单两处统一改走它；
+  · WebView 登录成功后**补上昵称回读**（`loginStatus`，仅网易云；失败只影响展示不影响登录态）。
+- **验证**：`music_empty_nick_test` 4 条；反向验证（去掉空串防护）后空昵称用例立即抛 RangeError。
+
+## D-216 · 重启后昵称丢失，头像与账号显示「?」（2026-11-13）
+
+- **状态**：已实施。
+- **现象**：进音乐模块时弹 Keychain 授权（说明 Cookie 恢复成功、logged=true），
+  但头像与右上角都显示「?」。
+- **根因**：昵称**只存内存**（`MusicAccountNotifier._nick`），Cookie 从 Keychain
+  恢复后没人回读昵称 —— 只要重启 / provider 重建，「已登录 + 无昵称」的状态就出现。
+- **修复**：`MusicAccountNotifier.build` 在「已登录且无昵称、auth 读盘完成」时异步回读
+  昵称（`createApi` 收口为可注入）：
+  · 回读成功 → 补齐昵称；
+  · 回读发现 Cookie 失效 → **撤下登录态并清凭据**（宁可显示未登录，不显示「顶着 ? 的已登录」）；
+  · 网络失败 → 保持现状，不误撤。
+- **验证**：`music_nick_restore_test` 4 条（恢复补昵称 / 失效撤登录 / 网络失败保持 / 渲染防护）；
+  反向验证（去掉回读触发）后前两条立即变红。
+
+## D-217 · 钥匙串服务名改为「喵坞 MiaoDock」+ 旧条目迁移（2026-11-13）
+
+- **状态**：已实施。
+- **为什么**：系统授权弹窗与「钥匙串访问」里显示的是插件默认服务名
+  `flutter_secure_storage_service`，用户看不懂；改为 `kSecAttrService = 喵坞 MiaoDock`
+  （`accountName`，macOS 与 iOS 同步）。
+- **必须迁移**：钥匙串按服务名区分条目，直接改名 = 换空保险箱，旧登录 Cookie 全部
+  「消失」表现为重启掉登录。`SecureStore.migrateServiceName()` 把旧名下的四个平台
+  Cookie 键搬到新名（只搬未存在的键，搬完删旧条目），在 `musicAuthProvider.build`
+  时触发，失败只打日志不阻断启动。
+- **验证**：音乐域 + core + l10n 96 个用例全绿；`flutter build macos` 通过。
+  真机验证点：首次启动弹窗应显示「喵坞 MiaoDock」；旧登录态应保留（迁移成功）。
+
+## D-218 · 酷狗 WebView 登录抓不到票据（2026-11-13）
+
+- **状态**：已实施。
+- **现象**：登录窗口里已完成酷狗登录，应用却一直不收口（"应用没登录成功"）。
+- **根因**：酷狗网页版的登录票据主要在**复合 Cookie `KuGoo`** 里（URL 编码的
+  `k=v&k=v` 串，含 `KugooID` / `t`），通用判定只认明文 `token`/`userid` → 漏判。
+- **修复**（对齐 miao-dock `extract_kugou_auth`）：
+  · 新增 `extractKugouCookieAuth`：明文键（userid/UserId/KugooID/kugouID、token/Token/t/T）
+    + KuGoo 复合解析（URL 解码后按 `&` `=` 拆）双通道；userid 取纯数字、`0` 视为游客；
+  · 判定口径：`logged_in` = 有效 userid 或存在 KuGoo；`playback_ready` = userid+token 齐全；
+  · **warmup**：有登录态但缺播放票据 → 导航 `kugou.com/newuc/user/uc/type=edit`
+    触发补 Cookie（桌面 / 移动端都加），有登录态即收口落盘；
+  · 通用收集器补齐酷狗优先级键（KuGoo/kugou/Kugou/KugooID/kugouID/UserId/kg_mid/...，
+    对齐 KUGOU_COOKIE_PRIORITY）。
+- **验证**：`kugou_cookie_auth_test` 6 条；反向验证（收窄为 userid+token 才算登录）后
+  KuGoo 用例变红。音乐域 + core + l10n 102 用例全绿。

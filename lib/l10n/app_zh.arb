@@ -6215,55 +6215,38 @@
   "@musicLoginTitle": {
     "description": "登录弹窗标题"
   },
-  "musicLoginScanWith": "使用 {platform} App 扫码登录",
-  "@musicLoginScanWith": {
-    "description": "登录弹窗二维码区标题",
+  "musicLoginOpenWindow": "重新打开登录窗口",
+  "@musicLoginOpenWindow": {
+    "description": "登录窗口被关闭后再次打开的按钮"
+  },
+  "musicLoginOpenOfficial": "在 {platform} 官方页面完成登录",
+  "@musicLoginOpenOfficial": {
+    "description": "说明登录将在官方页面进行",
     "placeholders": {
       "platform": {
         "type": "String"
       }
     }
   },
-  "musicLoginCountdown": "{sec}s 后自动刷新",
-  "@musicLoginCountdown": {
-    "description": "二维码倒计时",
-    "placeholders": {
-      "sec": {
-        "type": "int"
-      }
-    }
+  "musicLoginWebviewHint": "登录完成后会自动读取凭证并关闭窗口",
+  "@musicLoginWebviewHint": {
+    "description": "说明登录后自动回读凭证"
   },
-  "musicLoginRefreshAria": "刷新二维码",
-  "@musicLoginRefreshAria": {
-    "description": "刷新按钮读法"
+  "musicLoginWebviewUnsupported": "该平台暂不支持窗口登录",
+  "@musicLoginWebviewUnsupported": {
+    "description": "平台无 WebView 登录能力"
   },
   "musicLoginSuccessToast": "登录成功",
   "@musicLoginSuccessToast": {
     "description": "登录成功轻提示"
   },
-  "musicLoginQrWaiting": "等待扫码",
-  "@musicLoginQrWaiting": {
-    "description": "二维码状态：等待扫码"
-  },
-  "musicLoginQrScanned": "已扫码，请在手机上确认",
-  "@musicLoginQrScanned": {
-    "description": "二维码状态：已扫码"
-  },
-  "musicLoginQrExpired": "二维码已过期，请刷新",
-  "@musicLoginQrExpired": {
-    "description": "二维码状态：已过期"
-  },
-  "musicLoginQrFailed": "扫码登录未完成，请刷新二维码重试",
+  "musicLoginQrFailed": "登录未完成，请重试",
   "@musicLoginQrFailed": {
-    "description": "扫码登录失败：服务端未下发登录票据"
+    "description": "登录失败（未拿到登录凭证 / 凭证保存失败）"
   },
-  "musicLoginRiskControl": "登录被网易云风控拦截，请换用手机号登录或稍后重试",
-  "@musicLoginRiskControl": {
-    "description": "扫码登录被风控拒绝（8821）"
-  },
-  "musicLoginRetry": "点击重试",
-  "@musicLoginRetry": {
-    "description": "二维码过期 / 失败后的重试按钮"
+  "musicLoginWindowOpen": "请在弹出的窗口里完成登录",
+  "@musicLoginWindowOpen": {
+    "description": "登录窗口已打开，等待用户操作"
   },
   "musicLoginFailToast": "登录失败：{reason}",
   "@musicLoginFailToast": {

@@ -1,8 +1,10 @@
+import 'dart:async' show unawaited;
 import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/api/netease_api.dart';
 import '../domain/music_models.dart';
 import 'music_auth.dart';
 
@@ -30,6 +32,17 @@ class MusicAccountState {
   /// 平台徽标三态（core.js platBadge）：当前源 / 已登录 / 未登录。
   bool isLogged(MusicPlatform p) => p == cur ? logged : (extra[p] ?? false);
 
+  /// 头像占位字：昵称首字符；空昵称 / 未登录兜底「?」。
+  ///
+  /// 🔴 为什么收敛在这里：`substring(0, 1)` 对空串抛
+  /// `RangeError (end): Invalid value: Only valid value is 0: 0`——
+  /// 登录已成功但昵称回读未完成 / 回读失败时 nick 就是空串（用户实测：
+  /// 登录后发现页顶部整条红色错误横幅）。所有头像取首字的地方必须走本方法。
+  String get avatarInitial => logged && (nick?.isNotEmpty ?? false) ? nick!.substring(0, 1) : '?';
+
+  /// 头像旁的展示名：已登录显示昵称（可为空串，由 UI 兜底），未登录显示「未登录」由 UI 层取词条。
+  String get displayName => logged ? (nick ?? '') : '';
+
   MusicAccountState copyWith({MusicPlatform? cur, bool? logged, String? nick, Map<MusicPlatform, bool>? extra}) =>
       MusicAccountState(
         cur: cur ?? this.cur,
@@ -47,7 +60,7 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
   MusicAccountState build() {
     final auth = ref.watch(musicAuthProvider);
     final logged = (auth.cookieOf(_current) ?? '').isNotEmpty;
-    return MusicAccountState(
+    final state = MusicAccountState(
       cur: _current,
       logged: logged,
       nick: logged ? _nick : null,
@@ -57,6 +70,12 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
             platform: (auth.cookieOf(platform) ?? '').isNotEmpty,
       },
     );
+    // 🔴 Cookie 从 Keychain 恢复后昵称是空的（昵称只存内存）：不回读的话
+    // 头像与右上角永远显示「?」，直到重新登录。
+    if (logged && (state.nick?.isNotEmpty ?? false) == false && auth.loading == false) {
+      unawaited(_restoreNick(_current, auth.cookieOf(_current) ?? ''));
+    }
+    return state;
   }
 
   /// 切音源：未登录 → 由 UI 拉起登录弹窗；已登录 → 直接切；已是当前源 → 不动（N04）。
@@ -66,6 +85,37 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
     _current = p;
     _nick = null;
     state = MusicAccountState(cur: p, logged: wasLogged, nick: null, extra: {...state.extra, state.cur: state.logged});
+  }
+
+  /// 接口工厂（测试可替换）。
+  @visibleForTesting
+  NeteaseApi createApi({String cookie = ''}) => NeteaseApi(cookie: cookie);
+
+  /// 从 Keychain 恢复 Cookie 后补回昵称（仅网易云有稳定接口）。
+  ///
+  /// Cookie 已失效（接口回未登录）时同步撤下登录态：宁可显示未登录，
+  /// 也不能「顶着 ? 的已登录」——那会让用户以为账号异常。
+  Future<void> _restoreNick(MusicPlatform p, String cookie) async {
+    if (cookie.isEmpty) return;
+    try {
+      final info = await createApi(cookie: cookie).loginStatus();
+      if (!ref.mounted) return;
+      // 会话可能已切换平台或重新登录，只认当前平台的结果。
+      if (p != _current) return;
+      if (!info.loggedIn) {
+        // Cookie 过期：撤下登录态并清掉失效凭据。
+        _nick = null;
+        state = MusicAccountState(cur: _current, logged: false, nick: null, extra: {...state.extra, _current: false});
+        await ref.read(musicAuthProvider.notifier).clear(p);
+        return;
+      }
+      if (info.nick.isNotEmpty) {
+        _nick = info.nick;
+        state = state.copyWith(nick: info.nick);
+      }
+    } on Object {
+      // 网络失败：保持现状（已登录 + 「?」），下一轮再试。
+    }
   }
 
   /// 登录成功（真实平台状态回读）。

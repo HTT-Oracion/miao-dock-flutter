@@ -4,255 +4,156 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/api/netease_api.dart';
+import '../data/webview/kugou_cookie_auth.dart';
+import '../data/webview/webview_cookie.dart';
+import '../data/webview/webview_login_config.dart';
 import '../domain/music_models.dart';
 import 'music_auth.dart';
 import 'music_session.dart';
 
-/// 扫码登录阶段。
+/// 登录流程阶段。
 ///
-/// · [idle] 未开始；[loading] 正在取 key；
-/// · [waiting] 等待扫码；[scanned] 已扫码待手机确认；
-/// · [succeeded] 登录完成；
-/// · [expired] 二维码超时 —— **保持静止，等用户点重试**（不自动刷新）；
-/// · [failed] 服务端拒绝（风控等）—— 同上，等用户重试。
-enum MusicQrPhase { idle, loading, waiting, scanned, succeeded, expired, failed }
+/// 登录统一走「打开平台官方登录页（WebView）→ 读取 Cookie」：
+/// 官方页面在真实浏览器内核里完成登录，不需要我们伪造任何客户端指纹，
+/// 也就不触发风控。
+enum MusicLoginPhase {
+  /// 未开始。
+  idle,
+
+  /// 登录窗口已打开，等待用户在官方页面完成登录。
+  awaiting,
+
+  /// 已抓到登录 Cookie，正在落盘。
+  saving,
+
+  /// 登录成功（窗口可关闭）。
+  succeeded,
+
+  /// 用户关闭窗口但没登录成功（取消）。
+  cancelled,
+
+  /// 平台不支持，或保存凭据失败。
+  failed,
+}
 
 @immutable
-class MusicQrState {
-  const MusicQrState({
-    this.phase = MusicQrPhase.idle,
-    this.key,
-    this.gatewayUrl,
+class MusicLoginState {
+  const MusicLoginState({
+    this.phase = MusicLoginPhase.idle,
+    this.platform = MusicPlatform.netease,
     this.message = '',
-    this.secondsLeft = 272,
     this.nick,
   });
 
-  final MusicQrPhase phase;
+  final MusicLoginPhase phase;
+  final MusicPlatform platform;
 
-  /// 平台二维码 key（扫码后用于轮询）。
-  final String? key;
-
-  /// 扫码目标 URL（`https://music.163.com/login?codekey=...`）。
-  final String? gatewayUrl;
+  /// 诊断标签（UI 映射为 ARB 文案，不直接展示服务端原文）。
   final String message;
-  final int secondsLeft;
   final String? nick;
 
-  /// 是否需要用户点「重试」：超时或失败都停在这里，**不自动换码**。
-  ///
-  /// 为什么不自动刷新：二维码有 4 分钟有效期，自动换码会让用户正在扫的那张
-  /// 突然失效（"扫了没反应"）；且频繁调登录接口会触发风控。
-  bool get needsRetry => phase == MusicQrPhase.expired || phase == MusicQrPhase.failed;
+  bool get busy => phase == MusicLoginPhase.saving;
 
-  /// 登录已完成（弹窗应关闭）。
-  bool get isDone => phase == MusicQrPhase.succeeded;
+  /// 是否已经结束（成功 / 取消 / 失败）——UI 据此收尾。
+  bool get isFinished =>
+      phase == MusicLoginPhase.succeeded || phase == MusicLoginPhase.cancelled || phase == MusicLoginPhase.failed;
 
-  MusicQrState copyWith({
-    MusicQrPhase? phase,
-    String? key,
-    String? gatewayUrl,
-    String? message,
-    int? secondsLeft,
-    String? nick,
-  }) => MusicQrState(
-    phase: phase ?? this.phase,
-    key: key ?? this.key,
-    gatewayUrl: gatewayUrl ?? this.gatewayUrl,
-    message: message ?? this.message,
-    secondsLeft: secondsLeft ?? this.secondsLeft,
-    nick: nick ?? this.nick,
-  );
+  MusicLoginState copyWith({MusicLoginPhase? phase, MusicPlatform? platform, String? message, String? nick}) =>
+      MusicLoginState(
+        phase: phase ?? this.phase,
+        platform: platform ?? this.platform,
+        message: message ?? this.message,
+        nick: nick ?? this.nick,
+      );
 }
 
-/// 二维码登录控制器：唯一允许触碰平台登录接口的地方（UI 只读 state）。
+/// 登录控制器：**只负责状态与落盘**，不直接碰 WebView。
 ///
-/// 只对**网易云**实现真实扫码：其余三家的上游登录是网页 Cookie 回读或
-/// 手机号 + 验证码，属独立能力，本期不伪造入口。
-class MusicLoginController extends Notifier<MusicQrState> {
-  Timer? _poll;
-
-  /// 轮询间隔。
-  ///
-  /// 🔴 官方文档明确警告「不要频繁调登录接口，不然可能会被风控」。此前是 2 秒一次
-  /// （4 分钟窗口内 120 次），是 8821 风控的重要诱因之一；放宽到 5 秒后同窗口仅 48 次。
-  static const pollInterval = Duration(seconds: 5);
-
-  /// 接口工厂（测试可替换，避免用例连真实站点）。
-  @protected
-  NeteaseApi createApi({String cookie = ''}) => NeteaseApi(cookie: cookie);
+/// WebView 由 UI 层（桌面子窗口 / 移动全屏页）驱动，把抓到的 Cookie 交给
+/// [submitCookies]；这样控制器可以在没有 WebView 的测试环境里完整验证。
+class MusicLoginController extends Notifier<MusicLoginState> {
+  /// Cookie 抓取轮询间隔（与 miao-dock 的 2s 同口径）。
+  static const pollInterval = Duration(seconds: 2);
 
   @override
-  MusicQrState build() {
-    ref.onDispose(() => _poll?.cancel());
-    return const MusicQrState();
-  }
+  MusicLoginState build() => const MusicLoginState();
 
-  Future<void> start(MusicPlatform platform) async {
-    _poll?.cancel();
-    if (platform != MusicPlatform.netease) {
-      state = const MusicQrState(phase: MusicQrPhase.idle);
+  /// 某个平台是否支持 WebView 登录。
+  static bool supports(MusicPlatform platform) => supportsWebviewLogin(platform);
+
+  /// 开始登录：记录目标平台，进入「等待用户在官方页面完成登录」。
+  void begin(MusicPlatform platform) {
+    if (!supports(platform)) {
+      state = MusicLoginState(phase: MusicLoginPhase.failed, platform: platform, message: 'unsupported');
       return;
     }
-    // 🔴 不能在 `initState` / `build` 期间同步改 provider（Riverpod 会抛
-    // 「Tried to modify a provider while the widget tree was building」）。
-    await Future<void>.delayed(Duration.zero);
-    state = const MusicQrState(phase: MusicQrPhase.loading);
-    final api = createApi();
-    try {
-      final key = await api.qrKey();
-      state = MusicQrState(
-        phase: MusicQrPhase.waiting,
-        key: key,
-        gatewayUrl: 'https://music.163.com/login?codekey=$key',
-      );
-      _poll = Timer.periodic(pollInterval, (_) => _tick(api, key));
-    } on Object {
-      state = state.copyWith(phase: MusicQrPhase.failed, message: 'qr_key_failed');
-    }
+    state = MusicLoginState(phase: MusicLoginPhase.awaiting, platform: platform);
   }
 
-  Future<void> _tick(NeteaseApi api, String key) async {
-    if (state.key != key) return;
-    // 已进入终态（成功 / 超时 / 失败）就不再计时、不再请求。
-    if (state.phase == MusicQrPhase.succeeded) return;
-    if (state.needsRetry) {
-      _poll?.cancel();
-      return;
-    }
-    final left = state.secondsLeft - pollInterval.inSeconds;
-    if (left <= 0) {
-      _poll?.cancel();
-      // 🔴 超时**不自动刷新**：停在这一屏等用户点重试。
-      state = state.copyWith(phase: MusicQrPhase.expired, secondsLeft: 0);
-      return;
-    }
-    state = state.copyWith(secondsLeft: left);
-    final result = await _tryCheck(api, key);
-    if (result == null) return; // 单拍失败不打断：有效期 4 分钟，下一拍继续
-    switch (result.code) {
-      case 801:
-        // 等待扫码：若之前误标成 scanned（用户取消授权），退回 waiting。
-        if (state.phase == MusicQrPhase.scanned) {
-          state = state.copyWith(phase: MusicQrPhase.waiting);
-        }
-      case 802:
-        if (state.phase != MusicQrPhase.scanned) {
-          state = state.copyWith(phase: MusicQrPhase.scanned);
-        }
-      case 803:
-        _poll?.cancel();
-        await _finishLogin(result.cookie, result.nick);
-      case 800:
-        _poll?.cancel();
-        state = state.copyWith(phase: MusicQrPhase.expired, secondsLeft: 0);
-      case 502:
-        // 文档：扫码后返回 502 时需带 noCookie 再查一次。
-        final retried = await _tryCheck(api, key, noCookie: true);
-        if (retried == null) return;
-        await _handleCode(api, key, retried);
-      default:
-        // 其余业务码（8821 风控 / 8811 等）必须**立即收口**：之前落在 default 分支
-        // 被静默忽略，界面只会空转到超时，用户完全不知道发生了什么。
-        if (result.code > 0) {
-          _poll?.cancel();
-          state = state.copyWith(phase: MusicQrPhase.failed, message: _codeMessage(result.code));
-        }
-    }
-  }
-
-  /// 502 重试后的结果按同一套码处理（避免重复写分支）。
-  Future<void> _handleCode(
-    NeteaseApi api,
-    String key,
-    ({int code, String message, String? cookie, String? nick}) r,
-  ) async {
-    switch (r.code) {
-      case 802 || 803:
-        if (r.code == 803) {
-          _poll?.cancel();
-          await _finishLogin(r.cookie, r.nick);
-        } else if (state.phase != MusicQrPhase.scanned) {
-          state = state.copyWith(phase: MusicQrPhase.scanned);
-        }
-      case 800:
-        _poll?.cancel();
-        state = state.copyWith(phase: MusicQrPhase.expired, secondsLeft: 0);
-      default:
-        if (r.code > 0) {
-          _poll?.cancel();
-          state = state.copyWith(phase: MusicQrPhase.failed, message: _codeMessage(r.code));
-        }
-    }
-  }
-
-  /// 业务码 → 归因标签（UI 映射到 ARB 文案，不直接展示服务端 message）。
-  static String _codeMessage(int code) => switch (code) {
-    8821 => 'risk_control',
-    8811 => 'risk_control',
-    800 => 'expired',
-    502 => 'network',
-    _ => 'unknown:$code',
-  };
-
-  Future<({int code, String message, String? cookie, String? nick})?> _tryCheck(
-    NeteaseApi api,
-    String key, {
-    bool noCookie = false,
-  }) async {
-    try {
-      return await api.qrCheck(key, noCookie: noCookie);
-    } on Object {
-      return null;
-    }
-  }
-
-  /// 803 收口：**先把 Cookie 落盘并置登录成功，再去补昵称**。
+  /// WebView 轮询到 Cookie 后调用。
   ///
-  /// 昵称是展示增强，`loginStatus` 失败不能让用户卡在「扫了码但没登录」。
-  Future<void> _finishLogin(String? cookie, String? nickFromCheck) async {
-    if (!NeteaseApi.cookieHasLogin(cookie)) {
-      // 803 但没拿到 MUSIC_U：把实际收到的 cookie 名打进 message，便于定位是
-      // 通道问题（只有 NMTID）还是服务端未授权。
-      final names = cookie == null || cookie.isEmpty
-          ? 'none'
-          : cookie.split(';').map((e) => e.split('=').first.trim()).where((e) => e.isNotEmpty).join(',');
-      state = state.copyWith(phase: MusicQrPhase.failed, message: 'cookie_missing:$names');
-      return;
-    }
+  /// 返回 true 表示「已登录并落盘」，调用方据此关闭登录窗口。
+  Future<bool> submitCookies(Iterable<RawWebviewCookie> cookies) async {
+    if (state.phase != MusicLoginPhase.awaiting) return false;
+    final platform = state.platform;
+    final config = webviewLoginConfigs[platform];
+    if (config == null) return false;
+
+    final collector = WebviewCookieCollector(config);
+    // 酷狗用专用解析：登录票据主要在复合 Cookie KuGoo 里，通用判定漏判
+    // （用户实测：窗口里已登录、应用一直等不到）。判定口径与 miao-dock 一致：
+    // 有登录态即可收口，播放票据不足时由 warmup 补（见 launcher）。
+    final ready = platform == MusicPlatform.kugou
+        ? extractKugouCookieAuth(cookies.map((c) => (name: c.name, value: c.value)).toList()).loggedIn
+        : collector.hasLogin(cookies);
+    if (!ready) return false; // 还没登录完，继续等
+
+    final cookie = collector.collect(cookies);
+    if (cookie.isEmpty) return false;
+
+    // 诊断：抓到票据时打印 names 与长度（不含值，避免泄漏凭据）。
+    debugPrint(
+      '[music.login] ticket hit: platform=$platform len=${cookie.length} '
+      'names=${cookies.where((c) => config.ownsDomain(c.domain)).map((c) => c.name).toSet().toList()}',
+    );
+
+    state = state.copyWith(phase: MusicLoginPhase.saving);
     try {
-      await ref.read(musicAuthProvider.notifier).save(MusicPlatform.netease, cookie!);
+      await ref.read(musicAuthProvider.notifier).save(platform, cookie);
     } on MusicCredentialStoreException {
-      // 落盘失败：不要假装登录成功（重启就掉线，用户会以为登录坏了）。
-      state = state.copyWith(phase: MusicQrPhase.failed, message: 'credential_store_failed');
-      return;
+      // 落盘失败：不假装登录成功（重启就掉线，比直接报错更难查）。
+      state = state.copyWith(phase: MusicLoginPhase.failed, message: 'credential_store_failed');
+      return false;
     }
-    final initial = nickFromCheck ?? '';
-    ref.read(musicAccountProvider.notifier).login(MusicPlatform.netease, initial);
-    state = state.copyWith(phase: MusicQrPhase.succeeded, nick: initial.isEmpty ? null : initial);
-    // 803 已带昵称就不再打 loginStatus；没带才补一次（失败也只是缺昵称）。
-    if (initial.isNotEmpty) return;
-    final nick = await _fetchNick(cookie);
-    if (nick.isEmpty) return;
-    ref.read(musicAccountProvider.notifier).login(MusicPlatform.netease, nick);
-    state = state.copyWith(nick: nick);
+    ref.read(musicAccountProvider.notifier).login(platform, '');
+    state = state.copyWith(phase: MusicLoginPhase.succeeded);
+    // 昵称只是展示增强：回读失败不影响登录态（头像兜底显示「?」）。
+    unawaited(_fetchNick(platform, cookie));
+    return true;
   }
 
-  Future<String> _fetchNick(String cookie) async {
+  /// 回读昵称（仅网易云有稳定接口；其它平台留空，头像显示「?」）。
+  Future<void> _fetchNick(MusicPlatform platform, String cookie) async {
+    if (platform != MusicPlatform.netease) return;
     try {
-      final info = await createApi(cookie: cookie).loginStatus();
-      return info.nick;
+      final info = await NeteaseApi(cookie: cookie).loginStatus();
+      if (info.nick.isEmpty || !ref.mounted) return;
+      ref.read(musicAccountProvider.notifier).login(platform, info.nick);
+      state = state.copyWith(nick: info.nick);
     } on Object {
-      return '';
+      // 拿不到昵称就算了：登录态已经成立。
     }
   }
 
-  void reset() {
-    _poll?.cancel();
-    final key = state.key;
-    if (key != null) createApi().dropQrCookies(key);
-    state = const MusicQrState();
+  /// 用户关闭了登录窗口却仍未登录。
+  void cancel() {
+    if (state.phase == MusicLoginPhase.succeeded) return;
+    if (state.phase == MusicLoginPhase.awaiting) {
+      state = state.copyWith(phase: MusicLoginPhase.cancelled);
+    }
   }
+
+  void reset() => state = const MusicLoginState();
 }
 
-final musicLoginProvider = NotifierProvider<MusicLoginController, MusicQrState>(MusicLoginController.new);
+final musicLoginProvider = NotifierProvider<MusicLoginController, MusicLoginState>(MusicLoginController.new);

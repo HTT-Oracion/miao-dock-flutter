@@ -9,7 +9,7 @@ import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 
 /// 启动读盘与登录写入的竞态。
 ///
-/// 破坏点（修复前真实存在，也是「扫码后仍显示未登录」的真因）：
+/// 破坏点（修复前真实存在，曾导致「登录完成后应用仍显示未登录」）：
 /// · `_restore()` 用 `copyWith(cookies: restored)` **整体替换**内存态 →
 ///   登录刚写入的 Cookie 被启动时读到的空值覆盖。把 `_restore` 改回整体替换，
 ///   第一条用例立即失败。
@@ -63,7 +63,7 @@ class _TestAuth extends MusicAuthNotifier {
 ///
 /// 关键：`_restore()` 会依次读四个平台。这里让**第一个** read 挂起，
 /// 期间执行登录写入，再放行 —— 复现的是「读到的快照早于写入」这一真实竞态
-/// （真实场景：Keychain 冷启动慢 / 用户在 1 秒内完成扫码）。
+/// （真实场景：Keychain 冷启动慢 / 用户很快完成登录）。
 class _MemoryStore implements SecureStore {
   _MemoryStore({this.rejectWrites = false});
 
@@ -93,4 +93,7 @@ class _MemoryStore implements SecureStore {
 
   @override
   Future<void> delete(String key) async => _data.remove(key);
+
+  @override
+  Future<void> migrateServiceName() async {}
 }

@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,6 +36,8 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
 
   @override
   MusicAuthState build() {
+    // 服务名迁移（旧 flutter_secure_storage_service → 喵坞）：只跑一次，失败不阻断。
+    unawaited(_store.migrateServiceName());
     _restore();
     return const MusicAuthState();
   }
@@ -66,8 +70,16 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
     // 不校验的话用户会看到「已登录」而重启后消失。
     final readBack = await _store.read('$_keyPrefix${p.name}');
     if (readBack == null || readBack.isEmpty) {
+      // 诊断：把期望长度带出来，能区分「完全没写入」与「写入被截断」。
+      debugPrint(
+        '[music.auth] keychain read-back empty: platform=${p.name} '
+        'expectedLen=${cookie.length} key=$_keyPrefix${p.name}',
+      );
       state = state.copyWith(cookies: {...state.cookies}..remove(p));
       throw const MusicCredentialStoreException();
+    }
+    if (readBack != cookie) {
+      debugPrint('[music.auth] keychain read-back mismatch: got ${readBack.length} chars, expected ${cookie.length}');
     }
   }
 

@@ -61,6 +61,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 240));
   }
 
+  testWidgets('横卡 hover 上移不被裁剪：滚动区顶部预留呼吸空间', (tester) async {
+    // 破坏点：去掉 SingleChildScrollView 的 top padding → 横卡 hover 时
+    // translateY(-2) 的上边框被外层 Stack 裁掉（用户实测：上边框消失）。
+    await pumpLibrary(tester);
+    final scroll = tester.widgetList<SingleChildScrollView>(find.byType(SingleChildScrollView)).first;
+    final pad = scroll.padding;
+    final top = pad is EdgeInsets ? pad.top : null;
+    expect(top, greaterThanOrEqualTo(6));
+  });
+
   testWidgets('分组：系统歌单置顶 + 创建 8 + 收藏 4（subscribed 语义位）', (tester) async {
     await pumpLibrary(tester);
     final l10n = l10nOf(tester);

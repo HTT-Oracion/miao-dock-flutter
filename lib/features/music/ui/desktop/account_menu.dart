@@ -127,7 +127,7 @@ class _MenuBody extends ConsumerWidget {
                     radius: 17,
                     backgroundColor: account.logged ? palette.acc : palette.hi,
                     child: Text(
-                      account.logged && (account.nick?.isNotEmpty ?? false) ? account.nick!.substring(0, 1) : '?',
+                      account.avatarInitial,
                       style: TextStyle(
                         fontSize: AppFont.px13,
                         fontWeight: FontWeight.w700,
