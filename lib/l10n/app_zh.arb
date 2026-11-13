@@ -3343,13 +3343,21 @@
   "@viewOnline": {
     "description": "漫画视图：在线漫画（第 4 视图）"
   },
-  "settingsNavOnline": "漫画源",
+  "settingsNavOnline": "数据源",
   "@settingsNavOnline": {
-    "description": "设置页分区：漫画源管理"
+    "description": "设置页分区：数据源（漫画源 + 音乐源）"
   },
-  "settingsBlurbOnline": "在线漫画的数据源。源与仓库由你自行导入，应用不内置、不提供在线源仓库。",
+  "settingsBlurbOnline": "在线漫画与在线音乐的数据源。源与仓库由你自行导入，应用不内置、不提供在线源仓库。",
   "@settingsBlurbOnline": {
-    "description": "设置页漫画源分区说明"
+    "description": "设置页数据源分区说明"
+  },
+  "settingsSourceMusicHead": "音乐源",
+  "@settingsSourceMusicHead": {
+    "description": "数据源分区里音乐源小节的标题"
+  },
+  "settingsSourceMangaHead": "漫画源",
+  "@settingsSourceMangaHead": {
+    "description": "数据源分区里漫画源小节的标题"
   },
   "onlineSourceTitle": "漫画源",
   "@onlineSourceTitle": {
@@ -6231,6 +6239,257 @@
   "musicLoginWebviewHint": "登录完成后会自动读取凭证并关闭窗口",
   "@musicLoginWebviewHint": {
     "description": "说明登录后自动回读凭证"
+  },
+  "musicSourceMgrTitle": "音乐源管理",
+  "@musicSourceMgrTitle": {
+    "description": "音乐源管理弹窗标题"
+  },
+  "musicSourceMgrUrlHint": "源目录 index.json 或 JS 文件链接",
+  "@musicSourceMgrUrlHint": {
+    "description": "远程源导入的链接输入框占位"
+  },
+  "musicSourceMgrImport": "导入",
+  "@musicSourceMgrImport": {
+    "description": "导入远程音乐源按钮"
+  },
+  "musicSourceMgrInstalled": "已安装（{count}）",
+  "@musicSourceMgrInstalled": {
+    "description": "已安装 JS 音乐源分组标题",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicSourceMgrEmpty": "暂无导入的源，四平台内置源始终可用",
+  "@musicSourceMgrEmpty": {
+    "description": "无已安装源时的空态说明"
+  },
+  "musicSourceMgrImportOk": "已导入 {name}",
+  "@musicSourceMgrImportOk": {
+    "description": "导入成功提示",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourceMgrCatalog": "目录 {name}，含 {count} 个源",
+  "@musicSourceMgrCatalog": {
+    "description": "识别为目录时的提示",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "musicSourceMgrErrInvalidUrl": "链接格式不正确",
+  "@musicSourceMgrErrInvalidUrl": {
+    "description": "链接无效"
+  },
+  "musicSourceMgrErrNetwork": "网络请求失败，请检查链接",
+  "@musicSourceMgrErrNetwork": {
+    "description": "远程获取失败"
+  },
+  "musicSourceMgrErrInvalidJson": "链接内容不是合法 JSON",
+  "@musicSourceMgrErrInvalidJson": {
+    "description": "目录 JSON 解析失败"
+  },
+  "musicSourceMgrErrUnsupported": "链接内容既不是源脚本也不是目录",
+  "@musicSourceMgrErrUnsupported": {
+    "description": "无法识别的内容"
+  },
+  "musicSourceMgrErrField": "源缺少必要声明：{field}",
+  "@musicSourceMgrErrField": {
+    "description": "JS 源缺类字段（platform/key/name/baseUrl）",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourceMgrErrEntry": "源入口类声明不正确",
+  "@musicSourceMgrErrEntry": {
+    "description": "入口类未继承 MusicSourceBase"
+  },
+  "musicSourceMgrErrNoCapability": "源未声明任何能力方法",
+  "@musicSourceMgrErrNoCapability": {
+    "description": "能力扫描为空"
+  },
+  "musicSourceMgrErrTooLarge": "源文件过大（上限 2MB）",
+  "@musicSourceMgrErrTooLarge": {
+    "description": "JS 体积超限"
+  },
+  "musicSourceMgrUninstallOk": "已卸载 {name}",
+  "@musicSourceMgrUninstallOk": {
+    "description": "卸载成功提示",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourceMgrUninstall": "卸载",
+  "@musicSourceMgrUninstall": {
+    "description": "卸载已装音乐源按钮的 tooltip"
+  },
+  "musicNoSourceTitle": "还没有导入音乐源",
+  "@musicNoSourceTitle": {
+    "description": "未导入音乐源时的空态标题"
+  },
+  "musicNoSourceHint": "导入音乐源后，对应平台会出现在侧栏与登录弹窗里；内置源已不再默认启用",
+  "@musicNoSourceHint": {
+    "description": "未导入音乐源时的空态说明"
+  },
+  "musicSourceMgrOpen": "导入音乐源",
+  "@musicSourceMgrOpen": {
+    "description": "拉起源管理弹窗的按钮文案"
+  },
+  "musicSourceMgrPickFile": "本地导入",
+  "@musicSourceMgrPickFile": {
+    "description": "本地文件导入按钮"
+  },
+  "musicSourceMgrLocalHint": "选择 .js / index.json，或把文件拖进来",
+  "@musicSourceMgrLocalHint": {
+    "description": "本地导入方式说明"
+  },
+  "musicSourcePanelImportTitle": "导入音乐源",
+  "@musicSourcePanelImportTitle": {
+    "description": "导入盒标题"
+  },
+  "musicSourcePanelImportDesc": "支持本地 .js（单源）与 index.json（目录）",
+  "@musicSourcePanelImportDesc": {
+    "description": "导入盒说明第一行"
+  },
+  "musicSourcePanelImportSteps": "也可把文件直接拖入本框",
+  "@musicSourcePanelImportSteps": {
+    "description": "导入盒说明第二行（桌面拖拽）"
+  },
+  "musicSourcePanelSelectFile": "选择文件",
+  "@musicSourcePanelSelectFile": {
+    "description": "导入盒主按钮"
+  },
+  "musicSourcePanelOpenDir": "打开源目录",
+  "@musicSourcePanelOpenDir": {
+    "description": "打开已装源所在目录"
+  },
+  "musicSourcePanelImporting": "导入中…",
+  "@musicSourcePanelImporting": {
+    "description": "导入进行中的状态文案"
+  },
+  "musicSourcePanelWait": "等待导入…",
+  "@musicSourcePanelWait": {
+    "description": "导入盒底部状态文案"
+  },
+  "musicSourcePanelImported": "已导入",
+  "@musicSourcePanelImported": {
+    "description": "已装源分组标题"
+  },
+  "musicSourcePanelEmptyHint": "暂无导入的音乐源，导入后对应平台会出现在侧栏与登录弹窗",
+  "@musicSourcePanelEmptyHint": {
+    "description": "无已装源空态说明"
+  },
+  "musicSourcePanelSummary": "v{version} · {caps} 项能力",
+  "@musicSourcePanelSummary": {
+    "description": "已装源卡片副行",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "caps": {
+        "type": "int"
+      }
+    }
+  },
+  "musicSourcePanelDetailTitle": "源详情 · {name}",
+  "@musicSourcePanelDetailTitle": {
+    "description": "源详情弹窗标题",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourcePanelFieldId": "源 ID",
+  "@musicSourcePanelFieldId": {
+    "description": "详情字段：源 ID"
+  },
+  "musicSourcePanelFieldPlatform": "平台",
+  "@musicSourcePanelFieldPlatform": {
+    "description": "详情字段：平台"
+  },
+  "musicSourcePanelFieldVersion": "版本",
+  "@musicSourcePanelFieldVersion": {
+    "description": "详情字段：版本"
+  },
+  "musicSourcePanelFieldEntry": "入口类",
+  "@musicSourcePanelFieldEntry": {
+    "description": "详情字段：入口类"
+  },
+  "musicSourcePanelFieldHosts": "域名白名单",
+  "@musicSourcePanelFieldHosts": {
+    "description": "详情字段：域名白名单"
+  },
+  "musicSourcePanelFieldCaps": "能力",
+  "@musicSourcePanelFieldCaps": {
+    "description": "详情字段：能力列表"
+  },
+  "musicSourcePanelFieldFile": "源文件",
+  "@musicSourcePanelFieldFile": {
+    "description": "详情字段：源文件名"
+  },
+  "musicSourcePanelDetail": "详情",
+  "@musicSourcePanelDetail": {
+    "description": "卡片菜单：详情"
+  },
+  "musicSourcePanelCopyId": "复制 ID",
+  "@musicSourcePanelCopyId": {
+    "description": "卡片菜单：复制 ID"
+  },
+  "musicSourcePanelCopyOk": "已复制",
+  "@musicSourcePanelCopyOk": {
+    "description": "复制成功提示"
+  },
+  "musicSourcePanelDeleteMenu": "卸载源",
+  "@musicSourcePanelDeleteMenu": {
+    "description": "卡片菜单：卸载"
+  },
+  "musicSourcePanelDeleteTitle": "确认卸载源",
+  "@musicSourcePanelDeleteTitle": {
+    "description": "卸载确认弹窗标题"
+  },
+  "musicSourcePanelDeleteBody": "卸载「{name}」后，对应平台会从侧栏与登录弹窗消失；重新导入即可恢复。",
+  "@musicSourcePanelDeleteBody": {
+    "description": "卸载确认弹窗正文",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourcePanelOverwriteTitle": "源已存在",
+  "@musicSourcePanelOverwriteTitle": {
+    "description": "覆盖导入确认弹窗标题"
+  },
+  "musicSourcePanelOverwriteBody": "「{name}」已导入，是否用新版本覆盖？",
+  "@musicSourcePanelOverwriteBody": {
+    "description": "覆盖导入确认弹窗正文",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourcePanelOverwrite": "覆盖导入",
+  "@musicSourcePanelOverwrite": {
+    "description": "覆盖导入确认按钮"
+  },
+  "musicSourcePanelClose": "关闭",
+  "@musicSourcePanelClose": {
+    "description": "弹窗关闭按钮"
   },
   "musicLoginWebviewUnsupported": "该平台暂不支持窗口登录",
   "@musicLoginWebviewUnsupported": {

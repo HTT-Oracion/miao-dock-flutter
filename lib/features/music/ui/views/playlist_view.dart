@@ -11,8 +11,10 @@ import '../../../../shared/widgets/error_state.dart';
 import '../../../../shared/widgets/skeleton.dart';
 import '../../controller/music_playlist_library.dart';
 import '../../controller/music_player.dart';
+import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
+import '../widgets/music_state_box.dart';
 import '../widgets/fail_magic.dart';
 import '../widgets/music_scroll_memory.dart';
 import '../widgets/music_shared.dart';
@@ -32,6 +34,10 @@ class PlaylistLibraryView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final logged = ref.watch(musicAccountProvider.select((a) => a.logged));
+    // 🔴 未导入任何音乐源：不发起数据请求，直接给导入引导（与发现页同口径）。
+    if (ref.watch(availableMusicPlatformsProvider).isEmpty) {
+      return const MusicNoSourcePrompt();
+    }
     final library = ref.watch(playlistLibraryProvider);
     final playlists = ref.watch(userPlaylistsProvider);
 

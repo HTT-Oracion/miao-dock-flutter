@@ -17,12 +17,14 @@ import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/responsive.dart';
 import '../../../shared/widgets/app_input.dart';
+import '../../../shared/widgets/view_tabs.dart';
 import '../../../shared/widgets/app_select.dart';
 import '../../../shared/widgets/buttons.dart';
 import '../../../shared/widgets/app_switch.dart';
 import '../../../shared/widgets/log_box.dart';
 import '../../../shared/widgets/setting_row.dart';
 import '../../../shared/widgets/toast.dart';
+import '../../music/ui/widgets/music_source_manager.dart';
 import '../../manga/controller/engine_controller.dart';
 import '../../manga/controller/engine_install_controller.dart';
 import '../../manga/controller/engine_ready_controller.dart';
@@ -1112,22 +1114,48 @@ class _InferenceRows extends ConsumerWidget {
   }
 }
 
-// ── 漫画源（在线漫画）─────────────────────────────────────────────────
+// ── 数据源（漫画源 + 音乐源，页签切换）──────────────────────────────────
 
-class _OnlineSection extends ConsumerWidget {
+class _OnlineSection extends ConsumerStatefulWidget {
   const _OnlineSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_OnlineSection> createState() => _OnlineSectionState();
+}
+
+class _OnlineSectionState extends ConsumerState<_OnlineSection> {
+  /// 当前页签：false = 漫画源（默认），true = 音乐源。
+  bool _musicTab = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final mobile = context.isMobile;
+    final palette = AppPalette.of(context);
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(mobile ? 12 : 20, mobile ? 10 : 18, mobile ? 12 : 20, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Head(title: l10n.settingsNavOnline, blurb: l10n.settingsBlurbOnline),
-          const OnlineSourcePanel(),
+          // 页签：漫画源 / 音乐源（复用工具条视图页签组件）。
+          Row(
+            children: [
+              ViewTabs(
+                items: [('manga', l10n.settingsSourceMangaHead), ('music', l10n.settingsSourceMusicHead)],
+                activeId: _musicTab ? 'music' : 'manga',
+                onSelect: (String id) => setState(() => _musicTab = id == 'music'),
+              ),
+              const Spacer(),
+              Text(
+                _musicTab ? l10n.musicSourceMgrTitle : l10n.onlineSourceTitle,
+                style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 页签只切显示；已装源数据在注册表 provider 里，切换不丢。
+          if (_musicTab) const MusicSourcePanel() else const OnlineSourcePanel(),
         ],
       ),
     );

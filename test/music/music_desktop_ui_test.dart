@@ -50,6 +50,7 @@ void main() {
 
   Widget demoHost(Widget child, {DemoMusicRepository? repo, bool logged = true}) => ProviderScope(
     overrides: [
+      availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
       musicRepositoryProvider.overrideWithValue(repo ?? DemoMusicRepository()),
       if (logged) musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
       if (!logged) musicAccountProvider.overrideWith(_LoggedOutAccount.new),
@@ -114,7 +115,10 @@ void main() {
     final repo = DemoMusicRepository();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [musicRepositoryProvider.overrideWithValue(repo)],
+        overrides: [
+          musicRepositoryProvider.overrideWithValue(repo),
+          availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+        ],
         child: baseApp(const MusicScreen(view: MusicScreenView.discover)),
       ),
     );
@@ -263,6 +267,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
+        availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
         musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
       ],
     );
@@ -336,7 +341,11 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1440, 900));
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [musicAccountProvider.overrideWith(_LoggedOutAccount.new)],
+        overrides: [
+          musicAccountProvider.overrideWith(_LoggedOutAccount.new),
+          // 源体系口径：侧栏只列已导入平台，本用例注入网易云源。
+          availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+        ],
         child: baseApp(const SidebarSourceGroup()),
       ),
     );
@@ -349,14 +358,56 @@ void main() {
     expect(container.read(musicUiProvider).loginPlatform, MusicPlatform.netease);
   });
 
-  testWidgets('(e) 搜索浮层：未登录说明态出现', (tester) async {
+  testWidgets('(l2) 侧栏：无已导入源时整组不渲染', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1440, 900));
-    // 搜索浮层已提升到壳层挂载（要盖住侧栏/工具条，N06）——这里直接 pump 浮层本体，
-    // 配合未登录 override 验证说明态。
     await tester.pumpWidget(
       ProviderScope(
         overrides: [musicAccountProvider.overrideWith(_LoggedOutAccount.new)],
-        child: baseApp(const SearchOverlay()),
+        child: baseApp(const SidebarSourceGroup()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = l10nOf(tester);
+    // 破坏点：侧栏仍列内置四平台 → 用户以为内置源可用（源体系口径失效）。
+    expect(find.text(l10n.musicSrcGroup), findsNothing);
+    expect(find.text('网易云'), findsNothing);
+  });
+
+  testWidgets('(e) 搜索浮层：未导入源显示导入引导；有源未登录显示登录说明', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    final l10nBase = AppLocalizations.localizationsDelegates;
+
+    // 场景 1：无源 → 导入引导（不再提供搜索）。
+    await tester.pumpWidget(
+      ProviderScope(
+        key: UniqueKey(),
+        overrides: [musicAccountProvider.overrideWith(_LoggedOutAccount.new)],
+        child: MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
+          localizationsDelegates: l10nBase,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: SearchOverlay()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // 破坏点：浮层对「无源」不拦 → 用户会在没有任何音源时搜到空结果。
+    expect(find.text(l10nOf(tester).musicNoSourceTitle), findsOneWidget);
+
+    // 场景 2：有源未登录 → 原有的未登录说明态（N06 边界）。
+    await tester.pumpWidget(
+      ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          musicAccountProvider.overrideWith(_LoggedOutAccount.new),
+          availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
+        ],
+        child: MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
+          localizationsDelegates: l10nBase,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: SearchOverlay()),
+        ),
       ),
     );
     await tester.pumpAndSettle();

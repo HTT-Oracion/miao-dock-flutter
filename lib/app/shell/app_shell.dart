@@ -17,6 +17,7 @@ import 'readiness.dart';
 import '../../features/manga/domain/manga_task.dart';
 import '../../features/manga/domain/not_ready_state.dart';
 import '../../features/music/controller/music_playlist_library.dart';
+import '../../features/music/controller/music_providers.dart';
 import '../../features/music/controller/music_session.dart';
 import '../../features/music/domain/music_models.dart';
 import '../../features/music/controller/music_player.dart';
@@ -38,7 +39,7 @@ import 'shell_controller.dart';
 import 'sidebar_music_views.dart';
 import 'view_labels.dart';
 import 'mobile_nav.dart';
-import 'view_tabs.dart';
+import '../../shared/widgets/view_tabs.dart';
 
 /// 响应式应用壳（design.html §03）：
 /// 桌面 = 侧栏（208/68）+ 工具条（56）+ 内容区；
@@ -205,7 +206,9 @@ class _DesktopShell extends ConsumerWidget {
                       )
                     : null,
                 // 音乐模块附属组：音源（四平台 + 三态徽标，设计稿 N04）。
-                sourceGroup: location.moduleIndex == 1
+                // 音乐模块附属组：音源（只列**已导入源**的平台；一个都没有时
+                // 整组连同分隔线都不出现 —— 用户口径）。
+                sourceGroup: location.moduleIndex == 1 && ref.watch(availableMusicPlatformsProvider).isNotEmpty
                     ? (collapsed ? const SidebarSourceMini() : const SidebarSourceGroup())
                     : null,
                 topInset: topInset,
@@ -221,7 +224,7 @@ class _DesktopShell extends ConsumerWidget {
                         // 模块内视图页签（漫画模块；音乐设计稿把视图放回侧栏，不渲染页签）。
                         // 番剧无视图、设置是全局层 ⇒ 不渲染页签。
                         if (location.moduleIndex >= 0 && location.moduleIndex != 1 && location.viewItems.isNotEmpty)
-                          ShellViewTabs(
+                          ViewTabs(
                             items: [
                               for (final item in location.viewItems)
                                 (item.id, viewLabel(AppLocalizations.of(context), item.id)),

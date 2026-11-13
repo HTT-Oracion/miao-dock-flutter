@@ -30,6 +30,7 @@ import 'support/music_test_account.dart';
 void main() {
   Widget host(Widget child, {Size size = const Size(1440, 900), bool logged = true}) => ProviderScope(
     overrides: [
+      availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
       musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
       if (logged) musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
       if (!logged) musicAccountProvider.overrideWith(_LoggedOutAccount.new),

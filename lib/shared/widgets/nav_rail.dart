@@ -7,7 +7,7 @@ import '../../l10n/app_localizations.dart';
 
 /// 应用侧栏（design.html §03 / 重设计稿 2026-11-07）：
 /// 展开 208 / 收起 68；品牌 → 模块组 → 弹性 → MiniPlayer → 设置脚。
-/// 视图组已迁到工具条页签（[ShellViewTabs]），侧栏只保留模块级导航。
+/// 视图组已迁到工具条页签（[ViewTabs]），侧栏只保留模块级导航。
 ///
 /// 纯展示件：路由状态与回调由 AppShell 注入；hover / 动效在本件内完成。
 /// 图标按 design.html §05 指定（`languages` / `music` / `clapperboard` /

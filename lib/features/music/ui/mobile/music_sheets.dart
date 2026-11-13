@@ -10,6 +10,8 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_switch.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../../controller/music_player.dart';
+import '../widgets/music_source_manager.dart';
+import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
 import '../widgets/music_shared.dart';
@@ -765,6 +767,9 @@ class _AccountBody extends ConsumerWidget {
       return acc.isLogged(p) ? l10n.musicBadgeLogged : l10n.musicBadgeOff;
     }
 
+    // 🔴 平台行只列**已导入源**的平台；无源时整个平台列表换成导入入口。
+    final available = ref.watch(availableMusicPlatformsProvider);
+
     void tapPlatform(MusicPlatform p) {
       final notifier = ref.read(musicUiProvider.notifier);
       // 未登录优先：当前源未登录（如网易云）点自己也要能拉起登录。
@@ -808,16 +813,27 @@ class _AccountBody extends ConsumerWidget {
             ],
           ),
         ),
-        for (final p in MusicPlatform.values.where((p) => p != MusicPlatform.local))
+        if (available.isEmpty)
           _SheetOption(
-            leading: PlatformLogo(platform: p, size: 18),
-            title: platformLabel(l10n, p),
-            trailing: Text(
-              badgeOf(p),
-              style: TextStyle(fontSize: AppFont.px10_5, color: p == acc.cur ? palette.accInk : palette.mut),
+            leading: Icon(LucideIcons.disc3, size: 18, color: palette.mut),
+            title: l10n.musicSourceMgrOpen,
+            trailing: const SizedBox.shrink(),
+            onTap: () {
+              ref.read(musicUiProvider.notifier).setAccountSheet(false);
+              MusicSourceManagerModal.open(context);
+            },
+          )
+        else
+          for (final p in MusicPlatform.values.where((p) => p != MusicPlatform.local && available.contains(p)))
+            _SheetOption(
+              leading: PlatformLogo(platform: p, size: 18),
+              title: platformLabel(l10n, p),
+              trailing: Text(
+                badgeOf(p),
+                style: TextStyle(fontSize: AppFont.px10_5, color: p == acc.cur ? palette.accInk : palette.mut),
+              ),
+              onTap: () => tapPlatform(p),
             ),
-            onTap: () => tapPlatform(p),
-          ),
         if (acc.logged) ...[
           Container(height: 1, color: palette.line, margin: const EdgeInsets.symmetric(vertical: 6)),
           _SheetOption(

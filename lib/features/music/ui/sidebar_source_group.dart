@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/toast.dart';
+import '../controller/music_providers.dart';
 import '../controller/music_session.dart';
 import '../domain/music_models.dart';
 import 'widgets/platform_logo.dart';
@@ -21,6 +22,9 @@ class SidebarSourceGroup extends ConsumerWidget {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final account = ref.watch(musicAccountProvider);
+    // 🔴 平台行只列**已导入源**的平台；一个都没有时整组不渲染（壳层也 gate）。
+    final available = ref.watch(availableMusicPlatformsProvider);
+    if (available.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
@@ -34,7 +38,7 @@ class SidebarSourceGroup extends ConsumerWidget {
               style: TextStyle(fontSize: AppFont.px8_5, color: palette.mut),
             ),
           ),
-          for (final platform in MusicPlatform.values.where((p) => p != MusicPlatform.local))
+          for (final platform in MusicPlatform.values.where((p) => p != MusicPlatform.local && available.contains(p)))
             _SourceRow(
               platform: platform,
               badge: _badgeOf(account, platform, l10n),
@@ -132,6 +136,10 @@ class SidebarSourceMini extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cur = ref.watch(musicAccountProvider).cur;
+    // 当前源未导入（无源态）→ 不渲染。
+    if (ref.watch(availableMusicPlatformsProvider).contains(cur) == false) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Tooltip(

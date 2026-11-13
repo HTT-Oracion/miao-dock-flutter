@@ -23,6 +23,7 @@ import '../widgets/fail_magic.dart';
 import '../widgets/music_scroll_memory.dart';
 import '../widgets/music_shared.dart';
 import '../widgets/remote_cover_image.dart';
+import '../widgets/music_state_box.dart';
 import '../widgets/song_row.dart';
 
 /// 发现页（N21/N37 顺序固定：推荐栏 → 推荐歌单 → 官方榜单 → 推荐歌曲）。
@@ -37,6 +38,10 @@ class DiscoverView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    // 🔴 未导入任何音乐源：不发起任何数据请求，直接给导入引导（与漫画在线模块同交互）。
+    if (ref.watch(availableMusicPlatformsProvider).isEmpty) {
+      return const MusicNoSourcePrompt();
+    }
     final recs = ref.watch(recCardsProvider);
     final playlists = ref.watch(recPlaylistsProvider);
     final charts = ref.watch(chartsProvider);

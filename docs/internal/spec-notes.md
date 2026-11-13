@@ -4688,3 +4688,179 @@
     对齐 KUGOU_COOKIE_PRIORITY）。
 - **验证**：`kugou_cookie_auth_test` 6 条；反向验证（收窄为 userid+token 才算登录）后
   KuGoo 用例变红。音乐域 + core + l10n 102 用例全绿。
+
+## D-219 · 音乐源体系第一步：JS 源契约 + 网易云样例跑通（2026-11-14）
+
+- **状态**：已实施（开发中 —— 第一步收口，第二 / 三步待续）。
+- **做了什么**：
+  · `music_source.json` 清单格式（MusicSourceManifest）：`platform` 必须是内置枚举
+    （第一步 UI / 品牌 / 存储零改动；自由新增平台属第三步），sourceFile 拒绝路径穿越，
+    hosts 是 HTTP 白名单边界；
+  · QuickJS 引擎（`online/data/js/quickjs_music_source_engine.dart`）：宿主桥协议与
+    漫画源一致（http/cookie/delay/convert/log/数据存取），prelude
+    `assets/online/music_init.js` 提供 `MusicSourceBase` + `postForm`/`fetchJson`/`formEncode`
+    公共件；能力方法组为音乐面（searchSongs/charts/playlistDetail/lyrics/songUrl/...）；
+  · 音乐源 HTTP 通道（MusicSourceHttp）：域名白名单 + Cookie 罐 + 限速；UTF-8 必须
+    `utf8.decode`（fromCharCodes 会把多字节拆成 Latin-1，中文全乱码 —— 已踩）；
+  · 导入器（MusicSourceImporter）：清单校验 → 入口类静态检查（extends MusicSourceBase）
+    → 能力扫描（契约白名单）→ 落盘 `music-sources/<id>/`；
+  · `JsMusicSourceAdapter implements MusicSource`：JS 源与内置四平台在同一接口下互换，
+    仓库装配时**同平台 JS 源优先于内置实现**（UI 零改动的接口缝）；
+  · 网易云 JS 源样例（`assets/online/sources/netease/`）。
+- **验证**：debug 探针（kDebugMode，bootstrap 触发，`/tmp/music_source_probe.log`）实测
+  导入 → 搜索「周杰伦」5 首（中文正常）→ songUrl 成功（VIP 歌 code -110 与内置一致，
+  登录后才有 URL）→ 歌词 33 行 → 榜单 65 个。单测 20 条（manifest 7 / DTO 9 / importer 4），
+  反证轮通过（能力扫描放水、platform 校验放水 → 立即变红）。
+- **边界与后续**：
+  · AES 桥未加 —— 网易云样例走明文 form 接口即可跑通播放链路；酷狗 / QQ 源化时再加
+    （convert 方法组里补 aes-ecb，密钥走 saveData 由源自带）；
+  · `userPlaylists` / `dailySongs` / `comments` 是能力位方法：未声明能力的源调用返回空；
+  · 探针在第一步完成后保留于 debug 构建（第二 / 三步继续用），发布构建不含；
+  · 第二步：其余三平台源化 + 内置实现降级为兜底；第三步：远程源仓库（index.json + URL 导入）。
+
+## D-220 · 音乐源体系第二步：四平台 JS 源化（2026-11-14）
+
+- **状态**：已实施（酷狗 / QQ / 咪咕源化完成，内置 Dart 实现自动降级为「未装 JS 源时的兜底」）。
+- **做了什么**：
+  · 三份 JS 源 + 清单（`assets/online/sources/{kugou,qq,migu}/`），字段映射逐字对齐内置实现
+    （酷狗 PascalCase / v3 snake_case 双形状、QQ track_info、咪咕 copyrightId+contentId 双 id）；
+  · 引擎桥增强：`session` 方法（登录 Cookie 原串透传 —— 酷狗票据是 URL 参数不是
+    Cookie 头，Cookie 罐按域隔离带不到网关域）；`fetchBytes`（咪咕混淆流二进制过桥，
+    base64 编码）；`_bytes` 兼容 List<dynamic>（QuickJS 数组过桥）；
+  · prelude 公共件：`qqSign`（zzc 签名，取位序与异或表逐字对齐）、`getSessionCookie`、
+    `getJson`/`postForm` 支持绝对 URL（酷狗跨子域）；
+  · 咪咕混淆流解码在源内完成：`out[i] = body[i+4] + offset - key[i%key.len]`
+    （offset = 响应第 4 字节，漏掉 +offset 正文全乱码 —— 与内置实现的坑一致）。
+- **验证**：探针四平台全绿 —— 网易云（songUrl 真实地址 + 33 行歌词 + 65 榜单）、
+  酷狗（发如雪/晴天搜索 + 69 行歌词 + 56 榜单）、QQ（搜索 + 9 榜单）、
+  咪咕（20 首搜索 + 3 榜单）；node 独立复现 QQ 免费歌 vkey 成功（purl 185 字节）。
+  songUrl 为 null 的均为 VIP / 需登录（与内置实现同语义，登录 Cookie 注入后可用）。
+  单测 24 条（含四平台内置资产包导入校验），全量 126 用例绿。
+- **边界**：
+  · 酷狗 songUrl 未登录回 null（内置同语义）；登录后经 WebView Cookie → engine
+    `setSessionCookie` → 源内 parseAuth 自动生效；
+  · 咪咕歌词 0 行 = 搜索命中为 VIP 歌，listen 未返回 lrc URL（内置同语义）；
+  · AES-ECB 桥仍未加（四平台当前签名算法都不需要）。
+
+## D-221 · 音乐源体系第三步：JSON 精简 + 远程导入 + 源管理 UI（2026-11-14）
+
+- **状态**：已实施（第一步 ~ 第三步链路齐备；源仓库生态待外部贡献）。
+- **JSON 精简（对齐漫画源口径）**：**JS 即包**，清单字段全部从 JS 类字段与实际 URL 推导 ——
+  platform / key / name / version / baseUrl 在源类里声明；entryClass 扫
+  `class X extends MusicSourceBase`；**hosts 从 JS 实际出现的 URL 扫描**（白名单跟实际请求走，
+  不跟声明走 —— 反证：推导放水只留 baseUrl 域时跨子域用例立即变红）；`music_source.json`
+  整个移除（内测四平台资产只剩裸 JS）。源作者只维护一份 JS。
+- **远程导入**（`music_source_remote.dart`）：GitHub blob → raw 归一化；inspect 识别
+  裸 JS / 目录（index.json：`{name, sources:[{key,name,version,description,fileName}]}`，
+  也收裸数组）；目录逐条抓 JS 装包，单条失败不影响其余。
+- **源管理 UI**（`online/ui/music_source_manager.dart`）：账号菜单新增「音乐源管理」；
+  showAppDialog（窄屏底部抽屉）；URL 导入 + 已装列表 + 卸载；错误码全部映射 ARB。
+- **验证**：精简模型探针全绿（netease hosts=1 / kugou hosts=5 / qq hosts=4 / migu hosts=3
+  推导精确，搜索 / 歌词 / 榜单 / songUrl 与精简前一致）；单测 26 条（清单推导 7 +
+  导入 8 + DTO 9 + 内置包 4），全量 126 用例绿。
+- **坑**：导入器状态目录做成可注入（测试隔离）；`installedSources` 枚举安装目录下的
+  一级子目录 —— 测试里包目录不能放在扫描根内（导入后要清走）。
+
+## D-222 · 音乐源成为唯一平台来源 + 设置页数据源分区（2026-11-14）
+
+- **状态**：已实施（待用户实测确认后，下一步删除内置四平台 Dart 实现与对应测试）。
+- **做了什么**：
+  · 外部源仓库 `miao-dock/sources/music/`（index.json + 四平台 JS）——用户从本地 /
+    URL 导入实测，确认后即删内置实现；
+  · **平台清单只认已导入 JS 源**（availableMusicPlatformsProvider）：账号菜单平台行、
+    登录弹窗平台行都按它过滤；未导入源时发现 / 我的 / 搜索浮层显示导入引导
+    （MusicNoSourcePrompt，对齐漫画在线模块的 OnlineStateBox 交互），不再回退内置实现；
+  · 仓库装配：无 JS 源的平台给 stub 仓库（全空返回），UI 空态层拦截；
+  · 设置页「漫画源」→「数据源」：音乐源面板（MusicSourcePanel，弹窗与设置页共用）
+    + 漫画源面板上下两节；
+  · 登录弹窗无源时整窗变导入引导（用户口径：未登录点登录 → 先配置源）。
+- **验证**：390×844 断言（无源时不渲染数据分区 + 引导出现，反证通过——去掉 gate 即红）；
+  登录弹窗两态断言（有源只列该平台 logo / 无源整窗引导）；搜索浮层两态断言。
+  全量 128 用例绿；探针四平台（JS 源导入 → 搜索 → songUrl）全链路复验通过。
+- **待办（用户确认后）**：删除 lib/features/music/data/api/{kugou,qq,migu,netease}_api.dart、
+  data/sources/ 四平台实现与对应自测用例；保留 MusicSource 契约 / 仓库 / 播放器链路。
+
+## D-223 · 音乐源支持本地导入（对齐漫画源交互）（2026-11-14）
+
+- **状态**：已实施。
+- **做了什么**：音乐源面板（弹窗与设置页共用）新增本地导入 ——
+  · 「本地导入」按钮（file_selector，.js / .json）；
+  · 桌面拖拽（desktop_drop 的 DropTarget，拖入高亮，与漫画源同款）；
+  · 三种落地形态：裸 .js / **本地目录 index.json**（file:// 相对解析同目录 JS，
+    目录解析器放开 file 协议）/ 目录（扫描全部 .js 逐个导入）。
+- **验证**：单测新增「本地目录导入」链路（解析 → file:// 读 JS → 双源装包）；
+  反证（目录解析收回 file 协议 → 立即变红）。全量 129 用例绿，macOS 构建通过。
+- **交互与漫画源一致**：URL 导入 / 本地导入 / 拖拽三条入口并存。
+
+## D-224 · 侧栏音源组按已导入源过滤（2026-11-14）
+
+- **状态**：已实施。
+- **用户口径**：未导入数据源时，左侧栏不显示对应平台；一个平台都没有时，整个「音源」组
+  连同分隔线不渲染（不是空组壳）。
+- **做了什么**：
+  · 壳层 `sourceGroup` 槽位：`availableMusicPlatformsProvider` 为空时传 null
+    （NavRail 的分隔线随槽位一起消失）；
+  · `SidebarSourceGroup` 平台行按可用集过滤（空集 shrink 兜底）；收起态 `SidebarSourceMini`
+    当前源不在可用集时 shrink；
+  · 移动端账号抽屉（music_sheets）：平台行同样过滤，无源时整个列表换成「导入音乐源」入口
+    （打开源管理）；
+  · 账号菜单 / 登录弹窗的平台行此前已过滤（D-222），本条补齐侧栏与移动端。
+- **验证**：新增 (l2) 用例（无源时组标题与平台名都不渲染，反证：去掉过滤即列内置四平台）；
+  (l) 用例补可用平台注入。全量 130 用例绿，macOS 构建通过。
+
+## D-225 · 音乐源出包 + 面板对齐漫画源（2026-11-14）
+
+- **状态**：已实施。
+- **做了什么**：
+  · **应用不再内置 JS 源**：`assets/online/sources/` 移除；JS 统一放外部仓库
+    `miao-dock-sources/music/`（与 flutter 工程同级，index.json + 四平台 JS），
+    用户经 UI（URL / 本地导入 / 拖拽）导入；
+  · `assets/online/init.js` → `manga_init.js`（漫画 prelude 更名，音乐 prelude 原名不动）；
+  · 探针改由 `--dart-define=MIAO_MUSIC_SOURCES_DIR` 指向外部仓库（未提供则跳过）；
+  · **音乐源面板对齐漫画源面板**：虚线拖拽导入盒（upload 图标 + 选择文件 + 打开源目录
+    + 状态文案）、已装卡片（glyph 圆底 + 名称 + v版本·能力数 + host + 启用开关 + 菜单：
+    详情 / 复制 ID / 卸载）、详情弹窗、覆盖导入确认、卸载确认；
+  · 启用状态持久化（源目录 `state.json`），停用的源不参与装配与平台清单但保留文件。
+- **验证**：探针（dart-define 指向 `miao-dock-sources/music`）四平台导入 → 搜索 →
+  songUrl 全链路通过；单测 130 用例绿（内置包测试改为守护外部仓库：仓库缺文件即红）；
+  macOS 构建通过。
+
+## D-226 · 音乐源体系并入四层结构（2026-11-14）
+
+- **状态**：已实施。
+- **用户裁定**：`features/music/online/` 不得作为二级子目录 —— music 已有四层结构，
+  源体系并入既有层（漫画的 `manga/online/` 是独立子系统先例，music 不沿用该形态）。
+- **迁移**：
+  · domain 三件（manifest / js_music_source / engine）→ `music/domain/`；
+  · 引擎与数据（quickjs 引擎 / dto / http / import / remote / probe）→ `music/data/sources/js/`
+    （与内置平台 source 同层，js/ 子目录聚合同类）；
+  · 适配器 → `music/data/sources/js_music_source_adapter.dart`；
+  · 管理面板 → `music/ui/widgets/music_source_manager.dart`；
+  · 测试 → `test/music/data/sources/`。
+- **验证**：全量 130 用例绿；analyze 无问题；macOS 构建通过。
+
+## D-227 · 数据源分区改为页签切换（2026-11-14）
+
+- **状态**：已实施。
+- **用户裁定**：设置页「数据源」里漫画源 / 音乐源以**页签**切换显示，不再上下堆叠两个小节。
+- **做了什么**：`_OnlineSection` 改为 ConsumerStatefulWidget，顶部一对段选按钮
+  （漫画源 / 音乐源，选中 = 主色实底、未选 = 次级描边，右侧标注当前面板名）；
+  页签只切显示 —— 已装源数据在注册表 provider，切换不丢。
+- **验证**：analyze 无问题；130 用例绿；macOS 构建通过。
+
+## D-228 · 源目录统一 + 数据源页签复用工具条组件（2026-11-14）
+
+- **状态**：已实施。
+- **做了什么**：
+  · `miao-dock-sources/music/index.json` 改为**裸数组**（`[{name, fileName, key,
+    version, description}]`，与漫画源 index.json 完全同构；解析器本就兼容裸数组）；
+  · `music_init.js` 补 `var APP = { version: '0.1.0' }` 与 `globalThis.APP`（与
+    manga_init.js 一致）；
+  · `assets/online/init.js` → `manga_init.js`（漫画 prelude 更名）；
+  · `ShellViewTabs` 提升为 `shared/widgets/view_tabs.dart` 的 `ViewTabs`（设置页
+    数据源分区复用同一页签组件；app 壳层单调用点同步）；
+  · 设置页数据源分区的漫画源 / 音乐源切换改用 `ViewTabs` 分段按钮。
+- **事故记录**：一次脚本将 `nav_rail.dart` 内容误写入 `app_shell.dart`（变量写串），
+  `AppShell` 类一度丢失 —— 已 `git checkout` 恢复并重放本轮改动。教训：多文件
+  写回的脚本必须逐文件核验写入目标。
+- **验证**：全仓 448 用例绿；analyze 无问题；macOS 构建通过。

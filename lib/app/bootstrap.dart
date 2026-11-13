@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -18,6 +20,8 @@ import '../../features/manga/controller/remote_controller.dart';
 import '../../features/manga/domain/platform_caps.dart';
 import '../../features/manga/data/http_manga_svc_client.dart';
 import '../../features/manga/data/mobile_mirror_store.dart';
+import '../features/music/data/sources/js/quickjs_music_source_engine.dart';
+import '../features/music/data/sources/js/music_source_probe.dart';
 import 'engine_autostart.dart';
 import 'music_autostart.dart';
 import 'remote_autostart.dart';
@@ -40,6 +44,16 @@ Future<void> bootstrap(Widget app) async {
   await ensureShellPrefsLoaded();
   await initDesktopWindow();
   await initMobileSystemUi();
+
+  // 开发期：JS 音乐源端到端探针（仅 debug；结果落 /tmp/music_source_probe.log）。
+  // 验证完成后移除（见台账 D-219）。
+  if (kDebugMode) {
+    unawaited(
+      runMusicSourceProbe(QuickJsMusicSourceEngine()).catchError((Object e) {
+        debugPrint('[music.source.probe] bootstrap error: $e');
+      }),
+    );
+  }
 
   const forcedBaseUrl = String.fromEnvironment('MIAO_SVC_BASE_URL');
   const token = String.fromEnvironment('MIAO_SVC_TOKEN');

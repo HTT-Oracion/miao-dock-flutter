@@ -300,3 +300,16 @@ Directory? onlineStateDirectory() {
     return null;
   }
 }
+
+/// 在线音乐源目录（JS 源包落盘）。Web 返回 null（无 QuickJS 运行时）。
+Directory? musicSourceStateDirectory() {
+  if (kIsWeb) return null;
+  final prefs = _prefsFile();
+  final dir = Directory('${prefs.parent.path}/music-sources');
+  try {
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    return dir;
+  } catch (_) {
+    return null;
+  }
+}

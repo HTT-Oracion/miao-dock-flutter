@@ -5,8 +5,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/toast.dart';
+import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
+import '../widgets/music_source_manager.dart';
 import '../widgets/platform_logo.dart';
 import '../widgets/song_row.dart';
 
@@ -157,14 +159,25 @@ class _MenuBody extends ConsumerWidget {
               ),
             ),
             const MusicMenuDivider(),
-            for (final p in MusicPlatform.values.where((p) => p != MusicPlatform.local))
-              MusicMenuTile(
-                leading: PlatformLogo(platform: p, size: 14),
-                label: platformBrands[p]?.label ?? '',
-                sub: badgeOf(p),
-                checked: p == account.cur,
-                onTap: () => _onPlatformTap(context, ref, p),
-              ),
+            // 🔴 平台行只列**已导入 JS 源**的平台：内置实现不再出现在选择 UI 里。
+            ...[
+              for (final MusicPlatform p in ref.watch(availableMusicPlatformsProvider))
+                MusicMenuTile(
+                  leading: PlatformLogo(platform: p, size: 14),
+                  label: platformBrands[p]?.label ?? '',
+                  sub: badgeOf(p),
+                  checked: p == account.cur,
+                  onTap: () => _onPlatformTap(context, ref, p),
+                ),
+            ],
+            MusicMenuTile(
+              icon: LucideIcons.disc3,
+              label: l10n.musicSourceMgrTitle,
+              onTap: () {
+                onClose();
+                MusicSourceManagerModal.open(context);
+              },
+            ),
             if (account.logged) ...[
               const MusicMenuDivider(),
               MusicMenuTile(

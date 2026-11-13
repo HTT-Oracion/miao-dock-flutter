@@ -7,6 +7,7 @@ import 'package:miao_dock_flutter/app/shell/mobile_nav.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_player.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 
 import 'support/demo_music_repository.dart';
@@ -30,6 +31,7 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 void main() {
   Widget host() => ProviderScope(
     overrides: [
+      availableMusicPlatformsProvider.overrideWith((_) => {MusicPlatform.netease}),
       musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
       musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
     ],
@@ -156,4 +158,39 @@ void main() {
     pausePlayer(tester);
     await tester.pump(const Duration(milliseconds: 100));
   });
+
+  testWidgets('390×844：未导入音乐源时发现页显示导入引导（不渲染数据分区）', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          // 无源场景：不注入 availableMusicPlatformsProvider（默认空集）。
+          musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
+          musicAccountProvider.overrideWith(_LoggedOutAccount.new),
+        ],
+        child: MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppPalette.dark]),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: MusicScreen(view: MusicScreenView.discover)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)));
+    // 破坏点：无源时仍渲染推荐 / 榜单分区 → 用户对着空数据疑惑；引导缺失则无法导入。
+    expect(find.text(l10n.musicNoSourceTitle), findsOneWidget);
+    expect(find.text(l10n.musicSecRecPlaylists), findsNothing);
+    expect(find.text(l10n.musicSecCharts), findsNothing);
+  });
+}
+
+/// 未登录替身（无源场景下账号态同样未登录）。
+class _LoggedOutAccount extends MusicAccountNotifier {
+  @override
+  MusicAccountState build() =>
+      const MusicAccountState(cur: MusicPlatform.netease, logged: false, nick: null, extra: {});
 }

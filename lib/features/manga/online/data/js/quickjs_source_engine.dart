@@ -145,7 +145,7 @@ class QuickJsSourceEngine implements SourceEngine {
       if (setGlobal is! JSInvokable) throw StateError('sendMessage injection failed');
       setGlobal(['sendMessage', _onMessage]);
       setGlobal.free();
-      final prelude = _prelude ?? await rootBundle.loadString('assets/online/init.js');
+      final prelude = _prelude ?? await rootBundle.loadString('assets/online/manga_init.js');
       engine.evaluate(prelude, name: '<online-prelude>');
       _engine = engine;
     } catch (e) {

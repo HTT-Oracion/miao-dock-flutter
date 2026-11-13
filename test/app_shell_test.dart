@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:miao_dock_flutter/app/shell/view_tabs.dart';
+import 'package:miao_dock_flutter/shared/widgets/view_tabs.dart';
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 import 'package:miao_dock_flutter/shared/widgets/nav_rail.dart';
@@ -107,7 +107,7 @@ void main() {
     var selected = '';
     await tester.pumpWidget(
       host(
-        child: ShellViewTabs(
+        child: ViewTabs(
           items: const [('drop', '投放'), ('queue', '队列'), ('library', '漫画库')],
           activeId: 'queue',
           onSelect: (v) => selected = v,
@@ -125,7 +125,7 @@ void main() {
   testWidgets('视图页签空列表不渲染任何页签行（番剧 / 设置无页签）', (tester) async {
     await tester.pumpWidget(
       host(
-        child: ShellViewTabs(items: const [], activeId: null, onSelect: (_) {}),
+        child: ViewTabs(items: const [], activeId: null, onSelect: (_) {}),
       ),
     );
     await tester.pumpAndSettle();

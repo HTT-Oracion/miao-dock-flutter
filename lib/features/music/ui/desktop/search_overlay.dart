@@ -14,6 +14,7 @@ import '../../controller/music_player.dart';
 import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
+import '../widgets/music_state_box.dart';
 import '../widgets/music_shared.dart';
 
 /// 搜索浮层（N06）：全屏遮罩 + 顶部居中浮层，输入即分组返回「单曲 / 歌单」。
@@ -74,6 +75,27 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     final palette = AppPalette.of(context);
     final logged = ref.watch(musicAccountProvider.select((a) => a.logged));
     final search = ref.watch(musicSearchProvider);
+    // 🔴 未导入音乐源：不提供搜索，给导入引导（与发现 / 我的同口径）。
+    if (!ref.watch(availableMusicPlatformsProvider).contains(ref.watch(musicAccountProvider).cur)) {
+      return Material(
+        color: palette.bg,
+        child: SafeArea(
+          child: Column(
+            children: [
+              _SearchInput(
+                controller: _ctrl,
+                focus: _focus,
+                enabled: false,
+                onSubmit: _submit,
+                onClose: _close,
+                mobile: context.isMobile,
+              ),
+              const Expanded(child: MusicNoSourcePrompt(compact: true)),
+            ],
+          ),
+        ),
+      );
+    }
 
     // M06/M17 移动端：整屏浮层（设计稿 `.m-search{inset:0;background:var(--bg)}`），
     // 顶栏是输入框 + 取消，结果直接铺满，不使用桌面的居中弹层。

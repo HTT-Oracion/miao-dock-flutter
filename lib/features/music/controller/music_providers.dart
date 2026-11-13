@@ -2,18 +2,115 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/music_repository.dart';
+import '../data/sources/music_source.dart';
+import '../data/sources/js/quickjs_music_source_engine.dart';
+import '../data/sources/js/music_source_import.dart';
+import '../domain/js_music_source.dart';
+import '../domain/music_source_engine.dart';
+import '../data/sources/js_music_source_adapter.dart';
 import '../data/platform_music_repository.dart';
 import '../domain/music_models.dart';
 import 'music_auth.dart';
 import 'music_player.dart';
 import 'music_session.dart';
 
-/// 仓库装配：始终按当前音源连接真实平台接口；切音源即换仓库，队列不清空。
+/// 已导入且可用的 JS 音乐源覆盖的平台集合。
+///
+/// 🔴 音乐模块的平台清单**只认 JS 源**（与漫画源同口径）：内置 Dart 实现
+/// 仅作为删除前的兼容保留，不再出现在任何平台选择 UI 里；未导入源时
+/// 发现 / 我的呈现导入引导，而不是悄悄回退内置实现。
+final availableMusicPlatformsProvider = Provider<Set<MusicPlatform>>((ref) {
+  return {
+    for (final source in ref.watch(jsMusicSourceRegistryProvider))
+      if (source.isAvailable) source.platform,
+  };
+});
+
+/// 仓库装配：按当前音源接 JS 源；该平台没有已导入源时返回 stub 仓库
+/// （UI 在空态层拦截，stub 只是兜底防止误调用）。
 final musicRepositoryProvider = Provider<MusicRepository>((ref) {
   final account = ref.watch(musicAccountProvider);
   final cookie = ref.watch(musicAuthProvider).cookieOf(account.cur) ?? '';
-  return PlatformMusicRepository(platform: account.cur, cookie: cookie);
+  JsMusicSource? jsSource;
+  for (final candidate in ref.watch(jsMusicSourceRegistryProvider)) {
+    if (candidate.isAvailable && candidate.platform == account.cur) {
+      jsSource = candidate;
+      break;
+    }
+  }
+  if (jsSource != null) {
+    return PlatformMusicRepository(
+      platform: account.cur,
+      cookie: cookie,
+      source: JsMusicSourceAdapter(source: jsSource, engine: ref.watch(musicSourceEngineProvider), cookie: cookie),
+    );
+  }
+  return PlatformMusicRepository(platform: account.cur, source: const _NoSourceMusicSource(), cookie: cookie);
 });
+
+/// 未导入源时的兜底仓库：所有能力返回空（UI 空态拦截后不应被调用到）。
+class _NoSourceMusicSource implements MusicSource {
+  const _NoSourceMusicSource();
+
+  @override
+  MusicPlatform get platform => MusicPlatform.local;
+
+  @override
+  bool get supportsDailySongs => false;
+  @override
+  bool get supportsComments => false;
+  @override
+  bool get supportsRecommendPlaylists => false;
+  @override
+  bool get supportsSimilarSongs => false;
+
+  @override
+  Future<List<MusicSong>> searchSongs(String keywords, {int limit = 30, int offset = 0}) async => const [];
+  @override
+  Future<List<MusicPlaylist>> searchPlaylists(String keywords, {int limit = 12}) async => const [];
+  @override
+  Future<List<MusicPlaylist>> recommendedPlaylists({int limit = 6}) async => const [];
+  @override
+  Future<List<MusicPlaylist>> userPlaylists() async => const [];
+  @override
+  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async =>
+      const <({String id, String name, String updateMeta, String? coverUrl})>[];
+  @override
+  Future<({MusicPlaylist meta, List<MusicSong> songs})> playlistDetail(String id) async =>
+      (meta: const MusicPlaylist(id: '', name: '', trackCount: 0, seed: ''), songs: const <MusicSong>[]);
+  @override
+  Future<({MusicPlaylist meta, List<MusicSong> songs})> chartDetail(String id) async =>
+      (meta: const MusicPlaylist(id: '', name: '', trackCount: 0, seed: ''), songs: const <MusicSong>[]);
+  @override
+  Future<List<MusicSong>> dailySongs() async => const [];
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) async => const [];
+  @override
+  Future<List<MusicComment>> comments(String songId, {int limit = 20, int offset = 0}) async => const [];
+  @override
+  Future<SongLyrics> lyrics(MusicSong song) async => const SongLyrics(lines: []);
+  @override
+  Future<String?> songUrl(MusicSong song, QualityTier quality) async => null;
+}
+
+/// QuickJS 音乐源引擎单例：runtime 创建成本高，跨仓库重建共享。
+final musicSourceEngineProvider = Provider<MusicSourceEngine>((ref) {
+  final engine = QuickJsMusicSourceEngine();
+  ref.onDispose(engine.dispose);
+  return engine;
+});
+
+/// 已安装的 JS 音乐源注册表（启动时枚举落盘包；导入 / 卸载后 refresh）。
+final jsMusicSourceRegistryProvider = NotifierProvider<JsMusicSourceRegistry, List<JsMusicSource>>(
+  JsMusicSourceRegistry.new,
+);
+
+class JsMusicSourceRegistry extends Notifier<List<JsMusicSource>> {
+  @override
+  List<JsMusicSource> build() => MusicSourceImporter().installedSources();
+
+  void refresh() => state = MusicSourceImporter().installedSources();
+}
 
 /// 收藏集合由真实账号同步前保持为空，不预置演示歌曲。
 final likedSeedsProvider = Provider<Set<String>>((ref) => const {});

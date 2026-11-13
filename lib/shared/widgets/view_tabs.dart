@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
 
-/// 模块内视图页签（重设计稿 modules/frames.css `.viewtabs`）：
-/// 视图从侧栏视图组迁到工具条（2026-11-07 设计稿定稿）——
-/// 侧栏收敛为「品牌 / 模块组 / 迷你播放器 / 设置」，模块内的投放 / 队列 / 漫画库
-/// 改在工具条右侧以分段按钮呈现（工作流时序：投放 → 队列 → 漫画库）。
-///
-/// 纯展示件：路由状态与回调由 [AppShell] 注入。
-class ShellViewTabs extends StatelessWidget {
-  const ShellViewTabs({super.key, required this.items, required this.activeId, required this.onSelect});
+/// 模块内视图/分组页签（重设计稿 modules/frames.css `.viewtabs`）：
+/// 工具条右侧的分段按钮（投放 / 队列 / 漫画库），也用于设置页数据源分区
+/// 的漫画源 / 音乐源切换。纯展示件：选中态与回调由调用方注入。
+class ViewTabs extends StatelessWidget {
+  const ViewTabs({super.key, required this.items, required this.activeId, required this.onSelect});
 
-  /// (视图 id, 文案)。文案由壳层经 ARB 注入。
+  /// (视图 id, 文案)。文案由调用方经 ARB 注入。
   final List<(String, String)> items;
   final String? activeId;
   final ValueChanged<String> onSelect;

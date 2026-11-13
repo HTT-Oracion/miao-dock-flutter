@@ -10,9 +10,11 @@ import '../../../../shared/responsive.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../../controller/music_login_controller.dart';
+import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../data/webview/webview_login_config.dart';
 import '../../domain/music_models.dart';
+import '../widgets/music_state_box.dart';
 import '../widgets/platform_logo.dart';
 import '../login/mobile_webview_login_page.dart';
 import '../login/webview_login_provider.dart';
@@ -56,6 +58,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final login = ref.watch(musicLoginProvider);
+    final available = ref.watch(availableMusicPlatformsProvider);
 
     // 登录成功：关弹窗 + 轻提示。
     ref.listen(musicLoginProvider.select((s) => s.phase), (prev, next) {
@@ -95,18 +98,28 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                 children: [
                   _Header(title: l10n.musicLoginTitle, onClose: () => ref.read(musicUiProvider.notifier).closeLogin()),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      for (final p in MusicPlatform.values.where((p) => p != MusicPlatform.local)) ...[
-                        Expanded(
-                          child: _PlatformPick(platform: p, selected: p == _platform, onTap: () => _selectPlatform(p)),
-                        ),
-                        if (p != MusicPlatform.migu) const SizedBox(width: 6),
+                  // 🔴 平台行只列**已导入 JS 源**的平台；一个都没有时整个弹窗
+                  // 变成「导入引导」—— 未登录点登录 → 先去配置源（用户口径）。
+                  if (available.isEmpty)
+                    Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: MusicNoSourcePrompt())
+                  else ...[
+                    Row(
+                      children: [
+                        for (final MusicPlatform p in available) ...[
+                          Expanded(
+                            child: _PlatformPick(
+                              platform: p,
+                              selected: p == _platform,
+                              onTap: () => _selectPlatform(p),
+                            ),
+                          ),
+                          if (p != available.last) const SizedBox(width: 6),
+                        ],
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  ..._body(context, palette, l10n, login),
+                    ),
+                    const SizedBox(height: 18),
+                    ..._body(context, palette, l10n, login),
+                  ],
                 ],
               ),
             ),
