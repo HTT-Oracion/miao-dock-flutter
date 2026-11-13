@@ -5,6 +5,7 @@ import '../../../../../core/storage/shell_prefs.dart';
 import '../../../domain/js_music_source.dart';
 import '../../../domain/music_source_manifest.dart';
 import 'music_source_dto.dart' show scanMusicSourceCapabilities;
+import 'music_source_remote.dart' show MusicSourceRemoteLoader;
 
 /// 音乐源导入器：**JS 即包**（与漫画源同口径）。
 ///
@@ -29,6 +30,7 @@ class MusicSourceImporter {
     String? catalogKey,
     String? catalogName,
     String? catalogVersion,
+    String? sourceUrl,
     int? timeoutMs,
     Map<String, String> headers = const {},
   }) async {
@@ -51,8 +53,11 @@ class MusicSourceImporter {
     if (capabilities.isEmpty) {
       return MusicSourceImportResult(manifest: manifest, errors: const [MusicSourceIssue('no_capability')]);
     }
-    final source = JsMusicSource(manifest: manifest, capabilities: capabilities);
+    final source = JsMusicSource(manifest: manifest, capabilities: capabilities, sourceUrl: sourceUrl);
     final installed = await install(manifest, js);
+    if (sourceUrl != null) {
+      await File('${installed.path}/meta.json').writeAsString(jsonEncode({'sourceUrl': sourceUrl}), flush: true);
+    }
     return MusicSourceImportResult(manifest: manifest, source: source, installedAt: installed);
   }
 
@@ -142,6 +147,57 @@ class MusicSourceImporter {
       }
     }
     return out;
+  }
+
+  /// 启动自动更新：对每个带 sourceUrl 的源重新拉取，版本或内容变化则覆盖升级。
+  ///
+  /// 返回发生更新的源 id 列表（调用方卸载引擎旧码并刷新注册表）。
+  /// 单源失败静默跳过；无 sourceUrl 的源（本地拖拽导入）不参与。
+  Future<List<String>> refreshAll() async {
+    final updated = <String>[];
+    for (final source in installedSources()) {
+      final url = source.sourceUrl;
+      if (url == null || url.isEmpty) continue;
+      try {
+        final js = await fetchSourceText(url);
+        if (js.length > maxJsBytes) continue;
+        final (manifest, issues) = manifestFromScript(
+          js,
+          fileNameForUrl(url),
+          catalogKey: source.id,
+          catalogName: source.name,
+          catalogVersion: source.manifest.version,
+        );
+        if (manifest == null || issues.isNotEmpty) continue;
+        // 版本与内容都未变 → 跳过（避免每次启动都写盘）。
+        if (manifest.version == source.manifest.version && js == await _installedJs(source.id)) continue;
+        final result = await importScript(js, fileName: fileNameForUrl(url), sourceUrl: url);
+        if (result.ok) updated.add(source.id);
+      } catch (_) {
+        // 单源更新失败静默跳过。
+      }
+    }
+    return updated;
+  }
+
+  Future<String> _installedJs(String sourceId) async {
+    final root = _rootResolver();
+    if (root == null) return '';
+    final dir = Directory('${root.path}/$sourceId');
+    if (!dir.existsSync()) return '';
+    for (final f in dir.listSync().whereType<File>().where((f) => f.path.endsWith('.js'))) {
+      return f.readAsStringSync();
+    }
+    return '';
+  }
+
+  static String fileNameForUrl(String url) => Uri.parse(url).pathSegments.last;
+
+  /// 拉取源文本：file://（本地导入）读盘，http(s) 走远程加载。
+  Future<String> fetchSourceText(String url) async {
+    final uri = Uri.parse(url);
+    if (uri.scheme == 'file') return File(uri.toFilePath()).readAsStringSync();
+    return MusicSourceRemoteLoader().fetchText(url);
   }
 
   Future<void> uninstall(String sourceId) async {

@@ -1,3 +1,5 @@
+import 'dart:async' show scheduleMicrotask, unawaited;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -78,7 +80,34 @@ final jsMusicSourceRegistryProvider = NotifierProvider<JsMusicSourceRegistry, Li
 
 class JsMusicSourceRegistry extends Notifier<List<JsMusicSource>> {
   @override
-  List<JsMusicSource> build() => MusicSourceImporter().installedSources();
+  List<JsMusicSource> build() {
+    final sources = MusicSourceImporter().installedSources();
+    // 🔴 启动自动更新：源声明了 sourceUrl（目录/远程导入时持久化）→ 比对版本/内容，
+    // 变化则覆盖升级。JS 修复后用户重启即自愈，不再需要手动重导。
+    // 更新完卸载引擎旧码（ensureLoaded 按 id 缓存，不卸载会用回旧逻辑）并刷新。
+    // 🔴 用 scheduleMicrotask 且仅在有可更新源时调度 —— Future() 会产生零时长
+    // Timer，在 fake_async 测试环境挂成 pending 断言（实测踩坑）。
+    if (sources.any((s) => s.sourceUrl != null && s.sourceUrl!.isNotEmpty)) {
+      scheduleMicrotask(() => unawaited(_autoUpdate()));
+    }
+    return sources;
+  }
+
+  Future<void> _autoUpdate() async {
+    try {
+      final importer = MusicSourceImporter();
+      final updated = await importer.refreshAll();
+      if (updated.isEmpty) return;
+      final engine = ref.read(musicSourceEngineProvider);
+      for (final id in updated) {
+        await engine.unload(id);
+      }
+      if (ref.mounted) refresh();
+      debugPrint('[music.source] auto-updated: $updated');
+    } catch (e) {
+      debugPrint('[music.source] auto-update failed: $e');
+    }
+  }
 
   void refresh() => state = MusicSourceImporter().installedSources();
 }

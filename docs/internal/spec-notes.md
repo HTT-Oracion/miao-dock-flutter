@@ -4983,3 +4983,17 @@
 - **根因记录（用户实测）**：已安装副本是旧版 JS（导入早于 loginInfo / dailySongs /
   recommendedPlaylists / referer / 登录声明等能力）——**重新导入即升级**（覆盖确认已实现）。
 - **验证**：全仓 424 用例绿；analyze 无问题；macOS 构建通过。头像 / 每日推荐需登录实测。
+
+## D-235 · 源自动更新 + microtask 调度（2026-11-14）
+
+- **状态**：已实施。
+- **做了什么**：
+  · 源导入持久化 `meta.json`（sourceUrl：目录条目 file:// 或远程 URL）；
+  · `refreshAll()`：启动比对版本/内容，变化则覆盖升级并返回更新的源 id；
+  · 注册表 build 调度 `_autoUpdate`：**有可更新源才调度**，`scheduleMicrotask`
+    （🔴 `Future(() async …)` 产生零时长 Timer，fake_async 测试挂成 pending 断言——实测踩坑）；
+  · 更新后卸载引擎旧码（ensureLoaded 按 id 缓存）并刷新注册表；
+  · JS 版本 1.0.0 → 1.1.0（auto-update 比对依据），已推送源仓库。
+- **验证**：全仓 424 用例绿；analyze 无问题；macOS 构建通过。
+- **用户操作**：重启应用即自动升级已装源副本（local index.json 导入的也生效——
+  refreshAll 按 file:// 重读），无需手动重导。

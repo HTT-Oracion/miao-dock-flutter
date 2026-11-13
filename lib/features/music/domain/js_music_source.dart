@@ -9,7 +9,7 @@ import 'music_source_manifest.dart';
 /// 不给「点了没反应」的按钮。连续失败达到 3 次熔断（与漫画源同口径）。
 ///
 /// 🔴 平台身份是**字符串** [platformId]（= 清单 platform 字段）：内置四平台的
-/// id 与旧枚举名一致（netease / kugou / qq / migu），新平台任意合法标识符。
+/// id 与枚举名一致（netease / kugou / qq / migu），新平台任意合法标识符。
 class JsMusicSource {
   const JsMusicSource({
     required this.manifest,
@@ -17,6 +17,7 @@ class JsMusicSource {
     this.enabled = true,
     this.consecutiveFailures = 0,
     this.lastUsedAt,
+    this.sourceUrl,
   });
 
   final MusicSourceManifest manifest;
@@ -24,6 +25,10 @@ class JsMusicSource {
   final bool enabled;
   final int consecutiveFailures;
   final DateTime? lastUsedAt;
+
+  /// 导入来源（远程目录条目地址 / 本地文件 file:// URL）；
+  /// 启动自动更新据此重新拉取。本地目录导入（拖拽 / 选择文件）为 null —— 不参与自动更新。
+  final String? sourceUrl;
 
   String get id => manifest.id;
 
@@ -41,22 +46,26 @@ class JsMusicSource {
       final digits = hex.replaceFirst('#', '');
       declared = Color(int.parse(digits.length == 6 ? 'FF$digits' : digits, radix: 16));
     }
-    return MusicPlatformInfo(id: platformId, label: name, logoUrl: manifest.logoUrl, color: declared);
+    return MusicPlatformInfo(
+      id: platformId,
+      label: name,
+      logoUrl: manifest.logoUrl,
+      color: declared,
+      streamReferer: manifest.streamReferer,
+    );
   }
 
-  JsMusicSource withFailure() => JsMusicSource(
-    manifest: manifest,
-    capabilities: capabilities,
-    enabled: enabled,
-    consecutiveFailures: consecutiveFailures + 1,
-    lastUsedAt: lastUsedAt,
-  );
+  JsMusicSource copyWith({bool? enabled, int? consecutiveFailures, DateTime? lastUsedAt, String? sourceUrl}) =>
+      JsMusicSource(
+        manifest: manifest,
+        capabilities: capabilities,
+        enabled: enabled ?? this.enabled,
+        consecutiveFailures: consecutiveFailures ?? this.consecutiveFailures,
+        lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+        sourceUrl: sourceUrl ?? this.sourceUrl,
+      );
 
-  JsMusicSource withSuccess() => JsMusicSource(
-    manifest: manifest,
-    capabilities: capabilities,
-    enabled: enabled,
-    consecutiveFailures: 0,
-    lastUsedAt: DateTime.now(),
-  );
+  JsMusicSource withFailure() => copyWith(consecutiveFailures: consecutiveFailures + 1);
+
+  JsMusicSource withSuccess() => copyWith(consecutiveFailures: 0, lastUsedAt: DateTime.now());
 }
