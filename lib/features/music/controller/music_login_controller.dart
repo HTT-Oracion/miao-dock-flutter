@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/api/netease_api.dart';
 import '../data/webview/kugou_cookie_auth.dart';
 import '../data/webview/webview_cookie.dart';
+import '../domain/js_music_source.dart';
+import 'music_providers.dart';
 import '../data/webview/webview_login_config.dart';
 import 'music_auth.dart';
 import 'music_session.dart';
@@ -129,12 +130,22 @@ class MusicLoginController extends Notifier<MusicLoginState> {
     return true;
   }
 
-  /// 回读昵称（仅网易云有稳定接口；其它平台留空，头像显示「?」）。
+  /// 回读昵称：走当前平台的 JS 源 `loginInfo` 能力（Cookie 先注入引擎）。
+  /// 源未声明该能力 / 无该平台源时跳过（头像显示「?」）。
   Future<void> _fetchNick(String platformId, String cookie) async {
-    if (platformId != 'netease') return;
     try {
-      final info = await NeteaseApi(cookie: cookie).loginStatus();
-      if (info.nick.isEmpty || !ref.mounted) return;
+      JsMusicSource? source;
+      for (final candidate in ref.read(jsMusicSourceRegistryProvider)) {
+        if (candidate.isAvailable && candidate.platformId == platformId) {
+          source = candidate;
+          break;
+        }
+      }
+      if (source == null || source.capabilities.contains('loginInfo') == false) return;
+      final engine = ref.read(musicSourceEngineProvider);
+      await engine.setSessionCookie(source, cookie);
+      final info = await engine.loginInfo(source);
+      if (info == null || !info.loggedIn || info.nick.isEmpty || !ref.mounted) return;
       ref.read(musicAccountProvider.notifier).login(platformId, info.nick);
       state = state.copyWith(nick: info.nick);
     } on Object {

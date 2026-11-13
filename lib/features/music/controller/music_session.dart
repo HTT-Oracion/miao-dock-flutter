@@ -4,8 +4,10 @@ import 'dart:ui' show Rect;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/api/netease_api.dart';
+import '../domain/js_music_source.dart';
 import '../domain/music_models.dart';
+import '../domain/music_source_engine.dart';
+import 'music_providers.dart';
 import 'music_auth.dart';
 
 /// 账号与音源会话（设计稿 N04/N05/M10）。
@@ -87,21 +89,34 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
     state = MusicAccountState(cur: p, logged: wasLogged, nick: null, extra: {...state.extra, state.cur: state.logged});
   }
 
-  /// 接口工厂（测试可替换）。
+  /// 接口出口（测试可替换）：JS 源引擎。
   @visibleForTesting
-  NeteaseApi createApi({String cookie = ''}) => NeteaseApi(cookie: cookie);
+  MusicSourceEngine createEngine() => ref.read(musicSourceEngineProvider);
 
-  /// 从 Keychain 恢复 Cookie 后补回昵称（仅网易云有稳定接口）。
+  /// 从 Keychain 恢复 Cookie 后补回昵称：走该平台 JS 源的 `loginInfo` 能力
+  /// （Cookie 注入引擎 Cookie 罐后由源自行携带请求）。
   ///
-  /// Cookie 已失效（接口回未登录）时同步撤下登录态：宁可显示未登录，
+  /// 源回「未登录」时同步撤下登录态：宁可显示未登录，
   /// 也不能「顶着 ? 的已登录」——那会让用户以为账号异常。
+  /// 源未声明能力 / 无该平台源 / 网络失败：保持现状，下一轮再试。
   Future<void> _restoreNick(String p, String cookie) async {
     if (cookie.isEmpty) return;
     try {
-      final info = await createApi(cookie: cookie).loginStatus();
+      JsMusicSource? source;
+      for (final candidate in ref.read(jsMusicSourceRegistryProvider)) {
+        if (candidate.isAvailable && candidate.platformId == p) {
+          source = candidate;
+          break;
+        }
+      }
+      if (source == null || source.capabilities.contains('loginInfo') == false) return;
+      final engine = createEngine();
+      await engine.setSessionCookie(source, cookie);
+      final info = await engine.loginInfo(source);
       if (!ref.mounted) return;
       // 会话可能已切换平台或重新登录，只认当前平台的结果。
       if (p != _current) return;
+      if (info == null) return;
       if (!info.loggedIn) {
         // Cookie 过期：撤下登录态并清掉失效凭据。
         _nick = null;

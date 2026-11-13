@@ -1,3 +1,4 @@
+import 'music_login_info.dart';
 import 'music_models.dart';
 import 'js_music_source.dart';
 
@@ -34,6 +35,11 @@ abstract interface class MusicSourceEngine {
   Future<List<MusicSong>> dailySongs(JsMusicSource source);
 
   Future<List<MusicComment>> comments(JsMusicSource source, {required String songId, int limit, int offset});
+
+  /// 账户信息（昵称回读 / 登录态校验）。源未声明 `loginInfo` 能力时返回 null。
+  ///
+  /// 返回 [MusicLoginInfo.loggedIn] = false 表示 Cookie 已失效（调用方据此撤登录态）。
+  Future<MusicLoginInfo?> loginInfo(JsMusicSource source);
 
   Future<List<MusicPlaylist>> userPlaylists(JsMusicSource source);
 

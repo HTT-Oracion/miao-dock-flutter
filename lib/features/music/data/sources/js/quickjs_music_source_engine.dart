@@ -11,6 +11,7 @@ import 'package:flutter_qjs/flutter_qjs.dart';
 import '../../../../../core/storage/shell_prefs.dart';
 import '../../../domain/js_music_source.dart';
 import '../../../domain/music_models.dart';
+import '../../../domain/music_login_info.dart';
 import '../../../domain/music_source_engine.dart';
 import 'music_source_dto.dart';
 import 'music_source_http.dart';
@@ -374,6 +375,14 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
         engine.port.close();
       } catch (_) {}
     }
+  }
+
+  @override
+  Future<MusicLoginInfo?> loginInfo(JsMusicSource source) async {
+    if (source.capabilities.contains('loginInfo') == false) return null;
+    final raw = await _call(source, 'loginInfo', const {}, (r) => r);
+    if (raw is! Map) return null;
+    return MusicLoginInfo(loggedIn: raw['loggedIn'] == true, nick: '${raw['nick'] ?? ''}');
   }
 
   @override

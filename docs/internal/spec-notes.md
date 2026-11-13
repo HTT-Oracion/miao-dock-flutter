@@ -4889,3 +4889,27 @@
 - **坑**：批量替换把 `'local,',` 写进字符串字面量（双逗号）；`\$p` 转义陷阱把 auth
   键写成字面量 `$p`（全平台共用一键 + save 回读被 fake gate 卡死 30s 超时）——
   均已修复并全量回归。
+
+## D-230 · 昵称回读迁入 JS 源 + 内置播放实现移除（2026-11-14）
+
+- **状态**：已实施。
+- **昵称回读迁入 JS 源**：
+  · 引擎契约新增 `loginInfo` 能力位（`MusicLoginInfo {loggedIn, nick}`）——源用
+    App 注入的 Cookie 自行请求账户接口；netease.js 已实现（`/api/nuser/account/get`），
+    其它平台可按同口径声明；
+  · 登录收口与 Keychain 恢复两条昵称回读路径改为「找到平台源 → setSessionCookie →
+    engine.loginInfo」；源回未登录时撤登录态（原语义保留）；
+  · **NeteaseAccountApi 删除**——内置播放实现移除后它不再有存在必要。
+- **内置播放实现移除**：
+  · 删 `data/api/{netease,kugou,qqmusic,migu}_api.dart`、`api/lrc.dart`、
+    `api/music_cover_url.dart`、`data/sources/{netease,kugou,qq,migu}_source.dart`；
+  · `platform_music_repository` 删 `_buildSource` 静态装配——仓库只接注入的
+    MusicSource（JS 适配器 / stub）；
+  · 对应自测删除：`music_api_offline_test`（QQ 签名 / LRC / 咪咕解码——算法已由
+    JS 源实现）、`music_cover_mapping_test`、`music_cover_url_test`、
+    `platform_repository_test`（内置装配测试）。
+- **保留**：`webview_login_config` 静态表（内置四平台登录仍走 WebView）、
+  `platformBrands`（内置四平台徽章字形）、`MusicSource` 契约、仓库、播放器链路。
+- **验证**：全仓 449 用例绿（`p0e4_remote_test` 为打真实漫画服务的 e2e 用例，环境依赖
+  与本改动无关）；探针（外部仓库四平台）导入 → 搜索 → songUrl 全链路复验；
+  analyze 无问题；macOS 构建通过。

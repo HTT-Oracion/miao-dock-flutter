@@ -219,6 +219,7 @@ class MusicSourceDto {
 /// 扫描源 JS 里出现的方法名（`async name(` 或 `name: async` / `name: function`），
 /// 只认契约白名单内的名字 —— 既当能力位，也防白名单外的方法被调用。
 const musicSourceCapabilityNames = {
+  'loginInfo',
   'searchSongs',
   'searchPlaylists',
   'charts',

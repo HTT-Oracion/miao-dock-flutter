@@ -3,26 +3,63 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../domain/music_models.dart';
 import 'api/music_api_error.dart';
-import 'api/netease_api.dart';
-import 'api/qqmusic_api.dart';
-import 'api/kugou_api.dart';
 import 'music_repository.dart';
-import 'sources/kugou_source.dart';
-import 'sources/migu_source.dart';
 import 'sources/music_source.dart';
-import 'sources/netease_source.dart';
-import 'sources/qq_source.dart';
 
-/// 真实音源仓库：按当前平台把 [MusicRepository] 的方法转给对应 [MusicSource]。
+/// 音源仓库：把 [MusicRepository] 的方法转给当前平台的 [MusicSource]（JS 源适配器）。
 ///
-/// 真实四平台接口（Dart 移植自 miao-dock 的 Rust 客户端）。
 /// 失败一律如实抛错，不静默回退本地演示数据。
 ///
 /// 歌词 / 评论 / 每日推荐三类能力各平台不一致，由 [MusicSource] 的能力位决定：
 /// 不支持时返回空集，而不是抛错 —— 空是「这个平台没有该功能」，不是故障。
+/// 未导入源时的兜底仓库：所有能力返回空（UI 空态层拦截后不应被调用到）。
+class _NoSourceSource implements MusicSource {
+  const _NoSourceSource();
+
+  @override
+  String get platformId => 'local';
+
+  @override
+  bool get supportsDailySongs => false;
+  @override
+  bool get supportsComments => false;
+  @override
+  bool get supportsRecommendPlaylists => false;
+  @override
+  bool get supportsSimilarSongs => false;
+
+  @override
+  Future<List<MusicSong>> searchSongs(String keywords, {int limit = 30, int offset = 0}) async => const <MusicSong>[];
+  @override
+  Future<List<MusicPlaylist>> searchPlaylists(String keywords, {int limit = 12}) async => const <MusicPlaylist>[];
+  @override
+  Future<List<MusicPlaylist>> recommendedPlaylists({int limit = 6}) async => const <MusicPlaylist>[];
+  @override
+  Future<List<MusicPlaylist>> userPlaylists() async => const <MusicPlaylist>[];
+  @override
+  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async =>
+      const <({String id, String name, String updateMeta, String? coverUrl})>[];
+  @override
+  Future<({MusicPlaylist meta, List<MusicSong> songs})> playlistDetail(String id) async =>
+      (meta: const MusicPlaylist(id: '', name: '', trackCount: 0, seed: ''), songs: const <MusicSong>[]);
+  @override
+  Future<({MusicPlaylist meta, List<MusicSong> songs})> chartDetail(String id) async =>
+      (meta: const MusicPlaylist(id: '', name: '', trackCount: 0, seed: ''), songs: const <MusicSong>[]);
+  @override
+  Future<List<MusicSong>> dailySongs() async => const <MusicSong>[];
+  @override
+  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) async => const <MusicSong>[];
+  @override
+  Future<List<MusicComment>> comments(String songId, {int limit = 20, int offset = 0}) async => const <MusicComment>[];
+  @override
+  Future<SongLyrics> lyrics(MusicSong song) async => const SongLyrics(lines: []);
+  @override
+  Future<String?> songUrl(MusicSong song, QualityTier quality) async => null;
+}
+
 class PlatformMusicRepository implements MusicRepository {
   PlatformMusicRepository({required this.platformId, MusicSource? source, this.cookie = ''})
-    : _source = source ?? _buildSource(platformId, cookie);
+    : _source = source ?? const _NoSourceSource();
 
   final String platformId;
   final MusicSource _source;
@@ -41,14 +78,6 @@ class PlatformMusicRepository implements MusicRepository {
   /// 的 data 里没有 specialname / 封面），详情页因此拿不到标题与封面。
   /// 列表页本来就有这些字段，记下来在详情时回填，比再猜一个接口可靠。
   final Map<String, MusicPlaylist> _metaCache = {};
-
-  static MusicSource _buildSource(String platformId, String cookie) => switch (platformId) {
-    'netease' => NeteaseSource(api: NeteaseApi(cookie: cookie)),
-    'qq' => QqSource(api: QqMusicApi(cookie: cookie)),
-    'kugou' => KugouSource(api: KugouApi(cookie: cookie)),
-    'migu' => MiguSource(),
-    _ => throw ArgumentError('platform has no remote source: \$platformId'),
-  };
 
   void _guard(FailScope scope) {
     if (_fails.contains(scope) || _fails.contains(FailScope.all)) {

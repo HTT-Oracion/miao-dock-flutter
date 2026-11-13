@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/music_repository.dart';
-import '../data/sources/music_source.dart';
 import '../data/sources/js/quickjs_music_source_engine.dart';
 import '../data/sources/js/music_source_import.dart';
 import '../domain/js_music_source.dart';
@@ -62,53 +61,8 @@ final musicRepositoryProvider = Provider<MusicRepository>((ref) {
       source: JsMusicSourceAdapter(source: jsSource, engine: ref.watch(musicSourceEngineProvider), cookie: cookie),
     );
   }
-  return PlatformMusicRepository(platformId: account.cur, source: const _NoSourceMusicSource(), cookie: cookie);
+  return PlatformMusicRepository(platformId: account.cur, cookie: cookie);
 });
-
-/// 未导入源时的兜底仓库：所有能力返回空（UI 空态拦截后不应被调用到）。
-class _NoSourceMusicSource implements MusicSource {
-  const _NoSourceMusicSource();
-
-  @override
-  String get platformId => 'local';
-
-  @override
-  bool get supportsDailySongs => false;
-  @override
-  bool get supportsComments => false;
-  @override
-  bool get supportsRecommendPlaylists => false;
-  @override
-  bool get supportsSimilarSongs => false;
-
-  @override
-  Future<List<MusicSong>> searchSongs(String keywords, {int limit = 30, int offset = 0}) async => const [];
-  @override
-  Future<List<MusicPlaylist>> searchPlaylists(String keywords, {int limit = 12}) async => const [];
-  @override
-  Future<List<MusicPlaylist>> recommendedPlaylists({int limit = 6}) async => const [];
-  @override
-  Future<List<MusicPlaylist>> userPlaylists() async => const [];
-  @override
-  Future<List<({String id, String name, String updateMeta, String? coverUrl})>> charts() async =>
-      const <({String id, String name, String updateMeta, String? coverUrl})>[];
-  @override
-  Future<({MusicPlaylist meta, List<MusicSong> songs})> playlistDetail(String id) async =>
-      (meta: const MusicPlaylist(id: '', name: '', trackCount: 0, seed: ''), songs: const <MusicSong>[]);
-  @override
-  Future<({MusicPlaylist meta, List<MusicSong> songs})> chartDetail(String id) async =>
-      (meta: const MusicPlaylist(id: '', name: '', trackCount: 0, seed: ''), songs: const <MusicSong>[]);
-  @override
-  Future<List<MusicSong>> dailySongs() async => const [];
-  @override
-  Future<List<MusicSong>> similarSongs(MusicSong seed, {int limit = 20}) async => const [];
-  @override
-  Future<List<MusicComment>> comments(String songId, {int limit = 20, int offset = 0}) async => const [];
-  @override
-  Future<SongLyrics> lyrics(MusicSong song) async => const SongLyrics(lines: []);
-  @override
-  Future<String?> songUrl(MusicSong song, QualityTier quality) async => null;
-}
 
 /// QuickJS 音乐源引擎单例：runtime 创建成本高，跨仓库重建共享。
 final musicSourceEngineProvider = Provider<MusicSourceEngine>((ref) {
