@@ -220,6 +220,7 @@ class MusicSourceDto {
 /// 只认契约白名单内的名字 —— 既当能力位，也防白名单外的方法被调用。
 const musicSourceCapabilityNames = {
   'loginInfo',
+  'recommendedPlaylists',
   'searchSongs',
   'searchPlaylists',
   'charts',

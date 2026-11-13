@@ -468,6 +468,13 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
   }
 
   @override
+  Future<List<MusicPlaylist>> recommendedPlaylists(JsMusicSource source, {int limit = 6}) async {
+    if (source.capabilities.contains('recommendedPlaylists') == false) return const [];
+    final raw = await _call(source, 'recommendedPlaylists', {'limit': limit}, (r) => r);
+    return _dto(platformId: source.platformId).playlists(raw);
+  }
+
+  @override
   Future<List<MusicPlaylist>> userPlaylists(JsMusicSource source) async {
     if (source.capabilities.contains('userPlaylists') == false) return const [];
     final raw = await _call(source, 'userPlaylists', const {}, (r) => r);

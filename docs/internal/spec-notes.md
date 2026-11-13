@@ -4913,3 +4913,23 @@
 - **验证**：全仓 449 用例绿（`p0e4_remote_test` 为打真实漫画服务的 e2e 用例，环境依赖
   与本改动无关）；探针（外部仓库四平台）导入 → 搜索 → songUrl 全链路复验；
   analyze 无问题；macOS 构建通过。
+
+## D-231 · 登录回显修复 + 推荐歌单 + 骨架对齐（2026-11-14）
+
+- **状态**：已实施。
+- **做了什么**：
+  · **源仓库已推送** `https://github.com/HTT-Oracion/miao-dock-sources`（manga/ + music/，
+    index.json 为裸数组口径）；
+  · **昵称回显修复**（对齐 miao-dock）：netease `loginInfo` 改 GET `/api/w/nuser/account/get`
+    （profile 兜底链 data→body→account，userId 必须存在）；四平台 loginInfo 全部实现
+    （kugou 取 Cookie KuGoo 的 NickName、qq 走 musicu GetLoginUserInfo（authst=music_key）、
+    migu 走 queryUserInfo）；
+  · **推荐歌曲修复**：根因是适配器 `recommendedPlaylists` 为空桩 —— 引擎补方法
+    （能力位门控）+ 适配器接线；netease.js 实现 `/api/personalized/playlist`；
+  · **【我喜欢的音乐】横卡修复**：netease.js 的 playlist 映射补 `special: specialType===5`
+    （groupPlaylists 靠它识别置顶横卡）；
+  · **骨架对齐**：歌单库卡片骨架改为与 `_PlaylistCard` 同形（60 封面 + 两行标题 + meta），
+    移动行 / 横卡尺寸对齐真实组件；详情页曲目骨架改为与 `SongRow` 同列
+    （58 高 / 封面 38 / 序号 22 / 专辑 150 / 时长 44 / 表头同列）。
+- **验证**：探针四平台 caps 增长（netease 11 / kugou 8 / qq 7 / migu 7）且全链路通；
+  全量 449 用例绿；analyze 无问题；macOS 构建通过。登录态昵称 / 推荐歌单需用户登录实测。

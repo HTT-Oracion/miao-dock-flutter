@@ -41,6 +41,8 @@ abstract interface class MusicSourceEngine {
   /// 返回 [MusicLoginInfo.loggedIn] = false 表示 Cookie 已失效（调用方据此撤登录态）。
   Future<MusicLoginInfo?> loginInfo(JsMusicSource source);
 
+  Future<List<MusicPlaylist>> recommendedPlaylists(JsMusicSource source, {int limit});
+
   Future<List<MusicPlaylist>> userPlaylists(JsMusicSource source);
 
   Future<void> unload(String sourceId);

@@ -625,25 +625,20 @@ class PlaylistLibrarySkeleton extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SkeletonBox(height: mobile ? 84 : 92, radius: mobile ? AppMetrics.radiusCardLg : 14),
+        // 【我喜欢的音乐】横卡同形：桌面 92（pad16*2+cover60）/ 移动 76（pad12*2+cover52）。
+        SkeletonBox(height: mobile ? 76 : 92, radius: mobile ? AppMetrics.radiusCardLg : 14),
         SizedBox(height: mobile ? 20 : 22),
         const SkeletonBox(width: 110, height: 12),
         const SizedBox(height: 10),
         if (mobile)
-          for (var i = 0; i < 3; i++) ...[
-            const SkeletonBox(height: 52, radius: AppMetrics.radiusCard),
-            const SizedBox(height: 4),
-          ]
+          for (var i = 0; i < 3; i++) ...[const _RowSkeleton(cover: 36, height: 52), const SizedBox(height: 4)]
         else
           const _CardSkeletonGrid(count: 8),
         SizedBox(height: mobile ? 16 : 20),
         const SkeletonBox(width: 110, height: 12),
         const SizedBox(height: 10),
         if (mobile)
-          for (var i = 0; i < 2; i++) ...[
-            const SkeletonBox(height: 52, radius: AppMetrics.radiusCard),
-            const SizedBox(height: 4),
-          ]
+          for (var i = 0; i < 2; i++) ...[const _RowSkeleton(cover: 36, height: 52), const SizedBox(height: 4)]
         else
           const _CardSkeletonGrid(count: 4),
       ],
@@ -668,11 +663,7 @@ class _CardSkeletonGrid extends StatelessWidget {
                 children: [
                   for (var k = i; k < i + cols; k++) ...[
                     if (k > i) const SizedBox(width: 12),
-                    Expanded(
-                      child: k < count
-                          ? const SkeletonBox(height: 80, radius: AppMetrics.radiusCardLg)
-                          : const SizedBox.shrink(),
-                    ),
+                    Expanded(child: k < count ? const _CardSkeletonCell() : const SizedBox.shrink()),
                   ],
                 ],
               ),
@@ -681,6 +672,69 @@ class _CardSkeletonGrid extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// 分组卡片骨架单格：与 `_PlaylistCard` 同形（60 封面 + 两行标题 + meta 行）。
+class _CardSkeletonCell extends StatelessWidget {
+  const _CardSkeletonCell();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: palette.card,
+        border: Border.all(color: palette.line2),
+        borderRadius: BorderRadius.circular(AppMetrics.radiusCardLg),
+      ),
+      child: Row(
+        children: [
+          const SkeletonBox(width: 60, height: 60, radius: 9),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [SkeletonBox(height: 12), SizedBox(height: 8), SkeletonBox(height: 12)],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 行骨架（移动端歌单行同形：小封面 + 文本列）。
+class _RowSkeleton extends StatelessWidget {
+  const _RowSkeleton({required this.cover, required this.height});
+
+  final double cover;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppPalette.of(context).card,
+        borderRadius: BorderRadius.circular(AppMetrics.radiusCard),
+      ),
+      child: Row(
+        children: [
+          SkeletonBox(width: cover, height: cover, radius: 8),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [SkeletonBox(height: 11), SizedBox(height: 6), SkeletonBox(height: 9)],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

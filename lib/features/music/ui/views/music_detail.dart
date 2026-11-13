@@ -403,7 +403,6 @@ class _DetailSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -431,21 +430,45 @@ class _DetailSkeleton extends StatelessWidget {
             ],
           ),
         ),
-        Container(height: 34, color: palette.card.withValues(alpha: 0.5)),
-        const SizedBox(height: 2),
+        // 表头（与 MusicSongTableHeader 同高同列）。
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+          child: Row(
+            children: [
+              const SizedBox(width: 22),
+              const SizedBox(width: 8),
+              const Expanded(child: SkeletonBox(height: 10)),
+              const SizedBox(width: 150),
+              const SizedBox(width: 44),
+              const SizedBox(width: 24),
+            ],
+          ),
+        ),
+        // 曲目行（与 SongRow 同形：58 高 / 封面 38 r9 / 序号 22 / 专辑 150 / 时长 44）。
         for (var i = 0; i < 8; i++)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-            child: Row(
-              children: [
-                SkeletonBox(width: 22, height: 12),
-                const SizedBox(width: 8),
-                Expanded(child: SkeletonBox(height: 12)),
-                const SizedBox(width: 16),
-                SkeletonBox(width: 120, height: 12),
-                const SizedBox(width: 16),
-                SkeletonBox(width: 36, height: 12),
-              ],
+            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
+            child: Container(
+              height: 58,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  SkeletonBox(width: 38, height: 38, radius: 9),
+                  const SizedBox(width: 8),
+                  const SizedBox(width: 22, child: Center(child: SkeletonBox(width: 14, height: 11))),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [SkeletonBox(height: 12), SizedBox(height: 6), SkeletonBox(height: 10)],
+                    ),
+                  ),
+                  const SizedBox(width: 150),
+                  const SizedBox(width: 44, child: SkeletonBox(height: 10)),
+                  const SizedBox(width: 24),
+                ],
+              ),
             ),
           ),
       ],

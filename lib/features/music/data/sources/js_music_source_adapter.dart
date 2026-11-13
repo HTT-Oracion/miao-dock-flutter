@@ -41,7 +41,8 @@ class JsMusicSourceAdapter implements MusicSource {
       engine.searchPlaylists(source, keyword: keywords, limit: limit);
 
   @override
-  Future<List<MusicPlaylist>> recommendedPlaylists({int limit = 6}) async => const [];
+  Future<List<MusicPlaylist>> recommendedPlaylists({int limit = 6}) =>
+      engine.recommendedPlaylists(source, limit: limit);
 
   @override
   Future<List<MusicPlaylist>> userPlaylists() async {
