@@ -38,14 +38,12 @@ class MusicHttp {
   Dio get dio => _dio;
 
   /// GET JSON。非 2xx、非 JSON 一律抛 [MusicApiException]。
-  ///
-  /// [headers] 用于个别接口需要覆盖平台默认头（如酷狗登录接口要 Android UA 与来源标识头）。
-  Future<dynamic> getJson(String url, {Map<String, dynamic>? query, Map<String, String>? headers}) async {
+  Future<dynamic> getJson(String url, {Map<String, dynamic>? query}) async {
     try {
       final resp = await _dio.get<String>(
         url,
         queryParameters: query,
-        options: Options(responseType: ResponseType.plain, headers: headers),
+        options: Options(responseType: ResponseType.plain),
       );
       return _decode(resp, url);
     } on MusicApiException {

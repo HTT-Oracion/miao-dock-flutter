@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math' show Random;
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
@@ -7,7 +6,6 @@ import 'package:dio/dio.dart';
 import '../../domain/music_models.dart';
 import 'lrc.dart';
 import 'music_cover_url.dart';
-import 'music_api_error.dart';
 import 'music_http.dart';
 
 /// 酷狗音乐客户端（移植自 `miao-dock/src-tauri/src/music/kugou.rs`）。
@@ -43,113 +41,6 @@ class KugouApi {
   static const _webAppId = 1014;
   static const _h5Salt = 'NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt';
   static const _signSalt = '57ae12eb6890223e355ccfcb74edf70d';
-
-  // ── 二维码登录（对齐 KuGouMusicApi login_qr_key / login_qr_check）──────────
-
-  /// 登录域名（与音乐网关分开，登录走 login-user）。
-  static const _loginBase = 'https://login-user.kugou.com';
-
-  /// 登录接口固定参数（`util/config.json`）。
-  static const _loginAppid = 1001;
-  static const _srcAppid = 2919;
-  static const _clientver = 20489;
-
-  /// 登录接口 UA：参考实现 `util/request.js` 的默认 UA（Android 客户端指纹）。
-  static const _loginUa = 'Android15-1070-11083-46-0-DiscoveryDRADProtocol-wifi';
-
-  /// 酷狗 Web 签名：`md5(salt + 按 key 排序的 k=v 串 + data + salt)`。
-  static String _webSign(Map<String, dynamic> params) {
-    final pairs = params.keys.map((k) => '$k=${params[k]}').toList()..sort();
-    return md5.convert(utf8.encode('$_h5Salt${pairs.join()}$_h5Salt')).toString();
-  }
-
-  /// 设备 MID：`md5(guid)` 的 16 进制转十进制大整数（参考 `calculateMid`）。
-  static String _calcMid(String guid) => BigInt.parse(md5.convert(utf8.encode(guid)).toString(), radix: 16).toString();
-
-  /// 本机稳定设备标识（进程内固定）。
-  static final String _deviceGuid = _newGuid();
-  static final String _deviceMid = _calcMid(_deviceGuid);
-
-  static String _newGuid() {
-    final r = Random.secure();
-    const hex = '0123456789abcdef';
-    final buf = StringBuffer();
-    for (var i = 0; i < 32; i++) {
-      buf.write(hex[r.nextInt(16)]);
-    }
-    final s = buf.toString();
-    return '${s.substring(0, 8)}-${s.substring(8, 12)}-4${s.substring(13, 16)}-8${s.substring(17, 20)}-${s.substring(20, 32)}';
-  }
-
-  Map<String, String> _loginHeaders(int clienttime) => {
-    'User-Agent': _loginUa,
-    'dfid': '-',
-    'clienttime': '$clienttime',
-    'mid': _deviceMid,
-    // 以下四项是酷狗内部来源标识头，缺了会被判为非官方客户端。
-    'kg-rc': '1',
-    'kg-thash': '5d816a0',
-    'kg-rec': '1',
-    'kg-rf': 'B9EDA08A64250DEFFBCADDEE00F8F25F',
-  };
-
-  /// 取二维码 key。返回 `qrcode`（轮询用）与 `qrcodeImg`（可直接显示的 base64）。
-  Future<({String key, String? imageBase64})> qrKey() async {
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final params = <String, dynamic>{
-      'dfid': '-',
-      'mid': _deviceMid,
-      'uuid': '-',
-      'appid': _loginAppid,
-      'clientver': _clientver,
-      'clienttime': now,
-      'type': 1,
-      'plat': 4,
-      'qrcode_txt': 'https://h5.kugou.com/apps/loginQRCode/html/index.html?appid=1005&',
-      'srcappid': _srcAppid,
-    };
-    params['signature'] = _webSign(params);
-    final uri = Uri.parse('$_loginBase/v2/qrcode').replace(queryParameters: params.map((k, v) => MapEntry(k, '$v')));
-    final json = await _http.getJson(uri.toString(), headers: _loginHeaders(now));
-    final data = _dig(json, ['data']);
-    final key = data is Map ? '${data['qrcode'] ?? ''}' : '';
-    if (key.isEmpty) {
-      throw MusicApiException.business('kugou', 'qr_key_failed');
-    }
-    final img = data is Map ? '${data['qrcode_img'] ?? ''}' : '';
-    return (key: key, imageBase64: img.isEmpty ? null : img);
-  }
-
-  /// 轮询扫码状态。
-  ///
-  /// 状态码（秒懂）：0 过期 / 1 等待扫码 / 2 待确认 / 4 授权成功（返回 token）。
-  Future<({int status, String? cookie})> qrCheck(String key) async {
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final params = <String, dynamic>{
-      'dfid': '-',
-      'mid': _deviceMid,
-      'uuid': '-',
-      'appid': _loginAppid,
-      'clientver': _clientver,
-      'clienttime': now,
-      'plat': 4,
-      'qrcode': key,
-      'srcappid': _srcAppid,
-    };
-    params['signature'] = _webSign(params);
-    final uri = Uri.parse('$_loginBase/v2/get_userinfo_qrcode')
-        .replace(queryParameters: params.map((k, v) => MapEntry(k, '$v')));
-    final json = await _http.getJson(uri.toString(), headers: _loginHeaders(now));
-    final data = _dig(json, ['data']);
-    final status = data is Map ? (data['status'] as num?)?.toInt() ?? -1 : -1;
-    if (status != 4 || data is! Map) return (status: status, cookie: null);
-    // 授权成功：token / userid 由响应体给出，与原有 Cookie 合并成登录态。
-    final token = '${data['token'] ?? ''}';
-    final userid = '${data['userid'] ?? ''}';
-    if (token.isEmpty || userid.isEmpty) return (status: status, cookie: null);
-    final base = cookie.trim().isEmpty ? '' : '${cookie.trim()}; ';
-    return (status: status, cookie: '${base}userid=$userid; token=$token; mid=$_deviceMid');
-  }
 
   // ── 搜索 ────────────────────────────────────────────────────────────────
 

@@ -6265,10 +6265,6 @@
   "@musicLoginRetry": {
     "description": "二维码过期 / 失败后的重试按钮"
   },
-  "musicLoginQrUnsupported": "该平台暂不支持扫码登录",
-  "@musicLoginQrUnsupported": {
-    "description": "平台无二维码登录能力时的提示"
-  },
   "musicLoginFailToast": "登录失败：{reason}",
   "@musicLoginFailToast": {
     "description": "登录失败轻提示",

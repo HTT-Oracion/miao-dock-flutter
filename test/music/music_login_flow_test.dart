@@ -6,7 +6,6 @@ import 'package:miao_dock_flutter/core/theme/tokens.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_auth.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_login_controller.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
-import 'package:miao_dock_flutter/features/music/data/api/music_qr_login.dart';
 import 'package:miao_dock_flutter/features/music/data/api/netease_api.dart';
 import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 import 'package:miao_dock_flutter/features/music/ui/desktop/login_modal.dart';
@@ -18,33 +17,32 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 /// · 803 分支依赖 `loginStatus()` 成功才置登录 → `loginStatus` 抛错时用例失败；
 /// · Cookie 合并漏掉 `MUSIC_U` → 用例失败（只收到 NMTID 不算登录）；
 /// · 成功态没有回到 UI（phase 不是 succeeded）→ 弹窗关闭断言失败。
-/// 假适配器：直接把 poll 结果映射成归一化状态，绕开真实网络。
-class _FakeAdapter implements QrLoginAdapter {
-  _FakeAdapter({this.qrCookie = 'MUSIC_U=abc; __csrf=xyz', this.code = 803});
+class _FakeApi extends NeteaseApi {
+  _FakeApi({this.qrCookie = 'MUSIC_U=abc; __csrf=xyz', this.statusThrows = false, this.code = 803});
 
+  /// 轮询下发的 Cookie（藏在私有字段里，避免与 [NeteaseApi.cookie] 撞名）。
   final String qrCookie;
+  final bool statusThrows;
   final int code;
+
   int keyCalls = 0;
 
   @override
-  MusicPlatform get platform => MusicPlatform.netease;
-
-  @override
-  Future<QrLoginTicket> requestTicket() async {
+  Future<String> qrKey() async {
     keyCalls += 1;
-    return const QrLoginTicket(ticket: 'key-1', content: 'https://music.163.com/login?codekey=key-1');
+    return 'key-1';
   }
 
   @override
-  Future<QrLoginPoll> poll(String ticket) async {
-    final state = switch (code) {
-      801 => QrPollState.waiting,
-      802 => QrPollState.scanned,
-      803 => QrPollState.success,
-      800 => QrPollState.expired,
-      _ => QrPollState.rejected,
-    };
-    return QrLoginPoll(state: state, cookie: code == 803 ? qrCookie : null);
+  Future<({int code, String message, String? cookie, String? nick})> qrCheck(
+    String key, {
+    bool noCookie = false,
+  }) async => (code: code, message: '', cookie: qrCookie, nick: null);
+
+  @override
+  Future<({bool loggedIn, String userId, String nick})> loginStatus() async {
+    if (statusThrows) throw StateError('loginStatus blocked');
+    return (loggedIn: true, userId: '42', nick: '测试昵称');
   }
 }
 
@@ -59,12 +57,12 @@ class _FakeAuth extends MusicAuthNotifier {
 }
 
 class _ControlledLogin extends MusicLoginController {
-  _ControlledLogin(this.adapter);
+  _ControlledLogin(this.api);
 
-  final QrLoginAdapter adapter;
+  final NeteaseApi api;
 
   @override
-  QrLoginAdapter? createAdapter(MusicPlatform platform, {String cookie = ''}) => adapter;
+  NeteaseApi createApi({String cookie = ''}) => api;
 
   /// 把倒计时压到只剩一拍，方便用例驱动超时。
   void forceSecondsLeft(int v) => state = state.copyWith(secondsLeft: v);
@@ -97,7 +95,7 @@ Widget host(Widget child) => MaterialApp(
 );
 
 void main() {
-  ProviderContainer containerWith(QrLoginAdapter api) {
+  ProviderContainer containerWith(NeteaseApi api) {
     final container = ProviderContainer(
       overrides: [
         musicAuthProvider.overrideWith(_FakeAuth.new),
@@ -110,7 +108,7 @@ void main() {
   }
 
   test('扫码 803：Cookie 落盘后账号即登录成功', () async {
-    final container = containerWith(_FakeAdapter());
+    final container = containerWith(_FakeApi());
     await container.read(musicLoginProvider.notifier).start(MusicPlatform.netease);
     // 等轮询一拍（start 内部 2s 定时器；这里直接驱动首拍）。
     await Future<void>.delayed(const Duration(milliseconds: 5400)); // 首拍在 5s
@@ -121,12 +119,11 @@ void main() {
     expect(login.phase, MusicQrPhase.succeeded);
     expect(account.logged, isTrue);
     expect(container.read(musicAuthProvider).cookieOf(MusicPlatform.netease), contains('MUSIC_U='));
-    // 昵称只是展示增强：假适配器不返回昵称时允许为空，但登录态必须成立。
-    expect(account.logged, isTrue);
+    expect(account.nick, '测试昵称');
   });
 
-  test('扫码 803：响应无昵称也能登录成功（昵称只是展示增强）', () async {
-    final container = containerWith(_FakeAdapter(code: 803));
+  test('扫码 803：loginStatus 失败也要登录成功（昵称缺失可接受）', () async {
+    final container = containerWith(_FakeApi(statusThrows: true));
     await container.read(musicLoginProvider.notifier).start(MusicPlatform.netease);
     await Future<void>.delayed(const Duration(milliseconds: 5400)); // 首拍在 5s
 
@@ -136,7 +133,7 @@ void main() {
   });
 
   test('只有 NMTID 没有 MUSIC_U：不算登录成功', () async {
-    final container = containerWith(_FakeAdapter(qrCookie: 'NMTID=only-stats'));
+    final container = containerWith(_FakeApi(qrCookie: 'NMTID=only-stats'));
     await container.read(musicLoginProvider.notifier).start(MusicPlatform.netease);
     await Future<void>.delayed(const Duration(milliseconds: 5400)); // 首拍在 5s
 
@@ -146,7 +143,7 @@ void main() {
   });
 
   test('风控 8821：立即失败并停轮询（不再空等到超时）', () async {
-    final container = containerWith(_FakeAdapter(code: 8821));
+    final container = containerWith(_FakeApi(code: 8821));
     await container.read(musicLoginProvider.notifier).start(MusicPlatform.netease);
     await Future<void>.delayed(const Duration(milliseconds: 5400)); // 首拍在 5s
 
@@ -188,7 +185,7 @@ void main() {
   });
 
   testWidgets('二维码状态：等待态画码、不显示重试；过期后转重试态且不自动换码', (tester) async {
-    final api = _FakeAdapter();
+    final api = _FakeApi();
     final container = ProviderContainer(
       overrides: [
         musicAuthProvider.overrideWith(_FakeAuth.new),
