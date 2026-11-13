@@ -30,6 +30,8 @@ class _FakeAuth extends MusicAuthNotifier {
   }
 }
 
+final repoNeteaseJs = File('../miao-dock-sources/music/netease.js').readAsStringSync();
+
 void main() {
   ProviderContainer make() {
     final c = ProviderContainer(
@@ -55,6 +57,24 @@ void main() {
       final cfg = declaredConfig(p);
       expect(cfg, isNotNull, reason: '$p 缺登录声明');
     }
+  });
+
+  test('已装副本是旧 JS（无登录声明）：内置兜底仍可登录', () {
+    // 模拟用户已安装的旧版副本（声明字段出现前的 JS）——这是用户实测踩到的场景。
+    final staleJs = repoNeteaseJs
+        .replaceAll(RegExp(r"\s*loginUrl = '[^']*';"), '')
+        .replaceAll(RegExp(r"\s*loginCookieDomains = '[^']*';"), '')
+        .replaceAll(RegExp(r"\s*loginCookieNames = '[^']*';"), '');
+    expect(staleJs.contains('loginUrl'), isFalse);
+    final (manifest, issues) = manifestFromScript(staleJs, 'netease.js');
+    expect(manifest, isNotNull, reason: '$issues');
+    expect(manifest!.login, isNull, reason: '旧副本应无登录声明');
+
+    // 破坏点：内置兜底删除 → 旧副本永远「不支持窗口登录」，只能重新导入。
+    final cfg = loginConfigFor(manifest.platform, declared: manifest.login);
+    expect(cfg, isNotNull, reason: '内置兜底必须能登录');
+    expect(cfg!.loginCookieNames, contains('MUSIC_U'));
+    expect(cfg.url, startsWith('https://music.163.com'));
   });
 
   test('Cookie 按域名过滤：只收本平台域，且跳过空值', () {

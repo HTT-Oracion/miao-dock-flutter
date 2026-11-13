@@ -52,16 +52,53 @@ class WebviewLoginConfig {
   }
 }
 
-/// 平台登录配置查询：**只走源声明**（JS `loginUrl` 等类字段，导入期解析进
-/// manifest.login）。静态表已随内置播放实现一起移除 —— 登录能力跟着源走。
+/// 内置四平台的登录配置兜底（凭据基础设施，与 platformBrands 同性质）：
+/// 播放/搜索逻辑已全部迁入 JS 源，但**登录引导是产品事实源**——
+/// 已装源副本缺登录声明（旧版本 JS）时也能登录。
+const builtinWebviewLoginConfigs = <String, WebviewLoginConfig>{
+  'netease': WebviewLoginConfig(
+    platformId: 'netease',
+    url: 'https://music.163.com/#/login',
+    title: '网易云音乐登录',
+    cookieDomains: ['music.163.com', '163.com', 'netease.com'],
+    loginCookieNames: ['MUSIC_U'],
+  ),
+  'kugou': WebviewLoginConfig(
+    platformId: 'kugou',
+    url: 'https://www.kugou.com/',
+    title: '酷狗音乐登录',
+    cookieDomains: ['kugou.com'],
+    loginCookieNames: ['token', 'userid'],
+    warmupUrl: 'https://www.kugou.com/newuc/user/uc/type=edit',
+  ),
+  'qq': WebviewLoginConfig(
+    platformId: 'qq',
+    url: 'https://y.qq.com/n/ryqq/profile',
+    title: 'QQ 音乐登录',
+    cookieDomains: ['qq.com', 'y.qq.com'],
+    loginCookieNames: ['uin', 'qm_keyst'],
+  ),
+  'migu': WebviewLoginConfig(
+    platformId: 'migu',
+    url: 'https://music.migu.cn/v5/',
+    title: '咪咕音乐登录',
+    cookieDomains: ['migu.cn'],
+    loginCookieNames: ['userid', 'uid'],
+  ),
+};
+
+/// 平台登录配置查询：**源声明优先，内置四平台兜底**（三层兜底哲学同徽章）。
+/// 新平台只能靠源声明；内置四平台即使已装副本是旧 JS 也能登录。
 WebviewLoginConfig? loginConfigFor(String platformId, {MusicSourceLoginConfig? declared}) {
-  if (declared == null) return null;
-  return WebviewLoginConfig(
-    platformId: platformId,
-    url: declared.url,
-    title: '$platformId 登录',
-    cookieDomains: declared.cookieDomains,
-    loginCookieNames: declared.cookieNames,
-    warmupUrl: declared.warmupUrl,
-  );
+  if (declared != null) {
+    return WebviewLoginConfig(
+      platformId: platformId,
+      url: declared.url,
+      title: '$platformId 登录',
+      cookieDomains: declared.cookieDomains,
+      loginCookieNames: declared.cookieNames,
+      warmupUrl: declared.warmupUrl ?? builtinWebviewLoginConfigs[platformId]?.warmupUrl,
+    );
+  }
+  return builtinWebviewLoginConfigs[platformId];
 }
