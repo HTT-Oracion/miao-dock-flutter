@@ -4587,3 +4587,32 @@
   由 `AudioSource.uri` 的 `tag: MediaItem` 承载 —— 通知栏 / 锁屏 / 系统媒体面板靠它展示。
 - **验证**：`flutter build macos` 通过、应用启动无崩溃；音乐域 + l10n 91 个用例全绿。
 - **已知边界**：后台播放属系统级行为，**真机锁屏验证仍需人工确认**（本轮未做真机验证）。
+
+## D-213 · 多平台二维码登录（2026-11-13）
+
+- **状态**：已实施（网易云 / 酷狗）；QQ / 咪咕见下方边界。
+- **架构**：新增 `QrLoginAdapter` 平台无关契约（`music_qr_login.dart`）+ 适配器实现
+  （`qr_login_adapters.dart`）。控制器与 UI 不再按平台写分支，只消费
+  `QrLoginTicket` / `QrLoginPoll` / `QrPollState`。
+- **酷狗**（一比一还原 `KuGouMusicApi`）：
+  · `GET login-user.kugou.com/v2/qrcode` 取码（返回 `qrcode` + `qrcode_img`）；
+  · `GET /v2/get_userinfo_qrcode` 轮询，状态码 **0 过期 / 1 等待 / 2 待确认 / 4 成功**；
+  · Web 签名 `md5(salt + 按 key 排序的 k=v + data + salt)`，salt `NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt`；
+  · 固定参数 `appid=1001` / `srcappid=2919` / `clientver=20489` / `plat=4`；
+  · `mid = md5(guid)` 转十进制大整数（`calculateMid` 同算法），进程内固定；
+  · 登录 UA 用 `Android15-1070-11083-46-0-DiscoveryDRADProtocol-wifi`，并带
+    `dfid` / `clienttime` / `mid` / `kg-rc` / `kg-thash` / `kg-rec` / `kg-rf`（缺了被判非官方客户端）；
+  · 成功时把 `userid` / `token` / `mid` 合成 Cookie，正好匹配既有 `_parseAuth` 的取流要求。
+- **UI**：酷狗直接下发 base64 二维码图，弹窗新增 `_Base64Qr` 渲染分支；
+  无扫码能力的平台显示「该平台暂不支持扫码登录」，不再伪造倒计时。
+- **验证**：真实接口跑通 —— 酷狗取码返回 `qrcode` + 1242 字节 base64 PNG，轮询回 `status=1`；
+  单元测试覆盖状态码映射（改成网易云的 803 口径即变红）。
+- **边界（如实记录）**：
+  · **QQ**：`jsososo/QQMusicApi` 无二维码模块；只有酷狗项目的 `login_qq_qr_*` 走 QQ 互联
+    （`ptlogin2`）。已实测该链路能取到 `qrsig` / `pt_login_sig` / 二维码图，但成功回调后还需
+    AES+RSA 把 openid/access_token 换成酷狗令牌，再落到本项目需要的 `uin` + `qm_keyst` ——
+    属独立工程量，本轮未接。
+  · **咪咕**：`miguMusic-api-enhanced` 只有手机号 / 短信 / 一键 / 账密登录，无二维码接口。
+- **账号密码登录**：四平台均无现成可直接移植的账密接口 —— 网易云已因易盾风控禁用密码登录
+  （官方文档明示）；咪咕账密需 RSA 加密手机号 + 设备指纹；QQ 走开放平台；酷狗为短信。
+  故本轮未实现账密登录，详见答复。

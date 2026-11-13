@@ -1,5 +1,5 @@
+import 'dart:convert';
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +10,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/toast.dart';
 import '../../controller/music_login_controller.dart';
+import '../../data/api/qr_login_adapters.dart';
 import '../../controller/music_session.dart';
 import '../../domain/music_models.dart';
 import '../widgets/music_shared.dart';
@@ -30,7 +31,6 @@ class _LoginModalState extends ConsumerState<LoginModal> {
   late MusicPlatform _platform = ref.read(musicUiProvider).loginPlatform;
 
   _QrPhase _phase = _QrPhase.waiting;
-  int _cd = 272;
   Timer? _ticker;
 
   @override
@@ -49,20 +49,20 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     super.dispose();
   }
 
-  /// 网易云扫码交给真实登录控制器；其余平台不伪造扫码成功。
-  bool get _online => _platform == MusicPlatform.netease;
+  /// 该平台是否有真实二维码登录能力（网易云 / 酷狗）。
+  ///
+  /// QQ / 咪咕的参考实现没有二维码接口，点击时显示「暂不支持」，不伪造扫码流程。
+  bool get _online => qrLoginAdapterFor(_platform) != null;
 
   void _startTicker() {
     _ticker?.cancel();
     _phase = _QrPhase.waiting;
-    _cd = 272;
     if (_online) {
       ref.read(musicLoginProvider.notifier).start(_platform);
       return;
     }
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _cd = math.max(_cd - 1, 0));
-    });
+    // 不支持二维码登录的平台：不再假装倒计时，直接交给控制器落到 unsupported。
+    ref.read(musicLoginProvider.notifier).start(_platform);
   }
 
   void _selectPlatform(MusicPlatform platform) {
@@ -146,7 +146,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                       // 停在重试态等用户点（自动换码会让正在扫的码突然失效）。
                       if (!qrState.needsRetry)
                         Text(
-                          l10n.musicLoginCountdown(_online ? qrState.secondsLeft : _cd),
+                          l10n.musicLoginCountdown(qrState.secondsLeft),
                           style: TextStyle(fontSize: AppFont.px11, color: palette.mut),
                         ),
                       if (!qrState.needsRetry) const SizedBox(width: 8),
@@ -204,6 +204,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
       MusicQrPhase.loading || MusicQrPhase.idle => _QrView.loading,
       MusicQrPhase.expired || MusicQrPhase.failed => _QrView.retry,
       MusicQrPhase.scanned => _QrView.scanned,
+      MusicQrPhase.unsupported => _QrView.unsupported,
       _ => _QrView.waiting,
     };
   }
@@ -216,6 +217,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
       };
     }
     return switch (view) {
+      _QrView.unsupported => l10n.musicLoginQrUnsupported,
       _QrView.loading => l10n.onlineLoading,
       _QrView.retry when qr?.phase == MusicQrPhase.expired => l10n.musicLoginQrExpired,
       _QrView.retry => _failureReason(l10n, qr?.message ?? ''),
@@ -226,8 +228,9 @@ class _LoginModalState extends ConsumerState<LoginModal> {
 
   List<Widget> _qrBody(BuildContext context, AppPalette palette, AppLocalizations l10n) {
     final brand = platformBrands[_platform];
-    final qr = _online ? ref.watch(musicLoginProvider) : null;
-    final gatewayUrl = qr?.gatewayUrl;
+    final qr = ref.watch(musicLoginProvider);
+    final gatewayUrl = qr.gatewayUrl;
+    final qrImage = qr.qrImageBase64;
     final view = _qrView(qr);
     final showQr = view == _QrView.waiting || view == _QrView.scanned;
     final statusText = _statusText(palette, l10n, qr, view);
@@ -239,7 +242,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: !showQr || gatewayUrl == null
+                child: !showQr
                     ? SeedCover(
                         seed: brand?.label ?? 'qr',
                         size: 158,
@@ -247,6 +250,16 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                         child: view == _QrView.loading
                             ? Icon(LucideIcons.loader, size: 34, color: palette.coverInk)
                             : Icon(LucideIcons.qrCode, size: 56, color: palette.coverInk),
+                      )
+                    // 酷狗直接下发整张二维码图（data:image/png;base64,...）。
+                    : qrImage != null
+                    ? _Base64Qr(data: qrImage)
+                    : gatewayUrl == null
+                    ? SeedCover(
+                        seed: brand?.label ?? 'qr',
+                        size: 158,
+                        radius: AppMetrics.radiusCard,
+                        child: Icon(LucideIcons.qrCode, size: 56, color: palette.coverInk),
                       )
                     : DecoratedBox(
                         decoration: BoxDecoration(
@@ -332,7 +345,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
 }
 
 /// 二维码的 UI 显示态（与 controller 的 phase 解耦，避免 UI 到处判 phase）。
-enum _QrView { loading, waiting, scanned, retry }
+enum _QrView { loading, waiting, scanned, retry, unsupported }
 
 class _Header extends StatelessWidget {
   const _Header({required this.title, required this.onClose});
@@ -467,6 +480,30 @@ class _Corners extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 平台直接下发的二维码图（`data:image/png;base64,...`）。
+///
+/// 酷狗走这种方式：服务端已生成好图片，不需要本地再渲染二维码内容。
+class _Base64Qr extends StatelessWidget {
+  const _Base64Qr({required this.data});
+
+  final String data;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final comma = data.indexOf(',');
+    final payload = comma >= 0 ? data.substring(comma + 1) : data;
+    final bytes = base64Decode(payload);
+    return DecoratedBox(
+      decoration: BoxDecoration(color: palette.coverInk, borderRadius: BorderRadius.circular(AppMetrics.radiusCard)),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Image.memory(bytes, key: const ValueKey('music-login-qr'), fit: BoxFit.contain, gaplessPlayback: true),
       ),
     );
   }
