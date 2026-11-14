@@ -29,6 +29,18 @@ enum QualityTier {
 /// 详情页数据源类型：歌单 / 官方榜单 / 每日推荐（共用一套详情布局）。
 enum MusicSourceKind { playlist, chart, daily }
 
+/// 收藏按钮是否显示（用户口径，**唯一判据**）。
+///
+/// · 【我喜欢的音乐】= 系统歌单（special）→ 收藏无意义；
+/// · 【我创建的歌单】= 非收藏（!subscribed）→ 自己的歌单不该被收藏；
+/// · 每日推荐 → 不是歌单。
+/// 只有「收藏来的歌单」与「榜单」可收藏。
+bool shouldShowCollectButton(MusicSourceKind kind, MusicPlaylist meta) => switch (kind) {
+  MusicSourceKind.chart => true,
+  MusicSourceKind.daily => false,
+  MusicSourceKind.playlist => meta.subscribed,
+};
+
 /// 单曲（曲名 / 艺人 / 专辑 / 时长 / 来源 / 音质标注）。
 @immutable
 class MusicSong {

@@ -257,6 +257,9 @@ class _Hero extends StatelessWidget {
   final VoidCallback onPlayAll;
   final VoidCallback onToggleCollect;
 
+  /// 收藏按钮是否显示：判据只有一处（`shouldShowCollectButton`），避免 UI 各判一遍。
+  bool get _showCollect => shouldShowCollectButton(kind, meta);
+
   /// hero 上方的小标签：设计稿用英文眉标（PLAYLIST / CHART / LIKED / COLLECTED）。
   String _kicker(AppLocalizations l10n) {
     if (kind == MusicSourceKind.daily) return l10n.musicKickerDaily;
@@ -365,8 +368,7 @@ class _Hero extends StatelessWidget {
             Row(
               children: [
                 Expanded(child: play),
-                const SizedBox(width: 8),
-                Expanded(child: collect),
+                if (_showCollect) ...[const SizedBox(width: 8), Expanded(child: collect)],
               ],
             ),
           ],
@@ -388,7 +390,12 @@ class _Hero extends StatelessWidget {
               children: [
                 info,
                 const SizedBox(height: 14),
-                Row(children: [play, const SizedBox(width: 8), collect]),
+                Row(
+                  children: [
+                    play,
+                    if (_showCollect) ...[const SizedBox(width: 8), collect],
+                  ],
+                ),
               ],
             ),
           ),

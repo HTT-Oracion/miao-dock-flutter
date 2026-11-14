@@ -13,6 +13,10 @@ import 'package:miao_dock_flutter/features/music/domain/music_models.dart';
 /// 故障注入（[setFailScope]）只服务于状态自检（加载 / 失败 / 局部失败截图与测试），
 /// 不参与任何正常业务分支。
 class DemoMusicRepository implements MusicRepository {
+  /// 心动模式能力位（演示仓库按支持处理，具体用例可覆盖）。
+  @override
+  bool get supportsSimilarSongs => true;
+
   final Set<FailScope> _fails = {};
 
   static const Map<FailScope, Set<FailScope>> _scopeMatch = {

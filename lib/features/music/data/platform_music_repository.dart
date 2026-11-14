@@ -65,6 +65,10 @@ class PlatformMusicRepository implements MusicRepository {
   final MusicSource _source;
   final String cookie;
 
+  /// 心动模式能力位：转发源能力（JS 源声明 `similarSongs` 才为 true）。
+  @override
+  bool get supportsSimilarSongs => _source.supportsSimilarSongs;
+
   /// 歌词缓存：`{歌曲id: 歌词}`。UI 的 [lyricsFor] 是同步的（构建期读），
   /// 真实音源只能先回空轴再异步补 —— 缓存命中后同一位置自然变成真歌词。
   final Map<String, SongLyrics> _lyricCache = {};

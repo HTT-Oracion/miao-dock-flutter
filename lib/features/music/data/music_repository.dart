@@ -4,6 +4,12 @@ import '../domain/music_models.dart';
 ///
 /// UI / controller 只面向本接口；运行时实现连接当前选择的真实音乐平台。
 abstract interface class MusicRepository {
+  /// 心动模式能力位（= 当前源是否提供相似歌曲）。
+  ///
+  /// UI 的心动档、播放器的 `canUseHeartbeat` 都只认这一个来源（对齐 miao-dock
+  /// `platform.supportsSimilar`）—— 判据分散会「按钮显示心动、实际按随机播」。
+  bool get supportsSimilarSongs;
+
   /// 发现页推荐栏（9 张竖卡）。
   Future<List<MusicRecCard>> recCards();
 

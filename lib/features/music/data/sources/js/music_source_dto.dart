@@ -1,3 +1,5 @@
+import 'dart:convert' show jsonDecode;
+
 import '../../../domain/music_models.dart';
 import '../../../domain/js_music_source.dart';
 import '../../../domain/music_source_manifest.dart';
@@ -147,10 +149,46 @@ class MusicSourceDto {
   }
 
   /// 极简 LRC：`[mm:ss.xx]` / `[mm:ss]` 行。
+  ///
+  /// 🔴 网易云新版歌词混有 **JSON 行**（`{"t":1000,"c":[{"tx":"作词: "},…]}`，
+  /// 制作名单 / 部分新歌正文都是这种格式）—— 只认 `[mm:ss]` 行会把纯 JSON
+  /// 歌词解析成空轴（桌面歌词还会因 `% 0` 崩溃）。两种格式都收。
   SongLyrics _parseLrc(String lrc, String? translation) {
+    final lines = _parseLrcLines(lrc);
+    final merged = _mergeTranslation(lines, translation);
+    // [offset:N] 标签：整轴平移（含翻译轨重对齐）。
+    final offsetTag = RegExp(r'\[offset:\s*([+-]?\d+)\]', caseSensitive: false).firstMatch(lrc);
+    if (offsetTag == null) return merged;
+    final shift = int.parse(offsetTag.group(1)!);
+    if (shift == 0) return merged;
+    final shifted = [
+      for (final line in merged.lines) LyricLine(t: line.t + shift, text: line.text, translation: line.translation),
+    ];
+    return SongLyrics(lines: shifted, hasTranslation: merged.hasTranslation);
+  }
+
+  List<LyricLine> _parseLrcLines(String lrc) {
     final lines = <LyricLine>[];
     final pattern = RegExp(r'\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?\]\s*(.*)');
     for (final raw in lrc.split('\n')) {
+      // JSON 结构行：{"t":1000,"c":[{"tx":"作词: "},{"tx":"周杰伦",…}]}
+      if (raw.trimLeft().startsWith('{')) {
+        try {
+          final obj = jsonDecode(raw) as Map;
+          final t = (obj['t'] as num?)?.toInt();
+          final segs = obj['c'];
+          if (t == null || segs is! List) continue;
+          final text = [
+            for (final seg in segs)
+              if (seg is Map && seg['tx'] is String) seg['tx'] as String,
+          ].join().trim();
+          if (text.isEmpty) continue;
+          lines.add(LyricLine(t: t, text: text));
+        } catch (_) {
+          // 非 JSON 行按原逻辑走。
+        }
+        continue;
+      }
       final m = pattern.firstMatch(raw);
       if (m == null) continue;
       final t =
@@ -162,14 +200,18 @@ class MusicSourceDto {
       lines.add(LyricLine(t: t, text: text));
     }
     lines.sort((a, b) => a.t.compareTo(b.t));
+    return lines;
+  }
+
+  SongLyrics _mergeTranslation(List<LyricLine> lines, String? translation) {
     if (translation == null || translation.isEmpty) return SongLyrics(lines: lines, hasTranslation: false);
-    final translated = _parseLrc(translation, null);
-    if (translated.lines.isEmpty) return SongLyrics(lines: lines, hasTranslation: false);
+    final translated = _parseLrcLines(translation);
+    if (translated.isEmpty) return SongLyrics(lines: lines, hasTranslation: false);
     // 按时间就近对齐翻译轨。
     final merged = <LyricLine>[];
     for (final line in lines) {
       LyricLine? best;
-      for (final cur in translated.lines) {
+      for (final cur in translated) {
         if (best == null || (cur.t - line.t).abs() < (best.t - line.t).abs()) best = cur;
       }
       merged.add(LyricLine(t: line.t, text: line.text, translation: best?.text));

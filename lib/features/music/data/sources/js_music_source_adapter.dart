@@ -30,7 +30,10 @@ class JsMusicSourceAdapter implements MusicSource {
       source.capabilities.contains('charts') || source.capabilities.contains('searchPlaylists');
 
   @override
-  bool get supportsSimilarSongs => false;
+  /// 心动模式能力位：源声明了 `similarSongs` 才可用（对齐 miao-dock
+  /// `platform.supportsSimilar`，不硬编码平台名单）。
+  @override
+  bool get supportsSimilarSongs => source.capabilities.contains('similarSongs');
 
   @override
   Future<List<MusicSong>> searchSongs(String keywords, {int limit = 30, int offset = 0}) =>

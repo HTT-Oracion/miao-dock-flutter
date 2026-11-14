@@ -7,6 +7,7 @@ import 'package:miao_dock_flutter/features/music/data/sources/js/music_source_dt
 ///
 /// 破坏点：映射错字段（ar/artists、dt/duration 混淆）→ 列表显示空 / 时长 0。
 void main() {
+  jsonLyricTests();
   const dto = MusicSourceDto(platformId: 'netease');
 
   test('搜索歌曲：归一化契约字段映射', () {
@@ -175,5 +176,49 @@ void main() {
     expect(comments.first.id, '7');
     expect(comments.first.nick, '路人');
     expect(comments.first.likes, 88);
+  });
+}
+
+/// 网易云新版歌词 = JSON 行格式（`{"t":ms,"c":[{"tx":"…"}]}`）。
+///
+/// 破坏点：只认 `[mm:ss]` 行 → 纯 JSON 歌词解析成空轴（歌词不动 / 桌面歌词
+/// `% 0` 崩溃）。
+void jsonLyricTests() {
+  const dto = MusicSourceDto(platformId: 'netease');
+
+  test('JSON 行歌词：按 t 解析并按时间排序', () {
+    final raw = {
+      'lrc':
+          '{"t":1000,"c":[{"tx":"作词: "},{"tx":"周杰伦"}]}\n'
+          '{"t":2000,"c":[{"tx":"编曲: "},{"tx":"屠颖"}]}\n'
+          '[00:23.97]半夜睡不着觉把心情哼成歌',
+    };
+    final lyrics = dto.lyrics(raw);
+    // 破坏点：JSON 行被跳过 → 只剩 1 行。
+    expect(lyrics.lines.length, 3);
+    expect(lyrics.lines[0].t, 1000);
+    expect(lyrics.lines[0].text, '作词: 周杰伦');
+    expect(lyrics.lines[1].text, '编曲: 屠颖');
+    expect(lyrics.lines[2].text, '半夜睡不着觉把心情哼成歌');
+    expect(lyrics.lines[2].t, 23970);
+  });
+
+  test('offset 标签：整轴按毫秒平移', () {
+    final raw = {'lrc': '[offset:-500]\n[00:10.00]甲\n[00:20.00]乙'};
+    final lyrics = dto.lyrics(raw);
+    // 破坏点：忽略 offset → 时间停在 10000（与音频差 500ms，正好是「进度不匹配」）。
+    expect(lyrics.lines[0].t, 9500);
+    expect(lyrics.lines[1].t, 19500);
+  });
+
+  test('纯 JSON 歌词 + 翻译轨：就近对齐', () {
+    final raw = {
+      'lrc': '{"t":1000,"c":[{"tx":"line one"}]}\n{"t":5000,"c":[{"tx":"line two"}]}',
+      'translation': '{"t":1100,"c":[{"tx":"第一句"}]}\n{"t":5100,"c":[{"tx":"第二句"}]}',
+    };
+    final lyrics = dto.lyrics(raw);
+    expect(lyrics.hasTranslation, isTrue);
+    expect(lyrics.lines[0].translation, '第一句');
+    expect(lyrics.lines[1].translation, '第二句');
   });
 }

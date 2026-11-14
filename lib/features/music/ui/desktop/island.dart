@@ -43,6 +43,7 @@ class _DynamicIslandState extends ConsumerState<DynamicIsland> {
     final expanded = _expanded;
 
     final lyrics = ref.watch(currentLyricsProvider);
+    // 空歌词：下方 lyricLines 自带兜底（改用歌名 / 歌手），这里只算下标。
     var idx = 0;
     for (final (k, line) in lyrics.lines.indexed) {
       if (player.positionMs >= line.t) idx = k;

@@ -67,6 +67,8 @@ class DesktopLyricsOverlay extends ConsumerWidget {
     final palette = AppPalette.of(context);
 
     final lyrics = ref.watch(currentLyricsProvider);
+    // 🔴 空歌词（解析失败 / 纯音乐）必须直接隐藏 —— `% 0` 会抛 IntegerDivisionByZero。
+    if (lyrics.lines.isEmpty) return const SizedBox.shrink();
     var idx = 0;
     for (final (k, line) in lyrics.lines.indexed) {
       if (player.positionMs >= line.t) idx = k;

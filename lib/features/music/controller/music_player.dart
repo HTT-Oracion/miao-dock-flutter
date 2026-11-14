@@ -7,7 +7,6 @@ import '../data/music_repository.dart';
 import '../domain/music_models.dart';
 import 'music_audio_engine.dart';
 import 'music_providers.dart';
-import 'music_session.dart';
 
 /// 播放器状态快照（队列 / 当前曲 / 进度 / 模式 / 音质 / 音量 / 红心）。
 ///
@@ -555,7 +554,10 @@ class PlayerNotifier extends Notifier<MusicPlayerState> {
     _setPlayMode(next);
   }
 
-  bool get _canUseHeartbeat => state.queueFromLiked && ref.read(musicAccountProvider).cur == 'netease';
+  /// 心动模式可用性（唯一判据，对齐 miao-dock `canUseHeartbeat`）：
+  /// 仓库能力位（= 源声明了 similarSongs）+ 队列来自「我喜欢的音乐」。
+  /// 🔴 不在这里硬编码平台名单 —— 两处各写一份日后必漏改（miao-dock 注释同款提醒）。
+  bool get _canUseHeartbeat => state.queueFromLiked && ref.read(musicRepositoryProvider).supportsSimilarSongs;
 
   void _setPlayMode(PlayMode mode) {
     if (mode == PlayMode.heartbeat) {
