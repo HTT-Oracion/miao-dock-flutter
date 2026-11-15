@@ -6390,7 +6390,27 @@
   },
   "musicSourcePanelEmptyHint": "暂无导入的音乐源，导入后对应平台会出现在侧栏与登录弹窗",
   "@musicSourcePanelEmptyHint": {
-    "description": "无已装源空态说明"
+    "description": "无已装源空态说明（备用：卡片式空态见 musicSourceEmpty*）"
+  },
+  "musicSourceEmpty": "还没有音乐源",
+  "@musicSourceEmpty": {
+    "description": "无已装源空态标题（与漫画源 onlineSourceEmpty 同构）"
+  },
+  "musicSourceEmptyHint": "通过链接或 .js 文件导入源后即可播放对应平台音乐。",
+  "@musicSourceEmptyHint": {
+    "description": "无已装源空态说明（与漫画源 onlineSourceEmptyHintShort 同构）"
+  },
+  "musicSourceImportedTitle": "已导入的源",
+  "@musicSourceImportedTitle": {
+    "description": "已装源列表标题（与漫画源 onlineImportedTitle 同构）"
+  },
+  "musicSourceExportSource": "导出",
+  "@musicSourceExportSource": {
+    "description": "导出全部已装源（与漫画源 onlineExportSource 同构）"
+  },
+  "musicSourceDisclaimerShort": "音乐源由第三方提供，内容与可用性由源作者负责。",
+  "@musicSourceDisclaimerShort": {
+    "description": "源面板底部合规提示（与漫画源 onlineSourceDisclaimerShort 同构）"
   },
   "musicSourcePanelSummary": "v{version} · {caps} 项能力",
   "@musicSourcePanelSummary": {

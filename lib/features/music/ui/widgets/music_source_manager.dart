@@ -18,6 +18,8 @@ import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_switch.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
+// 空态 / 标签与漫画源面板共用同一组件，保证两个数据源页视觉一致。
+import '../../../../shared/widgets/state_box.dart';
 import '../../controller/music_providers.dart';
 import '../../data/sources/js/music_source_import.dart';
 import '../../data/sources/js/music_source_remote.dart';
@@ -99,18 +101,29 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
           // 本地导入盒：虚线拖拽框（与漫画 _ImportBox 同视觉）。
           _ImportBox(importing: _busy, mobile: mobile, onPickFile: _pickAndImport, onOpenDir: _openSourceDirectory),
           const SizedBox(height: 16),
-          Text(
-            l10n.musicSourceMgrInstalled(installed.length),
-            style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
-          ),
-          const SizedBox(height: 8),
+          // 已装源标题 + 计数：与漫画源面板同构（无源时不渲染）。
+          if (installed.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Text(
+                    l10n.musicSourceImportedTitle,
+                    style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
+                  ),
+                  const SizedBox(width: 10),
+                  OnlineTag('${installed.length}'),
+                ],
+              ),
+            ),
           if (installed.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                l10n.musicSourcePanelEmptyHint,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: AppFont.px11, height: 1.7, color: palette.mut),
+              padding: const EdgeInsets.only(top: 12),
+              child: OnlineStateBox(
+                icon: LucideIcons.inbox,
+                title: l10n.musicSourceEmpty,
+                description: l10n.musicSourceEmptyHint,
+                compact: true,
               ),
             )
           else
@@ -126,6 +139,20 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
                   onCopyId: () => _copyId(source),
                 ),
               ),
+          // 底部合规提示：与漫画源面板同构。
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: palette.acc.withValues(alpha: 0.08),
+              border: Border.all(color: palette.acc.withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              l10n.musicSourceDisclaimerShort,
+              style: TextStyle(fontSize: AppFont.px11_5, height: 1.6, color: palette.ink2),
+            ),
+          ),
         ],
       ),
     );
