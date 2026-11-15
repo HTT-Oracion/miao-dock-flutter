@@ -1,0 +1,24 @@
+# 统一换行：仓库内一律 LF，检出也保持 LF。
+# 背景：Windows 默认 core.autocrlf=true 会把工作区转成 CRLF，
+# 导致 flutter pub get 生成的 generated_* 文件每次都显示 modified，
+# 而内容其实一字未变（git diff --ignore-all-space 为空）。
+* text=auto eol=lf
+
+# Windows 脚本必须保持 CRLF，否则 cmd 解析出错
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制文件不做换行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.exe binary
+*.dll binary
