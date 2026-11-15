@@ -186,22 +186,24 @@ icacls "F:\software\projects\dock" /setintegritylevel Medium
 ```bash
 fvm install          # 按 .fvmrc 安装锁定的 Flutter 版本
 fvm flutter pub get  # workspace：App + services + packages 一次拉齐
-fvm dart run build_runner build --delete-conflicting-outputs
+fvm flutter gen-l10n # 生成 i18n 词条（生成物不入库，缺了编译必失败）
 ```
+
+- `fvm install` 只需首次执行：`fvm flutter` 会自动补齐 `.fvmrc` 指定的 SDK。
+- **必须 `gen-l10n`**：`lib/l10n/app_localizations*.dart` 在 `.gitignore` 内，
+  但 `lib/` 下 80 个文件 import 它，缺了直接编译失败。
+- 不需要 `build_runner`：仓库无 `build_runner` / `freezed` / `json_serializable` 依赖，
+  也没有 `*.g.dart` 生成物；CI 只跑 `pub get` + `gen-l10n`。
+
+**Windows 额外要求**：Visual Studio 生成工具需勾选 **ATL** 组件
+（`flutter_secure_storage_windows` 的 Windows 端依赖 `<atlstr.h>`），
+否则构建报 `error C1083: 无法打开包括文件: "atlstr.h"`。
 
 ### 三、启动
 
 ```bash
-# 只跑 UI（默认连 A 级 Fake，不需要任何服务进程）
-fvm flutter run -d macos
-
-# 桌面端整条链路：两个服务 + UI（服务用 mock 引擎，仍不需要 Python）
-fvm dart run services/mangasvc/bin/mangasvc.dart --engine mock
-fvm dart run services/animesvc/bin/animesvc.dart
-fvm flutter run -d macos
-
-# windows
-fvm flutter run -d windows
+# 桌面端（Windows / macOS / Linux）：直接跑
+fvm flutter run -d windows   # 或 -d macos / -d linux
 
 # 移动端（漫画翻译经设置中手动配置的桌面端地址调用）
 fvm flutter run -d ios    # 或 -d android
@@ -210,6 +212,35 @@ fvm flutter run -d ios    # 或 -d android
 fvm flutter run -d chrome
 ```
 
+桌面端**不需要手动起服务**：`lib/app/bootstrap.dart` 在启动时会自己拉起
+`mangasvc`（端口 5180–5190、令牌从 stdout 读取、退出时清理子进程），
+日志里出现 `[bootstrap] mangasvc dev-source → 端口 518x` 即为正常。
+服务起不来时 UI 会如实显示「服务未就绪」，排查见下。
+
+需要单独调试服务时（App 会自动复用已在运行的实例）：
+
+```bash
+fvm dart run services/mangasvc/bin/mangasvc.dart --engine mock   # mock 引擎，不需要 Python
+```
+
+> `animesvc` 目前是 6 行骨架（`bin/animesvc.dart` 只打印一行就退出），不要期待它提供服务。
+
+### 四、Windows 常见故障
+
+按「报错原文 → 成因 → 处理」对照，都是实测踩过的：
+
+| 报错 | 成因 | 处理 |
+|---|---|---|
+| `error C1083: 无法打开包括文件: "atlstr.h"` | VS 生成工具没装 ATL 组件 | 在 Visual Studio Installer 里给该实例勾选「适用于最新 v143 生成工具的 C++ ATL」 |
+| `Creation of temporary directory failed ... errno 5` | 仓库根目录带 Low 完整性标签，其下 exe 写不了 Medium 级的 `%LOCALAPPDATA%\Temp` | `icacls "<仓库根>" /setintegritylevel Medium`（见 §一 第 3 步） |
+| `mangasvc 在就绪前退出（code=1）` | 同上：子进程 `dart run` 的遥测写入被完整性控制拦下 | 同上 |
+| `Got socket error trying to find package ... at https://pub.dev` 但浏览器能开 pub.dev | 环境里残留失效的 `HTTP_PROXY`（代理软件没开） | 删掉该环境变量，或先启动代理再重试 |
+
+排查服务问题时，看 `flutter run` 控制台里 `[bootstrap]` 开头的行，
+它会给出解析到的可执行文件、失败原因与服务子进程输出。
+
+不用 `fvm` 而用全局 Flutter 时，请确认版本与 `.fvmrc` 一致；
+版本不一致时 `pub get` 会重新求解整棵依赖树，`pubspec.lock` 会被大改。
 
 ## 开发（随改随测）
 
