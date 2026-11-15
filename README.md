@@ -163,7 +163,25 @@ miao-dock-flutter/
 | Linux 构建 | clang / cmake / GTK 开发库 | `flutter build linux` 需要 |
 | 真翻译引擎（可选） | Python 3.11 运行时 + manga-image-translator + 模型权重 | 运行时由 `mangasvc` 装配到用户数据目录，**不入库**；日常开发用 mock，不需要装 |
 
-### 一、装依赖
+### 一、安装并配置 FVM（首次使用）
+
+```bash
+# 1. 安装 FVM
+dart pub global activate fvm
+
+# 2. 确保 FVM 可执行目录在 PATH 中
+#    Windows：$env:LOCALAPPDATA\Pub\Cache\bin
+#    macOS/Linux：$HOME/.pub-cache/bin
+#    配置后重开终端，用 fvm --version 验证
+
+# 3. Windows：把仓库根目录的完整性级别设为 Medium
+#    目录若残留 Low 完整性标签，其下构建的 exe 会被强制完整性控制挡住，
+#    表现为 flutter run 报 "Creation of temporary directory failed ... errno 5"，
+#    以及 mangasvc 就绪前退出（code=1）。
+icacls "F:\software\projects\dock" /setintegritylevel Medium
+```
+
+### 二、装依赖
 
 ```bash
 fvm install          # 按 .fvmrc 安装锁定的 Flutter 版本
@@ -171,7 +189,7 @@ fvm flutter pub get  # workspace：App + services + packages 一次拉齐
 fvm dart run build_runner build --delete-conflicting-outputs
 ```
 
-### 二、启动
+### 三、启动
 
 ```bash
 # 只跑 UI（默认连 A 级 Fake，不需要任何服务进程）
@@ -182,12 +200,16 @@ fvm dart run services/mangasvc/bin/mangasvc.dart --engine mock
 fvm dart run services/animesvc/bin/animesvc.dart
 fvm flutter run -d macos
 
+# windows
+fvm flutter run -d windows
+
 # 移动端（漫画翻译经设置中手动配置的桌面端地址调用）
 fvm flutter run -d ios    # 或 -d android
 
 # Web 端（同移动端连桌面端服务；mangasvc 需为该场景开启 CORS）
 fvm flutter run -d chrome
 ```
+
 
 ## 开发（随改随测）
 
