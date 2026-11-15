@@ -9,6 +9,8 @@ import '../../../../../shared/widgets/app_dialog.dart';
 import '../../../../../shared/widgets/app_input.dart';
 import '../../../../../shared/widgets/buttons.dart';
 import '../../../../../shared/widgets/skeleton.dart';
+import '../../../../../shared/widgets/source_library_list.dart';
+import '../../../../../shared/widgets/source_link_import_card.dart';
 import '../../../../../shared/widgets/toast.dart';
 import '../../controller/online_library_controller.dart';
 import '../../controller/online_sources_controller.dart';
@@ -278,192 +280,50 @@ class _OnlineLinkImportState extends ConsumerState<OnlineLinkImport> {
     final l10n = AppLocalizations.of(context);
     final libraries = ref.watch(onlineLibrariesProvider);
     final mobile = context.isMobile;
-    return Container(
-      padding: EdgeInsets.all(mobile ? 12 : 14),
-      decoration: BoxDecoration(
-        color: palette.card,
-        border: Border.all(color: palette.line2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(LucideIcons.link, size: 15, color: palette.acc),
-              const SizedBox(width: 7),
-              Text(
-                l10n.onlineLinkImportTitle,
-                style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
-              ),
-              const Spacer(),
-              Text(
-                l10n.onlineSourcesLibraryTitle,
-                style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.onlineSourceLibraryDesc,
-            style: TextStyle(fontSize: AppFont.px10_5, height: 1.6, color: palette.mut),
-          ),
-          const SizedBox(height: 9),
-          if (mobile) ...[
-            AppInput(
-              controller: _controller,
-              hint: l10n.onlineLinkImportHint,
-              onSubmitted: (_) => _import(),
-              height: 44,
-              prefixIcon: LucideIcons.link2,
-              errorText: _error,
-            ),
-            const SizedBox(height: 8),
-            AppButton(
-              label: _busy ? l10n.onlineLinkImporting : l10n.onlineLinkImportAction,
-              icon: LucideIcons.download,
-              onTap: _busy ? null : _import,
-              variant: AppButtonVariant.primary,
-              loading: _busy,
-              width: double.infinity,
-              height: 44,
-              fontSize: AppFont.px12,
-              fontWeight: FontWeight.w600,
-            ),
-          ] else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: AppInput(
-                    controller: _controller,
-                    hint: l10n.onlineLinkImportHint,
-                    onSubmitted: (_) => _import(),
-                    height: 36,
-                    prefixIcon: LucideIcons.link2,
-                    errorText: _error,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                AppButton(
-                  label: _busy ? l10n.onlineLinkImporting : l10n.onlineLinkImportAction,
-                  icon: LucideIcons.download,
-                  onTap: _busy ? null : _import,
-                  variant: AppButtonVariant.primary,
-                  loading: _busy,
-                  height: 36,
-                  horizontalPadding: 12,
-                  fontSize: AppFont.px11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ],
-            ),
-          const SizedBox(height: 12),
-          libraries.when(
-            skipLoadingOnRefresh: true,
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 6),
-              child: Align(alignment: Alignment.centerLeft, child: SkeletonBox(width: 180, height: 10)),
-            ),
-            error: (_, _) => Text(
-              l10n.onlineSourceLibraryLoadFailed,
-              style: TextStyle(fontSize: AppFont.px10_5, color: palette.bad),
-            ),
-            data: (items) => items.isEmpty
-                ? Text(
-                    l10n.onlineSourceLibraryEmpty,
-                    style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
-                  )
-                : Column(
-                    children: [
-                      for (final library in items)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: _LibraryRow(
-                            library: library,
-                            busy: _busyLibraryId == library.id,
-                            onBrowse: () => _browseLibrary(library),
-                            onDelete: () => _deleteLibrary(library),
-                          ),
-                        ),
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LibraryRow extends StatelessWidget {
-  const _LibraryRow({required this.library, required this.busy, required this.onBrowse, required this.onDelete});
-
-  final SourceLibrary library;
-  final bool busy;
-  final VoidCallback onBrowse;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final host = Uri.tryParse(library.url)?.host ?? library.url;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
-      decoration: BoxDecoration(
-        color: palette.navBg,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: palette.line2),
-      ),
-      child: Row(
-        children: [
-          Icon(LucideIcons.library, size: 16, color: palette.acc),
-          const SizedBox(width: 8),
-          Expanded(
-            child: InkWell(
-              onTap: busy ? null : onBrowse,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    library.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: AppFont.px11_5, fontWeight: FontWeight.w600, color: palette.ink),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    host,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (busy)
-            const Padding(
-              padding: EdgeInsets.all(8),
-              child: SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.5)),
-            )
-          else
-            AppButton(
-              icon: LucideIcons.refreshCw,
-              onTap: onBrowse,
-              variant: AppButtonVariant.ghost,
-              width: 30,
-              height: 30,
-              horizontalPadding: 0,
-            ),
-          AppButton(
-            icon: LucideIcons.trash2,
-            onTap: onDelete,
-            variant: AppButtonVariant.ghost,
-            width: 30,
-            height: 30,
-            horizontalPadding: 0,
-          ),
-        ],
+    return SourceLinkImportCard(
+      controller: _controller,
+      busy: _busy,
+      mobile: mobile,
+      onImport: _import,
+      title: l10n.onlineLinkImportTitle,
+      trailingLabel: l10n.onlineSourcesLibraryTitle,
+      description: l10n.onlineSourceLibraryDesc,
+      hint: l10n.onlineLinkImportHint,
+      actionLabel: l10n.onlineLinkImportAction,
+      actionLabelBusy: l10n.onlineLinkImporting,
+      errorText: _error,
+      footer: libraries.when(
+        skipLoadingOnRefresh: true,
+        loading: () => SourceLibraryList(
+          libraries: const [],
+          loading: true,
+          error: false,
+          emptyLabel: l10n.onlineSourceLibraryEmpty,
+          errorLabel: l10n.onlineSourceLibraryLoadFailed,
+          busyId: null,
+          onBrowse: (_) {},
+          onDelete: (_) {},
+        ),
+        error: (_, _) => SourceLibraryList(
+          libraries: const [],
+          loading: false,
+          error: true,
+          emptyLabel: l10n.onlineSourceLibraryEmpty,
+          errorLabel: l10n.onlineSourceLibraryLoadFailed,
+          busyId: null,
+          onBrowse: (_) {},
+          onDelete: (_) {},
+        ),
+        data: (items) => SourceLibraryList(
+          libraries: items,
+          loading: false,
+          error: false,
+          emptyLabel: l10n.onlineSourceLibraryEmpty,
+          errorLabel: l10n.onlineSourceLibraryLoadFailed,
+          busyId: _busyLibraryId,
+          onBrowse: _browseLibrary,
+          onDelete: _deleteLibrary,
+        ),
       ),
     );
   }

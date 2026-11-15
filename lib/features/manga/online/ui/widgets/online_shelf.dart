@@ -50,6 +50,11 @@ class OnlineShelf extends ConsumerWidget {
       selectView(OnlineView.discover);
     }
 
+    // 未导入任何源时隐藏「源区块」（标题 + 加号 + 源列表/空态框），
+    // 但保留整个左栏：发现 / 标签 / 排行 / 最近 / 下载 仍要能点。
+    // 导入入口由右侧页面级空态提供，避免同一屏出现两处重复引导。
+    final hasSources = sources.value?.isNotEmpty ?? false;
+
     return Container(
       width: 246,
       decoration: BoxDecoration(
@@ -58,82 +63,72 @@ class OnlineShelf extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          SizedBox(
-            height: 56,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-              child: Row(
-                children: [
-                  Text(
-                    l10n.onlineSourceTitle,
-                    style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
-                  ),
-                  const Spacer(),
-                  AppButton(
-                    icon: LucideIcons.plus,
-                    onTap: onManageSources,
-                    variant: AppButtonVariant.ghost,
-                    border: false,
-                    width: 34,
-                    height: 34,
-                    horizontalPadding: 0,
-                    fontSize: AppFont.px15,
-                    color: palette.ink2,
-                  ),
-                ],
+          if (hasSources)
+            SizedBox(
+              height: 56,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+                child: Row(
+                  children: [
+                    Text(
+                      l10n.onlineSourceTitle,
+                      style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
+                    ),
+                    const Spacer(),
+                    AppButton(
+                      icon: LucideIcons.plus,
+                      onTap: onManageSources,
+                      variant: AppButtonVariant.ghost,
+                      border: false,
+                      width: 34,
+                      height: 34,
+                      horizontalPadding: 0,
+                      fontSize: AppFont.px15,
+                      color: palette.ink2,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(top: hasSources ? 0 : 8, bottom: 12),
               children: [
-                sources.when(
-                  skipLoadingOnRefresh: true,
-                  data: (items) => items.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: OnlineStateBox(
-                            icon: LucideIcons.inbox,
-                            title: l10n.onlineSourceEmpty,
-                            description: l10n.onlineSourceEmptyHintShort,
-                            actionLabel: l10n.onlineGoImportShort,
-                            actionIcon: LucideIcons.plus,
-                            onAction: onManageSources,
-                            compact: true,
+                if (hasSources)
+                  sources.when(
+                    skipLoadingOnRefresh: true,
+                    data: (items) => Column(
+                      children: [
+                        for (final (index, source) in items.indexed)
+                          _PlatformRow(
+                            source: source,
+                            index: index,
+                            active: active?.id == source.id,
+                            onTap: source.enabled ? () => selectSource(source) : null,
                           ),
-                        )
-                      : Column(
-                          children: [
-                            for (final (index, source) in items.indexed)
-                              _PlatformRow(
-                                source: source,
-                                index: index,
-                                active: active?.id == source.id,
-                                onTap: source.enabled ? () => selectSource(source) : null,
-                              ),
-                          ],
-                        ),
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Column(children: [_PlatformSkeleton(), _PlatformSkeleton(), _PlatformSkeleton()]),
-                  ),
-                  error: (error, _) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: OnlineErrorBox(
-                      error: error,
-                      title: l10n.onlinePlatformLoadFailed,
-                      description: l10n.onlinePlatformLoadFailedHint,
-                      onRetry: () => ref.read(onlineSourcesProvider.notifier).refresh(),
-                      compact: true,
+                      ],
+                    ),
+                    loading: () => const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(children: [_PlatformSkeleton(), _PlatformSkeleton(), _PlatformSkeleton()]),
+                    ),
+                    error: (error, _) => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: OnlineErrorBox(
+                        error: error,
+                        title: l10n.onlinePlatformLoadFailed,
+                        description: l10n.onlinePlatformLoadFailedHint,
+                        onRetry: () => ref.read(onlineSourcesProvider.notifier).refresh(),
+                        compact: true,
+                      ),
                     ),
                   ),
-                ),
-                Container(
-                  height: 1,
-                  color: palette.line,
-                  margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                ),
+                if (hasSources)
+                  Container(
+                    height: 1,
+                    color: palette.line,
+                    margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
                   child: Text(

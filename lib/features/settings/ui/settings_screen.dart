@@ -1139,19 +1139,11 @@ class _OnlineSectionState extends ConsumerState<_OnlineSection> {
         children: [
           _Head(title: l10n.settingsNavOnline, blurb: l10n.settingsBlurbOnline),
           // 页签：漫画源 / 音乐源（复用工具条视图页签组件）。
-          Row(
-            children: [
-              ViewTabs(
-                items: [('manga', l10n.settingsSourceMangaHead), ('music', l10n.settingsSourceMusicHead)],
-                activeId: _musicTab ? 'music' : 'manga',
-                onSelect: (String id) => setState(() => _musicTab = id == 'music'),
-              ),
-              const Spacer(),
-              Text(
-                _musicTab ? l10n.musicSourceMgrTitle : l10n.onlineSourceTitle,
-                style: TextStyle(fontSize: AppFont.px10_5, color: palette.mut),
-              ),
-            ],
+          // 页签文案已写明「漫画源 / 音乐源」，右侧不再重复一行标签。
+          ViewTabs(
+            items: [('manga', l10n.settingsSourceMangaHead), ('music', l10n.settingsSourceMusicHead)],
+            activeId: _musicTab ? 'music' : 'manga',
+            onSelect: (String id) => setState(() => _musicTab = id == 'music'),
           ),
           const SizedBox(height: 12),
           // 页签只切显示；已装源数据在注册表 provider 里，切换不丢。

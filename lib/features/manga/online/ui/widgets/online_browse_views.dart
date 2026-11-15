@@ -37,8 +37,8 @@ class OnlineDiscoverView extends ConsumerWidget {
           icon: LucideIcons.inbox,
           title: l10n.onlineSourceEmpty,
           description: l10n.onlineSourceEmptyHint,
-          actionLabel: l10n.onlineGoImport,
-          actionIcon: LucideIcons.plus,
+          actionLabel: l10n.onlineImportTitle,
+          primary: true,
           onAction: onManageSources,
         ),
       );
@@ -112,9 +112,10 @@ class OnlineDiscoverView extends ConsumerWidget {
 }
 
 class OnlineCategoryView extends ConsumerWidget {
-  const OnlineCategoryView({super.key, required this.onOpenComic});
+  const OnlineCategoryView({super.key, required this.onOpenComic, required this.onManageSources});
 
   final ValueChanged<OnlineComic> onOpenComic;
+  final VoidCallback onManageSources;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,6 +132,9 @@ class OnlineCategoryView extends ConsumerWidget {
           icon: LucideIcons.inbox,
           title: l10n.onlineSourceEmpty,
           description: l10n.onlineSourceEmptyHint,
+          actionLabel: l10n.onlineImportTitle,
+          primary: true,
+          onAction: onManageSources,
         ),
       );
     }
@@ -281,9 +285,10 @@ class _ChipSkeletons extends StatelessWidget {
 }
 
 class OnlineRankView extends ConsumerWidget {
-  const OnlineRankView({super.key, required this.onOpenComic});
+  const OnlineRankView({super.key, required this.onOpenComic, required this.onManageSources});
 
   final ValueChanged<OnlineComic> onOpenComic;
+  final VoidCallback onManageSources;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -296,6 +301,9 @@ class OnlineRankView extends ConsumerWidget {
           icon: LucideIcons.inbox,
           title: l10n.onlineSourceEmpty,
           description: l10n.onlineSourceEmptyHint,
+          actionLabel: l10n.onlineImportTitle,
+          primary: true,
+          onAction: onManageSources,
         ),
       );
     }

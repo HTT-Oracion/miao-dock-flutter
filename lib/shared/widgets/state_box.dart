@@ -45,6 +45,15 @@ class OnlineTag extends StatelessWidget {
   }
 }
 
+/// 数据源面板「已装源」单行的估算占位高度（桌面档）。
+///
+/// 卡片 = 上下内距 12×2 + 内容高约 38，再加列表项间距 9。
+/// 弹窗用它把「超过 4 条」换算成列表区最大高度，见 `kSourceListMaxVisible`。
+const double kSourceRowExtent = 71;
+
+/// 弹窗里「已导入的源」一屏最多显示几条；超过则列表区滚动。
+const int kSourceListMaxVisible = 4;
+
 /// 所有异步区域的空 / 错 / 紧凑态。
 ///
 /// 设计稿 `.statebox`：虚线描边、图标 30、标题 13、说明 11.5、错误码 10 等宽。
@@ -63,6 +72,7 @@ class OnlineStateBox extends StatelessWidget {
     this.actionIcon,
     this.primary = false,
     this.compact = false,
+    this.bordered = true,
   });
 
   final IconData icon;
@@ -74,6 +84,10 @@ class OnlineStateBox extends StatelessWidget {
   final IconData? actionIcon;
   final bool primary;
   final bool compact;
+
+  /// 是否画虚线边框。默认画（设置页等列表区需要框定范围）；
+  /// 页面级空态（如「在线」未导入源）不画，避免整页只剩一个空心框。
+  final bool bordered;
 
   @override
   Widget build(BuildContext context) {
@@ -123,18 +137,20 @@ class OnlineStateBox extends StatelessWidget {
         ],
       ],
     );
+    final box = Container(
+      constraints: BoxConstraints(minHeight: compact ? 104 : 220),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 20, vertical: compact ? 12 : 64),
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: compact ? 230 : 420),
+        child: content,
+      ),
+    );
+    if (!bordered) return box;
     return CustomPaint(
       painter: _DashedBorderPainter(color: palette.line2, radius: AppMetrics.radiusCard),
-      child: Container(
-        constraints: BoxConstraints(minHeight: compact ? 104 : 220),
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 20, vertical: compact ? 12 : 64),
-        alignment: Alignment.center,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: compact ? 230 : 420),
-          child: content,
-        ),
-      ),
+      child: box,
     );
   }
 }

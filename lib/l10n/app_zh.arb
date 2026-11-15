@@ -3363,6 +3363,10 @@
   "@onlineSourceTitle": {
     "description": "在线漫画左栏标题"
   },
+  "onlineSourceMgrTitle": "漫画源管理",
+  "@onlineSourceMgrTitle": {
+    "description": "漫画源管理弹窗标题（与 musicSourceMgrTitle 同构）"
+  },
   "onlineManageSources": "管理源",
   "@onlineManageSources": {
     "description": "在线视图顶栏动作：前往设置管理源"
@@ -6360,15 +6364,19 @@
   "@musicSourcePanelImportTitle": {
     "description": "导入盒标题"
   },
-  "musicSourcePanelImportDesc": "支持本地 .js（单源）与 index.json（目录）",
+  "musicSourcePanelImportDesc": "选择 source.json 或 .js 源文件，或把源目录拖到这里；也可以在上方粘贴链接",
   "@musicSourcePanelImportDesc": {
     "description": "导入盒说明第一行"
   },
-  "musicSourcePanelImportSteps": "也可把文件直接拖入本框",
+  "musicSourcePanelImportSteps": "校验 → 检查入口类 → 写入源目录",
+  "musicSourcePanelImportDescMobile": "选择音乐源 .js 文件，或在上方粘贴目录 / 源链接\n校验 → 检查入口类 → 写入源目录",
+  "@musicSourcePanelImportDescMobile": {
+    "description": "移动端导入框说明（与 onlineImportDescMobile 同构）"
+  },
   "@musicSourcePanelImportSteps": {
     "description": "导入盒说明第二行（桌面拖拽）"
   },
-  "musicSourcePanelSelectFile": "选择文件",
+  "musicSourcePanelSelectFile": "导入源…",
   "@musicSourcePanelSelectFile": {
     "description": "导入盒主按钮"
   },
@@ -6376,11 +6384,11 @@
   "@musicSourcePanelOpenDir": {
     "description": "打开已装源所在目录"
   },
-  "musicSourcePanelImporting": "导入中…",
+  "musicSourcePanelImporting": "正在校验音乐源 …",
   "@musicSourcePanelImporting": {
     "description": "导入进行中的状态文案"
   },
-  "musicSourcePanelWait": "等待导入…",
+  "musicSourcePanelWait": "等待导入",
   "@musicSourcePanelWait": {
     "description": "导入盒底部状态文案"
   },
@@ -6396,7 +6404,7 @@
   "@musicSourceEmpty": {
     "description": "无已装源空态标题（与漫画源 onlineSourceEmpty 同构）"
   },
-  "musicSourceEmptyHint": "通过链接或 .js 文件导入源后即可播放对应平台音乐。",
+  "musicSourceEmptyHint": "通过链接或 source.json 导入源后即可播放对应平台音乐。",
   "@musicSourceEmptyHint": {
     "description": "无已装源空态说明（与漫画源 onlineSourceEmptyHintShort 同构）"
   },
@@ -6404,11 +6412,85 @@
   "@musicSourceImportedTitle": {
     "description": "已装源列表标题（与漫画源 onlineImportedTitle 同构）"
   },
+  "musicLinkImportTitle": "链接导入",
+  "@musicLinkImportTitle": {
+    "description": "音乐源链接导入卡片标题（与 onlineLinkImportTitle 同构）"
+  },
+  "musicLinkImportHint": "粘贴源仓库 index.json 或单个 .js 源链接",
+  "@musicLinkImportHint": {
+    "description": "音乐源链接输入框占位"
+  },
+  "musicLinkImportAction": "从链接导入",
+  "@musicLinkImportAction": {
+    "description": "音乐源链接导入按钮"
+  },
+  "musicLinkImporting": "正在解析链接…",
+  "@musicLinkImporting": {
+    "description": "音乐源链接导入进行中"
+  },
+  "musicSourcesLibraryTitle": "源仓库",
+  "@musicSourcesLibraryTitle": {
+    "description": "音乐源目录区标题（与 onlineSourcesLibraryTitle 同构）"
+  },
+  "musicSourceLibraryDesc": "添加一个 index.json 仓库，浏览并安装其中维护的音乐源。",
+  "@musicSourceLibraryDesc": {
+    "description": "音乐源目录说明（与 onlineSourceLibraryDesc 同构）"
+  },
+  "musicLinkInvalid": "链接格式不正确",
+  "@musicLinkInvalid": {
+    "description": "音乐源链接校验失败"
+  },
+  "musicSourceLibraryEmpty": "还没有源仓库",
+  "@musicSourceLibraryEmpty": {
+    "description": "音乐源仓库列表为空（与 onlineSourceLibraryEmpty 同构）"
+  },
+  "musicSourceLibraryLoadFailed": "仓库加载失败",
+  "@musicSourceLibraryLoadFailed": {
+    "description": "音乐源仓库加载失败"
+  },
+  "musicSourceLibraryDelete": "删除仓库",
+  "@musicSourceLibraryDelete": {
+    "description": "删除音乐源仓库确认标题"
+  },
+  "musicSourceLibraryDeleteBody": "删除仓库「{name}」后，已安装的源不受影响，只是不再从该仓库浏览。",
+  "@musicSourceLibraryDeleteBody": {
+    "description": "删除音乐源仓库确认说明",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourceLibraryCancel": "取消",
+  "@musicSourceLibraryCancel": {
+    "description": "取消按钮"
+  },
+  "musicSourceLibraryDeleteConfirm": "删除",
+  "@musicSourceLibraryDeleteConfirm": {
+    "description": "确认删除仓库"
+  },
   "musicSourceExportSource": "导出",
   "@musicSourceExportSource": {
     "description": "导出全部已装源（与漫画源 onlineExportSource 同构）"
   },
-  "musicSourceDisclaimerShort": "音乐源由第三方提供，内容与可用性由源作者负责。",
+  "musicSourceExportPickDir": "选择导出位置",
+  "@musicSourceExportPickDir": {
+    "description": "导出目录选择确认按钮"
+  },
+  "musicSourceExportSuccess": "已导出到 {dir}",
+  "@musicSourceExportSuccess": {
+    "description": "导出成功提示",
+    "placeholders": {
+      "dir": {
+        "type": "String"
+      }
+    }
+  },
+  "musicSourceExportFailed": "导出失败",
+  "@musicSourceExportFailed": {
+    "description": "导出失败提示"
+  },
+  "musicSourceDisclaimerShort": "源与仓库由你自行导入，应用不内置，不提供在线仓库。",
   "@musicSourceDisclaimerShort": {
     "description": "源面板底部合规提示（与漫画源 onlineSourceDisclaimerShort 同构）"
   },

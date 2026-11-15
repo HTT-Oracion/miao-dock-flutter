@@ -15,6 +15,8 @@ import '../../../../../shared/widgets/app_dialog.dart';
 import '../../../../../shared/widgets/app_switch.dart';
 import '../../../../../shared/widgets/buttons.dart';
 import '../../../../../shared/widgets/skeleton.dart';
+import '../../../../../shared/widgets/source_import_box.dart';
+import '../../../../../shared/widgets/source_list_header.dart';
 import '../../../../../shared/widgets/toast.dart';
 import '../../controller/online_sources_controller.dart';
 import '../../data/legacy_source_manifest.dart';
@@ -26,12 +28,16 @@ import 'online_link_import.dart';
 import '../../../../../shared/responsive.dart';
 import '../../../../../shared/widgets/app_dropdown.dart';
 
-/// 漫画源管理面板（设置 › 漫画源 / 移动端 sheet 共用）。
+/// 漫画源管理面板（设置 › 漫画源 / 移动端 sheet / 桌面弹窗共用）。
 class OnlineSourcePanel extends ConsumerStatefulWidget {
-  const OnlineSourcePanel({super.key, this.sheetMode = false});
+  const OnlineSourcePanel({super.key, this.sheetMode = false, this.maxVisibleSources});
 
   /// sheet 模式：移动端底部抽屉里内距更紧凑，不出现拖拽文案。
   final bool sheetMode;
+
+  /// 已装源列表最多可见几条；null = 不限（设置页整页滚动）。
+  /// 弹窗里传 4，超过后列表区自身滚动。
+  final int? maxVisibleSources;
 
   @override
   ConsumerState<OnlineSourcePanel> createState() => _OnlineSourcePanelState();
@@ -394,11 +400,20 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
               const OnlineLinkImport(),
               const SizedBox(height: 12),
               _dragWrapper(
-                _ImportBox(
+                SourceImportBox(
                   importing: _importing,
                   mobile: mobile,
                   onImport: _pickAndImport,
                   onOpenDir: mobile ? null : _openSourceDirectory,
+                  title: l10n.onlineImportTitle,
+                  description: l10n.onlineImportDesc,
+                  descriptionMobile: l10n.onlineImportDescMobile,
+                  steps: l10n.onlineImportSteps,
+                  importLabel: l10n.onlineImportSource,
+                  importLabelMobile: l10n.onlineSelectFileVerify,
+                  openDirLabel: l10n.onlineOpenSourceDir,
+                  importingLabel: l10n.onlineImporting,
+                  waitLabel: l10n.onlineWaitImport,
                 ),
               ),
               if (items.isEmpty)
@@ -412,63 +427,49 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
                   ),
                 )
               else ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 10),
-                  child: Row(
-                    children: [
-                      Text(
-                        l10n.onlineImportedTitle,
-                        style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
-                      ),
-                      const SizedBox(width: 10),
-                      OnlineTag('${items.length}'),
-                      const Spacer(),
-                      AppButton(
-                        label: l10n.onlineExportSource,
-                        icon: LucideIcons.externalLink,
-                        onTap: () => _exportAll(items),
-                        variant: AppButtonVariant.link,
-                        fontSize: AppFont.px11,
-                        horizontalPadding: 0,
-                      ),
-                    ],
-                  ),
+                SourceListHeader(
+                  title: l10n.onlineImportedTitle,
+                  count: items.length,
+                  exportLabel: l10n.onlineExportSource,
+                  onExport: () => _exportAll(items),
                 ),
-                for (final source in items)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
-                    child: _SourceRow(
-                      source: source,
-                      mobile: mobile,
-                      onToggle: (enabled) => _toggle(source, enabled),
-                      onDetail: () => _showDetail(source),
-                      onAction: (action) => _handleAction(action, source),
+                _sourceList(
+                  items.map(
+                    (source) => SourceListItemPadding(
+                      child: _SourceRow(
+                        source: source,
+                        mobile: mobile,
+                        onToggle: (enabled) => _toggle(source, enabled),
+                        onDetail: () => _showDetail(source),
+                        onAction: (action) => _handleAction(action, source),
+                      ),
                     ),
                   ),
+                ),
               ],
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: palette.acc.withValues(alpha: 0.08),
-                  border: Border.all(color: palette.acc.withValues(alpha: 0.4)),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '${l10n.onlineSourceDisclaimerShort} ',
-                        style: TextStyle(fontSize: AppFont.px11_5, height: 1.6, color: palette.ink2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              SourceDisclaimerBar(text: l10n.onlineSourceDisclaimerShort),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  /// 已装源列表：设置页直铺（随页面滚动）；弹窗里超过
+  /// [OnlineSourcePanel.maxVisibleSources] 条时，列表区自身滚动。
+  ///
+  /// 🔴 移动端不做内层滚动：弹窗在窄屏降级为 [AppSheet] 底部抽屉，它已经用
+  /// `Flexible + SingleChildScrollView` 包住整个内容区。再套一层固定高度的滚动区
+  /// 会造成双滚动与手势争夺。限制高度只在桌面生效。
+  Widget _sourceList(Iterable<Widget> children) {
+    final items = children.toList();
+    final limit = widget.maxVisibleSources;
+    final column = Column(mainAxisSize: MainAxisSize.min, children: items);
+    if (limit == null || items.length <= limit) return column;
+    if (context.isMobile) return column;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: kSourceRowExtent * limit),
+      child: SingleChildScrollView(child: column),
     );
   }
 
@@ -492,104 +493,6 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
   }
 
   bool get _isDesktopHost => !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
-}
-
-class _ImportBox extends StatelessWidget {
-  const _ImportBox({required this.importing, required this.mobile, required this.onImport, required this.onOpenDir});
-
-  final bool importing;
-  final bool mobile;
-  final VoidCallback onImport;
-  final VoidCallback? onOpenDir;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    return CustomPaint(
-      painter: _ImportDashedPainter(color: palette.line2),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
-        decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          children: [
-            Icon(LucideIcons.upload, size: 26, color: palette.acc),
-            const SizedBox(height: 8),
-            Text(
-              l10n.onlineImportTitle,
-              style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              mobile ? l10n.onlineImportDescMobile : '${l10n.onlineImportDesc}\n${l10n.onlineImportSteps}',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: AppFont.px10_5, height: 1.6, color: palette.mut),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                AppButton(
-                  label: mobile ? l10n.onlineSelectFileVerify : l10n.onlineImportSource,
-                  icon: LucideIcons.plus,
-                  onTap: importing ? null : onImport,
-                  variant: AppButtonVariant.primary,
-                  loading: importing,
-                  height: mobile ? 44 : 32,
-                  horizontalPadding: 13,
-                  fontSize: AppFont.px12,
-                  fontWeight: FontWeight.w600,
-                ),
-                if (onOpenDir != null)
-                  AppButton(
-                    label: l10n.onlineOpenSourceDir,
-                    icon: LucideIcons.folder,
-                    onTap: onOpenDir,
-                    variant: AppButtonVariant.ghost,
-                    height: 32,
-                    horizontalPadding: 13,
-                    fontSize: AppFont.px12,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              importing ? l10n.onlineImporting : l10n.onlineWaitImport,
-              style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ImportDashedPainter extends CustomPainter {
-  const _ImportDashedPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final path = Path()..addRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12)));
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final next = (distance + 4).clamp(0.0, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance = next + 4;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ImportDashedPainter oldDelegate) => oldDelegate.color != color;
 }
 
 class _SourceRow extends StatelessWidget {
@@ -623,13 +526,8 @@ class _SourceRow extends StatelessWidget {
       const AppDropdownItem.divider(),
       AppDropdownItem(value: 'delete', label: l10n.onlineDeleteSource, icon: LucideIcons.trash2, danger: true),
     ];
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: mobile ? 12 : 14, vertical: mobile ? 10 : 12),
-      decoration: BoxDecoration(
-        color: palette.card,
-        border: Border.all(color: palette.line2),
-        borderRadius: BorderRadius.circular(10),
-      ),
+    return SourceCardShell(
+      mobile: mobile,
       child: Row(
         children: [
           OnlineSourceLogo(glyph: source.glyph, size: mobile ? 32 : 38, radius: 9, tone: 0),

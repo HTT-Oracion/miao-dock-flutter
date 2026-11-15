@@ -14,18 +14,26 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/responsive.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_dropdown.dart';
-import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_switch.dart';
 import '../../../../shared/widgets/buttons.dart';
 import '../../../../shared/widgets/toast.dart';
+import '../../../../shared/widgets/source_import_box.dart';
+import '../../../../shared/widgets/source_list_header.dart';
+import '../../../../shared/widgets/source_library_list.dart';
+import '../../../../shared/widgets/source_link_import_card.dart';
 // 空态 / 标签与漫画源面板共用同一组件，保证两个数据源页视觉一致。
 import '../../../../shared/widgets/state_box.dart';
+import '../../../../shared/domain/source_library.dart';
 import '../../controller/music_providers.dart';
+import '../../controller/music_library_controller.dart';
 import '../../data/sources/js/music_source_import.dart';
 import '../../data/sources/js/music_source_remote.dart';
 import '../../domain/js_music_source.dart';
 import '../../domain/music_source_manifest.dart';
 
+/// 链接导入卡片（与漫画源 `OnlineLinkImport` 同款外壳、间距与按钮排布）。
+///
+/// 差异只在文案与目标（漫画源支持源仓库 index.json；音乐源解析后直接装包）。
 /// 音乐源管理弹窗（账号菜单 / 登录引导入口）。
 class MusicSourceManagerModal extends ConsumerStatefulWidget {
   const MusicSourceManagerModal({super.key});
@@ -44,7 +52,11 @@ class _MusicSourceManagerModalState extends ConsumerState<MusicSourceManagerModa
     return AppDialog(
       title: l10n.musicSourceMgrTitle,
       onClose: () => Navigator.of(context).maybePop(),
-      child: const SizedBox(width: 480, child: MusicSourcePanel()),
+      child: const SizedBox(
+        width: 480,
+        // 已装源超过 4 条时列表区滚动，弹窗本身不无限长。
+        child: MusicSourcePanel(maxVisibleSources: kSourceListMaxVisible),
+      ),
     );
   }
 }
@@ -52,7 +64,11 @@ class _MusicSourceManagerModalState extends ConsumerState<MusicSourceManagerModa
 /// 音乐源管理面板：与漫画源面板同结构（导入盒 / 已装卡片 / 详情 / 卸载确认），
 /// 弹窗与设置页「数据源 › 音乐源」共用。
 class MusicSourcePanel extends ConsumerStatefulWidget {
-  const MusicSourcePanel({super.key});
+  const MusicSourcePanel({super.key, this.maxVisibleSources});
+
+  /// 已装源列表最多可见几条；null = 不限（设置页整页滚动）。
+  /// 弹窗里传 [kSourceListMaxVisible]，超过后列表区自身滚动。
+  final int? maxVisibleSources;
 
   @override
   ConsumerState<MusicSourcePanel> createState() => _MusicSourcePanelState();
@@ -62,6 +78,7 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
   final _urlCtrl = TextEditingController();
   bool _busy = false;
   bool _dragging = false;
+  String? _busyLibraryId;
 
   @override
   void dispose() {
@@ -75,61 +92,76 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
     final l10n = AppLocalizations.of(context);
     final mobile = context.isMobile;
     final installed = ref.watch(jsMusicSourceRegistryProvider);
-    return _dragWrapper(
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 远程链接导入（与漫画 OnlineLinkImport 同位）。
-          Row(
-            children: [
-              Expanded(
-                child: AppInput(hint: l10n.musicSourceMgrUrlHint, controller: _urlCtrl, enabled: !_busy),
-              ),
-              const SizedBox(width: 8),
-              AppButton(
-                label: l10n.musicSourceMgrImport,
-                variant: AppButtonVariant.primary,
-                height: 36,
-                loading: _busy,
-                clickable: !_busy,
-                onTap: _importUrl,
-              ),
-            ],
+    final libraries = ref.watch(musicLibrariesProvider);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 链接导入卡片 + 源仓库列表：与漫画源共用同一组件。
+        SourceLinkImportCard(
+          controller: _urlCtrl,
+          busy: _busy,
+          mobile: mobile,
+          onImport: _importUrl,
+          title: l10n.musicLinkImportTitle,
+          trailingLabel: l10n.musicSourcesLibraryTitle,
+          description: l10n.musicSourceLibraryDesc,
+          hint: l10n.musicLinkImportHint,
+          actionLabel: l10n.musicLinkImportAction,
+          actionLabelBusy: l10n.musicLinkImporting,
+          footer: SourceLibraryList(
+            libraries: libraries,
+            loading: false,
+            error: false,
+            emptyLabel: l10n.musicSourceLibraryEmpty,
+            errorLabel: l10n.musicSourceLibraryLoadFailed,
+            busyId: _busyLibraryId,
+            onBrowse: _browseLibrary,
+            onDelete: _deleteLibrary,
           ),
-          const SizedBox(height: 12),
-          // 本地导入盒：虚线拖拽框（与漫画 _ImportBox 同视觉）。
-          _ImportBox(importing: _busy, mobile: mobile, onPickFile: _pickAndImport, onOpenDir: _openSourceDirectory),
-          const SizedBox(height: 16),
-          // 已装源标题 + 计数：与漫画源面板同构（无源时不渲染）。
-          if (installed.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  Text(
-                    l10n.musicSourceImportedTitle,
-                    style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
-                  ),
-                  const SizedBox(width: 10),
-                  OnlineTag('${installed.length}'),
-                ],
-              ),
+        ),
+        const SizedBox(height: 12),
+        // 本地导入框：只这一块接收拖拽（与漫画源一致），
+        // 拖拽高亮边框不会罩住整列。
+        _dragWrapper(
+          SourceImportBox(
+            importing: _busy,
+            mobile: mobile,
+            onImport: _pickAndImport,
+            onOpenDir: mobile ? null : _openSourceDirectory,
+            title: l10n.musicSourcePanelImportTitle,
+            description: l10n.musicSourcePanelImportDesc,
+            descriptionMobile: l10n.musicSourcePanelImportDesc,
+            steps: l10n.musicSourcePanelImportSteps,
+            importLabel: l10n.musicSourcePanelSelectFile,
+            importLabelMobile: l10n.musicSourcePanelSelectFile,
+            openDirLabel: l10n.musicSourcePanelOpenDir,
+            importingLabel: l10n.musicSourcePanelImporting,
+            waitLabel: l10n.musicSourcePanelWait,
+          ),
+        ),
+        // 与漫画源同构：空态 / 列表紧跟导入框，间距由空态自身 top 12
+        // 或标题行 top 16 承担，不再额外插 SizedBox。
+        if (installed.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: OnlineStateBox(
+              icon: LucideIcons.inbox,
+              title: l10n.musicSourceEmpty,
+              description: l10n.musicSourceEmptyHint,
+              compact: true,
             ),
-          if (installed.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: OnlineStateBox(
-                icon: LucideIcons.inbox,
-                title: l10n.musicSourceEmpty,
-                description: l10n.musicSourceEmptyHint,
-                compact: true,
-              ),
-            )
-          else
-            for (final source in installed)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 9),
+          )
+        else ...[
+          SourceListHeader(
+            title: l10n.musicSourceImportedTitle,
+            count: installed.length,
+            exportLabel: l10n.musicSourceExportSource,
+            onExport: () => _exportAll(installed),
+          ),
+          _sourceList(
+            installed.map(
+              (source) => SourceListItemPadding(
                 child: _SourceCard(
                   key: ValueKey('${source.id}:${source.manifest.version}'),
                   source: source,
@@ -137,28 +169,76 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
                   onDetail: () => _showDetail(source),
                   onDelete: () => _delete(source),
                   onCopyId: () => _copyId(source),
+                  onExport: () => _exportAll([source]),
                 ),
               ),
-          // 底部合规提示：与漫画源面板同构。
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: palette.acc.withValues(alpha: 0.08),
-              border: Border.all(color: palette.acc.withValues(alpha: 0.4)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              l10n.musicSourceDisclaimerShort,
-              style: TextStyle(fontSize: AppFont.px11_5, height: 1.6, color: palette.ink2),
             ),
           ),
         ],
-      ),
+        // 底部合规提示：共用组件。
+        SourceDisclaimerBar(text: l10n.musicSourceDisclaimerShort),
+      ],
+    );
+  }
+  // ── 导入（远程 URL）──────────────────────────────────────────────────────
+
+  /// 已装源列表：设置页直铺（随页面滚动）；弹窗里超过
+  /// [MusicSourcePanel.maxVisibleSources] 条时，列表区自身滚动。
+  ///
+  /// 🔴 移动端**不做内层滚动**：弹窗在窄屏降级为 [AppSheet] 底部抽屉，
+  /// 它已经用 `Flexible + SingleChildScrollView` 包住整个内容区。再套一层
+  /// 固定高度的滚动区会造成「双滚动 + 嵌套手势争夺」，抽屉里滑不动或只滑列表。
+  /// 因此限制高度只在桌面生效，移动端交给抽屉自己的整页滚动。
+  Widget _sourceList(Iterable<Widget> children) {
+    final items = children.toList();
+    final limit = widget.maxVisibleSources;
+    final column = Column(mainAxisSize: MainAxisSize.min, children: items);
+    if (limit == null || items.length <= limit) return column;
+    // 抽屉内已有整页滚动，不再限高。
+    if (context.isMobile) return column;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: kSourceRowExtent * limit),
+      child: SingleChildScrollView(child: column),
     );
   }
 
-  // ── 导入（远程 URL）──────────────────────────────────────────────────────
+  /// 导出全部已装源：每条源按其 id 建子目录，写入 JS 与 meta.json。
+  ///
+  /// 与漫画源「导出」同位同款；音乐源没有 manifest 文件（清单从 JS 推导），
+  /// 故只落 JS + meta（源 URL），保证导出物可重新导入。
+  Future<void> _exportAll(List<JsMusicSource> sources) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      final dir = await getDirectoryPath(confirmButtonText: l10n.musicSourceExportPickDir);
+      if (dir == null) return;
+      final root = musicSourceStateDirectory();
+      var exported = 0;
+      for (final source in sources) {
+        if (root == null) break;
+        final storedDir = Directory('${root.path}/${source.id}');
+        if (!storedDir.existsSync()) continue;
+        final target = Directory('$dir/${source.id}');
+        await target.create(recursive: true);
+        var wrote = false;
+        for (final file in storedDir.listSync().whereType<File>()) {
+          if (!file.path.endsWith('.js') && !file.path.endsWith('meta.json')) continue;
+          final name = file.uri.pathSegments.last;
+          await File('${target.path}/$name').writeAsBytes(await file.readAsBytes(), flush: true);
+          wrote = true;
+        }
+        if (wrote) exported++;
+      }
+      if (!mounted) return;
+      if (exported == 0) {
+        showAppToast(context, l10n.musicSourceExportFailed, tone: ToastTone.bad);
+      } else {
+        showAppToast(context, l10n.musicSourceExportSuccess(dir), tone: ToastTone.good);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      showAppToast(context, l10n.musicSourceExportFailed, tone: ToastTone.bad);
+    }
+  }
 
   Future<void> _importUrl() async {
     final l10n = AppLocalizations.of(context);
@@ -173,6 +253,10 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
           await _installScript(payload.js, fileName: payload.url.split('/').last);
         case MusicSourceCatalogPayload():
           final catalog = payload.catalog;
+          // 与漫画源一致：目录链接同时登记为「源仓库」，之后可从列表二次浏览。
+          final library = SourceLibrary(id: stableSourceLibraryId(payload.url), name: catalog.name, url: payload.url);
+          ref.read(musicLibrariesProvider.notifier).add(library);
+          ref.read(musicLibrariesProvider.notifier).markChecked(library.id);
           // 目录导入：逐条抓 JS 装包；单条失败不影响其余。
           var ok = 0;
           for (final entry in catalog.entries) {
@@ -205,6 +289,84 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  // ── 源仓库（浏览 / 删除）──────────────────────────────────────────────────
+
+  /// 浏览仓库：拉 index.json，装入其中全部音乐源。
+  Future<void> _browseLibrary(SourceLibrary library) async {
+    final l10n = AppLocalizations.of(context);
+    setState(() => _busyLibraryId = library.id);
+    try {
+      final loader = MusicSourceRemoteLoader();
+      final payload = await loader.inspect(library.url);
+      if (!mounted) return;
+      if (payload case MusicSourceCatalogPayload(:final catalog)) {
+        var ok = 0;
+        for (final entry in catalog.entries) {
+          try {
+            final js = await loader.fetchText(entry.fileUrl);
+            final accepted = await _installScript(
+              js,
+              fileName: Uri.parse(entry.fileUrl).pathSegments.last,
+              catalogKey: entry.key,
+              catalogName: entry.name,
+              catalogVersion: entry.version,
+              silent: true,
+            );
+            if (accepted) ok += 1;
+          } catch (_) {
+            // 单条失败继续。
+          }
+        }
+        ref.read(musicLibrariesProvider.notifier).markChecked(library.id);
+        ref.read(jsMusicSourceRegistryProvider.notifier).refresh();
+        if (mounted) {
+          showAppToast(context, l10n.musicSourceMgrCatalog(catalog.name, ok), tone: ToastTone.good);
+        }
+      } else {
+        if (mounted) showAppToast(context, l10n.musicSourceMgrErrUnsupported, tone: ToastTone.bad);
+      }
+    } on MusicSourceRemoteException catch (e) {
+      if (mounted) showAppToast(context, _remoteError(l10n, e.code), tone: ToastTone.bad);
+    } catch (_) {
+      if (mounted) showAppToast(context, l10n.musicSourceLibraryLoadFailed, tone: ToastTone.bad);
+    } finally {
+      if (mounted) setState(() => _busyLibraryId = null);
+    }
+  }
+
+  /// 删除仓库（只移除登记，不卸载已装的源 —— 与漫画源一致）。
+  Future<void> _deleteLibrary(SourceLibrary library) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AppDialog(
+        title: l10n.musicSourceLibraryDelete,
+        icon: LucideIcons.trash2,
+        width: 420,
+        actions: [
+          AppButton(
+            label: l10n.musicSourceLibraryCancel,
+            onTap: () => Navigator.of(dialogContext).pop(false),
+            variant: AppButtonVariant.secondary,
+            height: 32,
+          ),
+          AppButton(
+            label: l10n.musicSourceLibraryDeleteConfirm,
+            onTap: () => Navigator.of(dialogContext).pop(true),
+            variant: AppButtonVariant.danger,
+            height: 32,
+          ),
+        ],
+        child: Text(
+          l10n.musicSourceLibraryDeleteBody(library.name),
+          style: TextStyle(fontSize: AppFont.px12, height: 1.7, color: AppPalette.of(dialogContext).ink2),
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+    ref.read(musicLibrariesProvider.notifier).remove(library.id);
   }
 
   // ── 导入（本地）──────────────────────────────────────────────────────────
@@ -498,106 +660,6 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
 }
 
 /// 导入盒（与漫画 `_ImportBox` 同视觉：虚线框 + 上传图标 + 主/副按钮）。
-class _ImportBox extends StatelessWidget {
-  const _ImportBox({required this.importing, required this.mobile, required this.onPickFile, required this.onOpenDir});
-
-  final bool importing;
-  final bool mobile;
-  final VoidCallback onPickFile;
-  final VoidCallback onOpenDir;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    final l10n = AppLocalizations.of(context);
-    return CustomPaint(
-      painter: _ImportDashedPainter(color: palette.line2),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
-        decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          children: [
-            Icon(LucideIcons.upload, size: 26, color: palette.acc),
-            const SizedBox(height: 8),
-            Text(
-              l10n.musicSourcePanelImportTitle,
-              style: TextStyle(fontSize: AppFont.px12_5, fontWeight: FontWeight.w700, color: palette.ink),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              mobile
-                  ? l10n.musicSourcePanelImportDesc
-                  : '${l10n.musicSourcePanelImportDesc}\n${l10n.musicSourcePanelImportSteps}',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: AppFont.px10_5, height: 1.6, color: palette.mut),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                AppButton(
-                  label: l10n.musicSourcePanelSelectFile,
-                  icon: LucideIcons.plus,
-                  onTap: importing ? null : onPickFile,
-                  variant: AppButtonVariant.primary,
-                  loading: importing,
-                  height: mobile ? 44 : 32,
-                  horizontalPadding: 13,
-                  fontSize: AppFont.px12,
-                  fontWeight: FontWeight.w600,
-                ),
-                if (!mobile)
-                  AppButton(
-                    label: l10n.musicSourcePanelOpenDir,
-                    icon: LucideIcons.folder,
-                    onTap: onOpenDir,
-                    variant: AppButtonVariant.ghost,
-                    height: 32,
-                    horizontalPadding: 13,
-                    fontSize: AppFont.px12,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              importing ? l10n.musicSourcePanelImporting : l10n.musicSourcePanelWait,
-              style: TextStyle(fontSize: AppFont.px9_5, color: palette.mut),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ImportDashedPainter extends CustomPainter {
-  const _ImportDashedPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final path = Path()..addRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12)));
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final next = (distance + 4).clamp(0.0, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance = next + 4;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ImportDashedPainter oldDelegate) => oldDelegate.color != color;
-}
-
 /// 已装源卡片（与漫画 `_SourceRow` 同布局：glyph 圆底 / 名称概要 / host / 开关 / 菜单）。
 class _SourceCard extends StatelessWidget {
   const _SourceCard({
@@ -607,6 +669,7 @@ class _SourceCard extends StatelessWidget {
     required this.onDetail,
     required this.onDelete,
     required this.onCopyId,
+    required this.onExport,
   });
 
   final JsMusicSource source;
@@ -614,19 +677,15 @@ class _SourceCard extends StatelessWidget {
   final VoidCallback onDetail;
   final VoidCallback onDelete;
   final VoidCallback onCopyId;
+  final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final l10n = AppLocalizations.of(context);
     final mobile = context.isMobile;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: mobile ? 12 : 14, vertical: mobile ? 10 : 12),
-      decoration: BoxDecoration(
-        color: palette.card,
-        border: Border.all(color: palette.line2),
-        borderRadius: BorderRadius.circular(10),
-      ),
+    return SourceCardShell(
+      mobile: mobile,
       child: Row(
         children: [
           _GlyphBadge(source: source, size: mobile ? 32 : 38),
@@ -664,6 +723,7 @@ class _SourceCard extends StatelessWidget {
             items: [
               AppDropdownItem(value: 'detail', label: l10n.musicSourcePanelDetail, icon: LucideIcons.info),
               AppDropdownItem(value: 'copy', label: l10n.musicSourcePanelCopyId, icon: LucideIcons.copy),
+              AppDropdownItem(value: 'export', label: l10n.musicSourceExportSource, icon: LucideIcons.externalLink),
               const AppDropdownItem.divider(),
               AppDropdownItem(
                 value: 'delete',
@@ -678,6 +738,8 @@ class _SourceCard extends StatelessWidget {
                   onDetail();
                 case 'copy':
                   onCopyId();
+                case 'export':
+                  onExport();
                 case 'delete':
                   onDelete();
               }

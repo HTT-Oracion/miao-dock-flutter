@@ -25,6 +25,7 @@ import 'widgets/online_common.dart';
 import 'widgets/online_detail_view.dart';
 import 'widgets/online_shelf.dart';
 import 'widgets/online_source_panel.dart';
+import 'widgets/online_source_manager_modal.dart';
 
 /// 在线漫画（漫画翻译模块第 4 视图，`/manga/online`）。
 ///
@@ -104,7 +105,9 @@ class _OnlineScreenState extends ConsumerState<OnlineScreen> {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          OnlineShelf(onManageSources: _goSettingsSources, onOpenComic: _openComic, onContinue: _continueProgress),
+          // 左栏常驻：发现 / 标签 / 排行 / 最近 / 下载 这些浏览入口始终可用。
+          // 未导入源时只隐藏栏内的「源列表 + 导入入口」区块（见 OnlineShelf）。
+          OnlineShelf(onManageSources: _openSourceModal, onOpenComic: _openComic, onContinue: _continueProgress),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,9 +177,9 @@ class _OnlineScreenState extends ConsumerState<OnlineScreen> {
       return OnlineSearchView(onOpenComic: _openComicForNav);
     }
     return switch (nav.view) {
-      OnlineView.discover => OnlineDiscoverView(onOpenComic: _openComicForNav, onManageSources: _goSettingsSources),
-      OnlineView.categories => OnlineCategoryView(onOpenComic: _openComicForNav),
-      OnlineView.ranking => OnlineRankView(onOpenComic: _openComicForNav),
+      OnlineView.discover => OnlineDiscoverView(onOpenComic: _openComicForNav, onManageSources: _openSourceModal),
+      OnlineView.categories => OnlineCategoryView(onOpenComic: _openComicForNav, onManageSources: _openSourceModal),
+      OnlineView.ranking => OnlineRankView(onOpenComic: _openComicForNav, onManageSources: _openSourceModal),
       OnlineView.recent => OnlineRecentView(onOpenComic: _openComic, onContinue: _continueProgress),
       OnlineView.downloads => const OnlineDownloadsView(),
     };
@@ -299,6 +302,16 @@ class _OnlineScreenState extends ConsumerState<OnlineScreen> {
 
   void _goSettingsSources() {
     context.go('/settings?section=online');
+  }
+
+  /// 直接拉起源管理弹窗（与音乐页「导入音乐源」同一交互）。
+  ///
+  /// 桌面端用 [AppDialog] 外壳；移动端 [AppDialog] 内部自动降级为底部抽屉，
+  /// 因此这里不必再分平台分支。
+  void _openSourceModal() {
+    if (_sourceSheetOpen) return;
+    _sourceSheetOpen = true;
+    OnlineSourceManagerModal.open(context).whenComplete(() => _sourceSheetOpen = false);
   }
 
   void _openSourceSheet() {
