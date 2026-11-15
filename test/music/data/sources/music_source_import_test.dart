@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:miao_dock_flutter/features/music/data/sources/js/music_source_dto.dart';
 import 'package:miao_dock_flutter/features/music/data/sources/js/music_source_remote.dart';
 import 'package:miao_dock_flutter/features/music/data/sources/js/music_source_import.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_source_manifest.dart';
 
 /// `music_source.json` 包导入：校验 → 能力扫描 → 落盘。
 ///
@@ -32,6 +33,7 @@ class ProbeSource extends MusicSourceBase {
 void main() {
   testBundledPackages();
   newPlatformTests();
+  packageFileNameTests();
 
   late Directory tempDir;
   late MusicSourceImporter importer;
@@ -207,5 +209,40 @@ class BilibiliSource extends MusicSourceBase {
     expect(result.source!.manifest.colorHex, isNull);
     expect(result.source!.info.logoUrl, isNull);
     expect(result.source!.info.color, isNull);
+  });
+}
+
+/// 🔴 包内文件名归一：`sourceFile` 必须是文件名，不能是整条路径。
+///
+/// 破坏点（D-237 回归）：拖拽入口用 `path.split('/').last` 取文件名，在 Windows
+/// 反斜杠路径上拆不开，整条绝对路径被写进清单 → 落盘成
+/// `.../netease/F:\...\netease.js`，报 errno 123 导入失败。
+void packageFileNameTests() {
+  late Directory tempDir;
+  late MusicSourceImporter importer;
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('music-source-basename');
+    importer = MusicSourceImporter(rootResolver: () => tempDir);
+  });
+  tearDown(() {
+    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+  });
+
+  test('常量里 \ 与 / 都切成文件名', () {
+    expect(musicSourcePackageFileName(r'F:\a\b\netease.js'), 'netease.js');
+    expect(musicSourcePackageFileName('/a/b/netease.js'), 'netease.js');
+    expect(musicSourcePackageFileName('netease.js'), 'netease.js');
+    // 破坏点：混用分隔符 / 末尾带分隔符时取到空串 → 文件名丢失。
+    expect(musicSourcePackageFileName(r'F:\a\b\'), 'b');
+    expect(musicSourcePackageFileName(''), 'source.js');
+  });
+
+  test('Windows 风格整条路径传入 install：只落末段文件名', () async {
+    final (manifest, _) = manifestFromScript(jsSource, r'F:\software\sources\netease.js');
+    expect(manifest, isNotNull);
+    final installed = await importer.install(manifest!, jsSource);
+    // 破坏点：未归一 → 在 target 下拼出非法路径，文件写不出来。
+    expect(File('${installed.path}/netease.js').existsSync(), isTrue);
+    expect(installed.listSync().whereType<File>().length, 1);
   });
 }

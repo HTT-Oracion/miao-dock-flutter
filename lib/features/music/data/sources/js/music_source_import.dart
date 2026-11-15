@@ -100,7 +100,9 @@ class MusicSourceImporter {
     final target = Directory('${root.path}/${manifest.id}');
     if (target.existsSync()) target.deleteSync(recursive: true);
     await target.create(recursive: true);
-    await File('${target.path}/${manifest.sourceFile}').writeAsString(js, flush: true);
+    // 🔴 sourceFile 约定是包内文件名。上游若误传整条路径（历史上拖拽入口用
+    //    split('/') 在 Windows 上拆不开），拼进来会产生非法路径 errno 123。
+    await File('${target.path}/${musicSourcePackageFileName(manifest.sourceFile)}').writeAsString(js, flush: true);
     return target;
   }
 

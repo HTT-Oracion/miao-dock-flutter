@@ -13,6 +13,7 @@ import '../../../domain/js_music_source.dart';
 import '../../../domain/music_models.dart';
 import '../../../domain/music_login_info.dart';
 import '../../../domain/music_source_engine.dart';
+import '../../../domain/music_source_manifest.dart' show musicSourcePackageFileName;
 import 'music_source_dto.dart';
 import 'music_source_http.dart';
 
@@ -28,7 +29,7 @@ class StoredMusicSourceCodeLoader implements MusicSourceCodeLoader {
   Future<String> load(JsMusicSource source) async {
     final root = musicSourceStateDirectory();
     if (root == null) throw StateError('music source directory unavailable');
-    final file = File('${root.path}/${source.id}/${source.manifest.sourceFile}');
+    final file = File('${root.path}/${source.id}/${musicSourcePackageFileName(source.manifest.sourceFile)}');
     try {
       return await file.readAsString();
     } catch (e) {

@@ -164,3 +164,13 @@ class MusicSourceLoginConfig {
   if (manifest.hosts.isEmpty) issues.add('hosts');
   return (issues.isEmpty ? manifest : null, issues);
 }
+
+/// 取包内文件名：清单里的 `sourceFile` 约定为**文件名**，但历史调用点可能传入
+/// 整条路径（Windows 反斜杠路径 / `file://` URL 都会到这里）。
+///
+/// 落盘与加载都只应使用末段，否则会拼出 `.../netease/F:\...\netease.js`
+/// 这类非法路径（Windows 上 errno 123）。
+String musicSourcePackageFileName(String sourceFile) {
+  final seg = sourceFile.split(RegExp(r'[\\/]')).where((s) => s.isNotEmpty).toList();
+  return seg.isEmpty ? 'source.js' : seg.last;
+}

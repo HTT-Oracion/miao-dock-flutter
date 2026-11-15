@@ -245,7 +245,9 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
           handled = true;
           final accepted = await _installScript(
             await File(path).readAsString(),
-            fileName: path.split('/').last,
+            // 🔴 不能 split('/')：Windows 路径是反斜杠，
+            //    拆不开就会把整条绝对路径当成包内文件名写进清单。
+            fileName: File(path).uri.pathSegments.last,
             silent: true,
           );
           if (accepted) ok += 1;
@@ -260,7 +262,7 @@ class _MusicSourcePanelState extends ConsumerState<MusicSourcePanel> {
             final entryPath = Uri.parse(entry.fileUrl).toFilePath();
             final accepted = await _installScript(
               await File(entryPath).readAsString(),
-              fileName: entryPath.split('/').last,
+              fileName: File(entryPath).uri.pathSegments.last,
               catalogKey: entry.key,
               catalogName: entry.name,
               catalogVersion: entry.version,

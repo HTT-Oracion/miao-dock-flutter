@@ -5015,3 +5015,16 @@
 - **验证**：新增 3 组测试（JSON 歌词 / offset / 翻译对齐 3 条；收藏判据 5 条；
   心动门禁 3 条，用**酷狗平台**确保不依赖平台名）。反证：JSON 行分支禁用 → 红；
   收藏判据放开 → 红；心动改回硬编码 netease → 红。全仓 435 用例绿，构建通过。
+
+## D-237 · 音乐源导入：包内文件名归一（2026-11-15）
+
+- **状态**：已实施。
+- **根因**：拖拽 / 文件选择入口用 `path.split('/').last` 取文件名。Windows 路径是
+  反斜杠，拆不开 → 整条绝对路径被当作 `sourceFile` 写进清单 → 落盘时拼成
+  `.../music-sources/netease/F:\...\netease.js`，报 `errno 123`（文件名语法不正确）导入失败。
+- **做法**：新增 `musicSourcePackageFileName()`（`domain/music_source_manifest.dart`），
+  同时按 `\` 与 `/` 切分取末段，空则回落 `source.js`。三个落盘 / 加载点统一走它：
+  导入器 `install()`、引擎 `StoredMusicSourceCodeLoader.load()`；
+  两个 UI 入口改用 `File(path).uri.pathSegments.last`。
+- **验证**：新增 2 条回归（常量切分 5 断言 / Windows 整条路径落盘）。
+  反证：把 `RegExp(r'[\\/]')` 改回 `split('/')` → 3 条用例红；还原后 13 条全绿。
