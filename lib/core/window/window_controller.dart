@@ -54,3 +54,18 @@ double readerFocusTopInset({required bool macos, required bool fullscreen}) {
   if (fullscreen) return 0;
   return macos ? AppMetrics.macTrafficLightBand : 0;
 }
+
+/// 窗控「最大化 / 还原」按钮该做什么（纯函数，便于测试四种状态）。
+///
+/// 🔴 顺序不能颠倒：**先看全屏**。
+/// Windows 全屏（`setFullScreen(true)`）时窗口并不处于「最大化」状态，
+/// 只调 `unmaximize()` 无效，用户看到的就是「点了没反应、退不出全屏」。
+/// 这也是原生插件的既有行为：`Maximize()` 在 `showCmd == SW_MAXIMIZE` 时
+/// 直接返回，所以对已最大化的窗口再调 `maximize()` 同样是空操作。
+enum WindowToggleAction { exitFullScreen, unmaximize, maximize }
+
+WindowToggleAction windowToggleAction({required bool fullscreen, required bool maximized}) {
+  if (fullscreen) return WindowToggleAction.exitFullScreen;
+  if (maximized) return WindowToggleAction.unmaximize;
+  return WindowToggleAction.maximize;
+}

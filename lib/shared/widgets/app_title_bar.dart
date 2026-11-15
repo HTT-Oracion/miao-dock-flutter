@@ -65,12 +65,29 @@ class AppTitleBar extends StatelessWidget {
 class _WindowControls extends StatelessWidget {
   const _WindowControls();
 
+  /// 最大化 / 还原：按当前状态切换，而不是无脑 `maximize()`。
+  ///
+  /// 判定与副作用分开：[windowToggleAction] 是纯函数（可测四态），
+  /// 这里只负责把动作落到 `windowManager`。
+  Future<void> _toggleMaximize() async {
+    final fullscreen = await windowManager.isFullScreen();
+    final maximized = fullscreen ? false : await windowManager.isMaximized();
+    switch (windowToggleAction(fullscreen: fullscreen, maximized: maximized)) {
+      case WindowToggleAction.exitFullScreen:
+        await windowManager.setFullScreen(false);
+      case WindowToggleAction.unmaximize:
+        await windowManager.unmaximize();
+      case WindowToggleAction.maximize:
+        await windowManager.maximize();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         _ControlButton(icon: LucideIcons.minus, onTap: windowManager.minimize),
-        _ControlButton(icon: LucideIcons.square, onTap: windowManager.maximize),
+        _ControlButton(icon: LucideIcons.square, onTap: () => _toggleMaximize()),
         _ControlButton(icon: LucideIcons.x, danger: true, onTap: windowManager.close),
       ],
     );
