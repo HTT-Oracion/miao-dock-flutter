@@ -18,6 +18,9 @@ class SecureStore {
   /// 钥匙串服务名（kSecAttrService）：系统弹窗与「钥匙串访问」里显示的名字。
   static const _kcServiceName = '喵坞 MiaoDock';
 
+  /// 键命名空间：原始存储键 = `miao.` + 相对键；对外 API 只收/只返相对键。
+  static const String _prefix = 'miao.';
+
   /// macOS 必须禁用 data protection keychain。
   ///
   /// 🔴 默认的 data protection keychain 需要 `keychain-access-groups` entitlement
@@ -52,6 +55,9 @@ class SecureStore {
   ///
   /// 为什么必须搬：钥匙串按 `kSecAttrService` 区分条目，直接改名等于换了个
   /// 空保险箱 —— 用户之前登录的 Cookie 全部「消失」，表现为重启后掉登录。
+  ///
+  /// 旧存储里的原始键同样带 [_prefix]，所以按前缀扫描、去掉前缀后走 [read] /
+  /// [write]（与日常读写口径一致）；新存储已有非空值时不覆盖。
   Future<void> migrateServiceName() async {
     if (kIsWeb || !(Platform.isMacOS || Platform.isIOS)) return;
     final legacy = Platform.isMacOS
@@ -59,16 +65,21 @@ class SecureStore {
             mOptions: MacOsOptions(usesDataProtectionKeychain: false, accountName: _legacyServiceName),
           )
         : FlutterSecureStorage(iOptions: IOSOptions(accountName: _legacyServiceName));
-    const keys = ['music.cookie.netease', 'music.cookie.kugou', 'music.cookie.qq', 'music.cookie.migu'];
     try {
-      for (final k in keys) {
-        final v = await legacy.read(key: k);
-        if (v == null || v.isEmpty) continue;
-        final exists = await _storage.read(key: k);
+      final entries = await legacy.readAll();
+      for (final entry in entries.entries) {
+        final rawKey = entry.key;
+        if (!rawKey.startsWith(_prefix) || entry.value.isEmpty) continue;
+        final key = rawKey.substring(_prefix.length);
+        if (key.isEmpty) continue;
+        final exists = await read(key);
         if (exists == null || exists.isEmpty) {
-          await _storage.write(key: k, value: v);
+          await write(key, entry.value);
+          // 新存储可能静默失败（缺 entitlement）：确认写进去再删旧值，避免丢凭据。
+          final saved = await read(key);
+          if (saved == null || saved.isEmpty) continue;
         }
-        await legacy.delete(key: k);
+        await legacy.delete(key: rawKey);
       }
     } on Object catch (e) {
       // 迁移失败不打断启动：旧数据仍在，用户重新登录即可。
@@ -78,10 +89,30 @@ class SecureStore {
 
   final FlutterSecureStorage _storage;
 
-  static const String _prefix = 'miao.';
-
-  /// 读取全部键值（启动扫描用：凭据键随导入的平台动态增长）。
-  Future<Map<String, String>> readAll() => _storage.readAll();
+  /// 读取本命名空间内的全部键值（启动扫描用：凭据键随导入的平台动态增长）。
+  ///
+  /// 契约：返回的键是**相对键**（已去掉 [_prefix]），与 [read] / [write] /
+  /// [delete] 的入参口径一致；命名空间外的条目（其他应用或插件写入的键）过滤掉。
+  ///
+  /// 🔴 不能直接透传 `FlutterSecureStorage.readAll()`：它返回**原始键**（带
+  /// `miao.` 前缀），调用方用相对键前缀（如 `music.cookie.`）过滤会永远匹配不到，
+  /// 表现为「登录成功、重启掉登录」。
+  /// 存储不可用时按「没有凭证」返回空表，与 [read] 的口径一致。
+  Future<Map<String, String>> readAll() async {
+    try {
+      final raw = await _storage.readAll();
+      final out = <String, String>{};
+      for (final entry in raw.entries) {
+        if (!entry.key.startsWith(_prefix)) continue;
+        final key = entry.key.substring(_prefix.length);
+        if (key.isEmpty) continue;
+        out[key] = entry.value;
+      }
+      return out;
+    } catch (_) {
+      return const {};
+    }
+  }
 
   Future<String?> read(String key) async {
     try {

@@ -36,10 +36,23 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
 
   @override
   MusicAuthState build() {
-    // 服务名迁移（旧 flutter_secure_storage_service → 喵坞）：只跑一次，失败不阻断。
-    unawaited(_store.migrateServiceName());
-    _restore();
+    unawaited(_bootstrap());
     return const MusicAuthState();
+  }
+
+  /// 启动装配：**先迁移服务名再读盘**。
+  ///
+  /// 🔴 顺序不能并行：`migrateServiceName()` 搬的是「旧钥匙串 → 新钥匙串」，
+  /// 若与 `_restore()` 并发，首次升级启动可能读不到刚搬过来的凭据（要等第二次
+  /// 启动才恢复）。迁移在非 Apple 平台是 no-op，不会拖慢启动。
+  Future<void> _bootstrap() async {
+    try {
+      await _store.migrateServiceName();
+    } on Object catch (e) {
+      // 迁移失败不阻断启动：旧数据仍在，用户重新登录即可。
+      debugPrint('[music.auth] migrate service name failed: $e');
+    }
+    await _restore();
   }
 
   /// 启动读盘。
@@ -83,7 +96,7 @@ class MusicAuthNotifier extends Notifier<MusicAuthState> {
     if (readBack == null || readBack.isEmpty) {
       // 诊断：把期望长度带出来，能区分「完全没写入」与「写入被截断」。
       debugPrint(
-        '[music.auth] keychain read-back empty: platform=\$p '
+        '[music.auth] keychain read-back empty: platform=$p '
         'expectedLen=${cookie.length} key=$_keyPrefix$p',
       );
       state = state.copyWith(cookies: {...state.cookies}..remove(p));
