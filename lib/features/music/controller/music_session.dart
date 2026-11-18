@@ -115,6 +115,25 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
   @visibleForTesting
   MusicSourceEngine createEngine() => ref.read(musicSourceEngineProvider);
 
+  /// 找平台对应的已导入源（registry 内查）。
+  JsMusicSource? _sourceOf(String platformId) {
+    for (final candidate in ref.read(jsMusicSourceRegistryProvider)) {
+      if (candidate.isAvailable && candidate.platformId == platformId) return candidate;
+    }
+    return null;
+  }
+
+  /// 清掉引擎里的源会话 Cookie（退出 / 凭据失效时用，避免旧票继续生效）。
+  Future<void> _clearEngineSession(String platformId) async {
+    final source = _sourceOf(platformId);
+    if (source == null) return;
+    try {
+      await createEngine().clearSessionCookie(source);
+    } on Object {
+      // 引擎不可用：安全存储已清，最坏是本次会话内引擎还留着旧票。
+    }
+  }
+
   /// 从 Keychain 恢复 Cookie 后补回昵称：走该平台 JS 源的 `loginInfo` 能力
   /// （Cookie 注入引擎 Cookie 罐后由源自行携带请求）。
   ///
@@ -124,13 +143,7 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
   Future<void> _restoreNick(String p, String cookie) async {
     if (cookie.isEmpty) return;
     try {
-      JsMusicSource? source;
-      for (final candidate in ref.read(jsMusicSourceRegistryProvider)) {
-        if (candidate.isAvailable && candidate.platformId == p) {
-          source = candidate;
-          break;
-        }
-      }
+      final source = _sourceOf(p);
       if (source == null || source.capabilities.contains('loginInfo') == false) return;
       final engine = createEngine();
       await engine.setSessionCookie(source, cookie);
@@ -140,10 +153,11 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
       if (p != _current) return;
       if (info == null) return;
       if (!info.loggedIn) {
-        // Cookie 过期：撤下登录态并清掉失效凭据。
+        // Cookie 过期：撤下登录态、清掉失效凭据与引擎会话（否则旧票继续生效）。
         _nick = null;
         state = MusicAccountState(cur: _current, logged: false, nick: null, extra: {...state.extra, _current: false});
         await ref.read(musicAuthProvider.notifier).clear(p);
+        await _clearEngineSession(p);
         return;
       }
       state = state.copyWith(nick: info.nick.isNotEmpty ? info.nick : null, avatarUrl: () => info.avatarUrl);
@@ -168,6 +182,8 @@ class MusicAccountNotifier extends Notifier<MusicAccountState> {
     _nick = null;
     state = MusicAccountState(cur: state.cur, logged: false, nick: null, extra: state.extra);
     await ref.read(musicAuthProvider.notifier).clear(platform);
+    // 引擎会话是常驻的：不清的话退出后源请求仍带旧票（等于没退出）。
+    await _clearEngineSession(platform);
   }
 }
 

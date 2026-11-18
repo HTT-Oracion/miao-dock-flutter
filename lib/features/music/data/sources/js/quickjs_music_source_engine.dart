@@ -382,8 +382,7 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
   Future<MusicLoginInfo?> loginInfo(JsMusicSource source) async {
     if (source.capabilities.contains('loginInfo') == false) return null;
     final raw = await _call(source, 'loginInfo', const {}, (r) => r);
-    if (raw is! Map) return null;
-    return MusicLoginInfo(loggedIn: raw['loggedIn'] == true, nick: '${raw['nick'] ?? ''}');
+    return parseMusicLoginInfo(raw);
   }
 
   @override
@@ -391,6 +390,12 @@ class QuickJsMusicSourceEngine implements MusicSourceEngine {
     await ensureLoaded(source);
     _sessionCookies[source.id] = cookie;
     _http.setSessionCookie(source, cookie);
+  }
+
+  @override
+  Future<void> clearSessionCookie(JsMusicSource source) async {
+    _sessionCookies.remove(source.id);
+    _http.clearSessionCookie(source);
   }
 
   @override

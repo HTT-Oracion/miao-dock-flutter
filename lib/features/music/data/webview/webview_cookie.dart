@@ -23,15 +23,22 @@ class WebviewCookieCollector {
   final WebviewLoginConfig config;
 
   /// Cookie 名优先级（影响拼接顺序，不影响判定）。
+  ///
+  /// 四平台名单与 miao-dock `mod.rs` 的 `*_COOKIE_PRIORITY` 逐项对齐：先出现的是
+  /// 登录票据（服务端按顺序认），缺项会让落盘串的形状与 Rust 版不一致。
   static const _priority = [
-    // 网易云
+    // 网易云（NETEASE_COOKIE_PRIORITY）
     'MUSIC_U', '__csrf', 'NMTID', 'MUSIC_A', '__remember_me', '_ntes_nuid', '_ntes_nnid', 'WEVNSM', 'WNMCID',
-    // 酷狗（KuGoo 是复合票据，最优先；其余对齐 miao-dock KUGOU_COOKIE_PRIORITY）
-    'KuGoo', 'kugou', 'Kugou', 'token', 'userid', 'KugooID', 'kugouID', 'UserId', 'kg_mid', 'kg_dfid', 'NickName',
-    // QQ
-    'uin', 'qqmusic_uin', 'wxuin', 'login_type', 'qm_keyst', 'qqmusic_key',
-    // 咪咕
-    'userid', 'uid', 'migu_userid',
+    'JSESSIONID-WYYY',
+    // 酷狗（KUGOU_COOKIE_PRIORITY）：KuGoo 是复合票据，最优先。
+    'KuGoo', 'token', 'userid', 'KugooID', 'kugouID', 'UserId', 'kg_mid', 'kg_dfid', 'Kugou', 'NickName',
+    // QQ（QQ_COOKIE_PRIORITY）
+    'uin', 'qqmusic_uin', 'wxuin', 'login_type', 'qm_keyst', 'qqmusic_key', 'p_skey', 'skey', 'psrf_qqopenid',
+    'psrf_qqunionid', 'psrf_qqaccess_token', 'psrf_qqrefresh_token', 'wxopenid', 'wxunionid', 'wxrefresh_token',
+    'wxskey', 'p_uin', 'ptcz', 'RK',
+    // 咪咕（MIGU_COOKIE_PRIORITY）
+    'MUSIC_SESSION', 'migu_cookie_id', 'ESAFEID', 'mtfk', 'P_CID', 'migu_music_tail', 'migu_userid', 'userid', 'uid',
+    'SSON',
     // 通用
     'mid', 'dfid',
   ];
@@ -59,14 +66,29 @@ class WebviewCookieCollector {
     return names.map((n) => '$n=${picked[n]}').join('; ');
   }
 
-  /// 是否已拿到登录票据。
-  bool hasLogin(Iterable<RawWebviewCookie> cookies) {
+  /// 本平台域名下的 Cookie 名值表（同名保留首个，跳过空值）。
+  Map<String, String> jarOf(Iterable<RawWebviewCookie> cookies) {
     final jar = <String, String>{};
     for (final c in cookies) {
       if (!config.ownsDomain(c.domain)) continue;
       if (c.name.isEmpty || c.value.isEmpty) continue;
       jar.putIfAbsent(c.name, () => c.value);
     }
+    return jar;
+  }
+
+  /// 登录票据名是否**全部**到齐。
+  ///
+  /// 🔴 这才是「可以落盘」的判据：半张票（如 QQ 只有 uin、缺 qm_keyst）落盘后，
+  /// 重启回读会被判失效并清凭据 —— 与 miao-dock 的 playbackReady 口径对齐。
+  bool hasAllTickets(Iterable<RawWebviewCookie> cookies) {
+    final jar = jarOf(cookies);
+    return config.loginCookieNames.every((n) => (jar[n] ?? '').isNotEmpty);
+  }
+
+  /// 登录票据名是否**任一**到齐（只用于 launcher 触发 warmup 补票）。
+  bool hasAnyTicket(Iterable<RawWebviewCookie> cookies) {
+    final jar = jarOf(cookies);
     return config.loginCookieNames.any((n) => (jar[n] ?? '').isNotEmpty);
   }
 }

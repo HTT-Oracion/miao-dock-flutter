@@ -16,6 +16,12 @@ abstract interface class MusicSourceEngine {
   /// 注入会话 Cookie（WebView 登录落盘的那串），引擎写入源域名的 Cookie 罐。
   Future<void> setSessionCookie(JsMusicSource source, String cookie);
 
+  /// 清除源会话 Cookie（退出登录 / 回读判定凭据失效时调用）。
+  ///
+  /// 🔴 必须清：引擎的会话串与 Cookie 罐是常驻的，只清安全存储的话，
+  /// 退出登录后源请求仍会带旧票据（酷狗 songUrl / 网易云请求还能用旧登录态）。
+  Future<void> clearSessionCookie(JsMusicSource source);
+
   Future<List<MusicSong>> searchSongs(JsMusicSource source, {required String keyword, int limit, int offset});
 
   Future<List<MusicPlaylist>> searchPlaylists(JsMusicSource source, {required String keyword, int limit});

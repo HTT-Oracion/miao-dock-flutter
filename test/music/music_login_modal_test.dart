@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:miao_dock_flutter/core/theme/tokens.dart';
+import 'package:miao_dock_flutter/features/music/controller/music_auth.dart';
+import 'package:miao_dock_flutter/features/music/controller/music_login_controller.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_providers.dart';
 import 'package:miao_dock_flutter/features/music/controller/music_session.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_cookie.dart';
 import 'package:miao_dock_flutter/features/music/data/webview/webview_login_config.dart';
 import 'package:miao_dock_flutter/features/music/domain/js_music_source.dart';
+import 'package:miao_dock_flutter/features/music/domain/music_login_info.dart';
 
+import 'support/stub_engine.dart';
 import 'support/stub_registry.dart';
 
 import 'package:miao_dock_flutter/features/music/domain/music_source_manifest.dart';
@@ -32,9 +38,32 @@ class _CountingLauncher implements WebviewLoginLauncher {
   }
 }
 
+/// 捕获「登录窗口把 Cookie 交回控制器」的回调，窗口不自行结束。
+class _CaptureLauncher implements WebviewLoginLauncher {
+  WebviewLoginConfig? config;
+  Future<bool> Function(List<RawWebviewCookie>)? onCookies;
+
+  @override
+  Future<bool> open(WebviewLoginConfig config, Future<bool> Function(List<RawWebviewCookie>) onCookies) {
+    this.config = config;
+    this.onCookies = onCookies;
+    return Completer<bool>().future; // 用户还没完成登录：窗口保持打开
+  }
+}
+
 class _OpenLoginUi extends MusicUiNotifier {
   @override
   MusicUiState build() => const MusicUiState(loginOpen: true, loginPlatform: 'netease');
+}
+
+/// 打开登录弹窗并选中指定平台。
+class _OpenLoginUiFor extends MusicUiNotifier {
+  _OpenLoginUiFor(this.platform);
+
+  final String platform;
+
+  @override
+  MusicUiState build() => MusicUiState(loginOpen: true, loginPlatform: platform);
 }
 
 Widget host(Widget child) => MaterialApp(
@@ -91,6 +120,42 @@ void main() {
     expect(find.byType(MusicPlatformBadge), findsNWidgets(1));
   });
 
+  testWidgets('新平台靠源声明登录：不判「不支持」，可进入等待并保存登录态', (tester) async {
+    final source = _declaredLoginSource();
+    final launcher = _CaptureLauncher();
+    final engine = StubMusicSourceEngine(loginResult: const MusicLoginInfo(loggedIn: true, nick: 'B站用户'));
+    final container = ProviderContainer(
+      overrides: [
+        musicUiProvider.overrideWith(() => _OpenLoginUiFor('bilibili')),
+        musicPlatformInfosProvider.overrideWith((_) => [source.info]),
+        jsMusicSourceRegistryProvider.overrideWith(() => StubRegistry([source])),
+        webviewLoginLauncherProvider.overrideWithValue(launcher),
+        musicSourceEngineProvider.overrideWithValue(engine),
+        musicAuthProvider.overrideWith(_FakeAuth.new),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(container: container, child: host(const LoginModal())));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // 破坏点：supports 不带源声明 → 新平台被判「该平台暂不支持窗口登录」，
+    // begin 置 failed，后续 submitCookies 因 phase != awaiting 永远 no-op（登录态存不下来）。
+    expect(container.read(musicLoginProvider).phase, MusicLoginPhase.awaiting);
+    final l10n = AppLocalizations.of(tester.element(find.byType(LoginModal)));
+    expect(find.text(l10n.musicLoginWebviewUnsupported), findsNothing);
+    expect(launcher.config?.url, startsWith('https://www.bilibili.com'));
+
+    final ok = await launcher.onCookies!([
+      const RawWebviewCookie(name: 'SESSDATA', value: 's', domain: 'bilibili.com'),
+    ]);
+    expect(ok, isTrue);
+    expect(container.read(musicAuthProvider).cookieOf('bilibili'), contains('SESSDATA=s'));
+    // 吸收成功 toast 的定时器。
+    await tester.pump(const Duration(seconds: 4));
+  });
+
   testWidgets('无已导入源：登录弹窗整体变为导入引导', (tester) async {
     final container = ProviderContainer(overrides: [musicUiProvider.overrideWith(_OpenLoginUi.new)]);
     addTearDown(container.dispose);
@@ -138,4 +203,31 @@ void orderTests() {
     // 破坏点：装配层按枚举 / 字母序排序 → 侧栏与数据源页顺序不一致。
     expect(ids, ['kugou', 'netease', 'bilibili']);
   });
+}
+
+/// 仅靠 JS 源声明登录配置的新平台（无内置兜底）。
+JsMusicSource _declaredLoginSource() {
+  final (manifest, issues) = manifestFromScript(
+    "class S extends MusicSourceBase {\n  name = '哔哩哔哩';\n  platform = 'bilibili';\n  key = 'bilibili';\n"
+        "  version = '1.0.0';\n  baseUrl = 'https://www.bilibili.com';\n"
+        "  loginUrl = 'https://www.bilibili.com/';\n"
+        "  loginCookieDomains = 'bilibili.com';\n"
+        "  loginCookieNames = 'SESSDATA';\n"
+        "  async searchSongs(args) { return { songs: [] }; }\n"
+        "  async loginInfo(args) { return { loggedIn: true, nick: '' }; }\n}",
+    'bilibili.js',
+  );
+  assert(issues.isEmpty, '$issues');
+  return JsMusicSource(manifest: manifest!, capabilities: {'searchSongs', 'loginInfo'});
+}
+
+/// 内存登录态（不碰系统钥匙串）。
+class _FakeAuth extends MusicAuthNotifier {
+  @override
+  MusicAuthState build() => const MusicAuthState(cookies: {}, loading: false);
+
+  @override
+  Future<void> save(String p, String cookie) async {
+    state = state.copyWith(cookies: {...state.cookies, p: cookie});
+  }
 }

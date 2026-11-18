@@ -39,6 +39,7 @@ class _MobileWebviewLoginPageState extends State<MobileWebviewLoginPage> {
   @override
   void initState() {
     super.initState();
+    _cookieManager = WebViewCookieManager();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       // 官方登录页在移动端会按 UA 决定 H5/PC 版；给标准手机 UA 拿到移动版表单。
@@ -55,13 +56,22 @@ class _MobileWebviewLoginPageState extends State<MobileWebviewLoginPage> {
             await _pollCookies();
           },
         ),
-      )
-      ..loadRequest(Uri.parse(widget.config.url));
+      );
 
-    _cookieManager = WebViewCookieManager();
-    // 每次登录从干净状态开始，避免复用上一次的旧登录态。
-    unawaited(_cookieManager.clearCookies());
+    // 🔴 先清 Cookie 再导航（顺序与 miao-dock 一致）：反过来会把刚加载页面写入的
+    // 会话/CSRF Cookie 一起清掉，登录流程可能因此拿不到完整票据。
+    unawaited(_startFromCleanState());
     _poller = Timer.periodic(const Duration(seconds: 2), (_) => unawaited(_pollCookies()));
+  }
+
+  Future<void> _startFromCleanState() async {
+    try {
+      await _cookieManager.clearCookies();
+    } on Object {
+      // 清理失败不阻断登录：最坏是沿用上一次的 WebView Cookie。
+    }
+    if (!mounted) return;
+    await _controller.loadRequest(Uri.parse(widget.config.url));
   }
 
   static const _mobileUserAgent =

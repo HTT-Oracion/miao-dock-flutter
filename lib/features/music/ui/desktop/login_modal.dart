@@ -13,6 +13,7 @@ import '../../controller/music_login_controller.dart';
 import '../../controller/music_providers.dart';
 import '../../controller/music_session.dart';
 import '../../data/webview/webview_login_config.dart';
+import '../../domain/js_music_source.dart';
 import '../../domain/music_platform_info.dart';
 import '../../domain/music_source_manifest.dart';
 import '../widgets/music_shared.dart';
@@ -140,9 +141,22 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     );
   }
 
+  /// 目标平台声明的登录配置（仅扫描已导入源，与 [_platformId] 对应）。
+  ///
+  /// 🔴 判断「是否支持窗口登录」必须带上它：内置四平台有静态兜底，但**新平台
+  /// 只能靠 JS 源声明**（D-232）。此前这里漏传 declared → 新平台被误判
+  /// 「该平台暂不支持窗口登录」，登录态根本无从保存。
+  MusicSourceLoginConfig? _declaredFrom(Iterable<JsMusicSource> sources) {
+    for (final candidate in sources) {
+      if (candidate.isAvailable && candidate.platformId == _platformId) return candidate.manifest.login;
+    }
+    return null;
+  }
+
   List<Widget> _body(BuildContext context, AppPalette palette, AppLocalizations l10n, MusicLoginState login) {
     final info = platformInfoById(_platformId, ref.watch(musicPlatformInfosProvider));
-    final supported = MusicLoginController.supports(_platformId);
+    final declared = _declaredFrom(ref.watch(jsMusicSourceRegistryProvider));
+    final supported = MusicLoginController.supports(_platformId, declared: declared);
 
     if (!supported) {
       return [
@@ -211,14 +225,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     final seq = ++_loginSeq;
     setState(() => _launching = true);
     ref.read(musicLoginProvider.notifier).begin(_platformId);
-    MusicSourceLoginConfig? declared;
-    for (final candidate in ref.watch(jsMusicSourceRegistryProvider)) {
-      if (candidate.isAvailable && candidate.platformId == _platformId) {
-        declared = candidate.manifest.login;
-        break;
-      }
-    }
-    final config = loginConfigFor(_platformId, declared: declared);
+    final config = loginConfigFor(_platformId, declared: _declaredFrom(ref.read(jsMusicSourceRegistryProvider)));
     if (config == null) {
       setState(() => _launching = false);
       return;

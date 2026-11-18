@@ -37,12 +37,16 @@ class _StubEngine implements MusicSourceEngine {
   final bool throwOnLogin;
 
   String? injectedCookie;
+  String? clearedSourceId;
 
   @override
   Future<void> ensureLoaded(JsMusicSource source) async {}
 
   @override
   Future<void> setSessionCookie(JsMusicSource source, String cookie) async => injectedCookie = cookie;
+
+  @override
+  Future<void> clearSessionCookie(JsMusicSource source) async => clearedSourceId = source.id;
 
   @override
   Future<MusicLoginInfo?> loginInfo(JsMusicSource source) async {
@@ -120,6 +124,8 @@ void main() {
     // 破坏点：不撤登录态 → 「顶着 ? 的已登录」，用户以为账号异常。
     expect(s.logged, isFalse);
     expect(auth.cleared, isTrue);
+    // 失效凭据对应的引擎会话也要清（否则旧票继续被源请求使用）。
+    expect(engine.clearedSourceId, 'netease');
   });
 
   test('回读网络失败：保持已登录 + 「?」（不误撤）', () async {
@@ -138,6 +144,29 @@ void main() {
     final s = c.read(musicAccountProvider);
     expect(s.logged, isTrue);
     expect(s.avatarInitial, '?');
+  });
+
+  test('退出登录：清凭据的同时清引擎会话（旧票不残留）', () async {
+    final auth = _FakeAuth('MUSIC_U=ok');
+    final engine = _StubEngine(loggedIn: true, nick: '狼');
+    final c = ProviderContainer(
+      overrides: [
+        musicAuthProvider.overrideWith(() => auth),
+        musicSourceEngineProvider.overrideWithValue(engine),
+        jsMusicSourceRegistryProvider.overrideWith(() => _RegistryStub([_neteaseSource()])),
+        musicAccountProvider.overrideWith(() => _TestAccount(engine)),
+      ],
+    );
+    addTearDown(c.dispose);
+
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(c.read(musicAccountProvider).logged, isTrue);
+
+    await c.read(musicAccountProvider.notifier).logout();
+
+    expect(auth.cleared, isTrue);
+    // 破坏点：只清安全存储不清引擎 → 退出后源请求仍带旧票（酷狗 songUrl 还能播）。
+    expect(engine.clearedSourceId, 'netease');
   });
 
   test('avatarInitial 渲染防护：空昵称兜底「?」', () {

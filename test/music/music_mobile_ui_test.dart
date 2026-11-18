@@ -31,6 +31,9 @@ import 'package:miao_dock_flutter/l10n/app_localizations.dart';
 void main() {
   Widget host() => ProviderScope(
     overrides: [
+      // 🔴 源注册表固定为空：默认实现会枚举测试进程共享的落盘目录，
+      // 其它用例（源导入）留下的源会让本文件的 UI 断言随机变红。
+      jsMusicSourceRegistryProvider.overrideWith(() => StubRegistry(const [])),
       musicPlatformInfosProvider.overrideWith((_) => [neteaseSourceFromRepo().info]),
       musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
       musicAccountProvider.overrideWith(LoggedInMusicAccount.new),
@@ -166,7 +169,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          // 无源场景：不注入 availableMusicPlatformsProvider（默认空集）。
+          // 无源场景：注册表固定空集（默认会枚举落盘目录，受其它用例污染）。
+          jsMusicSourceRegistryProvider.overrideWith(() => StubRegistry(const [])),
           musicRepositoryProvider.overrideWithValue(DemoMusicRepository()),
           musicAccountProvider.overrideWith(_LoggedOutAccount.new),
         ],

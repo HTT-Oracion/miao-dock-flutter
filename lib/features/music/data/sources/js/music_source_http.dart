@@ -104,6 +104,12 @@ class MusicSourceHttp {
     }
   }
 
+  /// 清除源主域的会话 Cookie（退出登录 / 凭据失效时用）。
+  void clearSessionCookie(JsMusicSource source) {
+    final host = Uri.tryParse(source.manifest.baseUrl)?.host ?? '';
+    if (host.isNotEmpty) _cookies.remove(host);
+  }
+
   Future<MusicSourceHttpResponse> request({
     required String method,
     required String url,

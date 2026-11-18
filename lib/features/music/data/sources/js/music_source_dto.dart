@@ -2,7 +2,19 @@ import 'dart:convert' show jsonDecode;
 
 import '../../../domain/music_models.dart';
 import '../../../domain/js_music_source.dart';
+import '../../../domain/music_login_info.dart';
 import '../../../domain/music_source_manifest.dart';
+
+/// `loginInfo` 能力返回值 → 领域模型（纯函数，便于无 QuickJS 单测）。
+///
+/// 🔴 `avatarUrl` 必须解析：漏掉的话登录态恢复后头像永远「?」（D-234 链路断在引擎层）。
+/// 返回 null = 返回值不是对象（源违反契约）。
+MusicLoginInfo? parseMusicLoginInfo(Object? raw) {
+  if (raw is! Map) return null;
+  final nick = '${raw['nick'] ?? ''}'.trim();
+  final avatar = '${raw['avatarUrl'] ?? ''}'.trim();
+  return MusicLoginInfo(loggedIn: raw['loggedIn'] == true, nick: nick, avatarUrl: avatar.isEmpty ? null : avatar);
+}
 
 /// 音乐源返回的纯 JSON → 领域模型。UI 永远不直接看到 JS 原始结构。
 ///

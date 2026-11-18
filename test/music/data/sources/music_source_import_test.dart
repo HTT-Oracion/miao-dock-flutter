@@ -71,7 +71,7 @@ void main() {
     File('${dir.path}/music_source.json').writeAsStringSync(manifestJson);
     File('${dir.path}/probe.js').writeAsStringSync('class Wrong extends NotSourceBase {}');
 
-    final result = await MusicSourceImporter().importFromDirectory(dir);
+    final result = await importer.importFromDirectory(dir);
     // 破坏点：入口类检查放水 → 任意 JS 被实例化。
     expect(result.ok, isFalse);
     expect(result.errors.first.code, 'entryClass');
@@ -133,6 +133,19 @@ void main() {
 /// 外部源仓库（`../miao-dock-sources/music`，与 flutter 工程同级）：四平台 JS
 /// 都能通过真实导入校验。应用不再内置源 —— 这个测试守住「仓库里的源永远可导」。
 void testBundledPackages() {
+  // 🔴 落盘根必须注入临时目录：默认根是测试进程共享的 prefs 目录
+  // （`$systemTemp/miao-prefs-test-$pid`），本组把四个真实源装进去后，
+  // 其它用例（如「未导入源时显示导入引导」）会读到这些源 → 全量测试随机变红。
+  late Directory tempDir;
+  late MusicSourceImporter importer;
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('music-source-repo');
+    importer = MusicSourceImporter(rootResolver: () => tempDir);
+  });
+  tearDown(() {
+    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+  });
+
   final assets = [('netease', 'NeteaseSource'), ('kugou', 'KugouSource'), ('qq', 'QqSource'), ('migu', 'MiguSource')];
   for (final (pkg, entry) in assets) {
     test('源仓库 $pkg：清单可推导且能力齐全', () async {
@@ -149,7 +162,7 @@ void testBundledPackages() {
       final caps = scanMusicSourceCapabilities(js);
       expect(caps, containsAll(['searchSongs', 'songUrl']), reason: '$pkg 缺核心能力');
       // 跑真实导入校验（platform 推导 / hosts 扫描 / 入口类）。
-      final result = await MusicSourceImporter().importScript(js, fileName: '$pkg.js');
+      final result = await importer.importScript(js, fileName: '$pkg.js');
       expect(result.ok, isTrue, reason: '$pkg 导入校验失败：${result.errors}');
       expect(result.source!.platformId, isNotEmpty);
     });
