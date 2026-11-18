@@ -3,6 +3,49 @@ import 'dart:io';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
+
+/// 是否需要在当前平台注册桌面音频后端（纯函数，便于单测）。
+///
+/// 判据：非 Web、非测试进程、且是 Windows / Linux 桌面。
+@visibleForTesting
+bool shouldInitDesktopAudioBackend({
+  required bool isWeb,
+  required bool isFlutterTest,
+  required bool isWindows,
+  required bool isLinux,
+}) => !isWeb && !isFlutterTest && (isWindows || isLinux);
+
+/// 桌面（Windows / Linux）音频后端初始化。
+///
+/// 🔴 为什么必须有：`just_audio` 自带实现只覆盖 Android / iOS / macOS / Web，
+/// Windows / Linux 必须额外挂平台实现。缺它时 `AudioPlayer` 初始化直接抛
+/// `MissingPluginException(No implementation found for method init ...)`，
+/// 表现为点播放弹「无法播放」——这是桌面端整模块无法出声的根因（实测）。
+///
+/// 后端选型与 `docs/internal/third-party-packages.md` 一致：libmpv 内核
+/// （`just_audio_media_kit` + `media_kit_libs_*`），原生库由构建期下载。
+/// 必须在 `runApp`（首个 `AudioPlayer` 创建）之前完成注册。
+void initMusicDesktopAudioBackend() {
+  final isWindows = !kIsWeb && Platform.isWindows;
+  final isLinux = !kIsWeb && Platform.isLinux;
+  if (!shouldInitDesktopAudioBackend(
+    isWeb: kIsWeb,
+    // 单测 / widget 测试进程没有原生库，且 `MusicAudioEngine` 已按 FLUTTER_TEST 回落静默引擎。
+    isFlutterTest: !kIsWeb && Platform.environment['FLUTTER_TEST'] == 'true',
+    isWindows: isWindows,
+    isLinux: isLinux,
+  )) {
+    return;
+  }
+  try {
+    JustAudioMediaKit.ensureInitialized(windows: isWindows, linux: isLinux);
+    debugPrint('[music.audio] desktop backend ready: media_kit (windows=$isWindows linux=$isLinux)');
+  } on Object catch (e) {
+    // 后端不可用不阻断启动：前台其余功能可用，播放会走「无法播放」提示。
+    debugPrint('[music.audio] desktop backend init failed: $e');
+  }
+}
 
 /// 音乐后台播放初始化（音频会话 + 系统媒体控制）。
 ///

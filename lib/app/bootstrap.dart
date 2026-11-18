@@ -40,6 +40,9 @@ Future<void> bootstrap(Widget app) async {
   // 音乐后台播放必须在 runApp 之前初始化：它要注册 audio_service 的后台会话，
   // 晚于首帧会拿不到前台服务，锁屏 / 切后台就会被系统掐断。
   await initMusicBackgroundPlayback();
+  // 桌面（Windows / Linux）音频后端：just_audio 不自带桌面实现，必须在首个
+  // AudioPlayer 创建前注册，否则播放抛 MissingPluginException（见函数注释）。
+  initMusicDesktopAudioBackend();
   // 偏好先预热（移动端目录解析是异步的）：后面 readEngineDir / 远程地址读的都是它。
   await ensureShellPrefsLoaded();
   await initDesktopWindow();

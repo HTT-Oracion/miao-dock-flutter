@@ -8,6 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
   flutter_qjs
   flutter_secure_storage_linux
+  media_kit_libs_linux
   screen_retriever_linux
   window_manager
 )
