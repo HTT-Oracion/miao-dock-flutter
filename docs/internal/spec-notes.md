@@ -5103,3 +5103,39 @@
   migu uid 未持久化（重启后 listen 的 uid 头靠 Cookie 兜底）；③ Rust 登录窗口
   5 分钟超时兜底保存半张票，本实现**宁缺不假登录**；④ Rust 启动批量探测四平台登录态
   并缓存 profile，Flutter 仅按 cookie 有无展示多平台徽标（当前平台才回读校验）。
+
+## D-239 · 桌面端音乐无法播放：补 Windows / Linux 音频后端（2026-11-18）
+
+- **状态**：已实施（Windows 本机实测出声；Linux 接线完成，构建与出声未本机验证）。
+- **用户现象**：登录态修好后整模块仍「无法进行音乐播放」：点播放弹「无法播放」/无声音。
+- **根因（实测）**：`just_audio` 0.10.6 自带平台实现只覆盖 Android / iOS / macOS / Web，
+  Windows / Linux 必须另挂平台实现（官方 README「Platform specific configuration」）。
+  本项目此前只声明 `just_audio`，Windows 构建产物里没有任何音频插件 DLL；诊断探针实测：
+  音乐源 `songUrl` 正常（网易云搜索命中并返回 CDN 地址），但 `AudioPlayer.setAudioSource`
+  抛 `MissingPluginException(No implementation found for method init on channel
+  com.ryanheise.just_audio.methods)` → `_loadAudio` 捕获后提示 playbackUnavailable。
+  **与登录态修复无关，是桌面音频后端缺失。**
+- **修复**：
+  · 新增依赖（明细见 `third-party-packages.md`）：`just_audio_media_kit ^2.1.0`
+    （运行时，纯 Dart）、`media_kit_libs_windows_audio ^1.0.9` 与
+    `media_kit_libs_linux ^1.2.1`（构建期从 GitHub 下载音频版 libmpv，运行时原生库；
+    Windows 约 5.4 MB 随产物分发、不入库）；传递新增 media_kit 1.2.6 / posix /
+    safe_local_storage / uri_parser / image / archive（均纯 Dart）。
+  · `lib/app/music_autostart.dart` 新增 `initMusicDesktopAudioBackend()`：仅 Windows/Linux
+    桌面、非 Web、非测试进程时 `JustAudioMediaKit.ensureInitialized()`；判据抽成纯函数
+    `shouldInitDesktopAudioBackend` 便于单测。
+  · `bootstrap()` 在 `runApp` 前、首个 `AudioPlayer` 创建前调用它。
+  · 移动端 / macOS / Web 不变（just_audio 自带实现）；后台/锁屏仍只覆盖 Android/iOS/macOS。
+- **验证**：
+  · 修复前探针：`songUrl` 正常 → `audio.error=MissingPluginException(... init ...)` →
+    `RESULT=AUDIO_ERROR`（复现用户「无法播放」）。
+  · 修复后探针（Windows Debug 真机）：日志 `package:media_kit_libs_windows_audio registered.`、
+    `[music.audio] desktop backend ready: media_kit`；网易云地址 setAudioSource 成功
+    `duration=0:05:19`；4 秒后 `position=0:00:03.98 playing=true` → `RESULT=PLAYING`。
+  · 新增 `test/music/music_audio_backend_test.dart`：平台判据矩阵 + 测试进程回落静默引擎；
+    反证：判据删掉 Windows/Linux 分支或 FLUTTER_TEST 守卫 → 用例变红。
+  · `dart format --set-exit-if-changed lib test` / `flutter analyze` / `flutter test` 全绿。
+- **已知边界**：① Linux 后端已注册，但本机无 Linux 构建环境，构建与出声未验证；
+  ② 桌面端暂无锁屏 / 系统媒体通知（`just_audio_background` 只覆盖 Android/iOS/macOS，
+  保持原状）；③ libmpv 音频版由构建期从 GitHub 下载，离线/内网首次构建需自备代理
+  （README「桌面音频后端」已记）。

@@ -17,6 +17,13 @@
 | `flutter_qjs` | git pin `8feae95` | 在线漫画数据源的 quickjs-ng 运行时；单 runtime + `dispatch()` 事件循环，macOS/Windows/Linux/iOS/Android 原生构建 | 根（App） |
 | `html` | ^0.15.6 | 源 JS 的同步 DOM 宿主（`package:html` 解析 + 句柄表） | 根（App） |
 | `crypto` | ^3.0.6 | 源仓库稳定 id、页图磁盘缓存键 | 根（App） |
+| `audio_session` | ^0.1.25 | 音频焦点 / 中断处理（音乐域） | 根（App） |
+| `just_audio` | ^0.10.6 | 音乐播放状态机（Android / iOS / macOS / Web 自带平台实现） | 根（App） |
+| `just_audio_background` | ^0.0.1-beta.17 | 后台 / 锁屏播放（仅 Android / iOS / macOS；桌面不注册） | 根（App） |
+| `just_audio_media_kit` | ^2.1.0 | **Windows / Linux 桌面音频后端**（把 just_audio 平台接口接到 libmpv；缺失时桌面点播放直接 `MissingPluginException`，见 D-239） | 根（App） |
+| `media_kit` | 1.2.6（transitive） | libmpv 的 Dart 侧 FFI 绑定 | 根（传递） |
+| `media_kit_libs_windows_audio` | ^1.0.9 | Windows 音频版 libmpv（构建期从 GitHub 下载 `mpv-dev-x86_64-*.7z`，运行时随产物分发约 5.4 MB，不入库） | 根（构建期） |
+| `media_kit_libs_linux` | ^1.2.1 | Linux 音频版 libmpv（同上，构建期下载）；本机未验证 Linux 构建 | 根（构建期） |
 
 > `flutter_qjs` 带原生 macOS / iOS / Android / Windows / Linux 构建；当前 macOS、Android
 > 构建通过。该包尚未支持 Swift Package Manager，Flutter 构建会给出未来兼容性警告；
@@ -57,8 +64,9 @@
 | 包 | 用途 | 引入时机 |
 |---|---|---|
 | `media_kit` + `media_kit_video` + `media_kit_libs_video` | 番剧播放（libmpv 内核） | 番剧域；**spike 前置**（见 §四） |
-| `just_audio` + `just_audio_media_kit` | 音乐播放（桌面后端同为 libmpv） | 音乐域 |
-| `audio_session` | 音频焦点 / 中断处理 | 音乐域 |
+
+> 音乐播放链路（`just_audio` + `just_audio_media_kit` + `media_kit_libs_*`、
+> `audio_session` / `just_audio_background`）已全部引入，见 §一（D-047 / D-201 / D-239）。
 
 ### App：桌面集成（core/window）
 

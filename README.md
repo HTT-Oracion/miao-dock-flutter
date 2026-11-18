@@ -161,6 +161,7 @@ miao-dock-flutter/
 | macOS 构建 | Xcode + CocoaPods | `flutter build macos` 需要 |
 | Windows 构建 | Visual Studio 2022 生成工具（C++ 桌面开发） | `flutter build windows` 需要 |
 | Linux 构建 | clang / cmake / GTK 开发库 | `flutter build linux` 需要 |
+| 桌面音频后端 | libmpv 音频版（`media_kit_libs_windows_audio` / `media_kit_libs_linux`，首次桌面构建自动下载） | 音乐播放需要；**构建期需能访问 GitHub releases**（下载约 5.4 MB，产物随 App 分发，不入库） |
 | 真翻译引擎（可选） | Python 3.11 运行时 + manga-image-translator + 模型权重 | 运行时由 `mangasvc` 装配到用户数据目录，**不入库**；日常开发用 mock，不需要装 |
 
 ### 一、安装并配置 FVM（首次使用）
@@ -198,6 +199,12 @@ fvm flutter gen-l10n # 生成 i18n 词条（生成物不入库，缺了编译必
 **Windows 额外要求**：Visual Studio 生成工具需勾选 **ATL** 组件
 （`flutter_secure_storage_windows` 的 Windows 端依赖 `<atlstr.h>`），
 否则构建报 `error C1083: 无法打开包括文件: "atlstr.h"`。
+
+**桌面音频后端（Windows / Linux 首次构建）**：`just_audio` 不带桌面实现，构建期由
+`media_kit_libs_windows_audio` / `media_kit_libs_linux` 从 GitHub releases 下载音频版
+libmpv（约 5.4 MB，缓存在 `build/` 后不再重复下载）。内网 / 离线构建需先配好可达
+GitHub 的代理；构建成功后 `flutter run` 日志会打印
+`[music.audio] desktop backend ready: media_kit`，缺失时点播放会提示「无法播放」。
 
 ### 三、启动
 
