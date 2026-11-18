@@ -5028,3 +5028,78 @@
   两个 UI 入口改用 `File(path).uri.pathSegments.last`。
 - **验证**：新增 2 条回归（常量切分 5 断言 / Windows 整条路径落盘）。
   反证：把 `RegExp(r'[\\/]')` 改回 `split('/')` → 3 条用例红；还原后 13 条全绿。
+
+## D-238 · 音乐登录态跨重启丢失修复（JS 源体系对齐 Rust 口径）（2026-11-18）
+
+- **状态**：已实施（真机登录实测待用户验证）。
+- **用户现象**：JS 源版音乐登录成功后重启应用回到未登录；「我的歌单 / VIP 播放」等
+  登录态能力时好时坏。参照项目 miao-dock（Rust）同一登录流程正常。
+- **根因（按影响排序）**：
+  · **P0 SecureStore.readAll 命名空间错位（全平台）**：`read/write/delete` 给键加
+    `miao.` 前缀，`readAll()` 却直接透传 `FlutterSecureStorage.readAll()` 的**原始键**
+    （带前缀）；`MusicAuthNotifier._restore()` 用相对前缀 `music.cookie.` 过滤 →
+    生产环境永远匹配不到。**凭据写得进、读不出**，重启必掉登录。D-229 把读盘从
+    逐键 `read` 改成 `readAll` 扫描时引入；单测用的是无前缀假 SecureStore，所以假绿。
+  · **P0 登录收口判据过松**：登录窗口「loginCookieNames 任一出现即落盘」。QQ 的
+    `uin` 早于 `qm_keyst` 下发 → 半张票落盘；下次启动回读判失效 → 按既有语义清凭据，
+    「登录成功、重启掉线」闭环。launcher 的 warmup 分支下一拍仍会先走 `onCookies`，
+    实际拦不住提前收口。
+  · **P1 会话 Cookie 只喂给少数能力**：Rust 每个命令显式传 cookie；JS 版只在
+    `userPlaylists` / 昵称回读注入引擎，其余请求（酷狗 songUrl、网易云 VIP 播放等）
+    拿不到登录态 —— 登录态保存了却不生效。
+  · **P1 头像回读断链**：`QuickJsMusicSourceEngine.loginInfo` 手工拼结果时丢弃
+    `avatarUrl`（D-234 的源回读头像在引擎解析层断掉）。
+  · **P1 新平台登录入口误报**：登录弹窗算 `supports` 时未传源声明 → 靠 JS 源声明
+    登录配置的新平台显示「该平台暂不支持窗口登录」（`begin` 已声明，首帧仍会开窗，
+    但 UI 谎报且失败后无重试入口）。
+  · **P2 QQ loginInfo 语义错**：用「接口回了昵称」判登录（Rust 是 `uin`+播放票据
+    齐全即登录）；接口异常会把有效登录判失效，恢复路径随即清凭据。
+  · **P1/P2 登录态生命周期缺口**：退出登录只清安全存储、不清引擎会话（退出后酷狗
+    songUrl 仍能用旧票）；启动迁移与恢复并发（Apple 首次升级启动可能读空）；
+    移动端登录页三处回调并发进入收口；酷狗 ticket 在 `KuGoo` 复合字段时
+    loginInfo/songUrl 漏判；咪咕 `listen` 缺 H5 身份头导致连匿名播放地址都拿不到。
+- **修复**：
+  · `SecureStore.readAll()` 返回**相对键**并过滤命名空间外条目；`migrateServiceName`
+    改按前缀键扫旧服务名，写后回读成功才删旧值（防静默写失败丢凭据）；`build()`
+    改为「先 await 迁移再恢复」，消除首次升级启动的空读竞态。
+  · 登录收口改为「Cookie 注入引擎 → 源 `loginInfo` 校验通过才落盘」：明确
+    `loggedIn=false` 继续等（launcher 按 warmupUrl 补票）；校验异常 ≠ Cookie 无效，
+    票据名全到齐时按 Rust「先落盘、后校验」口径收口；旧源（无 `loginInfo` 能力）
+    回落「票据名全到齐」；同一串 Cookie 明确未完成时 30s 内不重复打源接口；
+    `submitCookies` 加在途锁（移动端并发回调不重复 probe / 落盘）。
+  · `JsMusicSourceAdapter` 每次能力调用前注入会话 Cookie（值变化才注入），
+    对齐 Rust「每个命令显式传 cookie」。
+  · 引擎新增 `clearSessionCookie`：退出登录 / 回读判定凭据失效时同时清会话串与
+    Cookie 罐（否则源请求继续带旧票，等于没退出）。
+  · 新增纯函数 `parseMusicLoginInfo`（解析 `avatarUrl`），登录成功直接用校验结果回填
+    昵称/头像，删除二次 `_fetchNick` 回读。
+  · 登录弹窗 `supports` 带源声明；移动端登录页改为「先清 Cookie 再导航」（对齐 Rust）。
+  · Cookie 优先级表补齐四平台 Rust `*_COOKIE_PRIORITY` 名单。
+  · **源仓库（miao-dock-sources，版本 1.2.0）**：QQ `loginInfo` 改**播放票据**窄链
+    （`qm_keyst/qqmusic_key/music_key/wxskey`，排除会提前出现的 `p_skey/skey`）
+    + `loginWarmupUrl(y.qq.com/n/ryqq/player)` + avatarUrl；酷狗 `loginInfo` 对齐
+    playbackReady（`parseAuth` 需 userId+token，`KuGoo` 复合票兜底），songUrl 同步
+    用复合票取值；咪咕 `listen/lyrics` 补 Rust 身份头（channel/appid/birth/signature/
+    referer）+ 会话 Cookie + uid 实例缓存（登录时写入、Cookie 兜底），恢复匿名播放；
+    三源补 avatarUrl。应用重启自动更新即生效。
+- **验证**：新增 / 改写用例 —— SecureStore 命名空间与恢复链路 4 条（含「raw 预置
+  `miao.music.cookie.*` → 启动恢复」反证）；登录收口 12 条（校验通过回填昵称头像 /
+  半张票不落盘 / 节流 / 异常+全票仍落盘 / 异常+半票不落盘 / 旧源全票兜底 / 无票据 /
+  取消 等）；头像解析 3 条；适配器注入 2 条；新平台弹窗 1 条；退出登录清引擎会话
+  1 条；回读失效清引擎会话并入既有断言。反证锚点：readAll 改回透传 / 收口退回
+  「任一票据」/ 适配器不注入 / `supports` 不带声明 / logout 不 clear → 对应用例变红。
+  `dart format --set-exit-if-changed lib test` 通过；`flutter analyze` 无新增问题
+  （仅 3 条历史 unused_local_variable 告警 + 1 条历史 test info）；
+  `flutter test` 全量 458 passed / 11 skipped / 4 failed —— 4 条为**改动前 HEAD 就存在**
+  的环境相关失败（`git worktree` 在 HEAD 51bdac5 上复跑同 4 条：app_smoke RenderFlex
+  溢出、paths_test 引擎夹具缺 llama-server），与本次改动无关。
+- **顺手修（测试隔离）**：全量回归里 `music_mobile_ui_test` 的「未导入源」用例会偶发变红 ——
+  根因是 `music_source_import_test` 用默认落盘根把四平台源装进了测试进程共享的
+  `$systemTemp/miao-prefs-test-<pid>`，其它用例的注册表枚举读到残留源。两处改为
+  注入临时落盘根 / 固定空前注册表，消除用例间污染（非产品代码）。
+- **已知差异（未纳入本轮，记档）**：① launcher 的 warmup 触发仍按源声明顶层票据名，
+  酷狗票据只存在于 `KuGoo` 复合字段且缺 token 时可能不触发补票（登录窗保持打开，
+  不落假登录）；② `qq.js` songUrl 仍固定匿名 `uin=0`（VIP/Hi-Res 播放缺口），
+  migu uid 未持久化（重启后 listen 的 uid 头靠 Cookie 兜底）；③ Rust 登录窗口
+  5 分钟超时兜底保存半张票，本实现**宁缺不假登录**；④ Rust 启动批量探测四平台登录态
+  并缓存 profile，Flutter 仅按 cookie 有无展示多平台徽标（当前平台才回读校验）。
