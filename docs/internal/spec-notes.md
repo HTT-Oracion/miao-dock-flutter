@@ -5139,3 +5139,30 @@
   ② 桌面端暂无锁屏 / 系统媒体通知（`just_audio_background` 只覆盖 Android/iOS/macOS，
   保持原状）；③ libmpv 音频版由构建期从 GitHub 下载，离线/内网首次构建需自备代理
   （README「桌面音频后端」已记）。
+
+## D-240 · 本地导入源仓库 index.json（漫画源）（2026-11-20）
+
+- **状态**：已实施。
+- **用户现象**：导入 `miao-dock-sources/manga/index.json` 提示「source.json 不是有效 JSON」，
+  本地源仓库装不进来。
+- **根因**：本地 `.json` 导入只有「单源清单 `source.json`」一条路径
+  （`SourceImporter.importManifest`），选中的仓库 `index.json` 是数组 →
+  `SourceManifest.fromJsonString` 抛 FormatException → `SourceIssue('invalidJson')` →
+  弹「不是有效 JSON」。链接导入早已有仓库分支（`SourceRemoteLoader.inspect` +
+  `parseSourceCatalog`），本地入口没接；拖拽也只认 `source.json` / `.js`，拖仓库目录被静默忽略。
+- **修复**：
+  · `parseSourceCatalog` 增加 `allowLocalFile`（本地按 `file://` 相对解析条目），新增
+    `isSourceCatalogDocument()` 判定 JSON 是仓库还是单源清单。
+  · `SourceImporter` 新增 `loadLocalCatalog()`（只解析、不落盘）与 `importCatalogEntry()`
+    （裸 `.js` 走上游 `ComicSource` 归一 + 统一 `installPackage`；`source.json` 包走
+    `importManifest`）；落盘根改为可注入（`rootResolver`，测试隔离）。
+  · 源面板：`.json` 先判形态 —— 仓库 → 批量导入（覆盖确认只弹一次、逐条结果汇总、
+    成功吐司）；其余仍按单源清单。拖拽接受任意 `.json` / `.js` 文件，以及含
+    `source.json` / `index.json` 的目录。
+  · 文案：导入说明补 `index.json`；新增批量成功 / 覆盖确认 / 汇总 / 条目缺失 /
+    非 ComicSource 五条词条。
+- **验证**：新增 `test/online/local_source_catalog_test.dart` 5 条 —— 用**真实仓库**
+  `../miao-dock-sources/manga/index.json` 解析出 `ManHuaGui` 条目并**安装成功落盘**
+  （`source.json` + `source.js`，version 1.2.2 / `loadComicInfo` 能力）；反证：不带
+  `allowLocalFile` 时条目被全部过滤（复现旧行为）；缺文件 / 非 ComicSource 脚本逐条报错，
+  不拖垮整个仓库。`flutter analyze` 无新增问题；`flutter test` 全量回归通过。
