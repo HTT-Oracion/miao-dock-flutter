@@ -3391,7 +3391,7 @@
   "@onlineImportTitle": {
     "description": "源导入区块标题"
   },
-  "onlineImportDesc": "选择 source.json 或 .js 源文件，或把源目录拖到这里；也可以在上方粘贴链接",
+  "onlineImportDesc": "选择 source.json / index.json / .js 源文件，或把源目录拖到这里；也可以在上方粘贴链接",
   "@onlineImportDesc": {
     "description": "源导入说明"
   },
@@ -3399,7 +3399,7 @@
   "@onlineImportSteps": {
     "description": "源导入四步"
   },
-  "onlineImporting": "正在校验 source.json …",
+  "onlineImporting": "正在校验源文件 …",
   "@onlineImporting": {
     "description": "源导入加载态"
   },
@@ -3454,15 +3454,45 @@
       }
     }
   },
+  "onlineImportCatalogOk": "已从仓库导入 {count} 个源",
+  "@onlineImportCatalogOk": {
+    "description": "本地源仓库（index.json）批量导入成功吐司",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineImportCatalogOverwriteBody": "仓库中有 {count} 个源已安装，继续导入将覆盖它们。",
+  "@onlineImportCatalogOverwriteBody": {
+    "description": "本地源仓库批量导入的覆盖确认正文",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlineImportCatalogSummary": "成功 {ok} 个，失败 {failed} 个",
+  "@onlineImportCatalogSummary": {
+    "description": "本地源仓库批量导入结果摘要",
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
   "onlineSourceEmpty": "还没有漫画源",
   "@onlineSourceEmpty": {
     "description": "空态：没有源"
   },
-  "onlineSourceEmptyHint": "在 设置 · 漫画源 通过链接或 source.json 导入源后即可浏览在线漫画。",
+  "onlineSourceEmptyHint": "在 设置 · 漫画源 通过链接或 source.json / index.json 导入源后即可浏览在线漫画。",
   "@onlineSourceEmptyHint": {
     "description": "空态：没有源说明"
   },
-  "onlineSourceEmptyHintShort": "通过链接或 source.json 导入源后即可浏览在线漫画。",
+  "onlineSourceEmptyHintShort": "通过链接或 source.json / index.json 导入源后即可浏览在线漫画。",
   "@onlineSourceEmptyHintShort": {
     "description": "空态：没有源短说明"
   },
@@ -3733,9 +3763,17 @@
   "@onlineSourceManageEntry": {
     "description": "源管理入口 tooltip"
   },
-  "onlineImportIssueJson": "source.json 不是有效 JSON",
+  "onlineImportIssueJson": "源文件不是有效 JSON",
   "@onlineImportIssueJson": {
     "description": "导入错误"
+  },
+  "onlineImportIssueCatalogEntryMissing": "仓库条目对应的源文件不存在",
+  "@onlineImportIssueCatalogEntryMissing": {
+    "description": "导入错误：本地仓库条目指向的 JS 缺失"
+  },
+  "onlineImportIssueNotComicSource": "该脚本不是 ComicSource 格式的漫画源",
+  "@onlineImportIssueNotComicSource": {
+    "description": "导入错误：本地仓库条目不是可导入的漫画源脚本"
   },
   "onlineImportIssueField": "字段校验失败：{field}",
   "@onlineImportIssueField": {
@@ -5402,7 +5440,7 @@
   "@onlineLangEnglish": {
     "description": "在线漫画：onlineLangEnglish"
   },
-  "onlineImportDescMobile": "选择 source.json / .js，或在上方粘贴数据源 / 仓库链接\n校验 → 检查入口类 → 写入源目录",
+  "onlineImportDescMobile": "选择 source.json / index.json / .js，或在上方粘贴数据源 / 仓库链接\n校验 → 检查入口类 → 写入源目录",
   "@onlineImportDescMobile": {
     "description": "移动端源导入说明"
   },

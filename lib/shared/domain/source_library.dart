@@ -141,13 +141,33 @@ String defaultSourceLibraryName(String url) {
   return parts.isEmpty ? uri.host : '${uri.host}/${parts.first}';
 }
 
+/// 判断一段 JSON 文本是**源仓库**（`index.json`：裸数组或 `sources`/`entries` 列表）
+/// 还是**单个源清单**（`source.json`：必有 `specVersion`）。
+///
+/// 用户选中的本地 `.json` 要据此分流：仓库 → 批量安装条目；单源清单 → 原流程。
+bool isSourceCatalogDocument(String raw) {
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is List) return true;
+    if (decoded is! Map) return false;
+    if (decoded['specVersion'] != null) return false;
+    return decoded['sources'] is List || decoded['entries'] is List;
+  } on FormatException {
+    return false;
+  }
+}
+
 /// 把仓库条目解析成统一的 [SourceCatalogEntry]。
 ///
 /// 仓库格式（推荐）：
 /// `{"name": "...", "sources": [{"id":"...","name":"...","version":"1.0.0",
 /// "description":"...","manifest":"sources/manhuagui/source.json"}]}`。
 /// 也接受裸数组，以及 `url`/`fileName` 作为 `manifest` 的别名，方便静态托管。
-SourceCatalog parseSourceCatalog(String raw, String catalogUrl) {
+///
+/// [allowLocalFile]：本地导入（用户选中的 `index.json`）时置 true —— 条目按
+/// `file://` 相对解析，否则文件路径会被当成非法 URL 全部过滤掉（本地仓库导入
+/// 直接报「没有可导入的源」）。
+SourceCatalog parseSourceCatalog(String raw, String catalogUrl, {bool allowLocalFile = false}) {
   final decoded = jsonDecode(raw);
   String name;
   List<dynamic> entries;
@@ -163,6 +183,14 @@ SourceCatalog parseSourceCatalog(String raw, String catalogUrl) {
     throw const FormatException('catalog');
   }
   final base = Uri.parse(catalogUrl);
+  bool validResolved(String? value) {
+    if (value == null) return false;
+    if (isValidSourceUrl(value)) return true;
+    if (!allowLocalFile) return false;
+    final uri = Uri.tryParse(value);
+    return uri != null && uri.isScheme('file');
+  }
+
   final parsed = <SourceCatalogEntry>[];
   final seen = <String>{};
   for (final item in entries) {
@@ -178,7 +206,7 @@ SourceCatalog parseSourceCatalog(String raw, String catalogUrl) {
     } else if (fileName.isNotEmpty) {
       resolved = base.resolve(fileName).toString();
     }
-    if (key.isEmpty || displayName.isEmpty || !isValidSourceUrl(resolved ?? '')) continue;
+    if (key.isEmpty || displayName.isEmpty || !validResolved(resolved)) continue;
     if (!seen.add(key)) continue;
     parsed.add(
       SourceCatalogEntry(

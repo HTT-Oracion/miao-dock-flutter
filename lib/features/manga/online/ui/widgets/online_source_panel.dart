@@ -23,6 +23,7 @@ import '../../data/legacy_source_manifest.dart';
 import '../../data/source_import.dart';
 import '../../data/source_package.dart';
 import '../../domain/online_source.dart';
+import '../../domain/source_library.dart';
 import 'online_common.dart';
 import 'online_link_import.dart';
 import '../../../../../shared/responsive.dart';
@@ -68,18 +69,24 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
     String? path;
     for (final item in items) {
       final candidate = item.path;
-      if (candidate.endsWith('/source.json') || candidate.endsWith('\\source.json') || candidate.endsWith('.js')) {
+      final lower = candidate.toLowerCase();
+      // 直接拖文件：source.json 包、本地仓库 index.json、单文件 .js 都收。
+      if (lower.endsWith('.json') || lower.endsWith('.js')) {
         path = candidate;
         break;
       }
       try {
         final dir = Directory(candidate);
         if (await dir.exists()) {
-          final manifest = File('${dir.path}/source.json');
-          if (await manifest.exists()) {
-            path = manifest.path;
-            break;
+          // 拖的是目录：优先 source.json 包，其次本地仓库 index.json。
+          for (final name in const ['source.json', 'index.json']) {
+            final file = File('${dir.path}/$name');
+            if (await file.exists()) {
+              path = file.path;
+              break;
+            }
           }
+          if (path != null) break;
         }
       } catch (_) {
         // 非目录路径忽略。
@@ -90,23 +97,157 @@ class _OnlineSourcePanelState extends ConsumerState<OnlineSourcePanel> {
 
   Future<void> _importPath(String path) async {
     setState(() => _importing = true);
-    SourceImportResult result;
-    if (path.endsWith('.js')) {
-      try {
-        final js = await File(path).readAsString();
-        final manifest = legacyManifestFromScript(js, scriptUri: Uri.file(path));
-        result = await _importer.installPackage(
-          SourcePackageData(manifest: manifest, js: js, sourceUrl: Uri.file(path).toString()),
-        );
-      } catch (_) {
-        result = const SourceImportResult(errors: [SourceIssue('invalidJson', 'js')]);
+    try {
+      if (path.toLowerCase().endsWith('.js')) {
+        SourceImportResult result;
+        try {
+          final js = await File(path).readAsString();
+          final manifest = legacyManifestFromScript(js, scriptUri: Uri.file(path));
+          result = await _importer.installPackage(
+            SourcePackageData(manifest: manifest, js: js, sourceUrl: Uri.file(path).toString()),
+          );
+        } catch (_) {
+          result = const SourceImportResult(errors: [SourceIssue('invalidJson', 'js')]);
+        }
+        if (!mounted) return;
+        await _handleResult(result);
+        return;
       }
-    } else {
-      result = await _importer.importManifest(path);
+      await _importJsonFile(path);
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  /// JSON 入口：先判形态 —— 本地源仓库（`index.json`，数组 / `sources` 列表）
+  /// 批量安装其中条目；其余仍按单个 `source.json` 包导入。
+  ///
+  /// 🔴 用户实测踩坑：选 `miao-dock-sources/manga/index.json` 时旧实现直接当
+  /// source.json 解析 → 报「source.json 不是有效 JSON」，本地仓库永远装不进来。
+  Future<void> _importJsonFile(String path) async {
+    String raw;
+    try {
+      raw = await File(path).readAsString();
+    } catch (_) {
+      if (mounted) {
+        await _showImportResult(const SourceImportResult(errors: [SourceIssue('invalidJson')]), error: true);
+      }
+      return;
+    }
+    if (isSourceCatalogDocument(raw)) {
+      await _importCatalog(path);
+      return;
+    }
+    final result = await _importer.importManifest(path);
+    if (!mounted) return;
+    await _handleResult(result);
+  }
+
+  Future<void> _importCatalog(String path) async {
+    final l10n = AppLocalizations.of(context);
+    SourceCatalog catalog;
+    try {
+      catalog = await _importer.loadLocalCatalog(path);
+    } catch (_) {
+      if (mounted) {
+        await _showImportResult(const SourceImportResult(errors: [SourceIssue('invalidJson')]), error: true);
+      }
+      return;
     }
     if (!mounted) return;
-    setState(() => _importing = false);
-    await _handleResult(result);
+    if (catalog.entries.isEmpty) {
+      showAppToast(context, l10n.onlineSourceCatalogEmpty, tone: ToastTone.bad);
+      return;
+    }
+    // 覆盖确认放在安装之前：批量覆盖不再逐条弹窗。
+    final installed = ref.read(onlineSourcesProvider).value ?? const <OnlineSource>[];
+    final installedIds = {for (final source in installed) source.id};
+    final conflicts = catalog.entries.where((entry) => installedIds.contains(entry.key)).length;
+    if (conflicts > 0) {
+      final confirmed = await showAppDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AppDialog(
+          title: l10n.onlineConfirmOverwriteTitle,
+          icon: LucideIcons.alertTriangle,
+          width: 420,
+          actions: [
+            AppButton(
+              label: l10n.onlineCancel,
+              onTap: () => Navigator.of(dialogContext).pop(false),
+              variant: AppButtonVariant.secondary,
+              height: 32,
+            ),
+            AppButton(
+              label: l10n.onlineOverwrite,
+              onTap: () => Navigator.of(dialogContext).pop(true),
+              variant: AppButtonVariant.primary,
+              height: 32,
+            ),
+          ],
+          child: Text(
+            l10n.onlineImportCatalogOverwriteBody(conflicts),
+            style: TextStyle(fontSize: AppFont.px12, height: 1.7, color: AppPalette.of(dialogContext).ink2),
+          ),
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    final imports = <SourceCatalogEntryImport>[];
+    for (final entry in catalog.entries) {
+      final result = await _importer.importCatalogEntry(entry);
+      imports.add(SourceCatalogEntryImport(key: entry.key, name: entry.name, result: result));
+    }
+    if (!mounted) return;
+    for (final item in imports) {
+      final source = item.result.source;
+      if (source == null) continue;
+      final current = ref.read(onlineSourcesProvider).value ?? const <OnlineSource>[];
+      final prior = current.where((existing) => existing.id == source.id).toList();
+      final keepsDisabled = prior.isNotEmpty && !prior.first.enabled;
+      await ref
+          .read(onlineSourcesProvider.notifier)
+          .addOrReplace(keepsDisabled ? source.copyWith(enabled: false) : source);
+    }
+    if (!mounted) return;
+    final failures = imports.where((item) => !item.ok).toList();
+    if (failures.isEmpty) {
+      showAppToast(context, l10n.onlineImportCatalogOk(imports.length), tone: ToastTone.good);
+      return;
+    }
+    await _showCatalogFailures(imports);
+  }
+
+  /// 批量导入结果：一行摘要 + 每个失败条目一行原因。
+  Future<void> _showCatalogFailures(List<SourceCatalogEntryImport> imports) async {
+    final l10n = AppLocalizations.of(context);
+    final okCount = imports.where((item) => item.ok).length;
+    final failures = imports.where((item) => !item.ok).toList();
+    final lines = <String>[l10n.onlineImportCatalogSummary(okCount, failures.length)];
+    for (final item in failures) {
+      final issue = item.result.errors.isEmpty ? const SourceIssue('invalidJson') : item.result.errors.first;
+      lines.add('${item.name}：${sourceIssueText(l10n, issue)}');
+    }
+    await showAppDialog<void>(
+      context: context,
+      builder: (dialogContext) => AppDialog(
+        title: l10n.onlineImportResult,
+        icon: LucideIcons.circleX,
+        width: 480,
+        onClose: () => Navigator.of(dialogContext).pop(),
+        actions: [
+          AppButton(
+            label: l10n.onlineImportClose,
+            onTap: () => Navigator.of(dialogContext).pop(),
+            variant: AppButtonVariant.primary,
+            height: 32,
+          ),
+        ],
+        child: Text(
+          lines.join('\n'),
+          style: TextStyle(fontSize: AppFont.px11_5, height: 1.8, color: AppPalette.of(dialogContext).ink2),
+        ),
+      ),
+    );
   }
 
   Future<void> _handleResult(SourceImportResult result) async {
@@ -724,6 +865,8 @@ class _IssueList extends StatelessWidget {
 /// 导入问题 → ARB。
 String sourceIssueText(AppLocalizations l10n, SourceIssue issue) => switch (issue.code) {
   'invalidJson' || 'json' => l10n.onlineImportIssueJson,
+  'catalogEntryMissing' => l10n.onlineImportIssueCatalogEntryMissing,
+  'notComicSource' => l10n.onlineImportIssueNotComicSource,
   'field' => l10n.onlineImportIssueField(issue.detail),
   'path' => l10n.onlineImportIssuePath,
   'sourceMissing' => l10n.onlineImportIssueSourceMissing,

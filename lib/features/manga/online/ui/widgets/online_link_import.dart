@@ -6,9 +6,7 @@ import '../../../../../core/theme/tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/responsive.dart';
 import '../../../../../shared/widgets/app_dialog.dart';
-import '../../../../../shared/widgets/app_input.dart';
 import '../../../../../shared/widgets/buttons.dart';
-import '../../../../../shared/widgets/skeleton.dart';
 import '../../../../../shared/widgets/source_library_list.dart';
 import '../../../../../shared/widgets/source_link_import_card.dart';
 import '../../../../../shared/widgets/toast.dart';
@@ -184,6 +182,8 @@ class _OnlineLinkImportState extends ConsumerState<OnlineLinkImport> {
 
   String _issueText(AppLocalizations l10n, SourceIssue issue) => switch (issue.code) {
     'invalidJson' || 'json' => l10n.onlineImportIssueJson,
+    'catalogEntryMissing' => l10n.onlineImportIssueCatalogEntryMissing,
+    'notComicSource' => l10n.onlineImportIssueNotComicSource,
     'field' => l10n.onlineImportIssueField(issue.detail),
     'path' => l10n.onlineImportIssuePath,
     'sourceMissing' => l10n.onlineImportIssueSourceMissing,
